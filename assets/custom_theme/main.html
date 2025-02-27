@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<meta name="twitter:card" content="Interpreto: Interpretability toolkit for LLMs">
+<meta name="twitter:site" content="@ANITI_Toulouse">
+<meta name="twitter:creator" content="@ANITI_Toulouse">
+<meta property="og:title" content="Interpreto - {{ page.title }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ page.canonical_url | url }}">
+<meta property="og:site_name" content="Interpreto Documentation">
+<meta property="og:description" content="Interpreto is a toolkit for concept-based interpretability of LLMs.">
+<meta property="og:image" content="https://raw.githubusercontent.com/FOR-sight-ai/interpreto/main/docs/assets/img/interpreto_logo.png">
+{% endblock %}
