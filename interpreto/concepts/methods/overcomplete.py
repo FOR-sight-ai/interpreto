@@ -37,13 +37,15 @@ from overcomplete import sae as oc_sae
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from interpreto.commons.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.commons.model_wrapping.model_with_split_points import ActivationSelectionStrategy, ModelWithSplitPoints
 from interpreto.concepts.base import ConceptBottleneckExplainer, check_fitted
 from interpreto.typing import LatentActivations
 
 
 class SAELoss:
-    """SAE loss functions should be callables supporting the following signature."""
+    """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py)
+
+    SAE loss functions should be callables supporting the following signature."""
 
     @staticmethod
     @abstractmethod
@@ -88,7 +90,8 @@ class DeadNeuronsReanimationLoss(SAELoss):
 
 
 class OvercompleteSAEClasses(Enum):
-    """
+    """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py)
+
     Overcomplete concepts encoder-decoder classes for dictionary learning
     derived from the [Overcomplete SAE](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/) class.
 
@@ -127,7 +130,8 @@ class OvercompleteSAEClasses(Enum):
 
 
 class OvercompleteOptimClasses(Enum):
-    """
+    """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py)
+
     Overcomplete optimization classes for dictionary learning
     derived from the [Overcomplete BaseOptimDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py) class.
 
@@ -181,8 +185,10 @@ class SAELossClasses(Enum):
     DeadNeuronsReanimation = DeadNeuronsReanimationLoss
 
 
+# TODO: Rename, remove Overcomplete prefix
 class OvercompleteSAE(ConceptBottleneckExplainer):
-    """
+    """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py)
+
     Implementation of a concept explainer using a
     [overcomplete.sae.SAE](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/) variant as `concept_model`.
 
@@ -204,6 +210,8 @@ class OvercompleteSAE(ConceptBottleneckExplainer):
         concept_model_class: type[oc_sae.SAE],
         *,
         nb_concepts: int,
+        activation_select_strategy: str | ActivationSelectionStrategy = ActivationSelectionStrategy.ALL,
+        activation_select_indices: int | list[int] | tuple[int] | None = None,
         split_point: str | None = None,
         encoder_module: nn.Module | str | None = None,
         dictionary_params: dict | None = None,
@@ -233,19 +241,23 @@ class OvercompleteSAE(ConceptBottleneckExplainer):
                 "Use `interpreto.concepts.methods.OvercompleteSAEClasses` to get the list of available SAE methods."
             )
         self.model_with_split_points = model_with_split_points
-        split: str = self.get_and_verify_split_point(split_point)
-        input_shape = self.model_with_split_points.get_activations(self.model_with_split_points._example_input, split)[
-            split
-        ].shape
+        self.split_point = split_point
+
+        # TODO: this will be replaced with a scan and a better way to select how to pick activations based on model class
+        activations = self.model_with_split_points.get_activations(
+            self.model_with_split_points._example_input,
+            select_strategy=activation_select_strategy,
+            select_indices=activation_select_indices,
+        )
         concept_model = concept_model_class(
-            input_shape=input_shape[-1],
+            input_shape=activations[self.split_point].shape[-1],
             nb_concepts=nb_concepts,
             encoder_module=encoder_module,
             dictionary_params=dictionary_params,
             device=device,
             **kwargs,
         )
-        super().__init__(model_with_split_points, concept_model, split)
+        super().__init__(model_with_split_points, concept_model, self.split_point)
         self.has_differentiable_concept_encoder = True
         self.has_differentiable_concept_decoder = True
 
@@ -353,8 +365,10 @@ class OvercompleteSAE(ConceptBottleneckExplainer):
         return self.concept_model.decode(concepts.to(self.device))  # type: ignore
 
 
+# TODO: Rename, remove Overcomplete prefix
 class OvercompleteDictionaryLearning(ConceptBottleneckExplainer):
-    """
+    """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py)
+
     Implementation of a concept explainer using an
     [overcomplete.optimization.BaseOptimDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py)
         (NMF and PCA variants) as `concept_model`.
@@ -402,7 +416,7 @@ class OvercompleteDictionaryLearning(ConceptBottleneckExplainer):
                 "Use `interpreto.concepts.methods.OvercompleteOptimClasses` to get the list of available SAE methods."
             )
         self.model_with_split_points = model_with_split_points
-        split: str = self.get_and_verify_split_point(split_point)
+        self.split_point = split_point
         if concept_model_class.__name__ == "ConvexNMF":
             # TODO: see if we can support the pgd solver or have an easy way to set parameters
             kwargs["solver"] = "mu"
@@ -411,7 +425,7 @@ class OvercompleteDictionaryLearning(ConceptBottleneckExplainer):
             device=device,  # type: ignore
             **kwargs,
         )
-        super().__init__(model_with_split_points, concept_model, split)
+        super().__init__(model_with_split_points, concept_model, self.split_point)
         self.has_differentiable_concept_encoder = False if "NMF" in concept_model_class.__name__ else True
         self.has_differentiable_concept_decoder = True
 
@@ -421,6 +435,8 @@ class OvercompleteDictionaryLearning(ConceptBottleneckExplainer):
         Args:
             activations (torch.Tensor | dict[str, torch.Tensor]): The activations used for fitting the `concept_model`.
                 If a dictionary is provided, the activation corresponding to `split_point` will be used.
+            overwrite (bool): Whether to overwrite the current model if it has already been fitted.
+                Default: False.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_model`.
                 See the Overcomplete documentation of the provided `concept_model` for more details.
         """

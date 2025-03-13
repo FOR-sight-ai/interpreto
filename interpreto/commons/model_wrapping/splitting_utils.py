@@ -96,8 +96,7 @@ def _get_paths_from_module(model_paths: list[str] | None = None, module: nn.Modu
         raise ValueError("Either a module or a precomputed list of valid model paths should be provided for sorting.")
     if model_paths is None:
         model_paths = []
-        if module is not None:
-            model_paths = list(walk_modules(module))
+        model_paths = list(walk_modules(module))  # type: ignore
     return model_paths
 
 

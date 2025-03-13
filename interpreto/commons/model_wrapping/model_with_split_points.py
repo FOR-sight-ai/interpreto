@@ -67,12 +67,17 @@ class ActivationSelectionStrategy(Enum):
 
 
 class ModelWithSplitPoints(LanguageModel):
-    """Generalized NNsight.LanguageModel wrapper around encoder-only, decoder-only and encoder-decoder language models.
+    """Code: [:octicons-mark-github-24: model_wrapping/model_with_split_points.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/commons/model_wrapping/model_with_split_points.py)
+
+    Generalized NNsight.LanguageModel wrapper around encoder-only, decoder-only and encoder-decoder language models.
     Handles splitting model at specified locations and activation extraction.
 
     Inputs can be in the form of:
+
         * One (`str`) or more (`list[str]`) prompts, including batched prompts (`list[list[str]]`).
+
         * One (`list[int] or torch.Tensor`) or more (`list[list[int]] or torch.Tensor`) tokenized prompts.
+
         * Direct model inputs: (`dic[str,Any]`)
 
     Attributes:
@@ -128,8 +133,8 @@ class ModelWithSplitPoints(LanguageModel):
                 raise InitializationError(
                     "Model autoclass not found.\n"
                     "The model class can be omitted if a pre-loaded model is passed to `model_or_repo_id` "
-                    "param.\nIf an HF Hub ID is used, the corresponding autoclass must be specified in `model_type`.\n"
-                    "Example: ModelWithSplitPoints('bert-base-cased', model_type=AutoModelForMaskedLM, ...)"
+                    "param.\nIf an HF Hub ID is used, the corresponding autoclass must be specified in `model_autoclass`.\n"
+                    "Example: ModelWithSplitPoints('bert-base-cased', model_autoclass=AutoModelForMaskedLM, ...)"
                 )
             if isinstance(model_autoclass, str):
                 supported_autoclasses = get_supported_hf_transformer_autoclasses()
@@ -215,7 +220,7 @@ class ModelWithSplitPoints(LanguageModel):
         """Get intermediate activations for all model split points
 
         Args:
-            inputs (str | list[str] | BatchEncoding): Inputs to the model forward pass before or after tokenzation.
+            inputs (str | list[str] | BatchEncoding): Inputs to the model forward pass before or after tokenization.
             select_strategy (str | ActivationSelectionStrategy): Selection strategy for activations.
 
                 Options are:
@@ -226,7 +231,7 @@ class ModelWithSplitPoints(LanguageModel):
             select_indices (list[int] | tuple[int] | None): Specifies indices that should be selected from the
                 activation sequence. Can be combined with `select_strategy` to obtain several behaviors. E.g.
                 `select_strategy="all", select_indices=mask_idxs` can be used to extract only activations corresponding
-                to [MASK] input ids with shape `(batch, len(masx_idxs), d_model)`, or
+                to [MASK] input ids with shape `(batch, len(mask_idxs), d_model)`, or
                 `select_strategy="flatten", select_indices=0` can be used to extract activations for the `[CLS]` token
                 only across all sequences, with shape `(batch, d_model)`. By default, all positions are selected.
 
@@ -255,6 +260,7 @@ class ModelWithSplitPoints(LanguageModel):
                 if idx == len(self.split_points) - 1:
                     getattr(curr_module, module_out_name).stop()
 
+        # TODO: Ideally we would not need to unpack tuples, check if necessary
         for idx, split in enumerate(self.split_points):
             act = activations.value[idx]
             activations_dict[split] = act[0] if isinstance(act, tuple) else act
@@ -272,12 +278,9 @@ class ModelWithSplitPoints(LanguageModel):
                 )
 
             # Apply selection rule
-            if ActivationSelectionStrategy.is_match(select_strategy, ActivationSelectionStrategy.ALL):
-                if select_indices:
-                    activations_dict[layer] = activations_dict[layer][:, select_indices, :]
+            if select_indices:
+                activations_dict[layer] = activations_dict[layer][:, select_indices, :]
             if ActivationSelectionStrategy.is_match(select_strategy, ActivationSelectionStrategy.FLATTEN):
-                if select_indices:
-                    activations_dict[layer] = activations_dict[layer][:, select_indices, :]
                 activations_dict[layer] = activations_dict[layer].flatten(0, 1)
                 if len(activations_dict[layer].shape) != 2:
                     raise RuntimeError(

@@ -36,7 +36,8 @@ from interpreto.typing import ConceptsActivations, ModelInput
 
 
 class Cockatiel(OvercompleteDictionaryLearning):
-    """
+    """Code: [:octicons-mark-github-24: `concepts/methods/cockatiel.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/cockatiel.py)
+
     Implementation of the Cockatiel concept explainer by Jourdan et al. (2023)[^1].
 
     [^1]:
@@ -48,7 +49,7 @@ class Cockatiel(OvercompleteDictionaryLearning):
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.
-        concept_model (oc_sae.SAE): An [Overcomplete NMF](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/nmf.py) encoder-decoder.
+        concept_model (overcomplete.optimization.SemiNMF): An [Overcomplete NMF](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/nmf.py) encoder-decoder.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
         has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
         has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
