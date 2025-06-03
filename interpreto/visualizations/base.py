@@ -140,6 +140,7 @@ class ConceptAttributionVisualization(ABC):
         outputs_words: list[str],
         outputs_attributions: torch.Tensor,
         concepts_descriptions: list[dict],
+        custom_style: dict = None,
     ):
         """
         Adapt the data to the expected format for the visualization
@@ -151,6 +152,7 @@ class ConceptAttributionVisualization(ABC):
             outputs_words (List[str]): List of words for the output (1 sentence)
             outputs_attributions (torch.Tensor): Attributions for the output (same dimension)
             concepts_descriptions (List[dict]): List of descriptions for the concepts
+            custom_style (dict): Custom style to apply to the visualization
 
         Returns:
             dict: The adapted data
@@ -162,6 +164,7 @@ class ConceptAttributionVisualization(ABC):
                 for words, attributions in zip(inputs_sentences, inputs_attributions, strict=False)
             ],
             "outputs": {"words": outputs_words, "attributions": outputs_attributions},
+            "custom_style": custom_style,
         }
         return data_struct
 

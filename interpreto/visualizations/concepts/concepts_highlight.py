@@ -24,6 +24,7 @@ class ConceptHighlightVisualization(ConceptAttributionVisualization):
         topk: int = 3,
         normalize: bool = True,
         highlight_border: bool = False,
+        margin_right: str = "0.2em",
         css: str = None,
     ):
         """
@@ -38,7 +39,9 @@ class ConceptHighlightVisualization(ConceptAttributionVisualization):
             topk (int, optional): Number of top concepts to display. Defaults to 3
             normalize (bool, optional): Whether to normalize the attributions. If False, then the attributions values range will be assumed to be [0, 1]. Defaults to True
             highlight_border (bool, optional): Whether to highlight the border of the words. Defaults to False
-            css: (str, optional): A custom css. Defaults to None
+            margin_right (str, optional): A custom CSS margin property to set the spacing between words. Defaults to '0.2em'
+            css: (str, optional): A custom CSS to replace the default Interpreto CSS. Note: This CSS will be applied globally across the entire notebook. Defaults to None
+
         """
         super().__init__()
         nb_inputs_outputs, nb_outputs, nb_concepts = attribution_output.attributions.shape
@@ -92,6 +95,7 @@ class ConceptHighlightVisualization(ConceptAttributionVisualization):
 
         self.topk = topk
         self.highlight_border = highlight_border
+        self.custom_style = {"margin-right": margin_right} if margin_right else {}
         self.custom_css = css
         self.data = self.adapt_data(
             inputs_sentences=[inputs_words],
@@ -101,6 +105,7 @@ class ConceptHighlightVisualization(ConceptAttributionVisualization):
             concepts_descriptions=self.make_concepts_descriptions(
                 concepts_colors, concepts_names, min_values, max_values
             ),
+            custom_style=self.custom_style,
         )
 
     def make_concepts_descriptions(
