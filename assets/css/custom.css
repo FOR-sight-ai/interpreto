@@ -20,16 +20,6 @@
     --md-accent-fg-color: var(--synthax-blue);
 }
 
-@font-face {
-    font-family: "Virgil";
-    src: url("https://unpkg.com/@excalidraw/excalidraw@0.12.0/dist/excalidraw-assets/Virgil.woff2");
-}
-@font-face {
-    font-family: "Cascadia";
-    src: url("https://unpkg.com/@excalidraw/excalidraw@0.12.0/dist/excalidraw-assets/Cascadia.woff2");
-}
-
-
 html {
     font-size: 115%;
 }
