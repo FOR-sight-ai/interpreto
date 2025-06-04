@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradients/">
+      
       
         <link rel="prev" href="../../overview/">
       
@@ -1732,7 +1734,7 @@
 <li>Approximate the integral of the gradients along the path and multiply by the input difference to get the attribution scores.</li>
 </ul>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">interpreto.attributions</span> <span class="kn">import</span> <span class="n">IntegratedGradients</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.attributions</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratedGradients</span>
 
 <span class="c1"># load model, tokenizer and text</span>
 <span class="n">method</span> <span class="o">=</span> <span class="n">IntegratedGradients</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">n_interpolations</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>

@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/">
+      
       
         <link rel="prev" href="../optim/">
       
@@ -2639,7 +2641,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 <span class="normal"><a href="#__codelineno-0-186">186</a></span>
 <span class="normal"><a href="#__codelineno-0-187">187</a></span>
 <span class="normal"><a href="#__codelineno-0-188">188</a></span>
-<span class="normal"><a href="#__codelineno-0-189">189</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-143" name="__codelineno-0-143"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-189">189</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-143" name="__codelineno-0-143"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-144" name="__codelineno-0-144"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-145" name="__codelineno-0-145"></a>    <span class="n">model_with_split_points</span><span class="p">:</span> <span class="n">ModelWithSplitPoints</span><span class="p">,</span>
 <a id="__codelineno-0-146" name="__codelineno-0-146"></a>    <span class="o">*</span><span class="p">,</span>
@@ -3018,7 +3020,7 @@ Default: False.</p>
 <span class="normal"><a href="#__codelineno-0-263">263</a></span>
 <span class="normal"><a href="#__codelineno-0-264">264</a></span>
 <span class="normal"><a href="#__codelineno-0-265">265</a></span>
-<span class="normal"><a href="#__codelineno-0-266">266</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="k">def</span> <span class="nf">fit</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-266">266</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
 <a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-203" name="__codelineno-0-203"></a>    <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="n">InterventionProxy</span><span class="p">,</span>
 <a id="__codelineno-0-204" name="__codelineno-0-204"></a>    <span class="o">*</span><span class="p">,</span>
@@ -3175,7 +3177,7 @@ Default: False.</p>
 <span class="normal"><a href="#__codelineno-0-278">278</a></span>
 <span class="normal"><a href="#__codelineno-0-279">279</a></span>
 <span class="normal"><a href="#__codelineno-0-280">280</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="k">def</span> <span class="nf">encode_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="k">def</span><span class="w"> </span><span class="nf">encode_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
 <a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the `concept_model` encoder.</span>
 <a id="__codelineno-0-271" name="__codelineno-0-271"></a>
 <a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">    Args:</span>
@@ -3276,7 +3278,7 @@ Default: False.</p>
 <span class="normal"><a href="#__codelineno-0-290">290</a></span>
 <span class="normal"><a href="#__codelineno-0-291">291</a></span>
 <span class="normal"><a href="#__codelineno-0-292">292</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="k">def</span> <span class="nf">decode_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="k">def</span><span class="w"> </span><span class="nf">decode_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode the given concepts using the `concept_model` decoder.</span>
 <a id="__codelineno-0-285" name="__codelineno-0-285"></a>
 <a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">    Args:</span>
@@ -3341,7 +3343,7 @@ Default: False.</p>
 <span class="normal"><a href="#__codelineno-0-365">365</a></span>
 <span class="normal"><a href="#__codelineno-0-366">366</a></span>
 <span class="normal"><a href="#__codelineno-0-367">367</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="k">def</span> <span class="nf">get_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># TODO: add this to tests</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># TODO: add this to tests</span>
 <a id="__codelineno-0-362" name="__codelineno-0-362"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the dictionary learned by the fitted `concept_model`.</span>
 <a id="__codelineno-0-363" name="__codelineno-0-363"></a>
 <a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">    Returns:</span>
@@ -3508,7 +3510,7 @@ If "all", all concepts are interpreted.</p>
 <span class="normal"><a href="#__codelineno-0-250">250</a></span>
 <span class="normal"><a href="#__codelineno-0-251">251</a></span>
 <span class="normal"><a href="#__codelineno-0-252">252</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="k">def</span> <span class="nf">interpret</span><span class="p">(</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="k">def</span><span class="w"> </span><span class="nf">interpret</span><span class="p">(</span>
 <a id="__codelineno-0-207" name="__codelineno-0-207"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="n">interpretation_method</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseConceptInterpretationMethod</span><span class="p">],</span>
 <a id="__codelineno-0-209" name="__codelineno-0-209"></a>    <span class="n">concepts_indices</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;all&quot;</span><span class="p">],</span>
@@ -3688,7 +3690,7 @@ or a dataset.</p>
 <span class="normal"><a href="#__codelineno-0-272">272</a></span>
 <span class="normal"><a href="#__codelineno-0-273">273</a></span>
 <span class="normal"><a href="#__codelineno-0-274">274</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-254" name="__codelineno-0-254"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="k">def</span> <span class="nf">input_concept_attribution</span><span class="p">(</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="k">def</span><span class="w"> </span><span class="nf">input_concept_attribution</span><span class="p">(</span>
 <a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">ModelInputs</span><span class="p">,</span>
 <a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="n">concept</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -3855,7 +3857,7 @@ or a dataset.</p>
 <span class="normal"><a href="#__codelineno-0-387">387</a></span>
 <span class="normal"><a href="#__codelineno-0-388">388</a></span>
 <span class="normal"><a href="#__codelineno-0-389">389</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-369" name="__codelineno-0-369"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="k">def</span> <span class="nf">concept_output_attribution</span><span class="p">(</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="k">def</span><span class="w"> </span><span class="nf">concept_output_attribution</span><span class="p">(</span>
 <a id="__codelineno-0-371" name="__codelineno-0-371"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-372" name="__codelineno-0-372"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">ModelInputs</span><span class="p">,</span>
 <a id="__codelineno-0-373" name="__codelineno-0-373"></a>    <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">,</span>

@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/dictionary_metrics/">
+      
       
         <link rel="prev" href="../overview/">
       
@@ -1792,7 +1794,7 @@
 <h1 id="concepts-dictionary-metrics">Concepts Dictionary Metrics<a class="headerlink" href="#concepts-dictionary-metrics" title="Permanent link">&para;</a></h1>
 <p>Concept dictionary metrics evaluate the concept space via its dictionary.
 They can either be compute on a single dictionary or compare two or more dictionaries.</p>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">interpreto.concepts.metrics</span> <span class="kn">import</span> <span class="n">MetricClass</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricClass</span>
 
 <span class="n">metric</span> <span class="o">=</span> <span class="n">MetricClass</span><span class="p">(</span><span class="n">concept_explainer1</span><span class="p">,</span> <span class="n">concept_explainer2</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
 <span class="n">score</span> <span class="o">=</span> <span class="n">metric</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
@@ -1889,9 +1891,9 @@ Both types are supported and can be mixed.</p>
 
 
 <p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">interpreto.concepts</span> <span class="kn">import</span> <span class="n">NMFConcepts</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">interpreto.concepts.metrics</span> <span class="kn">import</span> <span class="n">Stability</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts</span><span class="w"> </span><span class="kn">import</span> <span class="n">NMFConcepts</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stability</span>
 </code></pre></div>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Iterate on random seeds</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">concept_explainers</span> <span class="o">=</span> <span class="p">[]</span>
@@ -2006,7 +2008,7 @@ Both types are supported and can be mixed.</p>
 <span class="normal"><a href="#__codelineno-0-181">181</a></span>
 <span class="normal"><a href="#__codelineno-0-182">182</a></span>
 <span class="normal"><a href="#__codelineno-0-183">183</a></span>
-<span class="normal"><a href="#__codelineno-0-184">184</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-149" name="__codelineno-0-149"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-150" name="__codelineno-0-150"></a>    <span class="o">*</span><span class="n">concept_explainers</span><span class="p">:</span> <span class="n">ConceptAutoEncoderExplainer</span> <span class="o">|</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;cpt d&quot;</span><span class="p">],</span>
 <a id="__codelineno-0-151" name="__codelineno-0-151"></a>    <span class="n">matching_algorithm</span><span class="p">:</span> <span class="n">DistanceFunctionProtocol</span> <span class="o">=</span> <span class="n">ConceptMatchingAlgorithm</span><span class="o">.</span><span class="n">COSINE_HUNGARIAN</span><span class="p">,</span>
@@ -2111,7 +2113,7 @@ Both types are supported and can be mixed.</p>
 <span class="normal"><a href="#__codelineno-0-195">195</a></span>
 <span class="normal"><a href="#__codelineno-0-196">196</a></span>
 <span class="normal"><a href="#__codelineno-0-197">197</a></span>
-<span class="normal"><a href="#__codelineno-0-198">198</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-198">198</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <a id="__codelineno-0-187" name="__codelineno-0-187"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the mean score over pairwise comparison scores between dictionaries.</span>
 <a id="__codelineno-0-188" name="__codelineno-0-188"></a>
 <a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="sd">    Returns:</span>

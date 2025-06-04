@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/cockatiel/">
+      
       
         <link rel="prev" href="../base/">
       
@@ -2233,7 +2235,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 <span class="normal"><a href="#__codelineno-0-490">490</a></span>
 <span class="normal"><a href="#__codelineno-0-491">491</a></span>
 <span class="normal"><a href="#__codelineno-0-492">492</a></span>
-<span class="normal"><a href="#__codelineno-0-493">493</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-460" name="__codelineno-0-460"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-493">493</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-460" name="__codelineno-0-460"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-461" name="__codelineno-0-461"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-462" name="__codelineno-0-462"></a>    <span class="n">model_with_split_points</span><span class="p">:</span> <span class="n">ModelWithSplitPoints</span><span class="p">,</span>
 <a id="__codelineno-0-463" name="__codelineno-0-463"></a>    <span class="o">*</span><span class="p">,</span>
@@ -2386,7 +2388,7 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-512">512</a></span>
 <span class="normal"><a href="#__codelineno-0-513">513</a></span>
 <span class="normal"><a href="#__codelineno-0-514">514</a></span>
-<span class="normal"><a href="#__codelineno-0-515">515</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-495" name="__codelineno-0-495"></a><span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="n">InterventionProxy</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-515">515</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-495" name="__codelineno-0-495"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="n">InterventionProxy</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <a id="__codelineno-0-496" name="__codelineno-0-496"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit an Overcomplete OptimDictionaryLearning model on the given activations.</span>
 <a id="__codelineno-0-497" name="__codelineno-0-497"></a>
 <a id="__codelineno-0-498" name="__codelineno-0-498"></a><span class="sd">    Args:</span>
@@ -2505,7 +2507,7 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-534">534</a></span>
 <span class="normal"><a href="#__codelineno-0-535">535</a></span>
 <span class="normal"><a href="#__codelineno-0-536">536</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-517" name="__codelineno-0-517"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-518" name="__codelineno-0-518"></a><span class="k">def</span> <span class="nf">encode_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
+<a id="__codelineno-0-518" name="__codelineno-0-518"></a><span class="k">def</span><span class="w"> </span><span class="nf">encode_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
 <a id="__codelineno-0-519" name="__codelineno-0-519"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the `concept_model` encoder.</span>
 <a id="__codelineno-0-520" name="__codelineno-0-520"></a>
 <a id="__codelineno-0-521" name="__codelineno-0-521"></a><span class="sd">    Args:</span>
@@ -2613,7 +2615,7 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-356">356</a></span>
 <span class="normal"><a href="#__codelineno-0-357">357</a></span>
 <span class="normal"><a href="#__codelineno-0-358">358</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-348" name="__codelineno-0-348"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="k">def</span> <span class="nf">decode_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># LatentActivations</span>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="k">def</span><span class="w"> </span><span class="nf">decode_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># LatentActivations</span>
 <a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode the given concepts using the `concept_model` decoder.</span>
 <a id="__codelineno-0-351" name="__codelineno-0-351"></a>
 <a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">    Args:</span>
@@ -2678,7 +2680,7 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-365">365</a></span>
 <span class="normal"><a href="#__codelineno-0-366">366</a></span>
 <span class="normal"><a href="#__codelineno-0-367">367</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="k">def</span> <span class="nf">get_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># TODO: add this to tests</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># TODO: add this to tests</span>
 <a id="__codelineno-0-362" name="__codelineno-0-362"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the dictionary learned by the fitted `concept_model`.</span>
 <a id="__codelineno-0-363" name="__codelineno-0-363"></a>
 <a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">    Returns:</span>
@@ -2845,7 +2847,7 @@ If "all", all concepts are interpreted.</p>
 <span class="normal"><a href="#__codelineno-0-250">250</a></span>
 <span class="normal"><a href="#__codelineno-0-251">251</a></span>
 <span class="normal"><a href="#__codelineno-0-252">252</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="k">def</span> <span class="nf">interpret</span><span class="p">(</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="k">def</span><span class="w"> </span><span class="nf">interpret</span><span class="p">(</span>
 <a id="__codelineno-0-207" name="__codelineno-0-207"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="n">interpretation_method</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseConceptInterpretationMethod</span><span class="p">],</span>
 <a id="__codelineno-0-209" name="__codelineno-0-209"></a>    <span class="n">concepts_indices</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;all&quot;</span><span class="p">],</span>
@@ -3004,7 +3006,7 @@ If "all", all concepts are interpreted.</p>
 <span class="normal"><a href="#__codelineno-0-71">71</a></span>
 <span class="normal"><a href="#__codelineno-0-72">72</a></span>
 <span class="normal"><a href="#__codelineno-0-73">73</a></span>
-<span class="normal"><a href="#__codelineno-0-74">74</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-56" name="__codelineno-0-56"></a><span class="k">def</span> <span class="nf">input_concept_attribution</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-74">74</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-56" name="__codelineno-0-56"></a><span class="k">def</span><span class="w"> </span><span class="nf">input_concept_attribution</span><span class="p">(</span>
 <a id="__codelineno-0-57" name="__codelineno-0-57"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-58" name="__codelineno-0-58"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">ModelInput</span><span class="p">,</span>
 <a id="__codelineno-0-59" name="__codelineno-0-59"></a>    <span class="n">concept</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -3148,7 +3150,7 @@ If "all", all concepts are interpreted.</p>
 <span class="normal"><a href="#__codelineno-0-88">88</a></span>
 <span class="normal"><a href="#__codelineno-0-89">89</a></span>
 <span class="normal"><a href="#__codelineno-0-90">90</a></span>
-<span class="normal"><a href="#__codelineno-0-91">91</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="k">def</span> <span class="nf">concept_output_attribution</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-91">91</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="k">def</span><span class="w"> </span><span class="nf">concept_output_attribution</span><span class="p">(</span>
 <a id="__codelineno-0-77" name="__codelineno-0-77"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">ModelInputs</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">attribution_kwargs</span>
 <a id="__codelineno-0-78" name="__codelineno-0-78"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
 <a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the attribution of each concept for the logit of a target output element.</span>

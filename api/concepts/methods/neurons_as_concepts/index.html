@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/">
+      
       
         <link rel="prev" href="../cockatiel/">
       
@@ -2014,7 +2016,7 @@ split point of <code>model_with_split_points</code> if a single one is defined.<
 <span class="normal"><a href="#__codelineno-0-131">131</a></span>
 <span class="normal"><a href="#__codelineno-0-132">132</a></span>
 <span class="normal"><a href="#__codelineno-0-133">133</a></span>
-<span class="normal"><a href="#__codelineno-0-134">134</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-108" name="__codelineno-0-108"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-134">134</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-108" name="__codelineno-0-108"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-109" name="__codelineno-0-109"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-110" name="__codelineno-0-110"></a>    <span class="n">model_with_split_points</span><span class="p">:</span> <span class="n">ModelWithSplitPoints</span><span class="p">,</span>
 <a id="__codelineno-0-111" name="__codelineno-0-111"></a>    <span class="n">split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2210,7 +2212,7 @@ If "all", all concepts are interpreted.</p>
 <span class="normal"><a href="#__codelineno-0-250">250</a></span>
 <span class="normal"><a href="#__codelineno-0-251">251</a></span>
 <span class="normal"><a href="#__codelineno-0-252">252</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="k">def</span> <span class="nf">interpret</span><span class="p">(</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="k">def</span><span class="w"> </span><span class="nf">interpret</span><span class="p">(</span>
 <a id="__codelineno-0-207" name="__codelineno-0-207"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="n">interpretation_method</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">BaseConceptInterpretationMethod</span><span class="p">],</span>
 <a id="__codelineno-0-209" name="__codelineno-0-209"></a>    <span class="n">concepts_indices</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;all&quot;</span><span class="p">],</span>
@@ -2390,7 +2392,7 @@ or a dataset.</p>
 <span class="normal"><a href="#__codelineno-0-272">272</a></span>
 <span class="normal"><a href="#__codelineno-0-273">273</a></span>
 <span class="normal"><a href="#__codelineno-0-274">274</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-254" name="__codelineno-0-254"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="k">def</span> <span class="nf">input_concept_attribution</span><span class="p">(</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="k">def</span><span class="w"> </span><span class="nf">input_concept_attribution</span><span class="p">(</span>
 <a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">ModelInputs</span><span class="p">,</span>
 <a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="n">concept</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -2557,7 +2559,7 @@ or a dataset.</p>
 <span class="normal"><a href="#__codelineno-0-387">387</a></span>
 <span class="normal"><a href="#__codelineno-0-388">388</a></span>
 <span class="normal"><a href="#__codelineno-0-389">389</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-369" name="__codelineno-0-369"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="k">def</span> <span class="nf">concept_output_attribution</span><span class="p">(</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="k">def</span><span class="w"> </span><span class="nf">concept_output_attribution</span><span class="p">(</span>
 <a id="__codelineno-0-371" name="__codelineno-0-371"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-372" name="__codelineno-0-372"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">ModelInputs</span><span class="p">,</span>
 <a id="__codelineno-0-373" name="__codelineno-0-373"></a>    <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">,</span>

@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/smoothgrad/">
+      
       
         <link rel="prev" href="../saliency/">
       
@@ -1732,7 +1734,7 @@
 <li>Aggregate the result per token (e.g., by norm with the input) to get the final attribution scores.</li>
 </ul>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">interpreto.attributions</span> <span class="kn">import</span> <span class="n">Smoothgrad</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.attributions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Smoothgrad</span>
 
 <span class="c1"># load model, tokenizer and text</span>
 <span class="n">method</span> <span class="o">=</span> <span class="n">Smoothgrad</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">n_interpolations</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">noise_level</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>

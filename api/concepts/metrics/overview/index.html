@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/overview/">
+      
       
         <link rel="prev" href="../../interpretations/topk_inputs/">
       
@@ -1787,7 +1789,7 @@
 <p>Concept-based metrics evaluate either one of the two first components, or both.
 To evaluate the importance of a concept, attribution metrics are used.</p>
 <p>Each metric takes in different arguments, hence no common API can be defined, apart from the <code>compute</code> method:</p>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">interpreto.concepts.metrics</span> <span class="kn">import</span> <span class="n">MetricClass</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricClass</span>
 
 <span class="n">metric</span> <span class="o">=</span> <span class="n">MetricClass</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 <span class="n">score</span> <span class="o">=</span> <span class="n">metric</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>

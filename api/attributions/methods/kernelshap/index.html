@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernelshap/">
+      
       
       
       
@@ -1650,8 +1652,8 @@
 <p>📰 <a href="https://arxiv.org/abs/1705.07874">Paper</a></p>
 <p>KernelSHAP is a model‑agnostic Shapley value estimator that interprets predictions by computing Shapley values through a weighted linear regression in the space of feature coalitions. By unifying ideas from LIME and Shapley value theory, KernelSHAP provides additive feature attributions with strong consistency guarantees.</p>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">interpreto</span> <span class="kn">import</span> <span class="n">Granularity</span><span class="p">,</span> <span class="n">KernelShap</span>
-<span class="kn">from</span> <span class="nn">interpreto.attributions</span> <span class="kn">import</span> <span class="n">InferenceModes</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">Granularity</span><span class="p">,</span> <span class="n">KernelShap</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.attributions</span><span class="w"> </span><span class="kn">import</span> <span class="n">InferenceModes</span>
 
 <span class="c1"># load model, tokenizer and text</span>
 <span class="n">method</span> <span class="o">=</span> <span class="n">KernelShap</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> 

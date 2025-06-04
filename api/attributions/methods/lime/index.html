@@ -10,6 +10,8 @@
       
       
       
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/lime/">
+      
       
       
       
@@ -1650,8 +1652,8 @@
 <p>📰 <a href="https://dl.acm.org/doi/abs/10.1145/2939672.2939778">Paper</a></p>
 <p>Local Interpretable Model‑agnostic Explanations (LIME) is a perturbation‑based approach that explains individual predictions by fitting a simple, interpretable surrogate model locally around the prediction of interest. By sampling perturbed versions of the input and weighting them by their proximity to the original instance, LIME learns per‑feature importance scores that approximate the behaviour of the underlying black‑box model in that local region.</p>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span> <span class="nn">interpreto</span> <span class="kn">import</span> <span class="n">Granularity</span><span class="p">,</span> <span class="n">Lime</span>
-<span class="kn">from</span> <span class="nn">interpreto.attributions</span> <span class="kn">import</span> <span class="n">InferenceModes</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">Granularity</span><span class="p">,</span> <span class="n">Lime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.attributions</span><span class="w"> </span><span class="kn">import</span> <span class="n">InferenceModes</span>
 
 <span class="c1"># load model, tokenizer and text</span>
 <span class="n">method</span> <span class="o">=</span> <span class="n">Lime</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> 
