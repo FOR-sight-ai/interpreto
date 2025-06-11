@@ -10,28 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/lime/">
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/notebooks/concept_examples/">
       
       
-        <link rel="prev" href="../kernelshap/">
+        <link rel="prev" href="../attribution_walkthrough/">
       
       
-        <link rel="next" href="../integrated_gradients/">
+        <link rel="next" href="../../api/attributions/overview/">
       
       
-      <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
+      <link rel="icon" href="../../assets/img/interpreto_logo.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
     
     
       
-        <title>Lime - Interpreto</title>
+        <title>Training a Concept Explainer - Interpreto</title>
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.342714a4.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
       
         
-        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,17 +50,17 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-      <link rel="stylesheet" href="../../../../assets/css/custom.css">
+      <link rel="stylesheet" href="../../assets/css/custom.css">
     
-      <link rel="stylesheet" href="../../../../css/ansi-colours.css">
+      <link rel="stylesheet" href="../../css/ansi-colours.css">
     
-      <link rel="stylesheet" href="../../../../css/jupyter-cells.css">
+      <link rel="stylesheet" href="../../css/jupyter-cells.css">
     
-      <link rel="stylesheet" href="../../../../css/pandas-dataframe.css">
+      <link rel="stylesheet" href="../../css/pandas-dataframe.css">
     
-    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#lime" class="md-skip">
+        <a href="#examples-of-how-to-build-concept-based-explanations" class="md-skip">
           Skip to content
         </a>
       
@@ -102,9 +102,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../../.." title="Interpreto" class="md-header__button md-logo" aria-label="Interpreto" data-md-component="logo">
+    <a href="../.." title="Interpreto" class="md-header__button md-logo" aria-label="Interpreto" data-md-component="logo">
       
-  <img src="../../../../assets/img/interpreto_logo.png" alt="logo">
+  <img src="../../assets/img/interpreto_logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -121,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Lime
+              Training a Concept Explainer
             
           </span>
         </div>
@@ -233,7 +233,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../.." class="md-tabs__link">
+      <a href="../.." class="md-tabs__link">
         
   
   
@@ -250,11 +250,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../../../notebooks/attribution_walkthrough/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../attribution_walkthrough/" class="md-tabs__link">
           
   
   
@@ -272,8 +274,6 @@
   
   
   
-    
-  
   
     
     
@@ -281,13 +281,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../overview/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../api/attributions/overview/" class="md-tabs__link">
           
   
   
@@ -310,7 +308,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../../roadmap/" class="md-tabs__link">
+      <a href="../../roadmap/" class="md-tabs__link">
         
   
   
@@ -329,7 +327,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../../contributing/" class="md-tabs__link">
+      <a href="../../contributing/" class="md-tabs__link">
         
   
   
@@ -348,7 +346,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../../about/" class="md-tabs__link">
+      <a href="../../about/" class="md-tabs__link">
         
   
   
@@ -367,7 +365,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../../../citation/" class="md-tabs__link">
+      <a href="../../citation/" class="md-tabs__link">
         
   
   
@@ -408,9 +406,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../../.." title="Interpreto" class="md-nav__button md-logo" aria-label="Interpreto" data-md-component="logo">
+    <a href="../.." title="Interpreto" class="md-nav__button md-logo" aria-label="Interpreto" data-md-component="logo">
       
-  <img src="../../../../assets/img/interpreto_logo.png" alt="logo">
+  <img src="../../assets/img/interpreto_logo.png" alt="logo">
 
     </a>
     Interpreto
@@ -437,7 +435,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../.." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -448,106 +446,6 @@
   
 
       </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    Tutorials
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            Tutorials
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../../notebooks/attribution_walkthrough/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Use Attribution Methods
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../../../notebooks/concept_examples/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Training a Concept Explainer
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -581,15 +479,15 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
-    API Reference
+    Tutorials
     
   </span>
   
@@ -597,61 +495,10 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
-            API Reference
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    Attribution Explainers
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3_1">
-            <span class="md-nav__icon md-icon"></span>
-            Attribution Explainers
+            Tutorials
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -662,96 +509,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../../overview/" class="md-nav__link">
+      <a href="../attribution_walkthrough/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-      
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    Methods
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3_1_2">
-            <span class="md-nav__icon md-icon"></span>
-            Methods
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../kernelshap/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
-  
-  <span class="md-ellipsis">
-    KernelShap
+    Use Attribution Methods
     
   </span>
   
@@ -782,10 +545,8 @@
           
   
   
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
-  
   <span class="md-ellipsis">
-    Lime
+    Training a Concept Explainer
     
   </span>
   
@@ -797,10 +558,8 @@
         
   
   
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
-  
   <span class="md-ellipsis">
-    Lime
+    Training a Concept Explainer
     
   </span>
   
@@ -823,99 +582,36 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime" class="md-nav__link">
+  <a href="#split-the-model-using-the-modelwithsplitpoints-class" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Lime
+      Split the model using the ModelWithSplitPoints class
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(model)" class="md-nav__link">
+  <a href="#load-the-dataset-and-compute-activations" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model
+      Load the dataset and compute activations
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(tokenizer)" class="md-nav__link">
+  <a href="#create-and-fit-the-concept-explainer" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;tokenizer
+      Create and fit the concept explainer
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(batch_size)" class="md-nav__link">
+  <a href="#interpret-the-concepts" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;batch_size
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(granularity)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(inference_mode)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;inference_mode
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(n_perturbations)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;n_perturbations
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(perturb_probability)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;perturb_probability
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(distance_function)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;distance_function
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(kernel_width)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;kernel_width
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(device)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
+      Interpret the concepts
     </span>
   </a>
   
@@ -930,6 +626,109 @@
 
               
             
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Attribution Explainers
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            Attribution Explainers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
               
                 
   
@@ -937,7 +736,137 @@
   
   
     <li class="md-nav__item">
-      <a href="../integrated_gradients/" class="md-nav__link">
+      <a href="../../api/attributions/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Methods
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            Methods
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/kernelshap/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    KernelShap
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/lime/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    Lime
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/integrated_gradients/" class="md-nav__link">
         
   
   
@@ -962,7 +891,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../occlusion/" class="md-nav__link">
+      <a href="../../api/attributions/methods/occlusion/" class="md-nav__link">
         
   
   
@@ -987,7 +916,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../saliency/" class="md-nav__link">
+      <a href="../../api/attributions/methods/saliency/" class="md-nav__link">
         
   
   
@@ -1012,7 +941,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../smoothgrad/" class="md-nav__link">
+      <a href="../../api/attributions/methods/smoothgrad/" class="md-nav__link">
         
   
   
@@ -1037,7 +966,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sobol/" class="md-nav__link">
+      <a href="../../api/attributions/methods/sobol/" class="md-nav__link">
         
   
   
@@ -1115,7 +1044,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../metrics/overview/" class="md-nav__link">
+      <a href="../../api/attributions/metrics/overview/" class="md-nav__link">
         
   
   
@@ -1207,7 +1136,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/overview/" class="md-nav__link">
+      <a href="../../api/concepts/overview/" class="md-nav__link">
         
   
   
@@ -1230,7 +1159,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../commons/model_wrapping/" class="md-nav__link">
+      <a href="../../api/commons/model_wrapping/" class="md-nav__link">
         
   
   
@@ -1308,7 +1237,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/methods/base/" class="md-nav__link">
+      <a href="../../api/concepts/methods/base/" class="md-nav__link">
         
   
   
@@ -1333,7 +1262,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/methods/cockatiel/" class="md-nav__link">
+      <a href="../../api/concepts/methods/cockatiel/" class="md-nav__link">
         
   
   
@@ -1358,7 +1287,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/methods/neurons_as_concepts/" class="md-nav__link">
+      <a href="../../api/concepts/methods/neurons_as_concepts/" class="md-nav__link">
         
   
   
@@ -1383,7 +1312,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/methods/optim/" class="md-nav__link">
+      <a href="../../api/concepts/methods/optim/" class="md-nav__link">
         
   
   
@@ -1408,7 +1337,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/methods/sae/" class="md-nav__link">
+      <a href="../../api/concepts/methods/sae/" class="md-nav__link">
         
   
   
@@ -1490,7 +1419,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/interpretations/overview/" class="md-nav__link">
+      <a href="../../api/concepts/interpretations/overview/" class="md-nav__link">
         
   
   
@@ -1515,7 +1444,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/interpretations/base/" class="md-nav__link">
+      <a href="../../api/concepts/interpretations/base/" class="md-nav__link">
         
   
   
@@ -1540,7 +1469,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/interpretations/topk_inputs/" class="md-nav__link">
+      <a href="../../api/concepts/interpretations/topk_inputs/" class="md-nav__link">
         
   
   
@@ -1624,7 +1553,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/overview/" class="md-nav__link">
+      <a href="../../api/concepts/metrics/overview/" class="md-nav__link">
         
   
   
@@ -1649,7 +1578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/dictionary_metrics/" class="md-nav__link">
+      <a href="../../api/concepts/metrics/dictionary_metrics/" class="md-nav__link">
         
   
   
@@ -1674,7 +1603,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/reconstruction_metrics/" class="md-nav__link">
+      <a href="../../api/concepts/metrics/reconstruction_metrics/" class="md-nav__link">
         
   
   
@@ -1699,7 +1628,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/sparsity_metrics/" class="md-nav__link">
+      <a href="../../api/concepts/metrics/sparsity_metrics/" class="md-nav__link">
         
   
   
@@ -1747,7 +1676,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../roadmap/" class="md-nav__link">
+      <a href="../../roadmap/" class="md-nav__link">
         
   
   
@@ -1769,7 +1698,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   
@@ -1791,7 +1720,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../about/" class="md-nav__link">
+      <a href="../../about/" class="md-nav__link">
         
   
   
@@ -1813,7 +1742,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../citation/" class="md-nav__link">
+      <a href="../../citation/" class="md-nav__link">
         
   
   
@@ -1855,99 +1784,36 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime" class="md-nav__link">
+  <a href="#split-the-model-using-the-modelwithsplitpoints-class" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;Lime
+      Split the model using the ModelWithSplitPoints class
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(model)" class="md-nav__link">
+  <a href="#load-the-dataset-and-compute-activations" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model
+      Load the dataset and compute activations
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(tokenizer)" class="md-nav__link">
+  <a href="#create-and-fit-the-concept-explainer" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;tokenizer
+      Create and fit the concept explainer
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(batch_size)" class="md-nav__link">
+  <a href="#interpret-the-concepts" class="md-nav__link">
     <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;batch_size
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(granularity)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(inference_mode)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;inference_mode
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(n_perturbations)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;n_perturbations
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(perturb_probability)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;perturb_probability
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(distance_function)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;distance_function
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(kernel_width)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;kernel_width
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.lime.Lime(device)" class="md-nav__link">
-    <span class="md-ellipsis">
-      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
+      Interpret the concepts
     </span>
   </a>
   
@@ -1972,243 +1838,236 @@
   
 
 
-<h1 id="lime">LIME<a class="headerlink" href="#lime" title="Permanent link">&para;</a></h1>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script>
+(function() {
+  function addWidgetsRenderer() {
+    var requireJsScript = document.createElement('script');
+    requireJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js';
+
+    var mimeElement = document.querySelector('script[type="application/vnd.jupyter.widget-view+json"]');
+    var jupyterWidgetsScript = document.createElement('script');
+    var widgetRendererSrc = 'https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js';
+    var widgetState;
+
+    // Fallback for older version:
+    try {
+      widgetState = mimeElement && JSON.parse(mimeElement.innerHTML);
+
+      if (widgetState && (widgetState.version_major < 2 || !widgetState.version_major)) {
+        widgetRendererSrc = 'jupyter-js-widgets@*/dist/embed.js';
+      }
+    } catch(e) {}
+
+    jupyterWidgetsScript.src = widgetRendererSrc;
+
+    document.body.appendChild(requireJsScript);
+    document.body.appendChild(jupyterWidgetsScript);
+  }
+
+  document.addEventListener('DOMContentLoaded', addWidgetsRenderer);
+}());
+</script>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h1 id="examples-of-how-to-build-concept-based-explanations">Examples of how to build concept-based explanations<a class="headerlink" href="#examples-of-how-to-build-concept-based-explanations" title="Permanent link">&para;</a></h1>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Load the model and list modules to find where to split it.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
 
 
-<div class="doc doc-object doc-class">
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForCausalLM</span>
 
+<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;gpt2&quot;</span><span class="p">)</span>
 
-
-<a id="interpreto.attributions.methods.lime.Lime"></a>
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="interpreto.attributions.base.MultitaskExplainerMixin">MultitaskExplainerMixin</span></code>, <code><span title="interpreto.attributions.base.AttributionExplainer">AttributionExplainer</span></code></p>
-
-
-        <p>Local Interpretable Model-agnostic Explanations (LIME) is a perturbation‑based approach that explains individual predictions by
-fitting a simple, interpretable surrogate model locally around the prediction
-of interest. By sampling perturbed versions of the input and weighting them by
-their proximity to the original instance, LIME learns per‑feature importance scores
-that approximate the behaviour of the underlying black‑box model in that local region.</p>
-<p><strong>Reference:</strong>
-Ribeiro et al. (2016). <em>"Why Should I Trust You?": Explaining the Predictions of Any Classifier.</em>
-<a href="https://arxiv.org/abs/1602.04938">Paper</a></p>
-
-
-<p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">Granularity</span><span class="p">,</span> <span class="n">Lime</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.attributions</span><span class="w"> </span><span class="kn">import</span> <span class="n">InferenceModes</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">method</span> <span class="o">=</span> <span class="n">Lime</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span>              <span class="n">inference_mode</span><span class="o">=</span><span class="n">InferenceModes</span><span class="o">.</span><span class="n">LOG_SOFTMAX</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span>              <span class="n">n_perturbations</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span>              <span class="n">granularity</span><span class="o">=</span><span class="n">Granularity</span><span class="o">.</span><span class="n">WORD</span><span class="p">,</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">&gt;&gt;&gt; </span>              <span class="n">distance_function</span><span class="o">=</span><span class="n">Lime</span><span class="o">.</span><span class="n">distance_functions</span><span class="o">.</span><span class="n">HAMMING</span><span class="p">)</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">explanations</span> <span class="o">=</span> <span class="n">method</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">named_children</span><span class="p">()))</span>
+<span class="k">del</span> <span class="n">model</span>
 </code></pre></div>
 
 
 
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(model)" class="doc doc-heading doc-heading-parameter">                  <code>model</code>
-<a href="#interpreto.attributions.methods.lime.Lime(model)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="transformers.PreTrainedModel">PreTrainedModel</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>model to explain</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(tokenizer)" class="doc doc-heading doc-heading-parameter">                  <code>tokenizer</code>
-<a href="#interpreto.attributions.methods.lime.Lime(tokenizer)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="transformers.PreTrainedTokenizer">PreTrainedTokenizer</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Hugging Face tokenizer associated with the model</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(batch_size)" class="doc doc-heading doc-heading-parameter">                  <code>batch_size</code>
-<a href="#interpreto.attributions.methods.lime.Lime(batch_size)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>batch size for the attribution method</p>
-              </div>
-            </td>
-            <td>
-                  <code>4</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(granularity)" class="doc doc-heading doc-heading-parameter">                  <code>granularity</code>
-<a href="#interpreto.attributions.methods.lime.Lime(granularity)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="interpreto.commons.Granularity">Granularity</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>granularity level of the perturbations (token, word, sentence, etc.)</p>
-              </div>
-            </td>
-            <td>
-                  <code><span title="interpreto.commons.Granularity.WORD">WORD</span></code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(inference_mode)" class="doc doc-heading doc-heading-parameter">                  <code>inference_mode</code>
-<a href="#interpreto.attributions.methods.lime.Lime(inference_mode)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="torch.Tensor">Tensor</span>], <span title="torch.Tensor">Tensor</span>]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The mode used for inference.
-It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.</p>
-              </div>
-            </td>
-            <td>
-                  <code><span title="interpreto.attributions.base.InferenceModes.LOGITS">LOGITS</span></code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(n_perturbations)" class="doc doc-heading doc-heading-parameter">                  <code>n_perturbations</code>
-<a href="#interpreto.attributions.methods.lime.Lime(n_perturbations)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>the number of perturbations to generate.</p>
-              </div>
-            </td>
-            <td>
-                  <code>100</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(perturb_probability)" class="doc doc-heading doc-heading-parameter">                  <code>perturb_probability</code>
-<a href="#interpreto.attributions.methods.lime.Lime(perturb_probability)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="float">float</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>probability of perturbation.</p>
-              </div>
-            </td>
-            <td>
-                  <code>0.5</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(distance_function)" class="doc doc-heading doc-heading-parameter">                  <code>distance_function</code>
-<a href="#interpreto.attributions.methods.lime.Lime(distance_function)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="interpreto.attributions.aggregations.linear_regression_aggregation.DistancesFromMaskProtocol">DistancesFromMaskProtocol</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>distance function used to compute weights of perturbed samples in the linear model training.</p>
-              </div>
-            </td>
-            <td>
-                  <code><span title="interpreto.attributions.aggregations.linear_regression_aggregation.DistancesFromMask.COSINE">COSINE</span></code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(kernel_width)" class="doc doc-heading doc-heading-parameter">                  <code>kernel_width</code>
-<a href="#interpreto.attributions.methods.lime.Lime(kernel_width)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="float">float</span> | <span title="collections.abc.Callable">Callable</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>kernel width used in the <code>similarity_kernel</code>.
-If None, the kernel width is computed using the <code>default_kernel_width_fn</code> function.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.lime.Lime(device)" class="doc doc-heading doc-heading-parameter">                  <code>device</code>
-<a href="#interpreto.attributions.methods.lime.Lime(device)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="torch.device">device</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>device on which the attribution method will be run</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="split-the-model-using-the-modelwithsplitpoints-class">Split the model using the <code>ModelWithSplitPoints</code> class<a class="headerlink" href="#split-the-model-using-the-modelwithsplitpoints-class" title="Permanent link">&para;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelWithSplitPoints</span>
+
+<span class="n">splitted_model</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="p">(</span>
+    <span class="n">model_or_repo_id</span><span class="o">=</span><span class="s2">&quot;gpt2&quot;</span><span class="p">,</span>
+    <span class="n">split_points</span><span class="o">=</span><span class="s2">&quot;transformer.h.1.mlp&quot;</span><span class="p">,</span>
+    <span class="n">model_autoclass</span><span class="o">=</span><span class="n">AutoModelForCausalLM</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
 
 
 
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="load-the-dataset-and-compute-activations">Load the dataset and compute activations<a class="headerlink" href="#load-the-dataset-and-compute-activations" title="Permanent link">&para;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dataset</span>
+
+<span class="n">rotten_tomatoes</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;cornell-movie-review-data/rotten_tomatoes&quot;</span><span class="p">)[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">]</span>
+
+<span class="n">activations</span> <span class="o">=</span> <span class="n">splitted_model</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">rotten_tomatoes</span><span class="p">[</span><span class="mi">1000</span><span class="p">:])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</code></pre></div>
 
 
 
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="create-and-fit-the-concept-explainer">Create and fit the concept explainer<a class="headerlink" href="#create-and-fit-the-concept-explainer" title="Permanent link">&para;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts</span><span class="w"> </span><span class="kn">import</span> <span class="n">ICAConcepts</span>
+
+<span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">splitted_model</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="n">concept_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
+</code></pre></div>
 
 
 
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="interpret-the-concepts">Interpret the concepts<a class="headerlink" href="#interpret-the-concepts" title="Permanent link">&para;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
 
-  <div class="doc doc-children">
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.interpretations</span><span class="w"> </span><span class="kn">import</span> <span class="n">Granularities</span><span class="p">,</span> <span class="n">InterpretationSources</span><span class="p">,</span> <span class="n">TopKInputs</span>
+
+<span class="n">some_words</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;excellent&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;amazing&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;fantastic&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;outstanding&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;great&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;perfect&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;wonderful&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;superb&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;love&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;loved&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;satisfied&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;recommend&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;best&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;delightful&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pleasant&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enjoyed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;happy&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;awesome&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;brilliant&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;incredible&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;flawless&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;impressive&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;top-notch&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;well-done&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;five stars&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;worth it&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;will buy again&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;high quality&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;fast delivery&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;friendlyterrible&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;awful&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bad&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;poor&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;disappointing&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;hate&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;horrible&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;worst&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;boring&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rude&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;unsatisfied&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;never again&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;waste&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;problem&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;issue&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;slow&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cheap&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;low quality&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;broken&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;not recommended&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;annoying&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;frustrating&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;one star&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;unacceptable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;defective&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;dirty&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;late delivery&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;noisy&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;difficult&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;didn&#39;t work&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">interpretations</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span>
+    <span class="n">TopKInputs</span><span class="p">,</span>
+    <span class="n">concepts_indices</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span>
+    <span class="n">source</span><span class="o">=</span><span class="n">InterpretationSources</span><span class="o">.</span><span class="n">INPUTS</span><span class="p">,</span>
+    <span class="n">granularity</span><span class="o">=</span><span class="n">Granularities</span><span class="o">.</span><span class="n">TOKENS</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">some_words</span><span class="p">,</span>
+    <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
 
 
 
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="k">for</span> <span class="n">concept_id</span><span class="p">,</span> <span class="n">words_importance</span> <span class="ow">in</span> <span class="n">interpretations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concept </span><span class="si">{</span><span class="n">concept_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">words_importance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
 
 
 
-
-
-
-
-
-  </div>
-
-    </div>
-
+</div>
 </div>
 
 
@@ -2216,9 +2075,6 @@ If None, the kernel width is computed using the <code>default_kernel_width_fn</c
 
 
 
-
-  
-  
 
 
 
@@ -2250,7 +2106,7 @@ If None, the kernel width is computed using the <code>default_kernel_width_fn</c
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../kernelshap/" class="md-footer__link md-footer__link--prev" aria-label="Previous: KernelShap">
+          <a href="../attribution_walkthrough/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Use Attribution Methods">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2260,20 +2116,20 @@ If None, the kernel width is computed using the <code>default_kernel_width_fn</c
                 Previous
               </span>
               <div class="md-ellipsis">
-                KernelShap
+                Use Attribution Methods
               </div>
             </div>
           </a>
         
         
           
-          <a href="../integrated_gradients/" class="md-footer__link md-footer__link--next" aria-label="Next: IntegratedGradients">
+          <a href="../../api/attributions/overview/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                IntegratedGradients
+                Overview
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2347,16 +2203,16 @@ If None, the kernel width is computed using the <code>default_kernel_width_fn</c
     
     
       
-      <script id="__config" type="application/json">{"base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
       
         <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
-        <script src="../../../../assets/js/custom.js"></script>
+        <script src="../../assets/js/custom.js"></script>
       
     
   </body>

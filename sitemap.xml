@@ -2,118 +2,126 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/about/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/citation/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/contributing/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/roadmap/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/overview/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradients/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernelshap/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/lime/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/occlusion/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/saliency/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/smoothgrad/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/sobol/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
+    </url>
+    <url>
+         <loc>https://for-sight-ai.github.io/interpreto/api/attributions/metrics/overview/</loc>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/commons/model_wrapping/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/overview/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretation/overview/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/base/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/overview/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/methods/base/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/methods/cockatiel/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/dictionary_metrics/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/overview/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <lastmod>2025-06-11</lastmod>
     </url>
     <url>
-         <loc>https://for-sight-ai.github.io/interpreto/api/evaluation_metrics/overview/</loc>
-         <lastmod>2025-06-10</lastmod>
+         <loc>https://for-sight-ai.github.io/interpreto/notebooks/attribution_walkthrough/</loc>
+         <lastmod>2025-06-11</lastmod>
+    </url>
+    <url>
+         <loc>https://for-sight-ai.github.io/interpreto/notebooks/concept_examples/</loc>
+         <lastmod>2025-06-11</lastmod>
     </url>
 </urlset>
