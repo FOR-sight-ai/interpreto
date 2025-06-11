@@ -48,4 +48,4 @@ We will introduce a novel interpretation method for concept vectors using Large 
 
 ## 🙌 Contribute
 
-Want to help shape the future of Interpreto? Check out our [contributing guide](CONTRIBUTING.md) and feel free to open an issue or pull request!
+Want to help shape the future of Interpreto? Check out our [contributing guide](contributing.md) and feel free to open an issue or pull request!
