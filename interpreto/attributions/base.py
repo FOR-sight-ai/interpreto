@@ -71,9 +71,15 @@ class AttributionOutput:
     Class to store the output of an attribution method.
     """
 
-    __slots__ = ("attributions", "elements", "model_task")
+    __slots__ = ("attributions", "elements", "model_task", "classes")
 
-    def __init__(self, attributions: SingleAttribution, elements: list[str] | torch.Tensor, model_task: str):
+    def __init__(
+        self,
+        attributions: SingleAttribution,
+        elements: list[str] | torch.Tensor,
+        model_task: str,
+        classes: torch.Tensor | None = None,
+    ):
         """
         Initializes an AttributionOutput instance.
 
@@ -87,25 +93,30 @@ class AttributionOutput:
                 - `l` represents the number of elements for which attribution is computed (for NLP tasks: can be the total sequence length).
                 - Shapes depend on the task:
                     - Classification (single class): `(l)`
-                    - Classification (all classes): `(c, l)`, where `c` is the number of classes.
+                    - Classification (multi classes): `(c, l)`, where `c` is the number of classes.
                     - Generative models: `(l_g, l)`, where `l_g` is the length of the generated part.
                         - For non-generated elements, there are `l_g` attribution scores.
                         - For generated elements, scores are zero for previously generated tokens.
                     - Token classification: `(l_t, l)`, where `l_t` is the number of token classes. When the tokens are disturbed, l = l_t.
             elements (Iterable[list[str]] | Iterable[torch.Tensor]): A list or tensor representing the elements for which attributions are computed.
                 - These elements can be tokens, words, sentences, or tensors of size `l`.
-            model_task (str): A string representing the task of the model explained, such as "classification_single_class", "classification_multi_classes", or "generation".
+            model_task (str): A string representing the task of the model explained, such as "single-class classification", "multi-class classification", or "generation".
+            classes (torch.Tensor | None): Optional tensor of class labels.
+                - For single-class classification: tensor of shape `(1,)`
+                - For multi-class classification: tensor of shape `(c,)` where `c` is the number of classes
         """
         self.attributions = attributions
         self.elements = elements
         self.model_task = model_task
+        self.classes = classes
 
     def __repr__(self):
         return (
             f"AttributionOutput("
             f"attributions={repr(self.attributions)}, "
             f"elements={repr(self.elements)}, "
-            f"model_task='{self.model_task}')"
+            f"model_task='{self.model_task}', "
+            f"classes={repr(self.classes)})"
         )
 
     def __str__(self):
@@ -113,7 +124,8 @@ class AttributionOutput:
             f"AttributionOutput("
             f"attributions={self.attributions}, "
             f"elements={self.elements}, "
-            f"model_task='{self.model_task}')"
+            f"model_task='{self.model_task}', "
+            f"classes={self.classes})"
         )
 
 
@@ -335,9 +347,10 @@ class AttributionExplainer:
         # If targets are not provided, create them from model_inputs_to_explain.
         model_inputs_to_explain: Iterable[TensorMapping]
         sanitized_targets: Iterable[Float[torch.Tensor, "n t"]]
-        model_inputs_to_explain, sanitized_targets = self.process_inputs_to_explain_and_targets(
+        model_inputs_to_explain, sanitized_targets_gen = self.process_inputs_to_explain_and_targets(
             sanitized_model_inputs, targets, **model_kwargs
         )
+        sanitized_targets = list(sanitized_targets_gen)
 
         # Decompose each input for the desired granularity level (tokens, words, sentences...)
         decompositions = [Granularity.get_decomposition(t, self.granularity) for t in model_inputs_to_explain]
@@ -362,7 +375,7 @@ class AttributionExplainer:
         )
 
         results = []
-        for contribution, decomposition in zip(contributions, decompositions, strict=True):
+        for contribution, decomposition, target in zip(contributions, decompositions, sanitized_targets, strict=True):
             # Create AttributionOutput objects with the contributions and decoded token sequences for each element:
             elements = [
                 self.tokenizer.decode(token_ids, skip_special_tokens=self.granularity is not Granularity.ALL_TOKENS)
@@ -370,17 +383,19 @@ class AttributionExplainer:
             ]
             if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
                 model_task_str = "generation"
+                classes = None
             elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
+                classes = target.squeeze().detach().cpu()
                 if contribution.dim() == 1:
-                    model_task_str = "classification_single_class"
+                    model_task_str = "single-class classification"
                 else:
-                    model_task_str = "classification_multi_classes"
+                    model_task_str = "multi-class classification"
             else:
                 raise NotImplementedError(
                     f"Model type {self.inference_wrapper.model.__class__.__name__} not supported for AttributionExplainer."
                 )
             attribution_output = AttributionOutput(
-                attributions=contribution, elements=elements, model_task=model_task_str
+                attributions=contribution, elements=elements, model_task=model_task_str, classes=classes
             )
             results.append(attribution_output)
         return results
