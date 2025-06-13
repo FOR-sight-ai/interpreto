@@ -71,13 +71,9 @@ class AttributionOutput:
     Class to store the output of an attribution method.
     """
 
-    __slots__ = ("attributions", "elements")
+    __slots__ = ("attributions", "elements", "model_task")
 
-    def __init__(
-        self,
-        attributions: SingleAttribution,
-        elements: list[str] | torch.Tensor | None = None,
-    ):
+    def __init__(self, attributions: SingleAttribution, elements: list[str] | torch.Tensor, model_task: str):
         """
         Initializes an AttributionOutput instance.
 
@@ -96,17 +92,29 @@ class AttributionOutput:
                         - For non-generated elements, there are `l_g` attribution scores.
                         - For generated elements, scores are zero for previously generated tokens.
                     - Token classification: `(l_t, l)`, where `l_t` is the number of token classes. When the tokens are disturbed, l = l_t.
-            elements (Iterable[list[str]] | Iterable[torch.Tensor] | None, optional): A list or tensor representing the elements for which attributions are computed.
+            elements (Iterable[list[str]] | Iterable[torch.Tensor]): A list or tensor representing the elements for which attributions are computed.
                 - These elements can be tokens, words, sentences, or tensors of size `l`.
+            model_task (str): A string representing the task of the model explained, such as "classification_single_class", "classification_multi_classes", or "generation".
         """
         self.attributions = attributions
         self.elements = elements
+        self.model_task = model_task
 
     def __repr__(self):
-        return f"AttributionOutput(attributions={repr(self.attributions)}, elements={repr(self.elements)})"
+        return (
+            f"AttributionOutput("
+            f"attributions={repr(self.attributions)}, "
+            f"elements={repr(self.elements)}, "
+            f"model_task='{self.model_task}')"
+        )
 
     def __str__(self):
-        return f"AttributionOutput(attributions={self.attributions}, elements={self.elements})"
+        return (
+            f"AttributionOutput("
+            f"attributions={self.attributions}, "
+            f"elements={self.elements}, "
+            f"model_task='{self.model_task}')"
+        )
 
 
 class AttributionExplainer:
@@ -353,19 +361,29 @@ class AttributionExplainer:
             for score, mask in zip(scores, mask_generator, strict=True)
         )
 
-        # Create and return AttributionOutput objects with the contributions and decoded token sequences:
-        return [
-            AttributionOutput(
-                c,
-                [
-                    self.tokenizer.decode(
-                        token_ids, skip_special_tokens=self.granularity is not Granularity.ALL_TOKENS
-                    )
-                    for token_ids in d[0]
-                ],
+        results = []
+        for contribution, decomposition in zip(contributions, decompositions, strict=True):
+            # Create AttributionOutput objects with the contributions and decoded token sequences for each element:
+            elements = [
+                self.tokenizer.decode(token_ids, skip_special_tokens=self.granularity is not Granularity.ALL_TOKENS)
+                for token_ids in decomposition[0]
+            ]
+            if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
+                model_task_str = "generation"
+            elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
+                if contribution.dim() == 1:
+                    model_task_str = "classification_single_class"
+                else:
+                    model_task_str = "classification_multi_classes"
+            else:
+                raise NotImplementedError(
+                    f"Model type {self.inference_wrapper.model.__class__.__name__} not supported for AttributionExplainer."
+                )
+            attribution_output = AttributionOutput(
+                attributions=contribution, elements=elements, model_task=model_task_str
             )
-            for c, d in zip(contributions, decompositions, strict=True)
-        ]
+            results.append(attribution_output)
+        return results
 
     def __call__(self, model_inputs: ModelInputs, targets=None, **kwargs) -> Iterable[AttributionOutput]:
         """
