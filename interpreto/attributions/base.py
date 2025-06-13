@@ -102,8 +102,8 @@ class AttributionOutput:
                 - These elements can be tokens, words, sentences, or tensors of size `l`.
             model_task (str): A string representing the task of the model explained, such as "single-class classification", "multi-class classification", or "generation".
             classes (torch.Tensor | None): Optional tensor of class labels.
-                - For single-class classification: tensor of shape `(1,)`
-                - For multi-class classification: tensor of shape `(c,)` where `c` is the number of classes
+                - For single-class classification: tensor of shape `(1)`
+                - For multi-class classification: tensor of shape `(c)` where `c` is the number of classes
         """
         self.attributions = attributions
         self.elements = elements
@@ -385,7 +385,7 @@ class AttributionExplainer:
                 model_task_str = "generation"
                 classes = None
             elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
-                classes = target.squeeze().detach().cpu()
+                classes = target
                 if contribution.dim() == 1:
                     model_task_str = "single-class classification"
                 else:
