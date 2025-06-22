@@ -1469,10 +1469,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1506,56 +1502,6 @@
             Concept Interpretations
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="api/concepts/interpretations/overview/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 9h16v2H4zm0 4h10v2H4z"/></svg>
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="api/concepts/interpretations/base/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 6H2v12h2m7-12-6 6 6 6 1.41-1.42L8.83 13H23v-2H8.83l3.58-3.59z"/></svg>
-  
-  <span class="md-ellipsis">
-    Base Classes
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -2039,105 +1985,136 @@
 <h2 id="quick-start">🚀 Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <p>The library should be available on PyPI soon. Try <code>pip install interpreto</code> to install it.</p>
 <p>Otherwise, you can clone the repository and install it locally with <code>pip install -e .</code>.</p>
-<p>And any case, checkout the <a href="https://github.com/FOR-sight-ai/interpreto/tree/main/attribution_walkthrough.ipynb">attribution walkthrough</a> to get started!</p>
+<p>And any case, checkout the <a href="https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_walkthrough.ipynb">attribution walkthrough</a> and the <a href="https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/concept_examples.ipynb">concept example</a> to get started!</p>
 <h2 id="whats-included">📦 What's Included<a class="headerlink" href="#whats-included" title="Permanent link">&para;</a></h2>
 <p>Interpreto 🪄 provides a modular framework encompassing Attribution Methods, Concept-Based Methods, and Evaluation Metrics.</p>
 <h3 id="attribution-methods">Attribution Methods<a class="headerlink" href="#attribution-methods" title="Permanent link">&para;</a></h3>
-<details>
+<details class="abstract">
 <summary>Interpreto includes both inference-based and gradient-based attribution methods:</summary>
-
-*We currently have these methods available:*
-
-**Inference-based Methods:**
-
-- Occlusion: [Zeiler and Fergus, 2014. Visualizing and understanding convolutional networks](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
-- LIME: [Ribeiro et al. 2013, "Why should i trust you?" explaining the predictions of any classifier](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
-- Kernel SHAP: [Lundberg and Lee, 2017, A Unified Approach to Interpreting Model Predictions](https://arxiv.org/abs/1705.07874).
-- Sobol Attribution: [Fel et al. 2021, Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
-
-**Gradient based methods:**
-
-- Saliency: [Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps](https://arxiv.org/abs/1312.6034).
-- Integrated Gradient: [Sundararajan et al. 2017, Axiomatic Attribution for Deep Networks](http://proceedings.mlr.press/v70/sundararajan17a.html).
-- SmoothGrad: [Smilkov et al. 2017, SmoothGrad: removing noise by adding noise](https://arxiv.org/abs/1706.03825)
-
-*We will be adding these methods soon (Gradient based methods):*
-
-- InputxGradient: [Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps](https://arxiv.org/abs/1312.6034).
-- DeepLift: [Shrikumar et al. 2017, Learning Important Features Through Propagating Activation Differences](http://proceedings.mlr.press/v70/shrikumar17a).
-- VarGrad: [Richter et al. 2020, VarGrad: A Low-Variance Gradient Estimator for Variational Inference](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
-
+<p><strong>Inference-based Methods:</strong></p>
+<ul>
+<li>Occlusion: <a href="https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53">Zeiler and Fergus, 2014. Visualizing and understanding convolutional networks</a>.</li>
+<li>LIME: <a href="https://dl.acm.org/doi/abs/10.1145/2939672.2939778">Ribeiro et al. 2013, "Why should i trust you?" explaining the predictions of any classifier</a>.</li>
+<li>Kernel SHAP: <a href="https://arxiv.org/abs/1705.07874">Lundberg and Lee, 2017, A Unified Approach to Interpreting Model Predictions</a>.</li>
+<li>Sobol Attribution: <a href="https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html">Fel et al. 2021, Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis</a>.</li>
+</ul>
+<p><strong>Gradient based methods:</strong></p>
+<ul>
+<li>Saliency: <a href="https://arxiv.org/abs/1312.6034">Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps</a>.</li>
+<li>Integrated Gradient: <a href="http://proceedings.mlr.press/v70/sundararajan17a.html">Sundararajan et al. 2017, Axiomatic Attribution for Deep Networks</a>.</li>
+<li>SmoothGrad: <a href="https://arxiv.org/abs/1706.03825">Smilkov et al. 2017, SmoothGrad: removing noise by adding noise</a></li>
+</ul>
+<p>Will be implemented soon.</p>
+<ul>
+<li>InputxGradient: <a href="https://arxiv.org/abs/1312.6034">Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps</a>.</li>
+<li>DeepLift: <a href="http://proceedings.mlr.press/v70/shrikumar17a">Shrikumar et al. 2017, Learning Important Features Through Propagating Activation Differences</a>.</li>
+<li>VarGrad: <a href="https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html">Richter et al. 2020, VarGrad: A Low-Variance Gradient Estimator for Variational Inference</a></li>
+</ul>
 </details>
-
 <h3 id="concept-based-methods">Concept-Based Methods<a class="headerlink" href="#concept-based-methods" title="Permanent link">&para;</a></h3>
-<details>
-
-<summary> Concept-based explanations aim to provide high-level interpretations of latent model representations. </summary>
-
-Interpreto generalizes these methods through three core steps:
-
-1. Concept Discovery (e.g., from latent embeddings)
-2. Concept Interpretation (mapping discovered concepts to human-understandable elements)
-3. Concept-to-Output Attribution (assessing concept relevance to model outputs)
-
-**Concept Discovery Techniques** (via [Overcomplete](https://github.com/KempnerInstitute/overcomplete)):
-
-- NMF, Semi-NMF, ConvexNMF
-- ICA, SVD, PCA
-- SAE variants (Vanilla SAE, TopK SAE, JumpReLU SAE, BatchTopK SAE)
-
-**Available Concept Interpretation Techniques:**
-
-- Top-k tokens from tokenizer vocabulary
-
-*Concept Interpretation Techniques Added Soon:*
-
-- Top-k tokens/words/clauses/sentences from specific datasets
-- Input-to-concept attribution from dataset examples ([Jourdan et al. 2023](https://aclanthology.org/2023.findings-acl.317/))
-- Theme prediction via LLMs from top-k tokens/sentences
-
-*Concept Interpretation Techniques Added Later:*
-
-- OpenAI Interpretation ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
-- Aligning concepts with human labels ([Sajjad et al. 2022](https://aclanthology.org/2022.naacl-main.225/))
-- Word cloud visualizations of concepts ([Dalvi et al. 2022](https://arxiv.org/abs/2205.07237))
-- VocabProj & TokenChange ([Gur-Arieh et al. 2025](https://arxiv.org/abs/2501.08319))
-
-**Concept-to-Output Attribution:**
-
-This part will be implemented later, but all the attribution methods presented above will be available here.
-
-*Note that only methods with a concept extraction that has an encoder (input to concept) AND a decoder (concept to output) can use this function.*
-
-**Specific methods:**
-
-**[Available later when all parts are implemented]** Thanks to this generalization encompassing all concept-based methods and our highly flexible architecture, we can easily obtain a large number of concept-based methods:
-
-- CAV and TCAV: [Kim et al. 2018, Interpretability Beyond Feature Attribution: Quantitative Testing with Concept Activation Vectors (TCAV)](http://proceedings.mlr.press/v80/kim18d.html)
-- ConceptSHAP: [Yeh et al. 2020, On Completeness-aware Concept-Based Explanations in Deep Neural Networks](https://proceedings.neurips.cc/paper/2020/hash/ecb287ff763c169694f682af52c1f309-Abstract.html)
-- COCKATIEL: [Jourdan et al. 2023, COCKATIEL: COntinuous Concept ranKed ATtribution with Interpretable ELements for explaining neural net classifiers on NLP](https://aclanthology.org/2023.findings-acl.317/)
-- Yun et al. 2021, [Transformer visualization via dictionary learning: contextualized embedding as a linear superposition of transformer factors](https://arxiv.org/abs/2103.15949)
-- FFN values interpretation: [Geva et al. 2022, Transformer Feed-Forward Layers Build Predictions by Promoting Concepts in the Vocabulary Space](https://aclanthology.org/2022.emnlp-main.3/)
-- SparseCoding: [Cunningham et al. 2023, Sparse Autoencoders Find Highly Interpretable Features in Language Models](https://arxiv.org/abs/2309.08600)
-- Parameter Interpretation: [Dar et al. 2023, Analyzing Transformers in Embedding Space](https://aclanthology.org/2023.acl-long.893/)
-
+<details class="abstract">
+<summary>Concept-based explanations aim to provide high-level interpretations of latent model representations.</summary>
+<p>Interpreto generalizes these methods through three core steps:</p>
+<ol>
+<li>
+<p>Concept Discovery (e.g., from latent embeddings)</p>
+</li>
+<li>
+<p>Concept Interpretation (mapping discovered concepts to human-understandable elements)</p>
+</li>
+<li>
+<p>Concept-to-Output Attribution (assessing concept relevance to model outputs) [Work in progress]</p>
+</li>
+</ol>
+<p><strong>Concept Discovery Techniques</strong> (via <a href="https://github.com/KempnerInstitute/overcomplete">Overcomplete</a>):</p>
+<ul>
+<li>
+<p>NMF, Semi-NMF, ConvexNMF</p>
+</li>
+<li>
+<p>ICA, SVD, PCA</p>
+</li>
+<li>
+<p>SAE variants (Vanilla SAE, TopK SAE, JumpReLU SAE, BatchTopK SAE)</p>
+</li>
+</ul>
+<p><strong>Available Concept Interpretation Techniques:</strong></p>
+<ul>
+<li>
+<p>Top-k tokens from tokenizer vocabulary</p>
+</li>
+<li>
+<p>Top-k tokens/words/sentences/samples from specific datasets</p>
+</li>
+</ul>
+<p><em>Concept Interpretation Techniques Added Soon:</em></p>
+<ul>
+<li>Input-to-concept attribution from dataset examples (<a href="https://aclanthology.org/2023.findings-acl.317/">Jourdan et al. 2023</a>)</li>
+<li>Theme prediction via LLMs from top-k tokens/sentences</li>
+</ul>
+<p><em>Concept Interpretation Techniques Added Later:</em></p>
+<ul>
+<li>
+<p>OpenAI Interpretation (<a href="https://openai.com/index/language-models-can-explain-neurons-in-language-models/">Bills et al. 2023</a>)</p>
+</li>
+<li>
+<p>Aligning concepts with human labels (<a href="https://aclanthology.org/2022.naacl-main.225/">Sajjad et al. 2022</a>)</p>
+</li>
+<li>
+<p>Word cloud visualizations of concepts (<a href="https://arxiv.org/abs/2205.07237">Dalvi et al. 2022</a>)</p>
+</li>
+<li>
+<p>VocabProj &amp; TokenChange (<a href="https://arxiv.org/abs/2501.08319">Gur-Arieh et al. 2025</a>)</p>
+</li>
+</ul>
+<p><strong>Concept-to-Output Attribution:</strong></p>
+<p>This part will be implemented later, but all the attribution methods presented above will be available here.</p>
+<p><em>Note that only methods with a concept extraction that has an encoder (input to concept) AND a decoder (concept to output) can use this function.</em></p>
+<p><strong>Specific methods:</strong></p>
+<p><strong>[Available later when all parts are implemented]</strong> Thanks to this generalization encompassing all concept-based methods and our highly flexible architecture, we can easily obtain a large number of concept-based methods:</p>
+<ul>
+<li>
+<p>CAV and TCAV: <a href="http://proceedings.mlr.press/v80/kim18d.html">Kim et al. 2018, Interpretability Beyond Feature Attribution: Quantitative Testing with Concept Activation Vectors (TCAV)</a></p>
+</li>
+<li>
+<p>ConceptSHAP: <a href="https://proceedings.neurips.cc/paper/2020/hash/ecb287ff763c169694f682af52c1f309-Abstract.html">Yeh et al. 2020, On Completeness-aware Concept-Based Explanations in Deep Neural Networks</a></p>
+</li>
+<li>
+<p>COCKATIEL: <a href="https://aclanthology.org/2023.findings-acl.317/">Jourdan et al. 2023, COCKATIEL: COntinuous Concept ranKed ATtribution with Interpretable ELements for explaining neural net classifiers on NLP</a></p>
+</li>
+<li>
+<p>Yun et al. 2021, <a href="https://arxiv.org/abs/2103.15949">Transformer visualization via dictionary learning: contextualized embedding as a linear superposition of transformer factors</a></p>
+</li>
+<li>
+<p>FFN values interpretation: <a href="https://aclanthology.org/2022.emnlp-main.3/">Geva et al. 2022, Transformer Feed-Forward Layers Build Predictions by Promoting Concepts in the Vocabulary Space</a></p>
+</li>
+<li>
+<p>SparseCoding: <a href="https://arxiv.org/abs/2309.08600">Cunningham et al. 2023, Sparse Autoencoders Find Highly Interpretable Features in Language Models</a></p>
+</li>
+<li>
+<p>Parameter Interpretation: <a href="https://aclanthology.org/2023.acl-long.893/">Dar et al. 2023, Analyzing Transformers in Embedding Space</a></p>
+</li>
+</ul>
 </details>
-
 <h3 id="evaluation-metrics">Evaluation Metrics<a class="headerlink" href="#evaluation-metrics" title="Permanent link">&para;</a></h3>
 <p><strong>Evaluation Metrics for Attribution</strong></p>
 <p>We don't yet have metrics implemented for attribution methods, but that's coming soon!</p>
 <p><strong>Evaluation Metrics for Concepts</strong></p>
-<details>
-
-<summary> Several properties of the concept-space are desirable. The concept-space should (1) be faithful to the latent space data distribution; (2) have a low complexity to push toward interpretability; (3) be stable across different training regimes.
- </summary>
-
-- *Concept-space faithfulness:* In Interpreto, you can use the ReconstructionError to define a custom metric by specifying a reconstruction_space and a distance_function. The MSE or FID metrics are also available.
-- *Concept-space complexity:* Sparsity and SparsityRatio metric are available.
-- *Concept-space stability:* You can use Stability metric to compare concept-model dictionaries.
-
+<details class="abstract">
+<summary>Several properties of the concept-space are desirable.</summary>
+<p>List of properties and corresponding metrics:</p>
+<ul>
+<li>
+<p><em>Concept-space faithfulness:</em> <code>MSE</code>, <code>FID</code>, or define a custom one through <code>ReconstructionError</code> by specifying a <code>reconstruction_space</code> and a <code>distance_function</code>.</p>
+</li>
+<li>
+<p><em>Concept-space complexity:</em> <code>Sparsity</code> and <code>SparsityRatio</code> metric are available.</p>
+</li>
+<li>
+<p><em>Concept-space stability:</em> You can use <code>Stability</code> metric to compare concept-model dictionaries.</p>
+</li>
+</ul>
 </details>
-
 <h2 id="contributing">👍 Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
 <p>Feel free to propose your ideas or come and contribute with us on the Interpreto 🪄 toolbox! We have a specific document where we describe in a simple way how to make your <a href="docs/contributing.md">first pull request</a>.</p>
 <h2 id="see-also">👀 See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>

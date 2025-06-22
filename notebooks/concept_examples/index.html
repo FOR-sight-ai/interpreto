@@ -1374,10 +1374,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1411,56 +1407,6 @@
             Concept Interpretations
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/concepts/interpretations/overview/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 9h16v2H4zm0 4h10v2H4z"/></svg>
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/concepts/interpretations/base/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 6H2v12h2m7-12-6 6 6 6 1.41-1.42L8.83 13H23v-2H8.83l3.58-3.59z"/></svg>
-  
-  <span class="md-ellipsis">
-    Base Classes
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -1886,16 +1832,51 @@
 <div class="input">
 
 
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForCausalLM</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForMaskedLM</span><span class="p">,</span> <span class="n">AutoTokenizer</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;gpt2&quot;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForMaskedLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;EuroBERT/EuroBERT-210m&quot;</span><span class="p">,</span> <span class="n">trust_remote_code</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;EuroBERT/EuroBERT-210m&quot;</span><span class="p">)</span>
+<span class="n">split_point</span> <span class="o">=</span> <span class="s2">&quot;model.layers.10.mlp&quot;</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">named_children</span><span class="p">()))</span>
-<span class="k">del</span> <span class="n">model</span>
 </code></pre></div>
 
 
 
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>[('model', EuroBertModel(
+  (embed_tokens): Embedding(128256, 768, padding_idx=128001)
+  (layers): ModuleList(
+    (0-11): 12 x EuroBertDecoderLayer(
+      (self_attn): EuroBertAttention(
+        (q_proj): Linear(in_features=768, out_features=768, bias=False)
+        (k_proj): Linear(in_features=768, out_features=768, bias=False)
+        (v_proj): Linear(in_features=768, out_features=768, bias=False)
+        (o_proj): Linear(in_features=768, out_features=768, bias=False)
+      )
+      (mlp): EuroBertMLP(
+        (gate_proj): Linear(in_features=768, out_features=3072, bias=False)
+        (up_proj): Linear(in_features=768, out_features=3072, bias=False)
+        (down_proj): Linear(in_features=3072, out_features=768, bias=False)
+        (act_fn): SiLU()
+      )
+      (input_layernorm): EuroBertRMSNorm((768,), eps=1e-05)
+      (post_attention_layernorm): EuroBertRMSNorm((768,), eps=1e-05)
+    )
+  )
+  (norm): EuroBertRMSNorm((768,), eps=1e-05)
+  (rotary_emb): EuroBertRotaryEmbedding()
+)), ('lm_head', Linear(in_features=768, out_features=128256, bias=False))]
+</code>
+</pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered">
@@ -1912,9 +1893,11 @@
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelWithSplitPoints</span>
 
 <span class="n">splitted_model</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="p">(</span>
-    <span class="n">model_or_repo_id</span><span class="o">=</span><span class="s2">&quot;gpt2&quot;</span><span class="p">,</span>
-    <span class="n">split_points</span><span class="o">=</span><span class="s2">&quot;transformer.h.1.mlp&quot;</span><span class="p">,</span>
-    <span class="n">model_autoclass</span><span class="o">=</span><span class="n">AutoModelForCausalLM</span><span class="p">,</span>
+    <span class="n">model_or_repo_id</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span>
+    <span class="n">split_points</span><span class="o">=</span><span class="n">split_point</span><span class="p">,</span>
+    <span class="n">device_map</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -1937,13 +1920,36 @@
 
 <span class="n">rotten_tomatoes</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;cornell-movie-review-data/rotten_tomatoes&quot;</span><span class="p">)[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">]</span>
 
-<span class="n">activations</span> <span class="o">=</span> <span class="n">splitted_model</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">rotten_tomatoes</span><span class="p">[</span><span class="mi">1000</span><span class="p">:])</span>
+<span class="n">activations</span> <span class="o">=</span> <span class="n">splitted_model</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span>
+    <span class="n">rotten_tomatoes</span><span class="p">,</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">ModelWithSplitPoints</span><span class="o">.</span><span class="n">activation_granularities</span><span class="o">.</span><span class="n">WORD</span><span class="p">,</span>
+<span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">split_point</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </code></pre></div>
 
 
 
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>
+<code>Asking to truncate to max_length but no maximum length is provided and the model has no predefined maximum length. Default to no truncation.
+</code>
+</pre>
+</div>
+</div>
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>torch.Size([187890, 768])
+</code>
+</pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered">
@@ -1959,13 +1965,26 @@
 
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts</span><span class="w"> </span><span class="kn">import</span> <span class="n">ICAConcepts</span>
 
-<span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">splitted_model</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">splitted_model</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
 
 <span class="n">concept_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
 </code></pre></div>
 
 
 
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>
+<code>/home/antonin.poche/interpreto/.venv/lib/python3.12/site-packages/sklearn/decomposition/_fastica.py:127: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+</code>
+</pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="cell border-box-sizing text_cell rendered">
@@ -1979,77 +1998,16 @@
 <div class="input">
 
 
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.interpretations</span><span class="w"> </span><span class="kn">import</span> <span class="n">Granularities</span><span class="p">,</span> <span class="n">InterpretationSources</span><span class="p">,</span> <span class="n">TopKInputs</span>
-
-<span class="n">some_words</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;excellent&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;amazing&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;fantastic&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;outstanding&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;great&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;perfect&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;wonderful&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;superb&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;love&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;loved&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;satisfied&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;recommend&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;best&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;delightful&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;pleasant&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;enjoyed&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;happy&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;awesome&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;brilliant&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;incredible&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;flawless&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;impressive&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;top-notch&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;well-done&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;five stars&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;worth it&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;will buy again&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;high quality&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;fast delivery&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;friendlyterrible&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;awful&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;bad&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;poor&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;disappointing&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;hate&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;horrible&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;worst&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;boring&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;rude&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;unsatisfied&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;never again&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;waste&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;problem&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;issue&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;slow&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;cheap&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;low quality&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;broken&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;not recommended&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;annoying&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;frustrating&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;one star&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;unacceptable&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;defective&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;dirty&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;late delivery&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;noisy&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;difficult&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;didn&#39;t work&quot;</span><span class="p">,</span>
-<span class="p">]</span>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.interpretations</span><span class="w"> </span><span class="kn">import</span> <span class="n">TopKInputs</span>
 
 <span class="n">interpretations</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span>
     <span class="n">TopKInputs</span><span class="p">,</span>
     <span class="n">concepts_indices</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span>
-    <span class="n">source</span><span class="o">=</span><span class="n">InterpretationSources</span><span class="o">.</span><span class="n">INPUTS</span><span class="p">,</span>
-    <span class="n">granularity</span><span class="o">=</span><span class="n">Granularities</span><span class="o">.</span><span class="n">TOKENS</span><span class="p">,</span>
-    <span class="n">inputs</span><span class="o">=</span><span class="n">some_words</span><span class="p">,</span>
-    <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">source</span><span class="o">=</span><span class="n">TopKInputs</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">LATENT_ACTIVATIONS</span><span class="p">,</span>
+    <span class="n">granularity</span><span class="o">=</span><span class="n">TopKInputs</span><span class="o">.</span><span class="n">granularities</span><span class="o">.</span><span class="n">WORD</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">rotten_tomatoes</span><span class="p">,</span>
+    <span class="n">latent_activations</span><span class="o">=</span><span class="n">activations</span><span class="p">,</span>
+    <span class="n">k</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -2062,7 +2020,79 @@
 
 
 <div class="codehilite"><pre><span></span><code><span class="k">for</span> <span class="n">concept_id</span><span class="p">,</span> <span class="n">words_importance</span> <span class="ow">in</span> <span class="n">interpretations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concept </span><span class="si">{</span><span class="n">concept_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">words_importance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concept </span><span class="si">{</span><span class="n">concept_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">words_importance</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">words_importance</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;None&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Concept 0: [' all', ' everything', ' two', ' under', ' beyond', ' below', ' above', ' self', ' sibling', ' southern']
+Concept 1: [' see', ' watching', ' watch', ' view', ' seen', ' find', ' seeing', ' admire', ' sees', ' look']
+Concept 2: [' to', ' about', ' will', ' in', ' and', ' with', ' of', ' that', ' out', ' feels']
+Concept 3: [' doesn', ' does', ' believes', ' thing', ' to', ' into', ' of', ' claims', ' promises', ' cannot']
+Concept 4: [' in', '-in', 'in', ' en', ' into', ' em', ' inside', ' within', ' on', ' at']
+Concept 5: [' of', 'of', ' de', ' or', ' del', ' da', ' to', ' dos', '-of', ' do']
+Concept 6: [' like', ' as', ' be', ' apparently', ' corrupt', ' cult', ' supernatural', ' shot', ' towering', ' skin']
+Concept 7: [' one', ' on', ' end', ' upon', ' photographed', '-on', ' next', ' start', ' may', ' first']
+Concept 8: [' reason', ' admirable', ' reasons', ' genesis', ' love', ' thing', ' success', ' passion', ' wonderful', ' emerged']
+Concept 9: [' on', ' through', ' into', ' up', ' mind', ' to', ' forward', ' may', ' minds', ' along']
+Concept 10: [' a', ' an', 'a', ' another', ' one', 'an', ' some', 'one', ' um', '-a']
+Concept 11: [' to', ' be', ' note', 'not', ' takes', ' not', ' didn', ' testimony', ' give', ' done']
+Concept 12: [' with', 'with', ' com', ' con', '\x85with', ' by', ' appreciate', ' using', ' to', ' like']
+Concept 13: [' i', 'i', ' me', ' my', ' am', 'my', "'m", ' eu', ' myself', ' mine']
+Concept 14: ['.', ',', ' )', ' *', ' -', ' t', ' (', '?', ' s', '+']
+Concept 15: ['.', '!', ',', '?', ' )', "'", " '", ' "', ' ;', '-']
+Concept 16: [' surprising', ' breakthrough', ' believe', ' superb', ' most', ' wait', ' astonishing', ' time', ' impressive', ' complete']
+Concept 17: [' life', ' say', ' sweet', ' on', ' when', ' mature', ' of', ' love', ' ends', ' do']
+Concept 18: [' from', ' behind', 'from', ' than', ' beneath', ' front', ' moving', ' stuck', ' here', ' turned']
+Concept 19: [' and', 'and', '-and', ' y', ' &amp;', ' e', ' or', ' as', ' nor', ',']
+Concept 20: [' hit', ' hitting', ' relentlessly', ' killed', ' doesn', ' don', ' extreme', ' have', ' won', ' derive']
+Concept 21: [' may', ' can', ' could', ' might', ' would', ' will', ' must', ' wouldn', ' won', 'may']
+Concept 22: [' still', ' simply', ' nevertheless', ' certainly', ' also', ' ultimately', ' even', ' definitely', ' equally', ' similarly']
+Concept 23: [' text', ' filled', ' if', ' as', ' clear', ' time', ' line', ' impossible', ' adapted', ' title']
+Concept 24: [' maze', ' swamp', ' yarn', ' bowl', ' pony', ' mess', ' truck', ' bag', ' wreck', ' whirl']
+Concept 25: [' continues', ' has', ' further', ' only', ' later', ' ongoing', '-in', ' update', ' summer', ' new']
+Concept 26: [' rip', ' sink', ' shines', ' thump', ' collapses', ' sting', ' butt', ' bites', ' hums', ' suck']
+Concept 27: [' between', ' separates', ' typical', ' comes', ' need', ' from', ' prove', ' usual', ' fit', ' much']
+Concept 28: [' of', ' kind', ' intelligible', ' like', ' any', ' from', ' seem', ' treatises', ' devoid', ' story']
+Concept 29: ['it', 'a', 'if', 'at', 'the', 'in', 'as', 'not', 'there', 'no']
+Concept 30: [' see', ' all', ' every', ' missing', ' through', ' catch', ' displaying', ' gets', ' watch', ' use']
+Concept 31: [' little', "'", ' into', ' and', ' path', ' with', ' through', ' between', '-school', ' of']
+Concept 32: [' makes', ' seen', ' seem', ' thoughtful', ' often', ' were', ' like', ' two', ' many', ' kind']
+Concept 33: ['.', ' and', ' has', 'odd', ' poo', 'a', 'cinematic', ' very', ' ride', ' sometimes']
+Concept 34: [',', ' )', ' ;', ' :', ' --', '.', '?', ' -', '!', ' "']
+Concept 35: [' on', ' about', ' upon', ' at', 'about', ' over', ' into', ' sobre', ' what', ' how']
+Concept 36: [' get', ' subtle', ' like', ' what', ' "', ' four', ' three', "'", ' stark', ' don']
+Concept 37: [' makes', ' make', ' made', ' lifts', ' leaves', ' making', ' render', ' sent', ' leave', ' keep']
+Concept 38: [' rare', ' little', ' greatly', ' desperate', ' fierce', ' big', ' mountain', ' distant', ' grand', ' struggle']
+Concept 39: [' joan', 'payne', ' huston', 'cho', ' jonah', ' genet', ' chan', ' eyre', 'ne', ' jonze']
+Concept 40: [' by', ' from', ' por', 'by', ' pelo', 'from', ' since', ' da', ' through', ' at']
+Concept 41: [' that', ' which', ' who', ' que', ' whose', ' whom', ' new', 'what', ' qui', ' what']
+Concept 42: [' is', ' isn', ' was', ' are', ' wasn', ' aren', ' doesn', ' were', ' be', 'is']
+Concept 43: [' the', 'this', 'the', ' this', 'these', ' these', 'that', ' those', ' that', ' his']
+Concept 44: [' observations', ' insight', ' life', ' error', ' vision', ' investigation', ' experience', ' environment', ' effort', ' into']
+Concept 45: [' most', ' mainstream', ' mainly', ' mediocre', ' general', ' mostly', 'most', ' certain', ' typical', ' completely']
+Concept 46: [' lesser', '-fashioned', ' had', ' simplistic', ' primitive', ' inferior', ' just', ' disparate', '-made', ' mundane']
+Concept 47: [' off', ' death', ' out', ' chair', ' on', ' skin', ' seconds', ' time', ' door', ' way']
+Concept 48: [' inhabit', ' below', ' expressed', ' reflect', ' haunting', ' live', ' beneath', ' indulge', ' deferred', ' distancing']
+Concept 49: [' sur', ' twists', ' on', ' hours', ' hour', ' weeks', ' includes', ' onto', ' first', ' charm']
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code>
 </code></pre></div>
 
 

@@ -1291,10 +1291,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1328,56 +1324,6 @@
             Concept Interpretations
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../api/concepts/interpretations/overview/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 9h16v2H4zm0 4h10v2H4z"/></svg>
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../api/concepts/interpretations/base/" class="md-nav__link">
-        
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 6H2v12h2m7-12-6 6 6 6 1.41-1.42L8.83 13H23v-2H8.83l3.58-3.59z"/></svg>
-  
-  <span class="md-ellipsis">
-    Base Classes
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
             
               
                 
@@ -1680,18 +1626,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-word-level-concept-interpretation-via-top-k-tokens" class="md-nav__link">
+  <a href="#4-llm-based-concept-interpretation-theme-prediction" class="md-nav__link">
     <span class="md-ellipsis">
-      4. Word-level Concept Interpretation via Top-K Tokens
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-llm-based-concept-interpretation-theme-prediction" class="md-nav__link">
-    <span class="md-ellipsis">
-      5. LLM-Based Concept Interpretation: Theme Prediction
+      4. LLM-Based Concept Interpretation: Theme Prediction
     </span>
   </a>
   
@@ -1849,18 +1786,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-word-level-concept-interpretation-via-top-k-tokens" class="md-nav__link">
+  <a href="#4-llm-based-concept-interpretation-theme-prediction" class="md-nav__link">
     <span class="md-ellipsis">
-      4. Word-level Concept Interpretation via Top-K Tokens
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-llm-based-concept-interpretation-theme-prediction" class="md-nav__link">
-    <span class="md-ellipsis">
-      5. LLM-Based Concept Interpretation: Theme Prediction
+      4. LLM-Based Concept Interpretation: Theme Prediction
     </span>
   </a>
   
@@ -1914,14 +1842,7 @@
 <p>We currently have these attribution methods only with the ALL_TOKENS granularity, which corresponds to having an attribution score for each token in the sentence (even special tokens). We want to align gradient-based methods with inference-based ones.</p>
 <h3 id="3-integration-of-vargrad">3. Integration of VarGrad<a class="headerlink" href="#3-integration-of-vargrad" title="Permanent link">&para;</a></h3>
 <p>We will implement <strong>VarGrad</strong>, a variance-based extension of gradient attribution. This method improves robustness by computing the <strong>variance of attributions across multiple noisy forward passes</strong>, capturing uncertainty and stabilizing explanations.</p>
-<h3 id="4-word-level-concept-interpretation-via-top-k-tokens">4. Word-level Concept Interpretation via Top-K Tokens<a class="headerlink" href="#4-word-level-concept-interpretation-via-top-k-tokens" title="Permanent link">&para;</a></h3>
-<p>Currently, concept-based methods in Interpreto support Top-K <strong>token</strong> importance. We plan to extend this to <strong>word-level concept importance</strong>, by:</p>
-<ul>
-<li>Mapping top tokens to their corresponding full words</li>
-<li>Aggregating token scores to create interpretable Top-K word lists per concept</li>
-</ul>
-<p>This will provide clearer insight into the semantic essence of each concept.</p>
-<h3 id="5-llm-based-concept-interpretation-theme-prediction">5. LLM-Based Concept Interpretation: Theme Prediction<a class="headerlink" href="#5-llm-based-concept-interpretation-theme-prediction" title="Permanent link">&para;</a></h3>
+<h3 id="4-llm-based-concept-interpretation-theme-prediction">4. LLM-Based Concept Interpretation: Theme Prediction<a class="headerlink" href="#4-llm-based-concept-interpretation-theme-prediction" title="Permanent link">&para;</a></h3>
 <p>We will introduce a novel interpretation method for concept vectors using Large Language Models (LLMs):</p>
 <ul>
 <li>The <strong>"theme prediction"</strong> method will generate human-readable summaries of concept vectors by prompting an LLM with Top-K examples (words, tokens, or sentences)</li>
