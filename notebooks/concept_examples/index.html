@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
     
     
       
@@ -2092,7 +2092,33 @@ Concept 49: [' sur', ' twists', ' on', ' hours', ' hour', ' weeks', ' includes',
 <div class="input">
 
 
-<div class="codehilite"><pre><span></span><code>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.interpretations.llm_labels</span><span class="w"> </span><span class="kn">import</span> <span class="n">SAMPLING_METHOD</span><span class="p">,</span> <span class="n">LLMLabels</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.model_wrapping.llm_interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAILLM</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.model_wrapping.model_with_split_points</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActivationGranularity</span>
+
+<span class="n">interpretations</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span>
+    <span class="n">LLMLabels</span><span class="p">,</span>
+    <span class="n">concepts_indices</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">ActivationGranularity</span><span class="o">.</span><span class="n">SAMPLE</span><span class="p">,</span>
+    <span class="n">llm_interface</span><span class="o">=</span><span class="n">OpenAILLM</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OPENAI_API_KEY&quot;</span><span class="p">]),</span>
+    <span class="n">sampling_method</span><span class="o">=</span><span class="n">SAMPLING_METHOD</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">rotten_tomatoes</span><span class="p">[:</span><span class="mi">20</span><span class="p">],</span>
+    <span class="n">k_context</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="k">for</span> <span class="n">concept_id</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">interpretations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concept </span><span class="si">{</span><span class="n">concept_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -2236,7 +2262,7 @@ Concept 49: [' sur', ' twists', ' on', ' hours', ' hour', ' weeks', ' includes',
       <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      <script src="../../assets/javascripts/bundle.56ea9cef.min.js"></script>
       
         <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
       
