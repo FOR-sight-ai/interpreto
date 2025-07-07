@@ -24,16 +24,20 @@
 
 from __future__ import annotations
 
-# from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod
+from enum import Enum
 
-# import torch
+
+class Role(Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
 
 
-# # Abstract interface definition
-# class LLMInterface(ABC):
-#     @abstractmethod
-#     def generate(self, system_prompt: str, user_prompt: str) -> str:
-#         pass
+class LLMInterface(ABC):
+    @abstractmethod
+    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+        pass
 
 
 # class HuggingFaceLLM(LLMInterface):  # TODO: use what we already have in nnsight
@@ -56,26 +60,41 @@ from __future__ import annotations
 #         return output[len(prompt) :].strip()
 
 
-# class OpenAILLM(LLMInterface):
-#     def __init__(self, api_key: str, model: str = "gpt-3.5-turbo"):
-#         try:
-#             import openai
-#         except ImportError as e:
-#             raise ImportError("Install openai to use OpenAI API.") from e
+class OpenAILLM(LLMInterface):
+    def __init__(self, api_key: str, model: str = "o4-mini", num_try: int = 5):
+        try:
+            import openai
+        except ImportError as e:
+            raise ImportError("Install openai to use OpenAI API.") from e
 
-#         openai.api_key = api_key
-#         self.openai = openai
-#         self.model = model
+        self.client = openai.OpenAI(api_key=api_key)
+        self.model = model
+        self.num_try = num_try
 
-#     def generate(self, system_prompt: str, user_prompt: str) -> str:
-#         response = self.openai.ChatCompletion.create(
-#             model=self.model,
-#             messages=[
-#                 {"role": "system", "content": system_prompt},
-#                 {"role": "user", "content": user_prompt},
-#             ],
-#         )
-#         return response.choices[0].message.content.strip()
+    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+        messages: list[dict[str, str]] = []
+        for role, content in prompt:
+            if role == Role.SYSTEM:
+                messages.append({"role": "system", "content": content})
+            elif role == Role.USER:
+                messages.append({"role": "user", "content": content})
+            elif role == Role.ASSISTANT:
+                messages.append({"role": "assistant", "content": content})
+            else:
+                raise ValueError(f"Unknown role for openai api: {role}")
+
+        label = None
+        for _ in range(self.num_try):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,  # type : ignore
+                )
+                label = response.choices[0].message.content
+                break
+            except Exception as e:
+                print(e)
+        return label
 
 
 # class GoogleGeminiLLM(LLMInterface):

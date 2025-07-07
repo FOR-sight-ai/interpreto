@@ -105,7 +105,7 @@ def test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer):
     explainer = ClassificationAttributionExplainer(bert_model, tokenizer=bert_tokenizer, batch_size=2, device=DEVICE)
     explainer.inference_wrapper = DummyInferenceWrapper()  # type: ignore
 
-    # Model input example without special_tokens_mask
+    # Model input example
     model_inputs = [
         {
             "input_ids": torch.tensor([[101, 2023, 2003, 1037, 2742, 102]]),
@@ -123,7 +123,6 @@ def test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer):
         model_inputs, targets=targets
     )
     assert len(processed_inputs) == 2  # type: ignore
-    assert all("special_tokens_mask" in mi for mi in processed_inputs)
     assert len(processed_targets) == 2  # type: ignore
     assert all(isinstance(t, torch.Tensor) for t in processed_targets)
 
@@ -145,19 +144,16 @@ def test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer):
     with pytest.raises(ValueError, match="Mismatch.*length of the inputs"):
         explainer.process_inputs_to_explain_and_targets(model_inputs, targets=[1])  # Only one target for two inputs
 
-    # 5. Already tokenized input with special_tokens_mask
+    # 5. Already tokenized input
     model_inputs_masked = [
         {
             "input_ids": torch.tensor([[101, 2023, 1037, 3185, 102]]),
             "attention_mask": torch.tensor([[1, 1, 1, 1, 1]]),
-            "special_tokens_mask": torch.tensor([[1, 0, 0, 0, 1]]),
         },
         {
             "input_ids": torch.tensor([[101, 2064, 2017, 2066, 102]]),
             "attention_mask": torch.tensor([[1, 1, 1, 1, 1]]),
-            "special_tokens_mask": torch.tensor([[1, 0, 0, 0, 1]]),
         },
     ]
     targets = [0, 1]
     processed_inputs, processed_targets = explainer.process_inputs_to_explain_and_targets(model_inputs_masked, targets)
-    assert all("special_tokens_mask" in mi for mi in processed_inputs)

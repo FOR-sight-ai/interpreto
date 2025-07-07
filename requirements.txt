@@ -38,8 +38,6 @@ einops==0.8.1
     # via
     #   nnsight
     #   overcomplete
-exceptiongroup==1.3.0
-    # via ipython
 executing==2.2.0
     # via stack-data
 fastjsonschema==2.21.1
@@ -321,7 +319,9 @@ sentencepiece==0.2.0
     #   nnsight
     #   transformers
 setuptools==80.9.0
-    # via triton
+    # via
+    #   torch
+    #   triton
 simple-websocket==1.1.0
     # via python-engineio
 six==1.17.0
@@ -385,10 +385,7 @@ triton==3.3.0
 typing-extensions==4.14.0
     # via
     #   beautifulsoup4
-    #   exceptiongroup
     #   huggingface-hub
-    #   ipython
-    #   mistune
     #   pydantic
     #   pydantic-core
     #   referencing

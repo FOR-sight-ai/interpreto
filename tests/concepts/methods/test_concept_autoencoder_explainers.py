@@ -157,7 +157,7 @@ if __name__ == "__main__":
         model_autoclass=AutoModelForMaskedLM,  # type: ignore
     )
     activations_dict: dict[str, torch.Tensor] = splitted_encoder_ml.get_activations(
-        sentences, select_strategy=ModelWithSplitPoints.activation_strategies.FLATTEN
+        sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
     )  # type: ignore
     test_overcomplete_cbe(
         splitted_encoder_ml=splitted_encoder_ml,

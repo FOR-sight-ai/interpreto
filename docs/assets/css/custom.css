@@ -150,6 +150,11 @@ li .parameter-type {
     color: var(--synthax-red);
 }
 
+.md-grid {
+    /* TODO: test */
+    max-width: 80%;
+}
+
 .md-typeset table:not([class]) {
     font-size: 0.8rem;
 }

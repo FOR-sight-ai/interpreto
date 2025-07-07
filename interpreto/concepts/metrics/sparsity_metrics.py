@@ -25,7 +25,6 @@
 from __future__ import annotations
 
 import torch
-from nnsight.intervention.graph import InterventionProxy
 
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.typing import ConceptsActivations, LatentActivations
@@ -50,11 +49,11 @@ class Sparsity:
         self.concept_explainer = concept_explainer
         self.epsilon = epsilon
 
-    def compute(self, latent_activations: LatentActivations | InterventionProxy) -> float:
+    def compute(self, latent_activations: LatentActivations | dict[str, LatentActivations]) -> float:
         """Compute the metric.
 
         Args:
-            latent_activations (LatentActivations | InterventionProxy): The latent activations.
+            latent_activations (LatentActivations | dict[str, LatentActivations]): The latent activations.
 
         Returns:
             float: The metric.
@@ -81,11 +80,11 @@ class SparsityRatio(Sparsity):
         epsilon (float): The threshold used to compute the sparsity.
     """
 
-    def compute(self, latent_activations: LatentActivations | InterventionProxy) -> float:
+    def compute(self, latent_activations: LatentActivations | dict[str, LatentActivations]) -> float:
         """Compute the metric.
 
         Args:
-            latent_activations (LatentActivations | InterventionProxy): The latent activations.
+            latent_activations (LatentActivations | dict[str, LatentActivations]): The latent activations.
 
         Returns:
             float: The metric.

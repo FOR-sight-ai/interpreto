@@ -66,7 +66,7 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
     perturbator.to(DEVICE)
 
     for sent in sentences:
-        elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True, return_special_tokens_mask=True)
+        elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
         elem.to(DEVICE)
         assert isinstance(elem, MutableMapping)
         l = elem["input_ids"].shape[1]
@@ -83,11 +83,7 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
         assert "attention_mask" in perturbed_inputs.keys()
         assert isinstance(perturbed_inputs["attention_mask"], torch.Tensor)
         assert perturbed_inputs["attention_mask"].shape == (p, l)
-        assert torch.all(torch.isclose(perturbed_inputs["offset_mapping"], elem["offset_mapping"], atol=1e-5))
 
-        assert "offset_mapping" in perturbed_inputs.keys()
-        assert isinstance(perturbed_inputs["offset_mapping"], torch.Tensor)
-        assert perturbed_inputs["offset_mapping"].shape == (p, l, 2)
         assert torch.all(torch.isclose(perturbed_inputs["attention_mask"], elem["attention_mask"], atol=1e-5))
 
 
@@ -107,12 +103,14 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
     if perturbator_class in [OcclusionPerturbator, SobolTokenPerturbator]:
         # the number of perturbations depends on the sequence length
         perturbator = perturbator_class(
+            tokenizer=bert_tokenizer,
             inputs_embedder=inputs_embedder,
             granularity=Granularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
         )
     else:
         perturbator = perturbator_class(
+            tokenizer=bert_tokenizer,
             inputs_embedder=inputs_embedder,
             granularity=Granularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
@@ -121,7 +119,7 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
     perturbator.to(DEVICE)
 
     for sent in sentences:
-        elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True, return_special_tokens_mask=True)
+        elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
         elem.to(DEVICE)
         assert isinstance(elem, MutableMapping)
         l = elem["input_ids"].shape[1]
@@ -150,11 +148,6 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         assert isinstance(perturbed_inputs["attention_mask"], torch.Tensor)
         assert torch.all(torch.isclose(perturbed_inputs["attention_mask"], elem["attention_mask"], atol=1e-5))
         assert perturbed_inputs["attention_mask"].shape == (real_p, l)
-
-        assert "offset_mapping" in perturbed_inputs.keys()
-        assert isinstance(perturbed_inputs["offset_mapping"], torch.Tensor)
-        assert torch.all(torch.isclose(perturbed_inputs["offset_mapping"], elem["offset_mapping"], atol=1e-5))
-        assert perturbed_inputs["offset_mapping"].shape == (real_p, l, 2)
 
 
 # TODO: test apply mask

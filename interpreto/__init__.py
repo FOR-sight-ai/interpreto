@@ -40,6 +40,12 @@ from .commons import (
     Granularity,
 )
 from .model_wrapping import ModelWithSplitPoints
+from .visualizations.attributions import (
+    AttributionVisualization,
+)
+from .visualizations.concepts import (
+    ConceptHighlightVisualization,
+)
 
 
 def get_version() -> str:

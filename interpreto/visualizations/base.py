@@ -19,7 +19,7 @@ def tensor_to_list(obj):
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
-class AttributionVisualization(ABC):
+class BaseAttributionVisualization(ABC):
     """
     Abstract class for words highlighting visualization
     """

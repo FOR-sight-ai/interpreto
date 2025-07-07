@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .topk_inputs import Granularities, InterpretationSources, TopKInputs
+from .llm_labels import LLMLabels
+from .topk_inputs import TopKInputs
 
-__all__ = ["Granularities", "InterpretationSources", "TopKInputs"]
+__all__ = ["TopKInputs", "LLMLabels"]

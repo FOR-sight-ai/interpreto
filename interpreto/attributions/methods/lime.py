@@ -103,6 +103,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
         model, replace_token_id = self._set_tokenizer(model, tokenizer)
 
         perturbator = RandomMaskedTokenPerturbator(
+            tokenizer=tokenizer,
             inputs_embedder=model.get_input_embeddings(),
             n_perturbations=n_perturbations,
             replace_token_id=replace_token_id,

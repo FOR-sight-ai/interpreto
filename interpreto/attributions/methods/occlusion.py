@@ -89,12 +89,19 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         """
         model, replace_token_id = self._set_tokenizer(model, tokenizer)
 
+        perturbator = OcclusionPerturbator(
+            tokenizer=tokenizer,
+            inputs_embedder=model.get_input_embeddings(),
+            granularity=granularity,
+            replace_token_id=replace_token_id,
+        )
+
         super().__init__(
             model=model,
             tokenizer=tokenizer,
             batch_size=batch_size,
             device=device,
-            perturbator=OcclusionPerturbator(granularity=granularity, replace_token_id=replace_token_id),  # type: ignore
+            perturbator=perturbator,
             aggregator=OcclusionAggregator(),
             granularity=granularity,
             inference_mode=inference_mode,

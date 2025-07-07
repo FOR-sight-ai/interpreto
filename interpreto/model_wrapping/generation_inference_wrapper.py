@@ -77,7 +77,6 @@ class GenerationInferenceWrapper(InferenceWrapper):
                   the generated continuation.
             targets_ids (torch.Tensor): The token IDs of the generated part.
         """
-        # filtered_model_inputs = {key: value for key, value in model_inputs.items() if key != "offset_mapping"}
         filtered_model_inputs = {key: model_inputs[key].to(self.device) for key in ("input_ids", "attention_mask")}
 
         full_ids = self.model.generate(**filtered_model_inputs, **generation_kwargs)

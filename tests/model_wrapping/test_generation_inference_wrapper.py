@@ -60,7 +60,9 @@ def test_generation_inference_wrapper_single_sentence(model_name, sentences):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model_inputs = tokenizer(sentences[0], return_tensors="pt", padding=True, truncation=True)
+    model_inputs = tokenizer(
+        sentences[0], return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
+    )
     model_inputs.to(DEVICE)
     model_inputs_length = model_inputs["input_ids"].shape[1]
     max_length = model_inputs_length + 12
@@ -121,7 +123,9 @@ def test_generation_inference_wrapper_multiple_sentences(model_name, sentences):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     n_sentences = len(sentences)
-    model_inputs = tokenizer(sentences, return_tensors="pt", padding=True, truncation=True)
+    model_inputs = tokenizer(
+        sentences, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
+    )
     model_inputs.to(DEVICE)
     model_inputs_length = model_inputs["input_ids"].shape[1]
     max_length = model_inputs_length + 12
@@ -187,8 +191,12 @@ def test_generation_inference_wrapper_multiple_mappings(model_name, sentences):
     if nb_split >= n_sentences:
         raise ValueError("nb_split must be less than the number of sentences (n_sentences).")
 
-    model_inputs1 = tokenizer(sentences[:nb_split], return_tensors="pt", padding=True, truncation=True)
-    model_inputs2 = tokenizer(sentences[nb_split:], return_tensors="pt", padding=True, truncation=True)
+    model_inputs1 = tokenizer(
+        sentences[:nb_split], return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
+    )
+    model_inputs2 = tokenizer(
+        sentences[nb_split:], return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
+    )
     model_inputs1.to(DEVICE)
     model_inputs2.to(DEVICE)
     model_inputs = [model_inputs1, model_inputs2]

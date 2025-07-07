@@ -26,8 +26,6 @@ from __future__ import annotations
 
 from enum import Enum
 
-from nnsight.intervention.graph import InterventionProxy
-
 from interpreto.commons.distances import DistanceFunctionProtocol, DistanceFunctions
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.typing import ConceptsActivations, LatentActivations
@@ -72,11 +70,11 @@ class ReconstructionError:
         self.reconstruction_space = reconstruction_space
         self.distance_function = distance_function
 
-    def compute(self, latent_activations: LatentActivations | InterventionProxy) -> float:
+    def compute(self, latent_activations: LatentActivations | dict[str, LatentActivations]) -> float:
         """Compute the reconstruction error.
 
         Args:
-            latent_activations (LatentActivations | InterventionProxy): The latent activations to use for the computation.
+            latent_activations (LatentActivations | dict[str, LatentActivations]): The latent activations to use for the computation.
 
         Returns:
             float: The reconstruction error.

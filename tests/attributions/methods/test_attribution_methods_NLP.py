@@ -85,6 +85,7 @@ ALL_MODEL_LOADERS = {
     "hf-internal-testing/tiny-random-gptj": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-CodeGenForCausalLM": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-FalconModel": AutoModelForCausalLM,
+    # "hf-internal-testing/tiny-random-Gemma3ForCausalLM": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-LlamaForCausalLM": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-MistralForCausalLM": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-Starcoder2ForCausalLM": AutoModelForCausalLM,
@@ -146,7 +147,9 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer):
     list_input_text_onlytext = [text, text, list_text, list_text]
 
     list_input_text_onlytokenized = [
-        tokenizer(input_text_onlytext, return_tensors="pt", padding=True, truncation=True).to(DEVICE)
+        tokenizer(
+            input_text_onlytext, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
+        ).to(DEVICE)
         for input_text_onlytext in [text, list_text]
     ]
 
@@ -226,6 +229,6 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer):
 
 if __name__ == "__main__":
     test_attribution_methods_with_text_short(
-        model_name="hf-internal-testing/tiny-random-gpt2",
-        attribution_explainer=Occlusion,
+        model_name="hf-internal-testing/tiny-random-bert",
+        attribution_explainer=Lime,
     )

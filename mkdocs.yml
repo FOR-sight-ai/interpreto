@@ -34,8 +34,6 @@ nav:
         - Optimization Methods: api/concepts/methods/optim.md
         - SAEs (Sparse AutoEncoders): api/concepts/methods/sae.md
       - Concept Interpretations:
-        - Overview: api/concepts/interpretations/overview.md
-        - Base Classes: api/concepts/interpretations/base.md
         - TopKInputs: api/concepts/interpretations/topk_inputs.md
       - Metrics:
         - Overview: api/concepts/metrics/overview.md

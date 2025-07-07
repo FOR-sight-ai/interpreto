@@ -34,6 +34,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
+from transformers import PreTrainedTokenizer
 
 from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
 from interpreto.commons.granularity import Granularity
@@ -52,6 +53,7 @@ class SequenceSamplers(Enum):
 class SobolTokenPerturbator(TokenMaskBasedPerturbator):
     def __init__(
         self,
+        tokenizer: PreTrainedTokenizer | None = None,
         inputs_embedder: torch.nn.Module | None = None,
         granularity: Granularity = Granularity.TOKEN,
         replace_token_id: int = 0,
@@ -62,12 +64,14 @@ class SobolTokenPerturbator(TokenMaskBasedPerturbator):
         Initialize the perturbator.
 
         Args:
+            tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model
             inputs_embedder (torch.nn.Module | None): optional inputs embedder
             nb_token_perturbations (int): number of Monte Carlo samples perturbations for each token.
             granularity (str): granularity level of the perturbations (token, word, sentence, etc.)
             sampler (SequenceSamplers): Sobol sequence sampler, either `SOBOL`, `HALTON` or `LatinHypercube`.
         """
         super().__init__(
+            tokenizer=tokenizer,
             inputs_embedder=inputs_embedder,
             granularity=granularity,
             n_perturbations=-1,  # TODO: find a better way to handle this, I guess, it should not be an attribute of the parent class

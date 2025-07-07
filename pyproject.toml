@@ -28,7 +28,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interpreto"
-version = "0.2.4"
+version = "0.3.2"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -111,6 +111,10 @@ lint = [
 notebook = [
   "ipykernel>=6.29.2",
   "ipywidgets>=8.1.2"
+]
+spacy = [
+  "spacy>=3.8",
+  "pip"
 ]
 
 [project.urls]

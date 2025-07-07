@@ -8,12 +8,13 @@
    */
   window.DataVisualizationAttribution = class DataVisualizationAttribution {
     static DisplayType = {
-      SINGLE_CLASS_ATTRIBUTION: 1, // simple attribution, only display the attribution for the input words
-      MULTI_CLASS_ATTRIBUTION: 2, // multi-class attribution, display the attributions for the input words per class
-      GENERATION_ATTRIBUTION: 3, // generation attribution, display the attributions for the input words per output
+      SINGLE_CLASS_ATTRIBUTION: 0, // simple attribution, only display the attribution for the input words
+      MULTI_CLASS_ATTRIBUTION: 1, // multi-class attribution, display the attributions for the input words per class
+      GENERATION_ATTRIBUTION: 2, // generation attribution, display the attributions for the input words per output
     };
 
     constructor(
+      displayType,
       uniqueIdClasses,
       uniqueIdInputs,
       uniqueIdOutputs,
@@ -33,15 +34,7 @@
       this.selectedOutputId = null;
       this.highlightBorder = highlightBorder === "True";
       this.jsonData = JSON.parse(jsonData);
-
-      this.displayType = DataVisualizationAttribution.DisplayType.SINGLE_CLASS_ATTRIBUTION;
-      if (this.uniqueIdClasses != null) {
-        this.displayType = DataVisualizationAttribution.DisplayType.MULTI_CLASS_ATTRIBUTION;
-      }
-      if (this.uniqueIdOutputs != null) {
-        this.displayType = DataVisualizationAttribution.DisplayType.GENERATION_ATTRIBUTION;
-      }
-
+      this.displayType = displayType;
       // Classes, Inputs, Outputs creation (style is applied when selecting different elements)
       //                inputs    outputs   class
       // single class    many         0         1
@@ -69,6 +62,7 @@
           // Select by default the only class available
           this.currentOutputId = 0;
           this.activatedClassId = 0;
+          this.createClass();
           this.createInputs();
       }
       this.refreshInputsStyles();
@@ -99,15 +93,8 @@
      * @returns {string} A CSS style string
      */
     getStyleForWord(alpha, min, max, classId, normalize) {
-      console.log("\t getStyleForWord() classId: " + classId);
-      console.log("\t getStyleForWord() alpha: " + alpha);
-      console.log("\t getStyleForWord() min: " + min);
-      console.log("\t getStyleForWord() max: " + max);
-      console.log("\t getStyleForWord() jsonData.classes: ", this.jsonData.classes);
       let negativeColor = this.jsonData.classes[classId].negative_color;
       let positiveColor = this.jsonData.classes[classId].positive_color;
-      console.log("\t getStyleForWord() negativeColor: ", negativeColor);
-      console.log("\t getStyleForWord() positiveColor: ", positiveColor);
 
       if (normalize) {
         if (alpha < 0) {
@@ -116,13 +103,11 @@
           alpha = alpha / max;
         }
       }
-      console.log("\t getStyleForWord() alpha normalized: " + alpha);
       
       // Compute the color of the word based on the alpha value     
       let color = alpha < 0 ? negativeColor : positiveColor;
       // convert str color to array of numbers
       color = this.hexToRgb(color);
-      console.log("\t getStyleForWord() color: ", color);
       
       const alphaRatio = this.highlightBorder ? 0.5 : 1.0;
       const borderColor = [...color, Math.abs(alpha)];
@@ -134,13 +119,29 @@
       } else {
         style += "outline-color: transparent;";
       }
-      
-      console.log("\t getStyleForWord() style: " + style);
       return style;
     }
-    
+
     /**
-     * Create the classes buttons in the DOM, attached to the uniqueIdClasses div element
+     * Create the class element in the DOM, attached to the uniqueIdClasses div element (mono class attribution)
+     */
+    createClass() {
+      // display the list of classes in 'unique_id_classes'
+      var mainClassesDiv = document.getElementById(this.uniqueIdClasses);
+
+      console.log("Creating " + this.jsonData.classes.length + " class of name " + this.jsonData.classes[0].name);
+      // Add label for the class
+      var currentClass = this.jsonData.classes[0];
+      var classElement = document.createElement("div");
+      classElement.classList.add("common-word-style");
+      classElement.classList.add("class-style");
+      classElement.textContent = currentClass.name;
+      classElement.classId = 0;
+      mainClassesDiv.appendChild(classElement);
+    }
+
+    /**
+     * Create the classes buttons in the DOM, attached to the uniqueIdClasses div element (multi class attribution)
      */
     createClasses() {
       // display the list of classes in 'unique_id_classes'
@@ -314,11 +315,6 @@
             let alpha = this.jsonData.inputs.attributions[this.currentOutputId][j][this.activatedClassId];
             let minValue = this.jsonData.classes[this.activatedClassId].min;
             let maxValue = this.jsonData.classes[this.activatedClassId].max;
-            console.log("DEBUG: wordElement:", wordElement);
-            console.log("DEBUG: alpha:", alpha);
-            console.log("DEBUG: classes:", this.jsonData.classes);
-            console.log("DEBUG: minValue:", minValue);
-            console.log("DEBUG: maxValue:", maxValue);
 
             // Generate the style for the word according to the alpha value
             let style = this.getStyleForWord(

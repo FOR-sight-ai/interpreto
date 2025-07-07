@@ -73,8 +73,6 @@ class GaussianNoisePerturbator(Perturbator):
         embeddings: Float[torch.Tensor, "b l d"] = model_inputs["inputs_embeds"]
         model_inputs["inputs_embeds"] = embeddings.repeat(self.n_perturbations, 1, 1)
         model_inputs["attention_mask"] = model_inputs["attention_mask"].repeat(self.n_perturbations, 1)
-        if "offset_mapping" in model_inputs:
-            model_inputs["offset_mapping"] = model_inputs["offset_mapping"].repeat(self.n_perturbations, 1, 1)
 
         # add noise
         # TODO: check if we should not limit this to relevant tokens (not padding, end of sequence, etc.)

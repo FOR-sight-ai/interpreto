@@ -27,6 +27,7 @@ from __future__ import annotations
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
+from transformers import PreTrainedTokenizer
 
 from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
 from interpreto.commons.granularity import Granularity
@@ -41,6 +42,7 @@ class OcclusionPerturbator(TokenMaskBasedPerturbator):
 
     def __init__(
         self,
+        tokenizer: PreTrainedTokenizer | None = None,
         inputs_embedder: torch.nn.Module | None = None,
         granularity: Granularity = Granularity.TOKEN,
         replace_token_id: int = 0,
@@ -48,12 +50,14 @@ class OcclusionPerturbator(TokenMaskBasedPerturbator):
         """Instantiate the perturbator.
 
         Args:
+            tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model.
             inputs_embedder (torch.nn.Module | None): Optional embedder used to obtain input embeddings from input IDs.
             granularity (Granularity): Level at which occlusion should be applied.
             replace_token_id (int): Token used to replace occluded elements.
         """
 
         super().__init__(
+            tokenizer=tokenizer,
             replace_token_id=replace_token_id,
             inputs_embedder=inputs_embedder,
             n_perturbations=-1,

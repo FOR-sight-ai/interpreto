@@ -33,7 +33,6 @@ from enum import Enum
 from typing import Generic, TypeVar
 
 import torch
-from nnsight.intervention.graph import InterventionProxy
 from overcomplete import optimization as oc_opt
 from overcomplete import sae as oc_sae
 from torch import nn
@@ -200,7 +199,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
 
     def fit(
         self,
-        activations: LatentActivations | InterventionProxy,
+        activations: LatentActivations | dict[str, LatentActivations],
         *,
         use_amp: bool = False,
         batch_size: int = 1024,
@@ -354,7 +353,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         self.has_differentiable_concept_encoder = True
         self.has_differentiable_concept_decoder = True
 
-    def fit(self, activations: LatentActivations | InterventionProxy, *, overwrite: bool = False, **kwargs):
+    def fit(self, activations: LatentActivations | dict[str, LatentActivations], *, overwrite: bool = False, **kwargs):
         """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
 
         Args:
@@ -492,7 +491,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
         self.has_differentiable_concept_encoder = False
         self.has_differentiable_concept_decoder = True
 
-    def fit(self, activations: LatentActivations | InterventionProxy, *, overwrite: bool = False, **kwargs):
+    def fit(self, activations: LatentActivations | dict[str, LatentActivations], *, overwrite: bool = False, **kwargs):
         """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
 
         Args:

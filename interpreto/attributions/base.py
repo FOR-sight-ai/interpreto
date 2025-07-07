@@ -31,12 +31,13 @@ from __future__ import annotations
 import itertools
 from abc import abstractmethod
 from collections.abc import Callable, Iterable, MutableMapping
+from enum import Enum
 from typing import Any
 
 import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
-from transformers import PreTrainedModel, PreTrainedTokenizer
+from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations.base import Aggregator
 from interpreto.attributions.perturbations.base import Perturbator
@@ -50,6 +51,16 @@ from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs
 SingleAttribution = (
     Float[torch.Tensor, "l"] | Float[torch.Tensor, "l c"] | Float[torch.Tensor, "l l_g"] | Float[torch.Tensor, "l l_t"]
 )
+
+
+class ModelTask(Enum):
+    """
+    Enum to represent the model task type.
+    """
+
+    SINGLE_CLASS_CLASSIFICATION = "single-class classification"
+    MULTI_CLASS_CLASSIFICATION = "multi-class classification"
+    GENERATION = "generation"
 
 
 def clone_tensor_mapping(tm: TensorMapping, detach: bool = False) -> TensorMapping:
@@ -71,12 +82,14 @@ class AttributionOutput:
     Class to store the output of an attribution method.
     """
 
-    __slots__ = ("attributions", "elements")
+    __slots__ = ("attributions", "elements", "model_task", "classes")
 
     def __init__(
         self,
         attributions: SingleAttribution,
-        elements: list[str] | torch.Tensor | None = None,
+        elements: list[str] | torch.Tensor,
+        model_task: ModelTask,
+        classes: torch.Tensor | None = None,
     ):
         """
         Initializes an AttributionOutput instance.
@@ -91,22 +104,40 @@ class AttributionOutput:
                 - `l` represents the number of elements for which attribution is computed (for NLP tasks: can be the total sequence length).
                 - Shapes depend on the task:
                     - Classification (single class): `(l)`
-                    - Classification (all classes): `(c, l)`, where `c` is the number of classes.
+                    - Classification (multi classes): `(c, l)`, where `c` is the number of classes.
                     - Generative models: `(l_g, l)`, where `l_g` is the length of the generated part.
                         - For non-generated elements, there are `l_g` attribution scores.
                         - For generated elements, scores are zero for previously generated tokens.
                     - Token classification: `(l_t, l)`, where `l_t` is the number of token classes. When the tokens are disturbed, l = l_t.
-            elements (Iterable[list[str]] | Iterable[torch.Tensor] | None, optional): A list or tensor representing the elements for which attributions are computed.
+            elements (Iterable[list[str]] | Iterable[torch.Tensor]): A list or tensor representing the elements for which attributions are computed.
                 - These elements can be tokens, words, sentences, or tensors of size `l`.
+            model_task (ModelTask): An enum representing the task of the model explained, such as SINGLE_CLASS_CLASSIFICATION, MULTI_CLASS_CLASSIFICATION, or GENERATION.
+            classes (torch.Tensor | None): Optional tensor of class labels.
+                - For single-class classification: tensor of shape `(1)`
+                - For multi-class classification: tensor of shape `(c)` where `c` is the number of classes
         """
         self.attributions = attributions
         self.elements = elements
+        self.model_task = model_task
+        self.classes = classes
 
     def __repr__(self):
-        return f"AttributionOutput(attributions={repr(self.attributions)}, elements={repr(self.elements)})"
+        return (
+            f"AttributionOutput("
+            f"attributions={repr(self.attributions)}, "
+            f"elements={repr(self.elements)}, "
+            f"model_task='{self.model_task}', "
+            f"classes={repr(self.classes)})"
+        )
 
     def __str__(self):
-        return f"AttributionOutput(attributions={self.attributions}, elements={self.elements})"
+        return (
+            f"AttributionOutput("
+            f"attributions={self.attributions}, "
+            f"elements={self.elements}, "
+            f"model_task='{self.model_task}', "
+            f"classes={self.classes})"
+        )
 
 
 class AttributionExplainer:
@@ -243,18 +274,23 @@ class AttributionExplainer:
             ValueError: If the type of model_inputs is not supported.
         """
         if isinstance(model_inputs, str):
-            return [
-                self.tokenizer(
-                    model_inputs, return_tensors="pt", return_offsets_mapping=True, return_special_tokens_mask=True
-                )
-            ]
+            return [self.tokenizer(model_inputs, return_tensors="pt", return_offsets_mapping=True)]
         if isinstance(
-            model_inputs, MutableMapping
+            model_inputs, BatchEncoding
         ):  # we cant use TensorMapping in the isinstance so we use MutableMapping.
-            return [
-                {key: value[i].unsqueeze(0) for key, value in model_inputs.items()}
-                for i in range(model_inputs["attention_mask"].shape[0])  # type: ignore
-            ]  # type: ignore
+            splitted_encodings = []
+            for i, enc in enumerate(model_inputs.encodings):  # type: ignore  # one Encoding per row
+                data_i = {
+                    k: (v[i].unsqueeze(0) if isinstance(v, torch.Tensor) else [v[i]]) for k, v in model_inputs.items()
+                }
+                splitted_encodings.append(
+                    BatchEncoding(
+                        data=data_i,  # tensors/arrays for that row
+                        encoding=enc,  # its Encoding (keeps word_ids, offsets…) necessary for granularity
+                        tensor_type="pt",  # keep tensors if you had them
+                    )
+                )
+            return splitted_encodings
         if isinstance(model_inputs, Iterable):
             return list(itertools.chain(*[self.process_model_inputs(item) for item in model_inputs]))
         raise ValueError(
@@ -327,12 +363,10 @@ class AttributionExplainer:
         # If targets are not provided, create them from model_inputs_to_explain.
         model_inputs_to_explain: Iterable[TensorMapping]
         sanitized_targets: Iterable[Float[torch.Tensor, "n t"]]
-        model_inputs_to_explain, sanitized_targets = self.process_inputs_to_explain_and_targets(
+        model_inputs_to_explain, sanitized_targets_gen = self.process_inputs_to_explain_and_targets(
             sanitized_model_inputs, targets, **model_kwargs
         )
-
-        # Decompose each input for the desired granularity level (tokens, words, sentences...)
-        decompositions = [Granularity.get_decomposition(t, self.granularity) for t in model_inputs_to_explain]
+        sanitized_targets = list(sanitized_targets_gen)
 
         # Create perturbation masks and perturb inputs based on the masks.
         # Inputs might be embedded during the perturbation process if the perturbator works with embeddings.
@@ -353,19 +387,35 @@ class AttributionExplainer:
             for score, mask in zip(scores, mask_generator, strict=True)
         )
 
+        # Decompose each input for the desired granularity level (tokens, words, sentences...)
+        granular_inputs_texts: list[list[str]] = [
+            Granularity.get_decomposition(t, self.granularity, self.tokenizer, return_text=True)[0]
+            for t in model_inputs_to_explain
+        ]  # type: ignore
+
         # Create and return AttributionOutput objects with the contributions and decoded token sequences:
-        return [
-            AttributionOutput(
-                c,
-                [
-                    self.tokenizer.decode(
-                        token_ids, skip_special_tokens=self.granularity is not Granularity.ALL_TOKENS
-                    )
-                    for token_ids in d[0]
-                ],
+        results = []
+        for contribution, elements, target in zip(
+            contributions, granular_inputs_texts, sanitized_targets, strict=True
+        ):
+            if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
+                model_task = ModelTask.GENERATION
+                classes = None
+            elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
+                classes = target
+                if contribution.dim() == 1:
+                    model_task = ModelTask.SINGLE_CLASS_CLASSIFICATION
+                else:
+                    model_task = ModelTask.MULTI_CLASS_CLASSIFICATION
+            else:
+                raise NotImplementedError(
+                    f"Model type {self.inference_wrapper.model.__class__.__name__} not supported for AttributionExplainer."
+                )
+            attribution_output = AttributionOutput(
+                attributions=contribution, elements=elements, model_task=model_task, classes=classes
             )
-            for c, d in zip(contributions, decompositions, strict=True)
-        ]
+            results.append(attribution_output)
+        return results
 
     def __call__(self, model_inputs: ModelInputs, targets=None, **kwargs) -> Iterable[AttributionOutput]:
         """
@@ -484,12 +534,11 @@ class ClassificationAttributionExplainer(AttributionExplainer):
         **model_kwargs: Any,
     ) -> tuple[Iterable[TensorMapping], Iterable[torch.Tensor]]:
         """
-        Preprocesses model inputs and classification targets for explanation.
+        Pre-processes model inputs and classification targets for explanation.
 
         This method ensures that:
         - If `targets` are not provided, they are computed by performing inference on `model_inputs` and selecting the predicted class using `argmax`.
         - The `targets` are then validated and converted using `self.process_targets`, ensuring the same length as `model_inputs`.
-        - Each input mapping includes `special_tokens_mask` (and optionally `offset_mapping`) by decoding and re-tokenizing if necessary.
 
         Parameters
         ----------
@@ -515,10 +564,6 @@ class ClassificationAttributionExplainer(AttributionExplainer):
             If the provided or inferred targets do not match the number of input instances, or if their format is invalid.
         """
         if targets is None:
-            # logits = torch.stack(
-            #     [a.detach() for a in self.inference_wrapper.get_logits(clone_tensor_mapping(a) for a in model_inputs)]
-            # )
-            # targets = logits.argmax(dim=-1)
             # compute targets from logits if not provided
             sanitized_targets: Iterable[torch.Tensor] = self.inference_wrapper.get_targets(model_inputs)  # type: ignore
         else:
@@ -526,20 +571,7 @@ class ClassificationAttributionExplainer(AttributionExplainer):
             expected_targets_length = len(model_inputs)  # type: ignore
             sanitized_targets: Iterable[torch.Tensor] = self.process_targets(targets, expected_targets_length)  # type: ignore
 
-        # add special tokens mask if not already present:
-        model_inputs_to_explain = []
-        for mapping in model_inputs:
-            # if "special_tokens_mask" or "offsets_mapping" not in mapping:
-            if "special_tokens_mask" not in mapping:
-                text = self.tokenizer.decode(mapping["input_ids"][0], skip_special_tokens=True)
-                mapping_with_special_values = self.tokenizer(
-                    [text], return_tensors="pt", return_offsets_mapping=True, return_special_tokens_mask=True
-                )
-                model_inputs_to_explain.append(mapping_with_special_values)
-            else:
-                model_inputs_to_explain.append(mapping)
-
-        return model_inputs_to_explain, sanitized_targets
+        return model_inputs, sanitized_targets
 
 
 class GenerationAttributionExplainer(AttributionExplainer):
@@ -614,30 +646,30 @@ class GenerationAttributionExplainer(AttributionExplainer):
         # TODO: verify that inputs and targets have the same length
         sanitized_targets: list[torch.Tensor]
         if targets is None:
-            model_inputs_to_explain_basic, sanitized_targets = (
-                self.inference_wrapper.get_inputs_to_explain_and_targets(model_inputs, **model_kwargs)
+            model_inputs_to_explain, sanitized_targets = self.inference_wrapper.get_inputs_to_explain_and_targets(
+                model_inputs, **model_kwargs
             )
         else:
             sanitized_targets = self.process_targets(targets)
-            model_inputs_to_explain_basic = []
+            model_inputs_to_explain = []
             for model_input, target in zip(model_inputs, sanitized_targets, strict=True):
-                model_inputs_to_explain_basic.append(
+                model_inputs_to_explain.append(
                     {
                         "input_ids": torch.cat([model_input["input_ids"], target], dim=1),  # type: ignore
                         "attention_mask": torch.cat([model_input["attention_mask"], torch.ones_like(target)], dim=1),  # type: ignore
                     }
                 )
-        # Add offsets mapping and special tokens mask:
+
+        # Convert to a `BatchEncoding` object and add offsets mapping:
+        # TODO: see if it can be optimized, conversion might be necessary only for WORD and SENTENCE granularity
         model_inputs_to_explain_text = [
-            self.tokenizer.decode(elem["input_ids"][0], skip_special_tokens=True)
-            for elem in model_inputs_to_explain_basic
+            self.tokenizer.decode(elem["input_ids"][0], skip_special_tokens=True) for elem in model_inputs_to_explain
         ]
         model_inputs_to_explain = [
             self.tokenizer(
                 [model_inputs_to_explain_text],
                 return_tensors="pt",
                 return_offsets_mapping=True,
-                return_special_tokens_mask=True,
             )
             for model_inputs_to_explain_text in model_inputs_to_explain_text
         ]

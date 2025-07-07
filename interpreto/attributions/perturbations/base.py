@@ -33,6 +33,7 @@ from abc import abstractmethod
 import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
+from transformers import PreTrainedTokenizer
 
 from interpreto.commons.granularity import Granularity
 from interpreto.typing import TensorMapping
@@ -133,15 +134,13 @@ class Perturbator:
         """
         Method called when we ask the perturbator to perturb a mapping of tensors, generally the output of a tokenizer
         The mapping should be similar to mappings returned by the tokenizer.
-        It should at least have "input_ids", "attention_mask" and "offset_mappings" keys
+        It should at least have "input_ids" and "attention_mask".
+        Optionally, it "offsets_mapping" might be required for the `SENTENCE` granularity.
         Give directly the output of the tokenizer without modifying it would be the best and most common way to use this method
 
         Args:
             inputs (TensorMapping): output of the tokenizers
         """
-        assert "offset_mapping" in inputs, (
-            "Offset mapping is required to perturb tokens, specify the 'return_offsets_mapping=True' parameter when tokenizing the input"
-        )
         mask = None
         if "input_ids" in inputs:
             # Call the tokens perturbation on the inputs ids
@@ -221,16 +220,19 @@ class TokenMaskBasedPerturbator(MaskBasedPerturbator):
     Base class for perturbations consisting in applying masks on token (or groups of tokens)
     """
 
-    __slots__ = ("n_perturbations", "replace_token_id", "granularity")
+    __slots__ = ("tokenizer", "n_perturbations", "replace_token_id", "granularity")
 
     def __init__(
         self,
+        tokenizer: PreTrainedTokenizer | None,
         replace_token_id: int,
         inputs_embedder: torch.nn.Module | None = None,
         n_perturbations: int = 1,
         granularity: Granularity = Granularity.TOKEN,
     ):
         super().__init__(inputs_embedder=inputs_embedder)
+
+        self.tokenizer = tokenizer
 
         # number of perturbations made by the "perturb" method
         self.n_perturbations = n_perturbations
@@ -260,73 +262,6 @@ class TokenMaskBasedPerturbator(MaskBasedPerturbator):
         """
         raise NotImplementedError()
 
-    @staticmethod
-    @jaxtyped(typechecker=beartype)
-    def get_gran_mask_from_real_mask(
-        model_inputs: TensorMapping,
-        real_mask: Float[torch.Tensor, "p l"],
-        granularity: Granularity = Granularity.DEFAULT,
-    ) -> Float[torch.Tensor, "p g"]:
-        """
-        Transforms a real token-wise mask to an approximation of its associated mask for a certain granularity level
-
-        Args:
-            model_inputs (TensorMapping): mapping given by the tokenizer
-            p_mask (torch.Tensor): _description_
-
-        Returns:
-            torch.Tensor: granularity level mask
-        """
-        # TODO : eventually store gran matrix in tokens to avoid recomputing it ?
-        t_gran_matrix: Float[torch.Tensor, "l g"] = Granularity.get_association_matrix(model_inputs, granularity)[
-            0
-        ].transpose(-1, -2)
-        mask: Float[torch.Tensor, "p g"] = torch.einsum("pl,lg->pg", real_mask, t_gran_matrix) / t_gran_matrix.sum(
-            dim=-1
-        )
-        return mask
-
-    @staticmethod
-    @jaxtyped(typechecker=beartype)
-    def get_real_mask_from_gran_mask(
-        gran_mask: Float[torch.Tensor, "p g"],
-        gran_assoc_matrix: Float[torch.Tensor, "g l"],
-    ) -> Float[torch.Tensor, "p l"]:
-        """
-        Transforms a specific granularity mask to a general token-wise mask
-
-        Args:
-            model_inputs (TensorMapping): mapping given by the tokenizer
-            gran_assoc_matrix (torch.Tensor): association matrix for a specific granularity level
-
-        Returns:
-            torch.Tensor: real general mask
-        """
-        # TODO : eventually store gran matrix in tokens to avoid recomputing it ?
-        mask: Float[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, gran_assoc_matrix)
-        return mask
-
-    @jaxtyped(typechecker=beartype)
-    def get_model_inputs_mask(self, model_inputs: TensorMapping) -> Float[torch.Tensor, "p l"]:
-        """
-        Method returning the real mask to apply on the model inputs
-        This method may be overwritten in subclasses to provide a more specific mask
-        default implementation gets the real mask from the specific granularity mask
-
-        Args:
-            model_inputs (MutableMapping): mapping given by the tokenizer
-
-        Returns:
-            torch.Tensor, torch.Tensor: real general mask and specific granularity mask (theoretical mask)
-        """
-        perturbation_dimension = int(Granularity.get_length(model_inputs, self.granularity).max().item())
-        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(perturbation_dimension)
-        gran_assoc_matrix: Float[torch.Tensor, "g l"] = Granularity.get_association_matrix(
-            model_inputs, self.granularity
-        )[0]
-        mask: Float[torch.Tensor, "p l"] = self.get_real_mask_from_gran_mask(gran_mask, gran_assoc_matrix)
-        return mask
-
     def perturb_ids(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         """
         Method called to perturb the inputs of the model
@@ -338,24 +273,32 @@ class TokenMaskBasedPerturbator(MaskBasedPerturbator):
             tuple: model_inputs with perturbations and the specific granularity mask
         """
         model_inputs = model_inputs.copy()  # type: ignore
-        model_inputs.to(self.device)  # type: ignore
 
-        mask_dim = int(Granularity.get_length(model_inputs, self.granularity).max().item())
-        gran_mask = self.get_mask(mask_dim)
-        real_mask = self.get_real_mask_from_gran_mask(
-            gran_mask, Granularity.get_association_matrix(model_inputs, self.granularity)[0]
+        if model_inputs["input_ids"].shape[0] != 1:
+            raise ValueError(
+                "Inputs are treated one by on one in the perturbator."
+                + "But received a batch of inputs."
+                + f"input_ids shape: {model_inputs['input_ids'].shape} - expected shape: (1, l)"
+            )
+
+        # compute association matrix between the granularity level and ALL_TOKENS
+        association_matrix: Float[torch.Tensor, "g l"] = (
+            Granularity.get_association_matrix(model_inputs, self.granularity, self.tokenizer)[0]
+            .float()
+            .to(self.device)
         )
 
-        # real_mask, gran_mask = self.get_model_inputs_mask(model_inputs)
-        real_mask = real_mask.to(self.device)
-        mask_value = torch.Tensor([self.replace_token_id])
-        mask_value = mask_value.to(self.device)
+        # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)
+        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0]).to(self.device)
+
+        # compute real perturbation mask
+        real_mask: Float[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, association_matrix)
 
         model_inputs["input_ids"] = (
             self.apply_mask(
-                inputs=model_inputs["input_ids"].T,
+                inputs=model_inputs["input_ids"].T.to(self.device),
                 mask=real_mask,
-                mask_value=mask_value,
+                mask_value=torch.Tensor([self.replace_token_id]).to(self.device),
             )
             .squeeze(-1)
             .to(torch.int)

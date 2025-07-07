@@ -95,6 +95,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
         model, replace_token_id = self._set_tokenizer(model, tokenizer)
 
         perturbator = ShapTokenPerturbator(
+            tokenizer=tokenizer,
             inputs_embedder=model.get_input_embeddings(),
             granularity=granularity,
             replace_token_id=replace_token_id,

@@ -106,8 +106,4 @@ class LinearInterpolationPerturbator(Perturbator):
         model_inputs["attention_mask"] = model_inputs["attention_mask"].repeat(
             model_inputs["inputs_embeds"].shape[0], 1
         )
-        if "offset_mapping" in model_inputs:
-            model_inputs["offset_mapping"] = model_inputs["offset_mapping"].repeat(
-                model_inputs["inputs_embeds"].shape[0], 1, 1
-            )
         return model_inputs, None
