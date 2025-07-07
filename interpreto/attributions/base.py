@@ -83,14 +83,27 @@ class AttributionOutput:
     Class to store the output of an attribution method.
     """
 
-    __slots__ = ("attributions", "elements", "model_task", "classes")
+    __slots__ = (
+        "attributions",
+        "elements",
+        "model_inputs_to_explain",
+        "targets",
+        "model_task",
+        "classes",
+        "granularity",
+        "inference_mode",
+    )
 
     def __init__(
         self,
         attributions: SingleAttribution,
         elements: list[str] | torch.Tensor,
+        model_inputs_to_explain: TensorMapping,
+        targets: torch.Tensor,
         model_task: ModelTask,
         classes: torch.Tensor | None = None,
+        granularity: Granularity = Granularity.DEFAULT,
+        inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
     ):
         """
         Initializes an AttributionOutput instance.
@@ -119,16 +132,24 @@ class AttributionOutput:
         """
         self.attributions = attributions
         self.elements = elements
+        self.model_inputs_to_explain = model_inputs_to_explain
+        self.targets = targets
         self.model_task = model_task
         self.classes = classes
+        self.granularity = granularity
+        self.inference_mode = inference_mode
 
     def __repr__(self):
         return (
             f"AttributionOutput("
             f"attributions={repr(self.attributions)}, "
             f"elements={repr(self.elements)}, "
+            f"model_inputs_to_explain={repr(self.model_inputs_to_explain)}, "
+            f"targets={repr(self.targets)}, "
             f"model_task='{self.model_task}', "
-            f"classes={repr(self.classes)})"
+            f"classes={repr(self.classes)}), "
+            f"granularity={self.granularity}, "
+            f"inference_mode={self.inference_mode.__name__}"
         )
 
     def __str__(self):
@@ -136,8 +157,12 @@ class AttributionOutput:
             f"AttributionOutput("
             f"attributions={self.attributions}, "
             f"elements={self.elements}, "
+            f"model_inputs_to_explain={self.model_inputs_to_explain}, "
+            f"targets={self.targets}, "
             f"model_task='{self.model_task}', "
-            f"classes={self.classes})"
+            f"classes={self.classes}), "
+            f"granularity={self.granularity}, "
+            f"inference_mode={self.inference_mode.__name__}"
         )
 
 
@@ -337,9 +362,9 @@ class AttributionExplainer:
     def explain(
         self,
         model_inputs: ModelInputs,
-        targets: torch.Tensor
-        | Iterable[torch.Tensor]
-        | None = None,  # TODO: create specific target type for classification and generation
+        targets: (
+            torch.Tensor | Iterable[torch.Tensor] | None
+        ) = None,  # TODO: create specific target type for classification and generation
         **model_kwargs: Any,
     ) -> Iterable[AttributionOutput]:
         """
@@ -371,7 +396,7 @@ class AttributionExplainer:
         # Process the inputs and targets for explanation
         # If targets are not provided, create them from model_inputs_to_explain.
         model_inputs_to_explain: Iterable[TensorMapping]
-        sanitized_targets: Iterable[Float[torch.Tensor, "n t"]]
+        sanitized_targets: Iterable[Float[torch.Tensor, "t"]]
         model_inputs_to_explain, sanitized_targets_gen = self.process_inputs_to_explain_and_targets(
             sanitized_model_inputs, targets, **model_kwargs
         )
@@ -428,8 +453,8 @@ class AttributionExplainer:
 
         # Create and return AttributionOutput objects with the contributions and decoded token sequences:
         results = []
-        for contribution, elements, target in zip(
-            granular_contributions, granular_inputs_texts, sanitized_targets, strict=True
+        for contribution, model_input, elements, target in zip(
+            granular_contributions, model_inputs_to_explain, granular_inputs_texts, sanitized_targets, strict=True
         ):
             if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
                 model_task = ModelTask.GENERATION
@@ -445,7 +470,14 @@ class AttributionExplainer:
                     f"Model type {self.inference_wrapper.model.__class__.__name__} not supported for AttributionExplainer."
                 )
             attribution_output = AttributionOutput(
-                attributions=contribution, elements=elements, model_task=model_task, classes=classes
+                attributions=contribution,
+                elements=elements,
+                model_inputs_to_explain=model_input,
+                model_task=model_task,
+                classes=classes,
+                targets=target,
+                granularity=self.granularity,
+                inference_mode=self.inference_wrapper.mode,
             )
             results.append(attribution_output)
         return results
