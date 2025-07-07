@@ -519,8 +519,9 @@ class ModelWithSplitPoints(LanguageModel):
         # batch inputs
         if isinstance(inputs, BatchEncoding):
             batch_generator = []
-            for i in range(0, len(inputs), self.batch_size):
-                end_idx = min(i + self.batch_size, len(inputs))
+            nb_inputs = inputs["input_ids"].shape[0]  # type: ignore
+            for i in range(0, nb_inputs, self.batch_size):
+                end_idx = min(i + self.batch_size, nb_inputs)
                 batch_generator.append({key: value[i:end_idx] for key, value in inputs.items()})
         else:
             batch_generator = (
