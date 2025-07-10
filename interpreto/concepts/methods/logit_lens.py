@@ -87,7 +87,8 @@ class LogitLens():
                  head_name: str | None = None,
                  normalization: bool = False,
                  nb_token: int = 0,
-                 normalization_method: nn.Module | None = nn.LayerNorm,):
+                 normalization_method: nn.Module | None = nn.LayerNorm,
+                 batch_size: int = 8):
         self.splitted_model = model
         self.model = model._model
         self.tokenizer = tokenizer
@@ -100,6 +101,7 @@ class LogitLens():
         self.normalization_method = normalization_method
         self.device = model.device if hasattr(model, 'device') else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.layer_names = None
+        self.batch_size = batch_size
 
         possible_heads = ['lm_head', 'cls', 'score', 'predictions', 'decoder']
         k = 0
@@ -141,7 +143,7 @@ class LogitLens():
         This method computes the logits for the given activations using the model head.
         """
         if not self.model_head:
-            raise ValueError("Model head is not set. Please call `fit()` before applying the lens.")
+            raise ValueError("Model head is not set. Please make sure the initialization succeded before applying the lens.")
 
         if self.normalization:
             activation = self.normalization_method(activation.size(-1))(activation)
@@ -151,19 +153,14 @@ class LogitLens():
         proba = proba.detach().cpu()
         return proba
     
-    def explain(self,
+    def _explain(self,
                 inputs: str | list[str] | BatchEncoding | torch.Tensor,
                 layers_name: str | list[str] | None = None):
         """
         Generate explanations using the Logit Lens method.
         This method applies the linear function of the logits to the activations of the model.
         """
-        if isinstance(inputs, (str, list)):
-            if self.tokenizer.pad_token is None or self.tokenizer.pad_token_id < 0:
-                print("Tokenizer does not have a padding token. Setting a default padding token.")
-                self.tokenizer.pad_token = self.tokenizer.eos_token if self.tokenizer.eos_token else '[PAD]'
-                self.tokenizer.add_special_tokens({'pad_token': self.tokenizer.pad_token})
-            
+        if isinstance(inputs, (str, list)): 
             inputs_model = self.tokenizer(inputs, 
                                         return_tensors='pt', 
                                         padding=True, 
@@ -174,12 +171,11 @@ class LogitLens():
                     inputs_model.pop(key)
         else :
             inputs_model = inputs
-        print(inputs_model["input_ids"].shape)
+        # print(inputs_model["input_ids"].shape)
         mask_idxs = inputs_model["attention_mask"].bool().unsqueeze(-1).expand(-1, -1, self.vocab_size)
         self.activations = self.splitted_model.get_activations(inputs_model, ModelWithSplitPoints.activation_granularities.ALL)
 
         if layers_name is None:
-            print("Producing lens prediction for all activations.")
             layers_name = list(self.activations.keys())
 
         for layer in layers_name:
@@ -191,13 +187,13 @@ class LogitLens():
                 raise ValueError(f"Activation shape mismatch for layer '{layer}': expected {self.features_dim}, got {activation.shape[-1]}. Please check the model and the layer names.")
 
         if not self.model_head:
-            raise ValueError("Model head is not set. Please call `fit()` before explaining.")
+            raise ValueError("Model head is not set. Please call verify the initialization before explaining.")
         
         if isinstance(layers_name, str):
             layers_name = [layers_name]
 
         self.layer_names = layers_name
-        print(self.activations[self.layer_names[0]].shape)
+        # print(self.activations[self.layer_names[0]].shape)
 
         proba_dict = {}
         for layer in layers_name:
@@ -226,6 +222,79 @@ class LogitLens():
                 ])
             return top_k_tokens
     
+    def explain(self,
+                inputs: str | list[str] | BatchEncoding | torch.Tensor,
+                layers_name: str | list[str] | None = None):
+        """
+        Generate explanations using the Logit Lens method.
+        This part of the method assures that inputs are batched and handles padding mismatches.
+        """
+        if isinstance(inputs, (str, list)):
+            if self.tokenizer.pad_token is None or self.tokenizer.pad_token_id < 0:
+                print("Tokenizer does not have a padding token. Setting a default padding token.")
+                self.tokenizer.pad_token = self.tokenizer.eos_token if self.tokenizer.eos_token else '[PAD]'
+                self.tokenizer.add_special_tokens({'pad_token': self.tokenizer.pad_token})
+            if isinstance(inputs, str):
+                inputs = [inputs]
+            batched_inputs = [inputs[i:i + self.batch_size] for i in range(0, len(inputs), self.batch_size)]
+        elif isinstance(inputs, BatchEncoding):
+            input_ids = inputs["input_ids"]
+            attention_mask = inputs["attention_mask"]
+            batched_inputs = [
+                BatchEncoding({
+                    "input_ids": input_ids[i:i + self.batch_size],
+                    "attention_mask": attention_mask[i:i + self.batch_size]
+                })
+                for i in range(0, input_ids.shape[0], self.batch_size)
+            ]
+        elif isinstance(inputs, torch.Tensor):
+            batched_inputs = torch.split(inputs, self.batch_size, dim=0)
+        else:
+            raise ValueError("Unsupported type for inputs")
+        
+        if layers_name is None:
+            print("Producing lens prediction for all activations.")
+
+        merged_results = {}
+        for batch in batched_inputs:
+            batch_results = self._explain(batch, layers_name)
+            for layer, data in batch_results.items():
+                if layer not in merged_results:
+                    merged_results[layer] = data
+                else:
+                    max_seq_len = max(merged_results[layer]['tokens'].shape[1], data['tokens'].shape[1])
+                    pad_token = self.tokenizer.pad_token
+                    pad_token_array = np.array([[pad_token] * max_seq_len])
+
+                    merged_tokens = np.concatenate(
+                        (
+                            np.pad(merged_results[layer]['tokens'], 
+                                   ((0, 0), (0, max_seq_len - merged_results[layer]['tokens'].shape[1]), (0, 0)), 
+                                   constant_values=pad_token),
+                            np.pad(data['tokens'], 
+                                   ((0, 0), (0, max_seq_len - data['tokens'].shape[1]), (0, 0)), 
+                                   constant_values=pad_token)
+                        ),
+                        axis=0
+                    )
+                    
+                    merged_proba = np.concatenate(
+                        (
+                            np.pad(merged_results[layer]['proba'], 
+                                   ((0, 0), (0, max_seq_len - merged_results[layer]['proba'].shape[1]), (0, 0)), 
+                                   constant_values=0.0),
+                            np.pad(data['proba'], 
+                                   ((0, 0), (0, max_seq_len - data['proba'].shape[1]), (0, 0)), 
+                                   constant_values=0.0)
+                        ),
+                        axis=0
+                    )
+
+                    merged_results[layer]['tokens'] = merged_tokens
+                    merged_results[layer]['proba'] = merged_proba
+
+        return merged_results
+    
     def __call__(self,
                 inputs: str | list[str] | BatchEncoding | torch.Tensor,
                 layers_name: str | list[str] | None = None):
@@ -241,8 +310,8 @@ class LogitLens():
         """
         Interactive HTML/JS visualization for Logit Lens predictions.
         Each input token is shown as plain text (tokenization artifacts prettified).
-        On mouseover, a tooltip shows the top-k predicted tokens (prettified) and their probabilities
-        (probabilities are color-coded).
+        On mouseover, a tooltip shows the top-k predicted tokens and their probabilities
+        (probabilities are visible and color-coded).
         """
         explaining = self.explain(inputs, layers_name)
         layers_name = self.layer_names if layers_name is None else layers_name
