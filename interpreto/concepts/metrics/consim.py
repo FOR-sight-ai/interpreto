@@ -31,7 +31,7 @@ from tqdm import tqdm
 
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.model_wrapping.llm_interface import LLMInterface
+from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
 
@@ -469,7 +469,91 @@ def make_prompts(
 
 
 class ConSim:
-    # TODO: docstring and add reference
+    """Code: [:octicons-mark-github-24: `concepts/metrics/con_sim.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/metrics/con_sim.py)
+
+    ConSim for Concept-based Simulatability. Was introduced by Poché et al. in 2025 [^1].
+
+    It evaluates all three components of the concept-based explanation:
+
+    - the concepts space
+
+    - the concepts interpretation
+
+    - the concepts importance
+
+    To evaluate explanations on a given model $f$, ConSim evaluates to which extent explanations
+    help a meta-predictor $\Psi$ to simulate the predictions of the model $f$.
+
+    In our case, the role of the meta-predictor will be played by `judge_llm`, and interface calling
+    a model either from local, or from a remote API, such as OpenAI or HuggingFace.
+    Therefore, most of the code correspond to building the prompts for the LLM.
+
+    The prompts have five parts:
+
+    - the first part is the task description, which is a list of questions to ask the LLM.
+
+    - the second is a global concepts explanation on $f$. Listing the important concepts for each class.
+
+    - the third gives examples of samples and predictions from the model $f$.
+
+    - the fourth is a local concepts explanation on $f$. Listing the important concepts in each example.
+
+    - the fifth is a list of samples on which the meta-predictor $\Psi$ will be asked to predict the model $f$ predictions.
+
+    The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the
+    model $f$ predictions and computes the accuracy of the explanations.
+
+    Attributes
+    ----------
+    model_with_split_points: ModelWithSplitPoints
+        The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
+    judge_llm: LLMInterface
+        The LLM interface that will serve as the meta-predictor.
+    split_point: str
+        Where to split the model to explain.
+    activation_granularity: ActivationGranularity
+        The granularity of the activations to use for the explanations.
+
+    References
+    ----------
+    [^1]:
+        A. Poch{\'e}, A. Jacovi, A.M. Picard, V. Boutin, and F. Jourdan.
+        ConSim: Measuring Concept-Based Explanations' Effectiveness with Automated Simulatability.
+        In the Proceedings of the 2025 Association for Computational Linguistics (ACL).
+
+    Examples
+    --------
+
+    >>> import datasets
+    >>> from interpreto import ConSim, ModelWithSplitPoints, ICAConcepts, OpenAILLM
+    >>>
+    >>> # Load a model and wrap it
+    >>> model_with_split_points = ModelWithSplitPoints(
+    ...     "textattack/bert-base-uncased-ag-news",
+    ...     split_points=["bert.encoder.layer.10.output"],
+    ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
+    ...     batch_size=4,
+    ... )
+    >>>
+    >>> # Load a dataset and compute activations
+    >>> dataset = datasets.load_dataset("fancyzhx/ag_news")
+    >>> activations = model_with_split_points.get_activations(dataset["train"]["text"])
+    >>>
+    >>> # Fit the concept explainer
+    >>> concept_explainer_1 = ICAConcepts(model_with_split_points, nb_concepts=50)
+    >>> concept_explainer.fit(activations)
+    >>>
+    >>> # Define the judge-LLM
+    >>> judge_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt4o-mini")
+    >>>
+    >>> con_sim = ConSim(model_with_split_points, judge_llm)
+    >>> samples, labels, predictions = con_sim.select_samples(
+    ...     dataset["train"]["text"], dataset["train"]["label"], nb_classes=4
+    ... )
+    >>> score_1 = con_sim.evaluate(samples, labels, predictions, concept_explainer_1)
+    >>> score_2 = con_sim.evaluate(samples, labels, predictions, concept_explainer_2)
+    """
+
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
@@ -513,7 +597,7 @@ class ConSim:
             all_predictions.append(predictions)
         return torch.cat(all_predictions)
 
-    def extract_interesting_indices(
+    def extract_interesting_elements(
         self,
         inputs: list[str],
         labels: torch.Tensor,
@@ -600,6 +684,28 @@ class ConSim:
 
         return interesting_samples, labels[indices], predictions[indices]
 
+    def select_samples(
+        self,
+        inputs: list[str],
+        labels: list[int],
+        nb_classes: int,
+        nb_lp_samples: int = 20,
+        nb_ep_samples: int = 20,
+        seed: int = 0,
+        batch_size: int = 64,
+        device: torch.device | str = "cpu",
+    ) -> tuple[list[str], list[int], list[int]]:
+        predictions = self.get_predictions(inputs, batch_size=batch_size, device=device)
+        return self.extract_interesting_elements(
+            inputs,
+            labels,
+            predictions,
+            nb_classes,
+            nb_lp_samples,
+            nb_ep_samples,
+            seed,
+        )
+
     def compute_elements(
         self,
         concept_explainer: ConceptAutoEncoderExplainer,
@@ -629,12 +735,30 @@ class ConSim:
         )
         return latent_activations, concepts_activations, concepts_importance
 
-    def generate_prompt(
+    def generate_prompts(
         self,
         interesting_samples: list[str],
-        concepts_activations: ConceptsActivations,
         labels: list[int],
         predictions: list[int],
-    ) -> dict[str, str]:
-        prompt: dict[str, str]
-        return prompt
+    ) -> dict[str, str]: ...  # TODO
+
+    def evaluate(
+        self,
+        interesting_samples: list[str],
+        labels: list[int],
+        predictions: list[int],
+        concept_explainer: ConceptAutoEncoderExplainer,
+    ) -> float:
+        concept_activations, concepts_activations, concepts_importance = self.compute_elements(
+            concept_explainer, interesting_samples
+        )
+
+        prompts = self.generate_prompts(
+            interesting_samples=interesting_samples,
+            labels=labels,
+            predictions=predictions,
+        )
+
+        meta_predictions = self.judge_llm.generate(prompts)
+
+        return self.compute_score(meta_predictions, predictions, concept_activations, concepts_activations)
