@@ -547,7 +547,7 @@ class ConSim:
     >>> judge_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt4o-mini")
     >>>
     >>> con_sim = ConSim(model_with_split_points, judge_llm)
-    >>> samples, labels, predictions = con_sim.select_samples(
+    >>> samples, labels, predictions = con_sim.select_examples(
     ...     dataset["train"]["text"], dataset["train"]["label"], nb_classes=4
     ... )
     >>> score_1 = con_sim.evaluate(samples, labels, predictions, concept_explainer_1)
@@ -684,7 +684,7 @@ class ConSim:
 
         return interesting_samples, labels[indices], predictions[indices]
 
-    def select_samples(
+    def select_examples(
         self,
         inputs: list[str],
         labels: list[int],
