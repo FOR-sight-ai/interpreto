@@ -1766,13 +1766,14 @@
 <li><code>model</code> (<code>PreTrainedModel</code>): Hugging Face model to explain,</li>
 <li><code>tokenizer</code> (<code>PreTrainedTokenizer</code>): Hugging Face tokenizer associated with the model,</li>
 <li><code>batch_size</code> (<code>int</code>): batch size for the attribution method,</li>
+<li><code>granularity</code> (<code>Granularity</code>): granularity level of the explanation. It can be either one of <code>ALL_TOKENS</code> (includes all sentence tokens, even special tokens), <code>TOKEN</code>, <code>WORD</code>, or <code>SENTENCE</code>.</li>
+<li><code>inference_mode</code> (<code>Callable[[torch.Tensor], torch.Tensor], optional</code>): The mode used for inference. It can be either one of <code>LOGITS</code>, <code>SOFTMAX</code>, or <code>LOG_SOFTMAX</code>. Use <code>InferenceModes</code> to choose the appropriate mode. Default <code>inference_mode</code> is <code>LOGITS</code>.</li>
 <li><code>device</code> (<code>torch.device | None = None</code>): device on which the attribution method will be run,</li>
 <li><code>args</code>: specifics for each method.</li>
 </ul>
-<p><em>Note: There are also two arguments, general to all inference-based attribution methods, which are:</em></p>
+<p>For gradient-based attribution methods, granularity is not calculated at the perturbation mask level, but at the aggregation level. We then aggregate the scores given on the tokens to create scores on the chosen granularity. There may be several ways of aggregating these scores, so we need a new argument, only for gradient-based methods:</p>
 <ul>
-<li><code>granularity</code> (<code>Granularity</code>): granularity level of the perturbations. It can be either one of <code>ALL_TOKENS</code> (includes all sentence tokens, even special tokens), <code>TOKEN</code>, and <code>WORD</code>.</li>
-<li><code>inference_mode</code> (<code>Callable[[torch.Tensor], torch.Tensor], optional</code>): The mode used for inference. It can be either one of <code>LOGITS</code>, <code>SOFTMAX</code>, or <code>LOG_SOFTMAX</code>. Use <code>InferenceModes</code> to choose the appropriate mode. Default <code>inference_mode</code> is <code>LOGITS</code>.</li>
+<li><code>granularity_aggregation_strategy</code> (<code>GranularityAggregationStrategy</code>): If granularity is set to 'WORD', this determines how to aggregate token-level attributions into word-level scores. Options are: 'MEAN', 'MAX', 'MIN', 'SUM' and 'SIGNED_MAX'.</li>
 </ul>
 <p><strong>Step 2:</strong> The <code>AttributionExplainer</code> class overloads the <code>__call__</code> method to directly invoke the <code>explain</code> function. Therefore, calling <code>explainer(inputs, targets)</code> is equivalent to <code>explainer.explain(inputs, targets)</code>. It takes two parameters:</p>
 <ul>

@@ -2005,7 +2005,10 @@ Fel et al. (2021). <em>Look at the variance! Efficient black-box explanations wi
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The level of granularity for the explanation (e.g., token, word, sentence).</p>
+                <p>The level of granularity for the explanation.
+Options are: <code>ALL_TOKENS</code>, <code>TOKEN</code>, <code>WORD</code>, or <code>SENTENCE</code>.
+Defaults to Granularity.WORD.
+To obtain it, <code>from interpreto import Granularity</code> then <code>Granularity.WORD</code>.</p>
               </div>
             </td>
             <td>

@@ -934,6 +934,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.saliency.Saliency(granularity)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.saliency.Saliency(granularity_aggregation_strategy)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity_aggregation_strategy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#interpreto.attributions.methods.saliency.Saliency(device)" class="md-nav__link">
     <span class="md-ellipsis">
       <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
@@ -1792,6 +1810,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.saliency.Saliency(granularity)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.saliency.Saliency(granularity_aggregation_strategy)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity_aggregation_strategy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#interpreto.attributions.methods.saliency.Saliency(device)" class="md-nav__link">
     <span class="md-ellipsis">
       <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
@@ -1918,6 +1954,43 @@ Simonyan et al. (2013). <em>Deep Inside Convolutional Networks: Visualising Imag
             </td>
             <td>
                   <code>4</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.saliency.Saliency(granularity)" class="doc doc-heading doc-heading-parameter">                  <code>granularity</code>
+<a href="#interpreto.attributions.methods.saliency.Saliency(granularity)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.Granularity">Granularity</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The level of granularity for the explanation.
+Options are: <code>ALL_TOKENS</code>, <code>TOKEN</code>, <code>WORD</code>, or <code>SENTENCE</code>.
+Defaults to Granularity.WORD.
+To obtain it, <code>from interpreto import Granularity</code> then <code>Granularity.WORD</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.Granularity.WORD">WORD</span></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.saliency.Saliency(granularity_aggregation_strategy)" class="doc doc-heading doc-heading-parameter">                  <code>granularity_aggregation_strategy</code>
+<a href="#interpreto.attributions.methods.saliency.Saliency(granularity_aggregation_strategy)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.GranularityAggregationStrategy">GranularityAggregationStrategy</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>how to aggregate token-level attributions into granularity scores.
+Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
+Ignored for <code>granularity</code> set to <code>ALL_TOKENS</code> or <code>TOKEN</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.GranularityAggregationStrategy.MEAN">MEAN</span></code>
             </td>
           </tr>
           <tr class="doc-section-item">

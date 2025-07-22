@@ -1948,7 +1948,10 @@ Zeiler and Fergus (2014). <em>Visualizing and understanding convolutional networ
             </td>
             <td>
               <div class="doc-md-description">
-                <p>granularity level of the perturbations (token, word, sentence, etc.)</p>
+                <p>The level of granularity for the explanation.
+Options are: <code>ALL_TOKENS</code>, <code>TOKEN</code>, <code>WORD</code>, or <code>SENTENCE</code>.
+Defaults to Granularity.WORD.
+To obtain it, <code>from interpreto import Granularity</code> then <code>Granularity.WORD</code>.</p>
               </div>
             </td>
             <td>
