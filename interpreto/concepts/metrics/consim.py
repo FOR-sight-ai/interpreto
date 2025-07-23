@@ -35,12 +35,17 @@ from interpreto import ModelWithSplitPoints
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
-from interpreto.typing import ConceptsActivations, LatentActivations
 
 
 class PromptSetting(NamedTuple):
+    """
+    Configuration of the ConSim prompts.
+    It says which elements should be included in the prompt.
+
+    This is used to define the different `PromptTypes` available.
+    """
+
     # global
-    anonymous_classes: bool = False
     concepts_interpretation: bool = False
 
     # initial phase
@@ -128,7 +133,7 @@ class ConSim:
     - the concepts importance
 
     To evaluate explanations on a given model $f$, ConSim evaluates to which extent explanations
-    help a meta-predictor $\Psi$ to simulate the predictions of the model $f$.
+    help a meta-predictor $\\Psi$ to simulate the predictions of the model $f$.
 
     In our case, the role of the meta-predictor will be played by `user_llm`, and interface calling
     a model either from local, or from a remote API, such as OpenAI or HuggingFace.
@@ -144,7 +149,7 @@ class ConSim:
 
     - Learning Phase (LP.2) the fourth is a local concepts explanation on $f$. Listing the important concepts in each example.
 
-    - Evaluation Phase (EP.1) the fifth is a list of samples on which the meta-predictor $\Psi$ will be asked to predict the model $f$ predictions.
+    - Evaluation Phase (EP.1) the fifth is a list of samples on which the meta-predictor $\\Psi$ will be asked to predict the model $f$ predictions.
 
     The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the
     model $f$ predictions and computes the accuracy of the explanations.
@@ -161,6 +166,8 @@ class ConSim:
         The granularity of the activations to use for the explanations.
     classes: list[str]
         The names of classes of the dataset.
+    prompt_types: PromptTypes
+        Enum of the possible prompts types to use.
 
     References
     ----------
@@ -213,6 +220,22 @@ class ConSim:
         split_point: str | None = None,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
     ):
+        """
+        Initialize the ConSim metric.
+
+        Parameters
+        ----------
+        model_with_split_points: ModelWithSplitPoints
+            The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
+        user_llm: LLMInterface
+            The LLM interface that will serve as the meta-predictor.
+        classes: list[str]
+            The names of classes of the dataset.
+        split_point: str
+            Where to split the model to explain.
+        activation_granularity: ActivationGranularity
+            The granularity of the activations to use for the explanations.
+        """
         self.model_with_split_points = model_with_split_points
         if split_point is None:
             if len(self.model_with_split_points.split_points) > 1:
@@ -233,9 +256,29 @@ class ConSim:
         self.user_llm: LLMInterface = user_llm
         self.classes: list[str] = classes
 
-    def get_predictions(
+    def _get_predictions(
         self, inputs: list[str], batch_size: int = 64, device: torch.device | str = "cpu", tqdm_bar: bool = False
     ) -> torch.Tensor:
+        """
+        Get the predictions of the model on a list of inputs.
+        Called by `select_examples`.
+
+        Parameters
+        ----------
+        inputs: list[str]
+            The inputs to predict.
+        batch_size: int
+            The batch size to use for the predictions.
+        device: torch.device | str
+            The device to use for the predictions.
+        tqdm_bar: bool
+            Whether to show a tqdm bar.
+
+        Returns
+        -------
+        predictions: torch.Tensor
+            The predictions of the model on the inputs.
+        """
         all_predictions = []
         for batch_index in tqdm(
             range(0, len(inputs), batch_size),
@@ -251,7 +294,7 @@ class ConSim:
             all_predictions.append(predictions)
         return torch.cat(all_predictions)
 
-    def extract_interesting_elements(
+    def _extract_interesting_elements(
         self,
         inputs: list[str],
         labels: torch.Tensor,
@@ -260,6 +303,44 @@ class ConSim:
         nb_ep_samples: int = 20,
         seed: int = 0,
     ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
+        """
+        Extract interesting elements from the inputs, labels, and predictions.
+        It selects `nb_lp_samples` + `nb_ep_samples` samples from the inputs.
+        The goal is to select uniformly between each class (with respect to the labels).
+        There should be as many samples where the initial model prediction are correct as incorrect.
+        The samples are then randomly shuffled.
+
+        The first `nb_lp_samples` samples are selected for the learning phase.
+        The last `nb_ep_samples` samples are selected for the evaluation phase.
+
+        Therefore, there is no guarantee on the repartition inside learning and evaluation phase.
+
+        Called by `select_examples`.
+
+        Parameters
+        ----------
+        inputs: list[str]
+            The inputs to predict.
+        labels: torch.Tensor
+            The labels of the inputs.
+        predictions: torch.Tensor
+            The predictions of the model on the inputs.
+        nb_lp_samples: int
+            The number of samples to select for the learning phase.
+        nb_ep_samples: int
+            The number of samples to select for the evaluation phase.
+        seed: int
+            The seed to use for the random selection.
+
+        Returns
+        -------
+        interesting_samples: list[str]
+            The interesting samples.
+        labels: torch.Tensor
+            The labels of the interesting samples.
+        predictions: torch.Tensor
+            The predictions of the model on the interesting samples.
+        """
         nb_classes = len(self.classes)
         nb_correct = (nb_lp_samples + nb_ep_samples) // 2
         nb_mistakes = nb_lp_samples + nb_ep_samples - nb_correct
@@ -348,8 +429,46 @@ class ConSim:
         batch_size: int = 64,
         device: torch.device | str = "cpu",
     ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
-        predictions = self.get_predictions(inputs, batch_size=batch_size, device=device)
-        return self.extract_interesting_elements(
+        """
+        Select examples for the ConSim metric. It first computes the models' predictions on the inputs.
+        Then, it selects `nb_lp_samples` + `nb_ep_samples` samples from the inputs.
+        The goal is to select uniformly between each class (with respect to the labels).
+        There should be as many samples where the initial model prediction are correct as incorrect.
+        The samples are then randomly shuffled.
+
+        The first `nb_lp_samples` samples are selected for the learning phase.
+        The last `nb_ep_samples` samples are selected for the evaluation phase.
+
+        Therefore, there is no guarantee on the repartition inside learning and evaluation phase.
+
+        Parameters
+        ----------
+        inputs: list[str]
+            The inputs to predict.
+        labels: torch.Tensor
+            The labels of the inputs.
+        nb_lp_samples: int
+            The number of samples to select for the learning phase.
+        nb_ep_samples: int
+            The number of samples to select for the evaluation phase.
+        seed: int
+            The seed to use for the random selection.
+        batch_size: int
+            The batch size to use for the predictions.
+        device: torch.device | str
+            The device to use for the predictions.
+
+        Returns
+        -------
+        interesting_samples: list[str]
+            The interesting samples.
+        labels: torch.Tensor
+            The labels of the interesting samples.
+        predictions: torch.Tensor
+            The predictions of the model on the interesting samples.
+        """
+        predictions = self._get_predictions(inputs, batch_size=batch_size, device=device)
+        return self._extract_interesting_elements(
             inputs=inputs,
             labels=labels,
             predictions=predictions,
@@ -395,7 +514,7 @@ class ConSim:
         raise ValueError(f"Quantization of importance {importance} failed.")
 
     @staticmethod
-    def filter_and_quantize_concepts_importances(
+    def _filter_and_quantize_concepts_importances(
         concepts_interpretation: dict[str, str],
         global_importances: dict[str, dict[str, float]],
         local_importances: torch.Tensor,
@@ -403,6 +522,25 @@ class ConSim:
     ) -> tuple[dict[str, str], dict[str, dict[str, str]], list[dict[str, str]]]:
         """
         Filter the concepts importance and quantize the values.
+
+        The concepts with normalized global importances under the threshold are removed.
+        Similarly, the concepts with normalized local importances under the threshold are removed.
+
+        Only the intersection between the two are kept.
+
+        The concepts importance are quantized to literals.
+        The corresponding literals are:
+
+        - "++" for values above 0.3
+
+        - "+" for values between 0.05 and 0.3
+
+        - "-" for values between -0.05 and -0.3
+
+        - "--" for values below -0.3
+
+        Note that this values correspond to the normalized importance of the concepts.
+        The normalization is done by dividing the importances by the sum of the absolute values of the importances.
 
         Parameters
         ----------
@@ -485,19 +623,21 @@ class ConSim:
         return concepts_interpretation, quantized_global_importances, filtered_local_importances
 
     @staticmethod
-    def setting_to_prompt(
+    def _setting_to_prompt(
         setting: PromptSetting,
         anonymize_classes: bool,
         sentences: list[str],
-        predictions: list[int],
+        predictions: torch.Tensor,
         classes: list[str],
         concepts_interpretation: dict[str, str],
         global_importances: dict[str, dict[str, str]],
         local_importances: list[dict[str, str]],
     ) -> tuple[str, str, list[str]]:
         """
-        Create a prompt for the LLM model.
-        It adapts to the setting to cover all possibilities
+        Create a prompt for the LLM model by integrating the different elements.
+        The text is adapted to the particular setting to cover all possibilities.
+
+        Many possibilities are not explored through the `PromptTypes` enum, because they do not make sense.
 
         Parameter
         ---------
@@ -507,7 +647,7 @@ class ConSim:
             Whether to anonymize the classes.
         sentences: list[str]
             The sentences, the first half serve as examples and the second half is to be classified.
-        predictions: list[int]
+        predictions: torch.Tensor
             The predictions of the model on the sentences.
         classes: list[str]
             The classes of the dataset.
@@ -671,9 +811,9 @@ class ConSim:
         return system_prompt, user_prompt, literal_model_predictions
 
     @staticmethod
-    def generate_prompt(
+    def _generate_prompt(
         sentences: list[str],
-        predictions: list[int],
+        predictions: torch.Tensor,
         classes: list[str],
         concepts_interpretation: dict[str, str],
         global_importances: dict[str, dict[str, float]],
@@ -684,6 +824,9 @@ class ConSim:
     ) -> tuple[list[tuple[Role, str]], list[str]]:
         """
         Create prompts for the user-llm or meta-predictor.
+
+        First the different elements are processed so that they can be included in the prompt via `ConSim._generate_prompt`.
+        Then the elements are integrated into a prompt via `ConSim._setting_to_prompt`.
 
         Parameters
         ----------
@@ -727,12 +870,14 @@ class ConSim:
         Returns
         -------
         prompt: list[tuple[Role, str]]
-            The prompts for the LLM, the inputs and expected outputs.
+            The prompts for the LLM, the format matches the `LLMInterface` API.
+        literal_model_predictions: list[str]
+            The model predictions as a list of strings, it allows easier comparison with the `user_llm` answers.
         """
 
         # filter and quantize the concepts importances
         concepts_interpretation, processed_global_importances, processed_local_importances = (
-            ConSim.filter_and_quantize_concepts_importances(
+            ConSim._filter_and_quantize_concepts_importances(
                 concepts_interpretation=concepts_interpretation,
                 global_importances=global_importances,
                 local_importances=local_importances,
@@ -741,7 +886,7 @@ class ConSim:
         )
 
         # integrate the different elements into a prompt
-        system_prompt, user_prompt, literal_model_predictions = ConSim.setting_to_prompt(
+        system_prompt, user_prompt, literal_model_predictions = ConSim._setting_to_prompt(
             setting=prompt_type.value,
             anonymize_classes=anonymize_classes,
             sentences=sentences,
@@ -762,7 +907,33 @@ class ConSim:
         return prompt, literal_model_predictions
 
     @staticmethod
-    def extract_predictions_from_response(response: str, expected_length: int) -> list[str] | None:
+    def _extract_predictions_from_response(response: str, expected_length: int) -> list[str] | None:
+        """
+        Extract the model predictions from the response.
+        The response is expected to be a list of predictions for each sample.
+        The predictions are expected to be separated by "\n".
+
+        Example of a response:
+
+        ```
+        Sample_0: physician
+        Sample_1: surgeon
+        Sample_2: nurse
+        ```
+
+        Parameters
+        ----------
+        response: str
+            The response from the user-llm or meta-predictor.
+        expected_length: int
+            The expected length of the response.
+
+        Returns
+        -------
+        predictions: list[str] | None
+            The model predictions.
+            If the response is empty or the expected length is not respected, returns None.
+        """
         sentences = response.split("\n")
 
         while sentences[-1] == "":
@@ -784,7 +955,28 @@ class ConSim:
         return predictions
 
     @staticmethod
-    def predictions_accuracy(model_predictions: list[str], user_llm_predictions: list[str]) -> float | None:
+    def _predictions_accuracy(model_predictions: list[str], user_llm_predictions: list[str]) -> float | None:
+        """
+        Compute the accuracy of the model predictions.
+
+        Parameters
+        ----------
+        model_predictions: list[str]
+            The model predictions.
+        user_llm_predictions: list[str]
+            The user-llm predictions.
+
+        Returns
+        -------
+        accuracy: float | None
+            The accuracy of the model predictions.
+            If the model predictions are empty or the user-llm predictions are empty, returns None.
+
+        Raises
+        ------
+        ValueError
+            If the model predictions and the user-llm predictions have different lengths.
+        """
         if len(model_predictions) == 0 or len(user_llm_predictions) == 0:
             # TODO: discuss if we prefer to return None or raise an error with explicit message
             # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
@@ -805,13 +997,43 @@ class ConSim:
 
         return n_correct / len(model_predictions)
 
-    def compute_score(
+    def _compute_score(
         self,
         user_llm_response: str,
         literal_model_predictions: list[str],
     ) -> float | None:
+        """
+        Compute the score of the ConSim metric,
+        thus the accuracy of the `user_llm` predictions with respect to the model predictions.
+
+        Responses from the `user_llm` are expected to be in the format:
+
+        ```
+        Sample_0: physician
+        Sample_1: surgeon
+        Sample_2: nurse
+        ```
+
+        Parameters
+        ----------
+        user_llm_response: str
+            The response from the user-llm or meta-predictor.
+        literal_model_predictions: list[str]
+            The model predictions.
+
+        Returns
+        -------
+        score: float | None
+            The score of the ConSim metric.
+            If the model predictions are empty or the user-llm predictions are empty, returns None.
+
+        Raises
+        ------
+        ValueError
+            If the model predictions and the user-llm predictions have different lengths.
+        """
         # extract the model predictions
-        literal_meta_predictions = self.extract_predictions_from_response(
+        literal_meta_predictions = self._extract_predictions_from_response(
             response=user_llm_response, expected_length=len(literal_model_predictions)
         )
 
@@ -821,12 +1043,12 @@ class ConSim:
             return None
 
         # compute the accuracy
-        return self.predictions_accuracy(literal_model_predictions, literal_meta_predictions)
+        return self._predictions_accuracy(literal_model_predictions, literal_meta_predictions)
 
     def evaluate(
         self,
         interesting_samples: list[str],
-        predictions: list[int],
+        predictions: torch.Tensor,
         concept_explainer: ConceptAutoEncoderExplainer,
         concepts_interpretation: dict[str, str],
         global_importances: dict[str, dict[str, float]],
@@ -834,6 +1056,63 @@ class ConSim:
         anonymize_classes: bool = False,
         importance_threshold: float = 0.05,
     ) -> float | None:
+        """
+        Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.
+
+        First local concepts importances are computed via the `concept_explainer`.
+        Then a prompt is constructed by integrating all the different elements and following the `prompt_type`.
+        The prompt is sent to the `user_llm` and the model predictions are extracted from the response.
+        Finally, the score is computed by comparing the model predictions with the `user_llm` predictions.
+
+        Parameters
+        ----------
+        interesting_samples: list[str]
+            The interesting samples.
+        predictions: torch.Tensor
+            The predictions of the model on the interesting samples.
+        concept_explainer: ConceptAutoEncoderExplainer
+            The concept explainer.
+        concepts_interpretation: dict[str, str]
+            The words that activate the concepts the most and the least.
+            A dictionary with the concepts as keys and another dictionary as values.
+            The inner dictionary has the words as keys and the activations as values.
+        global_importances: dict[str, dict[str, float]]
+            The importance of the concepts for each class.
+            A dictionary with the classes as keys and another dictionary as values.
+            The inner dictionary has the concepts as keys and the importance as values.
+        prompt_type: PromptTypes
+            The type of prompt to use. Possible values are:
+
+            - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
+
+            - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.
+
+            - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.
+
+            - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.
+
+            - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.
+
+            - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
+
+        anonymize_classes: bool
+            Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.
+            It prevents the user-llm to solve the task by simply guessing the class.
+        importance_threshold: float
+            The threshold to select the most important concepts for each class.
+            The threshold correspond to the cumulative importance of the concepts to keep.
+
+        Returns
+        -------
+        score: float | None
+            The score of the ConSim metric.
+            If the model predictions are empty or the user-llm predictions are empty, returns None.
+
+        Raises
+        ------
+        ValueError
+            If the model predictions and the user-llm predictions have different lengths.
+        """
         # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
         # For now we force gradient-input
         local_importances: torch.Tensor = concept_explainer.concept_output_gradient(
@@ -844,7 +1123,7 @@ class ConSim:
             tqdm_bar=False,
         )
 
-        prompts, literal_model_predictions = ConSim.generate_prompt(
+        prompts, literal_model_predictions = ConSim._generate_prompt(
             sentences=interesting_samples,
             predictions=predictions,
             classes=self.classes,
@@ -863,7 +1142,7 @@ class ConSim:
             # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
             return None
 
-        return self.compute_score(
+        return self._compute_score(
             user_llm_response=user_llm_response,
             literal_model_predictions=literal_model_predictions,
         )
