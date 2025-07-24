@@ -176,7 +176,7 @@ class ConSim:
         ConSim: Measuring Concept-Based Explanations' Effectiveness with Automated Simulatability.
         In the Proceedings of the 2025 Association for Computational Linguistics (ACL).
 
-    Examples
+    Examples  # TODO: validate in practice
     --------
 
     >>> import datasets
@@ -206,8 +206,8 @@ class ConSim:
     >>> samples, labels, predictions = con_sim.select_examples(
     ...     dataset["train"]["text"], dataset["train"]["label"],
     ... )
-    >>> score_1 = con_sim.evaluate(samples, labels, predictions, concept_explainer_1)
-    >>> score_2 = con_sim.evaluate(samples, labels, predictions, concept_explainer_2)
+    >>> baseline = con_sim.evaluate(samples, labels, predictions, prompt_type=PromptTypes.L2_baseline_with_lp)
+    >>> con_sim_score = con_sim.evaluate(samples, labels, predictions, concept_explainer_1, prompt_type=PromptTypes.E3_global_and_local_concepts_with_lp)
     """
 
     prompt_types = PromptTypes
@@ -1113,6 +1113,13 @@ class ConSim:
         ValueError
             If the model predictions and the user-llm predictions have different lengths.
         """
+        # TODO: verify the mwsp of the explainer is the same
+
+        # TODO: allow some inputs to be None if they are not used
+        # only compute the elements if needed
+
+        # TODO: skip some parts the prompt type is a baseline
+        # TODO: only compute the lp elements in most cases
         # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
         # For now we force gradient-input
         local_importances: torch.Tensor = concept_explainer.concept_output_gradient(
@@ -1134,7 +1141,7 @@ class ConSim:
             anonymize_classes=anonymize_classes,
             importance_threshold=importance_threshold,
         )
-
+        # TODO: if user_llm is None, return the prompt
         user_llm_response = self.user_llm.generate(prompts)
 
         if user_llm_response is None:
