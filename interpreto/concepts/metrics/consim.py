@@ -1122,6 +1122,7 @@ class ConSim:
         # TODO: only compute the lp elements in most cases
         # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
         # For now we force gradient-input
+        # TODO: precise shapes with jaxtyping
         local_importances: torch.Tensor = concept_explainer.concept_output_gradient(
             inputs=interesting_samples,
             split_point=self.split_point,
