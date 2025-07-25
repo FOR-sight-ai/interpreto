@@ -800,7 +800,7 @@ class ConSim:
 
         # -----------------
         # model predictions (not included in the prompt, but returned to compute accuracy)
-        literal_model_predictions = [anonym_classes[classes[predictions[i]]] for i in range(mid_index)]
+        literal_model_predictions = [classes[predictions[i]] for i in range(mid_index)]
         if anonymize_classes:
             literal_model_predictions = [anonym_classes[class_name] for class_name in literal_model_predictions]
 
@@ -997,8 +997,8 @@ class ConSim:
 
         return n_correct / len(model_predictions)
 
+    @staticmethod
     def _compute_score(
-        self,
         user_llm_response: str,
         literal_model_predictions: list[str],
     ) -> float | None:
@@ -1033,7 +1033,7 @@ class ConSim:
             If the model predictions and the user-llm predictions have different lengths.
         """
         # extract the model predictions
-        literal_meta_predictions = self._extract_predictions_from_response(
+        literal_meta_predictions = ConSim._extract_predictions_from_response(
             response=user_llm_response, expected_length=len(literal_model_predictions)
         )
 
@@ -1043,7 +1043,7 @@ class ConSim:
             return None
 
         # compute the accuracy
-        return self._predictions_accuracy(literal_model_predictions, literal_meta_predictions)
+        return ConSim._predictions_accuracy(literal_model_predictions, literal_meta_predictions)
 
     def evaluate(
         self,
@@ -1106,7 +1106,10 @@ class ConSim:
         -------
         score: float | None
             The score of the ConSim metric.
-            If the model predictions are empty or the user-llm predictions are empty, returns None.
+            If the user-llm predictions are empty or in the wrong format, returns None.
+            It was chosen to return None,
+            because ConSim should be called a lot of times for statistically significant results.
+            Therefore, having a None score once in a while is better than the script crashing.
 
         Raises
         ------
