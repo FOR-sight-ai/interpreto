@@ -315,7 +315,7 @@ class Granularity(Enum):
             decomposition: list = []
             for gran_indices in indices:
                 ids = [int(input_ids[idx].item()) for idx in gran_indices]
-
+                # TODO: additional testing of this, it might cause issues for the TopKInputs concept interpretation method
                 if return_text:
                     text = tokenizer.decode(ids, skip_special_tokens=granularity is not Granularity.ALL_TOKENS)  # type: ignore
                     decomposition.append(text)
