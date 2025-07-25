@@ -30,10 +30,11 @@ from __future__ import annotations
 import os
 from enum import Enum
 from functools import lru_cache
+from typing import Protocol
 
 import torch
 from beartype import beartype
-from jaxtyping import Bool, Int, jaxtyped
+from jaxtyping import Bool, Float, Int, jaxtyped
 from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 
@@ -59,7 +60,99 @@ class NoWordIdsError(AttributeError):
         )
 
 
-class Granularity(Enum):
+class GranularityAggregationStrategy(Enum):
+    """
+    Enumeration of the available aggregation strategies for combining token-level
+    scores into a single score for each unit of a higher-level granularity
+    (e.g., word, sentence).
+
+    This is used in explainability methods to reduce token-based attributions
+    according to a defined granularity.
+
+    Attributes:
+        MEAN: Average of the token scores within each group.
+        MAX: Maximum token score within each group.
+        MIN: Minimum token score within each group.
+        SUM: Sum of all token scores within each group.
+        SIGNED_MAX: Selects the token with the highest absolute score and returns its signed value.
+                        For example, given scores [3, -1, 7], returns 7; for [3, -1, -7], returns -7.
+    """
+
+    MEAN = "mean"
+    MAX = "max"
+    MIN = "min"
+    SUM = "sum"
+    SIGNED_MAX = "signed_max"
+
+    @staticmethod
+    def aggregate(
+        x: Float[torch.Tensor, "l d"], strategy: GranularityAggregationStrategy, dim: int
+    ) -> Float[torch.Tensor, "1 d"]:
+        """
+        Aggregate activations.
+        Args:
+            x (torch.Tensor): The tensor to aggregate, shape: (l, d).
+            strategy (AggregationStrategy): The aggregation strategy to use.
+        Returns:
+            torch.Tensor: The aggregated tensor, shape (1, d).
+        """
+        match strategy:
+            case GranularityAggregationStrategy.SUM:
+                return x.sum(dim=dim, keepdim=True)
+            case GranularityAggregationStrategy.MEAN:
+                return x.mean(dim=dim, keepdim=True)
+            case GranularityAggregationStrategy.MAX:
+                return x.max(dim=dim, keepdim=True)[0]
+            case GranularityAggregationStrategy.MIN:
+                return x.min(dim=dim, keepdim=True)[0]
+            case GranularityAggregationStrategy.SIGNED_MAX:
+                return x.gather(dim, x.abs().max(dim=dim)[1].unsqueeze(dim))
+            case _:
+                raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
+
+    @staticmethod
+    def unfold(
+        x: Float[torch.Tensor, "1 d"], strategy: GranularityAggregationStrategy, new_dim_length: int
+    ) -> Float[torch.Tensor, "{new_dim_length} d"]:
+        """
+        Unfold activations.
+        Args:
+            x (torch.Tensor): The tensor to unfold, shape: (1, d).
+            strategy (AggregationStrategy): The aggregation strategy initially used.
+            new_dim_length (int): The new dimension length.
+        Returns:
+            torch.Tensor: The unfolded tensor, shape: (l, d).
+        """
+        match strategy:
+            case GranularityAggregationStrategy.SUM:
+                return (x / new_dim_length).repeat(new_dim_length, 1)
+            case (
+                GranularityAggregationStrategy.MEAN
+                | GranularityAggregationStrategy.MAX
+                | GranularityAggregationStrategy.MIN
+                | GranularityAggregationStrategy.SIGNED_MAX
+            ):
+                return x.repeat(new_dim_length, 1)
+            case _:
+                raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
+
+
+class AggregationProtocol(Protocol):
+    """Protocol for aggregation strategies used in :meth:`ModelWithSplitPoints.get_activations`."""
+
+    def __call__(self, x: torch.Tensor, dim: int) -> torch.Tensor:
+        """Aggregate activations.
+
+        Args:
+            x (torch.Tensor): The tensor to aggregate.
+
+        Returns:
+            torch.Tensor: The aggregated tensor.
+        """
+        ...
+
+
+class Granularity:
     """
     Enumerations of the different granularity levels supported for masking perturbations
     Allows to define token-wise masking, word-wise masking...
@@ -71,6 +164,7 @@ class Granularity(Enum):
     SENTENCE = "sentence"  # Sentences of the input
     # PARAGRAPH = "paragraph"  # Not supported yet, the "\n\n" characters are replaced by spaces in many tokenizers.
     DEFAULT = ALL_TOKENS
+    aggregation_strategies = GranularityAggregationStrategy
 
     @staticmethod
     # @jaxtyped(typechecker=beartype)
@@ -179,8 +273,7 @@ class Granularity(Enum):
                 #     raise ValueError(f"{level.value} granularity needs a *fast* tokenizer.")
                 if "offset_mapping" not in inputs:
                     raise ValueError(
-                        f"{level.value} granularity requires `return_offsets_mapping=True` "
-                        "when you call the tokenizer."
+                        f"{level} granularity requires `return_offsets_mapping=True` when you call the tokenizer."
                     )
 
                 if not _HAS_SPACY:
@@ -373,3 +466,82 @@ class Granularity(Enum):
             if token_indices:  # skip empty groups (can happen on only-punct spans)
                 groups.append(token_indices)
         return groups
+
+    @staticmethod
+    def aggregate_score_for_gradient_method(
+        contribution: torch.Tensor,
+        granularity: Granularity | None,
+        granularity_aggregation_strategy: GranularityAggregationStrategy | None = None,
+        inputs: BatchEncoding | None = None,
+        tokenizer: PreTrainedTokenizer | None = None,
+    ) -> Float[torch.Tensor, "t g"]:
+        """
+        Aggregate contribution for gradient-based methods according to the specified granularity.
+
+        Args:
+            contribution (torch.Tensor): The contribution to aggregate. Shape: (n, lp)
+            granularity (Granularity): The granularity level to use for aggregation.
+                If None, defaults to Granularity.DEFAULT.
+            granularity_aggregation_strategy (GranularityAggregationStrategy): The aggregation method to use.
+                It should be an attribute of `GranularityAggregationStrategy`. Choices are:
+                    - `MEAN`: average of contribution
+
+                    - `MAX`: maximum contribution
+
+                    - `MIN`: minimum contribution
+
+                    - `SUM`: sum of contribution
+
+                    - `SIGNED_MAX`: contribution with the largest absolute value, preserving its sign
+            inputs (BatchEncoding | None): Required if granularity is not `ALL_TOKENS`.
+            tokenizer (PreTrainedTokenizer | None): Required for TOKEN/WORD-level filtering.
+
+        Returns:
+            torch.Tensor: The aggregated contribution.
+        """
+        granularity = granularity or Granularity.DEFAULT  # type: ignore
+
+        if granularity == Granularity.ALL_TOKENS:
+            return contribution
+
+        if inputs is None:
+            raise ValueError("Inputs are required for non ALL_TOKENS granularity.")
+
+        # extract indices of contribution to keep from inputs
+        indices_list = Granularity.get_indices(inputs, granularity, tokenizer)  # type: ignore
+
+        if len(indices_list) > 1:
+            raise ValueError(
+                "`aggregate_score_for_gradient_method` do not support batched inputs. Please provide a single input."
+            )
+
+        match granularity:
+            case Granularity.TOKEN:
+                # convert contribution to tensor for faster indexing
+                indices = torch.tensor(indices_list[0]).squeeze(1)
+                return contribution[:, indices]
+            case Granularity.WORD | Granularity.SENTENCE:
+                # verify aggregation strategy is not None:
+                if granularity_aggregation_strategy is None:
+                    raise ValueError(
+                        "granularity_aggregation_strategy must be provided for WORD or SENTENCE granularity."
+                    )
+                # iterate over granularity elements
+                aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
+                    (contribution.shape[0], len(indices_list[0]))
+                )
+                for aggregation_index, token_indices in enumerate(indices_list[0]):
+                    # extract token contribution for each word/sentence
+                    tokens_contribution: Float[torch.Tensor, "t gi"] = contribution[:, token_indices]
+
+                    if tokens_contribution.dim() == 1 or tokens_contribution.shape[1] == 1:
+                        # if only one token, no aggregation needed
+                        aggregated_contribution[:, [aggregation_index]] = tokens_contribution
+                    else:
+                        # aggregate token contribution for each word/sentence
+                        aggregated_contribution[:, [aggregation_index]] = GranularityAggregationStrategy.aggregate(
+                            tokens_contribution, strategy=granularity_aggregation_strategy, dim=1
+                        )
+                return aggregated_contribution
+            case _:
+                raise NotImplementedError(f"Invalid granularity for aggregation: {granularity}")

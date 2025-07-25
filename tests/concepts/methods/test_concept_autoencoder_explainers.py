@@ -31,6 +31,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+from interpreto import Granularity
 from interpreto.concepts import (
     BatchTopKSAEConcepts,
     Cockatiel,
@@ -50,7 +51,7 @@ from interpreto.concepts import (
     VanillaSAEConcepts,
 )
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer, SAEExplainer
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.model_wrapping.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -141,6 +142,74 @@ def test_overcomplete_cbe(
         assert dictionary.shape == (nb_concepts, d)
 
 
+@pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
+@pytest.mark.parametrize(
+    "granularity",
+    [
+        ModelWithSplitPoints.activation_granularities.TOKEN,
+        ModelWithSplitPoints.activation_granularities.WORD,
+        ModelWithSplitPoints.activation_granularities.SENTENCE,
+    ],
+)
+def test_concept_output_gradient(
+    splitted_encoder_ml: ModelWithSplitPoints,
+    activations_dict: dict[str, torch.Tensor],
+    sentences: list[str],
+    method_class: type[ConceptAutoEncoderExplainer],
+    granularity: ActivationGranularity,
+):
+    split, activations = next(iter(activations_dict.items()))
+    nb_concepts = 3
+
+    if method_class == NeuronsAsConcepts:
+        cbe = method_class(splitted_encoder_ml)  # type: ignore
+        concepts_dim = activations.shape[1]
+    elif method_class in [Cockatiel, NMFConcepts]:
+        cbe = method_class(
+            splitted_encoder_ml,
+            nb_concepts=nb_concepts,  # type: ignore
+            device=DEVICE,  # type: ignore
+            force_relu=True,  # type: ignore
+        )  # type: ignore
+        cbe.fit(activations)
+        concepts_dim = nb_concepts
+    elif issubclass(method_class, SAEExplainer):
+        cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
+        cbe.fit(activations, nb_epochs=1, batch_size=1, device=DEVICE)
+        concepts_dim = nb_concepts
+    elif issubclass(method_class, DictionaryLearningExplainer):
+        cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
+        cbe.fit(activations)
+        concepts_dim = nb_concepts
+    else:
+        raise ValueError(f"Unknown method_class {method_class}")
+
+    if not cbe.has_differentiable_concept_decoder:
+        pytest.skip("Skipping test for method_class that does not have a differentiable concept decoder")
+
+    gradients = cbe.concept_output_gradient(
+        sentences,
+        targets=[0],
+        activation_granularity=granularity,
+    )
+    assert isinstance(gradients, list)
+    assert len(gradients) == len(sentences)
+    for grad, sentence in zip(gradients, sentences, strict=True):
+        assert isinstance(grad, torch.Tensor)
+
+        tokenizer = splitted_encoder_ml.tokenizer
+        tokens = tokenizer(
+            sentence,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            return_offsets_mapping=True,
+        )
+        indices_list = Granularity.get_indices(tokens, granularity.value, tokenizer)  # type: ignore
+        nb_granularity_elements = len(indices_list[0])
+        assert grad.shape == (1, nb_granularity_elements, concepts_dim)
+
+
 if __name__ == "__main__":
     from transformers import AutoModelForMaskedLM
 
@@ -155,6 +224,7 @@ if __name__ == "__main__":
         "hf-internal-testing/tiny-random-bert",
         split_points=["bert.encoder.layer.1.output"],
         model_autoclass=AutoModelForMaskedLM,  # type: ignore
+        device_map=DEVICE,
     )
     activations_dict: dict[str, torch.Tensor] = splitted_encoder_ml.get_activations(
         sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
@@ -163,4 +233,11 @@ if __name__ == "__main__":
         splitted_encoder_ml=splitted_encoder_ml,
         activations_dict=activations_dict,
         method_class=KMeansConcepts,
+    )
+    test_concept_output_gradient(
+        splitted_encoder_ml=splitted_encoder_ml,
+        activations_dict=activations_dict,
+        sentences=sentences,
+        method_class=NeuronsAsConcepts,
+        granularity=ModelWithSplitPoints.activation_granularities.WORD,
     )

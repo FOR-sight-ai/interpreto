@@ -43,7 +43,7 @@ from interpreto.attributions.base import AttributionExplainer
 from interpreto.concepts.interpretations.base import BaseConceptInterpretationMethod
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,
-    AggregationStrategy,
+    GranularityAggregationStrategy,
     ModelWithSplitPoints,
 )
 from interpreto.typing import ConceptModelProtocol, ConceptsActivations, LatentActivations, ModelInputs
@@ -414,11 +414,12 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         targets: list[int] | None = None,
         split_point: str | None = None,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
-        aggregation_strategy: AggregationStrategy = AggregationStrategy.MEAN,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concepts_x_gradients: bool = False,
         tqdm_bar: bool = True,
-    ) -> Float[torch.Tensor, "ng c"]:
+    ) -> list[Float[torch.Tensor, "t g c"]]:
         """ """
+        self.concept_model.to(self.model_with_split_points.device)
         gradients = self.model_with_split_points.get_concepts_output_gradients(
             inputs=inputs,
             targets=targets,

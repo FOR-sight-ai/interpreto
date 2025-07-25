@@ -49,7 +49,7 @@ def multi_split_model() -> ModelWithSplitPoints:
         "hf-internal-testing/tiny-random-bert",
         split_points=[
             "cls.predictions.transform.LayerNorm",
-            "bert.encoder.layer.1.output",
+            "bert.encoder.layer.1",
             "bert.encoder.layer.3.attention.self.query",
         ],
         model_autoclass=AutoModelForMaskedLM,  # type: ignore

@@ -3,13 +3,8 @@ import os
 import torch
 from matplotlib import pyplot as plt
 
-from interpreto.attributions.base import (
-    AttributionOutput,
-    ModelTask
-)
-from interpreto.visualizations.attributions import (
-    AttributionVisualization
-)
+from interpreto.attributions.base import AttributionOutput, ModelTask
+from interpreto.visualizations.attributions import AttributionVisualization
 from interpreto.visualizations.concepts.concepts_highlight import (
     ConceptHighlightVisualization,
 )
@@ -19,10 +14,9 @@ def test_attribution_monoclass():
     # attributions (1 classe)
     sentence = ["A", "B", "C", "one", "two", "three"]
     attributions = torch.linspace(-10, 10, steps=len(sentence))
-    single_class_classification_output = AttributionOutput(elements=sentence,
-                                                           attributions=attributions,
-                                                           model_task=ModelTask.SINGLE_CLASS_CLASSIFICATION,
-                                                           classes=[0])
+    single_class_classification_output = AttributionOutput(
+        elements=sentence, attributions=attributions, model_task=ModelTask.SINGLE_CLASS_CLASSIFICATION, classes=[0]
+    )
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     output_file_path = os.path.join(current_dir, "test_attribution_monoclass.html")
@@ -48,14 +42,13 @@ def test_attribution_multiclass():
     nb_classes = 2
 
     attributions = torch.rand(nb_classes, len(sentence))  # (c, l)
-    multi_class_classification_output = AttributionOutput(elements=sentence,
-                                                          attributions=attributions,
-                                                          model_task=ModelTask.MULTI_CLASS_CLASSIFICATION,
-                                                          classes=[0, 1])
+    multi_class_classification_output = AttributionOutput(
+        elements=sentence, attributions=attributions, model_task=ModelTask.MULTI_CLASS_CLASSIFICATION, classes=[0, 1]
+    )
 
     viz = AttributionVisualization(
         attribution_output=multi_class_classification_output,
-        class_names={0:"class1", 1:"class2"},
+        class_names={0: "class1", 1: "class2"},
     )
 
     current_dir = os.path.dirname(os.path.abspath(__file__))

@@ -67,6 +67,7 @@ jobs:
         model_ids = [
             "hf-internal-testing/tiny-random-bert",
             "hf-internal-testing/tiny-random-gpt2",
+            "hf-internal-testing/tiny-random-LlamaForCausalLM",
             "hf-internal-testing/tiny-random-roberta",
             "hf-internal-testing/tiny-random-t5",
         ]

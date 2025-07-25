@@ -22,6 +22,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import itertools
+
 import pytest
 import torch
 from transformers import (
@@ -37,14 +39,31 @@ from interpreto.model_wrapping.model_with_split_points import ActivationGranular
 
 BERT_SPLIT_POINTS = [
     "cls.predictions.transform.LayerNorm",
-    "bert.encoder.layer.1.output",
+    "bert.encoder.layer.1",
     "bert.encoder.layer.3.attention.self.query",
 ]
 
 BERT_SPLIT_POINTS_SORTED = [
-    "bert.encoder.layer.1.output",
+    "bert.encoder.layer.1",
     "bert.encoder.layer.3.attention.self.query",
     "cls.predictions.transform.LayerNorm",
+]
+
+GRANULARITIES = [
+    ActivationGranularity.ALL,
+    ActivationGranularity.ALL_TOKENS,
+    ActivationGranularity.CLS_TOKEN,
+    ActivationGranularity.TOKEN,
+    ActivationGranularity.WORD,
+    ActivationGranularity.SENTENCE,
+    ActivationGranularity.SAMPLE,
+]
+
+AGGREGATIONS = [
+    ModelWithSplitPoints.aggregation_strategies.MEAN,
+    ModelWithSplitPoints.aggregation_strategies.SUM,
+    ModelWithSplitPoints.aggregation_strategies.MAX,
+    ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX,
 ]
 
 
@@ -104,6 +123,285 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
         ModelWithSplitPoints("gpt2", "transformer.h.1")
 
 
+def test_pad_and_concat():
+    """Validate ``pad_and_concat`` left and right padding."""
+    tensors = [
+        torch.zeros(1, 2, 3),
+        torch.ones(1, 3, 3),
+    ]
+    out_right = ModelWithSplitPoints.pad_and_concat(tensors, "right", 0.5)
+    out_left = ModelWithSplitPoints.pad_and_concat(tensors, "left", -1.0)
+
+    assert out_right.shape == (2, 3, 3)
+    assert out_right[0, -1].tolist() == [0.5, 0.5, 0.5]
+    assert out_left.shape == (2, 3, 3)
+    assert out_left[0, 0].tolist() == [-1.0, -1.0, -1.0]
+
+
+def test_manage_output_tuple():
+    """Ensure ``_manage_output_tuple`` extracts the 3-D tensor from a tuple."""
+    model = ModelWithSplitPoints(
+        "hf-internal-testing/tiny-random-bert",
+        split_points=["bert.encoder.layer.1.output"],
+        model_autoclass=AutoModelForSequenceClassification,  # type: ignore
+    )
+    tensor = torch.zeros(1, 2, 3)
+    other = torch.zeros(1, 2)
+    out = model._manage_output_tuple((other, tensor), "dummy")  # type: ignore
+    assert out.shape == tensor.shape
+    assert model.output_tuple_index == 1
+
+    with pytest.raises(TypeError):
+        model._manage_output_tuple(42, "dummy")  # type: ignore
+
+
+def test_get_split_activations(splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]):
+    """Test activation extraction for a specific split."""
+    acts = splitted_encoder_ml.get_activations(sentences)
+    split = splitted_encoder_ml.split_points[0]
+    extracted = splitted_encoder_ml.get_split_activations(acts, split)
+    assert torch.equal(extracted, acts[split])
+
+    with pytest.raises(ValueError):
+        splitted_encoder_ml.get_split_activations({}, "unknown")  # type: ignore
+
+    with pytest.raises(TypeError):
+        splitted_encoder_ml.get_split_activations(42)  # type: ignore
+
+
+def test_get_latent_shape(splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]):
+    """Shapes returned by ``get_latent_shape`` match activation shapes."""
+    shapes = splitted_encoder_ml.get_latent_shape(sentences)
+    acts = splitted_encoder_ml.get_activations(sentences, activation_granularity=ActivationGranularity.ALL)
+    for sp in splitted_encoder_ml.split_points:
+        assert shapes[sp] == acts[sp].shape
+
+
+def test_activation_selection_and_reintegration_with_bert(bert_model, bert_tokenizer, sentences):
+    activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
+
+
+def test_activation_selection_and_reintegration_with_gpt2(gpt2_model, gpt2_tokenizer, sentences):
+    activation_selection_and_reintegration(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
+
+
+def activation_selection_and_reintegration(model, tokenizer, split_point, sentences):
+    """
+    Test that the selection then reintegration of raw activations are coherent.
+
+    Raw activations have a shape (n, l, d) where n is the batch size, l is the sequence length, and d is the hidden dimension.
+
+    Selected activations have a shape (ng, d) where ng is the number of granularity levels.
+    Except for the `ALL` activation granularity which dos not impact the shape.
+
+    Reintegrated activations should match back the raw activations.
+
+    We also reselect after reintegration to ensure that the selection is idempotent.
+    """
+    # ---------------------------
+    # Compute initial activations
+    if not hasattr(tokenizer, "pad_token") or tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        model.resize_token_embeddings(len(tokenizer))
+    mwsp = ModelWithSplitPoints(
+        model,
+        tokenizer=tokenizer,
+        split_points=[split_point],
+        model_autoclass=type(model),
+        batch_size=2,
+    )
+    tokens = tokenizer(
+        sentences,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        return_offsets_mapping=True,
+    )
+    activations = mwsp.get_activations(tokens, activation_granularity=ActivationGranularity.ALL)[split_point]
+
+    # -----------------------------------------------------------
+    # Define expected shapes for the different granularity levels
+    batch, seq_len = tokens["input_ids"].shape
+    hidden = mwsp._model.config.hidden_size
+    total_token_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.TOKEN, tokenizer))
+    total_word_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.WORD, tokenizer))
+
+    expected = {
+        ActivationGranularity.ALL: (batch, seq_len, hidden),
+        ActivationGranularity.CLS_TOKEN: (batch, hidden),
+        # ActivationGranularity.ALL_TOKENS: cannot be tested as the output shape depends on the batch size
+        ActivationGranularity.TOKEN: (total_token_len, hidden),
+        ActivationGranularity.WORD: (total_word_len, hidden),
+        ActivationGranularity.SENTENCE: (len(sentences) + 1, hidden),
+        ActivationGranularity.SAMPLE: (batch, hidden),
+    }
+
+    # -------------------------------------------------------
+    # List all plausible granularity/aggregation combinations
+    granularities_with_aggregations = list(
+        itertools.product(
+            (ActivationGranularity.WORD, ActivationGranularity.SENTENCE),
+            AGGREGATIONS,
+        )
+    )
+    granularities_without_aggregations = [
+        (ActivationGranularity.ALL, None),
+        (ActivationGranularity.ALL_TOKENS, None),
+        (ActivationGranularity.TOKEN, None),
+    ]
+
+    if model.__class__.__name__.endswith("ForSequenceClassification"):
+        granularities_without_aggregations.append((ActivationGranularity.CLS_TOKEN, None))
+
+    # --------------------------------------------------------------------------------
+    # Test selection and reintegration for all combinations of granularity/aggregation
+    for granularity, aggregation in granularities_without_aggregations + granularities_with_aggregations:
+        # ------------------
+        # Select activations
+        selected_activations, indices = mwsp._apply_selection_strategy(
+            inputs=tokens,
+            activations=activations.clone(),
+            activation_granularity=granularity,
+            aggregation_strategy=aggregation,
+        )
+        # ensure that the shape of the selected activations matches the expected shape
+        if granularity != ActivationGranularity.ALL_TOKENS:
+            # the ALL_TOKENS granularity shape depends on the batch size and cannot be tested
+            assert selected_activations.shape == expected[granularity]
+
+        # -----------------------
+        # Reintegrate activations
+        reconstructed_activations = mwsp._reintegrate_selected_activations(
+            activations.clone(),
+            selected_activations,
+            activation_granularity=granularity,
+            aggregation_strategy=aggregation,
+            granularity_indices=indices,
+        )
+        # ensure that the shape of the reintegrated activations matches the initial shape
+        assert reconstructed_activations.shape == activations.shape
+        # ensure that the reintegrated activations match the initial activations
+        if aggregation is None:
+            # if activations are aggregated, we cannot get back to the exact original activations
+            assert torch.allclose(reconstructed_activations, activations, atol=1e-5)
+
+        # -----------------------
+        # Reselect activations to ensure verify that the aggregation is idempotent
+        reselected_activations, indices = mwsp._apply_selection_strategy(
+            inputs=tokens,
+            activations=reconstructed_activations.clone(),
+            activation_granularity=granularity,
+            aggregation_strategy=aggregation,
+        )
+        # ensure that the shape of the reselected activations matches the selected activations
+        assert reselected_activations.shape == selected_activations.shape
+        # ensure that the reselected activations match the selected activations
+        assert torch.allclose(reselected_activations, selected_activations, atol=1e-5)
+
+
+def test_get_activation_and_gradient_with_bert(bert_model, bert_tokenizer, sentences):
+    activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
+
+
+def test_get_activation_and_gradient_with_gpt2(gpt2_model, gpt2_tokenizer, sentences):
+    activation_selection_and_reintegration(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
+
+
+def get_activation_and_gradient(model, tokenizer, split_point, sentences):
+    """
+    Test that the `get_activations` and `get_concepts_output_gradients` methods return the expected shapes.
+    """
+    # ----------------------------
+    # Add a padding token for gpt2
+    if not hasattr(tokenizer, "pad_token") or tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        model.resize_token_embeddings(len(tokenizer))
+
+    # --------------------------------------------------------
+    # Setup the model with split points, tokenizer, and tokens
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    mwsp = ModelWithSplitPoints(
+        model,
+        tokenizer=tokenizer,
+        split_points=[split_point],
+        model_autoclass=type(model),
+        batch_size=2,
+        device_map=device,
+    )
+    tokens = tokenizer(
+        sentences,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        return_offsets_mapping=True,
+    )
+
+    # -----------------------------------------------------------
+    # Define expected shapes for the different granularity levels
+    batch, seq_len = tokens["input_ids"].shape
+    hidden = mwsp._model.config.hidden_size
+    total_token_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.TOKEN, tokenizer))
+    total_word_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.WORD, tokenizer))
+
+    granularities_expected_shapes = {
+        # ActivationGranularity.ALL_TOKENS: cannot be tested as the output shape depends on the batch size
+        ActivationGranularity.TOKEN: (total_token_len, hidden),
+        ActivationGranularity.WORD: (total_word_len, hidden),
+        ActivationGranularity.SENTENCE: (len(sentences) + 1, hidden),
+        ActivationGranularity.SAMPLE: (batch, hidden),
+    }
+
+    if model.__class__.__name__.endswith("ForSequenceClassification"):
+        granularities_expected_shapes[ActivationGranularity.CLS_TOKEN] = (batch, hidden)
+
+    # ----------------------------------------------
+    # Define a concept encoder/decoder weight matrix
+    # We want W@W.T to be approximately the identity matrix
+    nb_concepts = 2 * hidden
+    initial = torch.randn(nb_concepts, hidden)
+    decoder_weights = torch.linalg.qr(initial)[0].to(device)
+    encoder_weights = decoder_weights.T
+
+    # ---------------------------------------------------------------------------------
+    # Test get_activations and get_concepts_output_gradients for all granularity levels
+    for granularity, expected_shape in granularities_expected_shapes.items():
+        # ---------------
+        # Get activations
+        activations = mwsp.get_activations(sentences, activation_granularity=granularity)[split_point]
+        assert activations.shape == expected_shape
+
+        if granularity in [ActivationGranularity.ALL, ActivationGranularity.SAMPLE]:
+            # ALL and SAMPLE granularities are not compatible with gradients
+            continue
+
+        if granularity == ActivationGranularity.CLS_TOKEN:
+            indices_list = [[[0]]] * len(sentences)  # type: ignore
+        else:
+            indices_list = Granularity.get_indices(tokens, granularity.value, tokenizer)  # type: ignore
+
+        # -------------
+        # Get gradients
+        if granularity in [ActivationGranularity.WORD, ActivationGranularity.SENTENCE]:
+            aggregations = AGGREGATIONS
+        else:
+            aggregations = [None]
+        for aggregation in aggregations:
+            grads_list = mwsp.get_concepts_output_gradients(
+                sentences,
+                encode_activations=lambda x: x @ encoder_weights,
+                decode_activations=lambda x: x @ decoder_weights,
+                activation_granularity=granularity,
+                aggregation_strategy=aggregation,
+                targets=None,
+            )
+            assert len(grads_list) == len(sentences)  # there should be as many gradients as inputs
+            for grads, indices in zip(grads_list, indices_list, strict=True):
+                # we expect the shape of the gradients to be (t, g, c)
+                # with t the number of targets, ng the number of granularity elements concatenated, and c the number of concepts
+                assert grads.shape[1] == len(indices)  # number of granularity elements
+                assert grads.shape[2] == nb_concepts  # number of concepts
+
+
 def test_activation_equivalence_batched_text_token_inputs(multi_split_model: ModelWithSplitPoints):
     """
     Test the equivalence of activations for text and token inputs
@@ -119,43 +417,6 @@ def test_activation_equivalence_batched_text_token_inputs(multi_split_model: Mod
 
     for k in activations_str.keys():
         assert torch.allclose(activations_str[k], activations_tensor[k])  # type: ignore
-
-
-def test_get_activations_selection_strategies(
-    splitted_encoder_ml: ModelWithSplitPoints,
-    sentences: list[str],
-):
-    """Validate output shapes and values for all activation selection strategies."""
-
-    tokenizer = splitted_encoder_ml.tokenizer
-    tokens = tokenizer(
-        sentences,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        return_offsets_mapping=True,
-    )
-
-    batch, seq_len = tokens["input_ids"].shape  # type: ignore
-    hidden = splitted_encoder_ml._model.config.hidden_size
-    total_token_len = sum([len(indices) for indices in Granularity.get_indices(tokens, Granularity.TOKEN, tokenizer)])
-    total_word_len = sum([len(indices) for indices in Granularity.get_indices(tokens, Granularity.WORD, tokenizer)])
-
-    expected_shapes = {
-        # splitted_encoder_ml.activation_granularities.ALL: (batch, seq_len, hidden),
-        splitted_encoder_ml.activation_granularities.CLS_TOKEN: (batch, hidden),
-        splitted_encoder_ml.activation_granularities.ALL_TOKENS: (batch * seq_len, hidden),
-        splitted_encoder_ml.activation_granularities.TOKEN: (total_token_len, hidden),
-        splitted_encoder_ml.activation_granularities.WORD: (total_word_len, hidden),
-        splitted_encoder_ml.activation_granularities.SENTENCE: (len(sentences) + 1, hidden),
-        splitted_encoder_ml.activation_granularities.SAMPLE: (batch, hidden),
-    }
-
-    split = splitted_encoder_ml.split_points[0]
-
-    for strategy, shape in expected_shapes.items():
-        activations = splitted_encoder_ml.get_activations(sentences, activation_granularity=strategy)
-        assert activations[split].shape == shape
 
 
 @pytest.mark.parametrize(
@@ -176,16 +437,17 @@ def test_batching(splitted_encoder_ml: ModelWithSplitPoints, huge_text: list[str
 
 # TODO: This test was removed because we do not currently handle splitting over layers that return
 # outputs that are not tensors.
-# def test_index_by_layer_idx(multi_split_model: ModelWithSplitPoints):
-#    """Test indexing by layer idx"""
-#    split_points_with_layer_idx: list[str | int] = list(BERT_SPLIT_POINTS)
-#    split_points_with_layer_idx[1] = 1  # instead of bert.encoder.layer.1
-#    multi_split_model.split_points = split_points_with_layer_idx
-#    assert multi_split_model.split_points == BERT_SPLIT_POINTS_SORTED, (
-#        f"Failed for split_points: {BERT_SPLIT_POINTS}\n"
-#        f"Expected: {BERT_SPLIT_POINTS_SORTED}\n"
-#        f"Got:      {multi_split_model.split_points}"
-#    )
+def test_index_by_layer_idx(multi_split_model: ModelWithSplitPoints):
+    """Test indexing by layer idx"""
+    split_points_with_layer_idx: list = list(BERT_SPLIT_POINTS)
+    split_points_with_layer_idx[1] = 1  # instead of bert.encoder.layer.1
+    multi_split_model.split_points = split_points_with_layer_idx
+    assert multi_split_model.split_points == BERT_SPLIT_POINTS_SORTED, (
+        f"Failed for split_points: {BERT_SPLIT_POINTS}\n"
+        f"Expected: {BERT_SPLIT_POINTS_SORTED}\n"
+        f"Got:      {multi_split_model.split_points}"
+    )
+
 
 ALL_MODEL_LOADERS = {
     "hf-internal-testing/tiny-random-albert": AutoModelForSequenceClassification,
@@ -249,18 +511,18 @@ STRATEGIES = [
 
 
 @pytest.mark.parametrize("model_name", CI_MODEL_LOADERS)
-def test_activations_short(model_name, huge_text: list[str]):
-    evaluate_activations(model_name, huge_text)
+def test_activations_and_gradients_on_models_short(model_name, sentences: list[str]):
+    evaluate_activations_and_gradients(model_name, sentences)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", [k for k in ALL_MODEL_LOADERS.keys() if k not in CI_MODEL_LOADERS])
-def test_activations_long(model_name, huge_text: list[str]):
-    evaluate_activations(model_name, huge_text)
+def test_activations_and_gradients_on_models_long(model_name, sentences: list[str]):
+    evaluate_activations_and_gradients(model_name, sentences)
 
 
-def evaluate_activations(model_name, huge_text: list[str]):
-    """Tests all combinations of models and loaders with an attribution method"""
+def evaluate_activations_and_gradients(model_name, sentences: list[str]):
+    """Tests model with split points get activations and gradients with a large variety of models"""
 
     model = ALL_MODEL_LOADERS[model_name].from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -269,14 +531,24 @@ def evaluate_activations(model_name, huge_text: list[str]):
         tokenizer.add_special_tokens({"pad_token": "[PAD]"})
         model.resize_token_embeddings(len(tokenizer))
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     splitted_model = ModelWithSplitPoints(
         model,
         tokenizer=tokenizer,
         split_points=ALL_MODEL_SPLIT_POINTS[model_name],
         model_autoclass=ALL_MODEL_LOADERS[model_name],
-        device_map="cuda" if torch.cuda.is_available() else "cpu",
+        device_map=device,
         batch_size=8,
     )
+
+    # ----------------------------------------------
+    # Define a concept encoder/decoder weight matrix
+    # We want W@W.T to be approximately the identity matrix
+    hidden = splitted_model._model.config.hidden_size
+    nb_concepts = 2 * hidden
+    initial = torch.randn(nb_concepts, hidden)
+    decoder_weights = torch.linalg.qr(initial)[0].to(device)
+    encoder_weights = decoder_weights.T
 
     for strategy in STRATEGIES:
         if (
@@ -285,7 +557,22 @@ def evaluate_activations(model_name, huge_text: list[str]):
         ):
             # CLS_TOKEN is only supported for sequence classification models
             continue
-        splitted_model.get_activations(huge_text, activation_granularity=strategy)
+        splitted_model.get_activations(sentences, activation_granularity=strategy)
+
+        if strategy in [
+            ModelWithSplitPoints.activation_granularities.ALL,
+            ModelWithSplitPoints.activation_granularities.SAMPLE,
+        ]:
+            # ALL and SAMPLE granularities are not compatible with gradients
+            continue
+
+        splitted_model.get_concepts_output_gradients(
+            sentences,
+            encode_activations=lambda x: x @ encoder_weights,
+            decode_activations=lambda x: x @ decoder_weights,
+            activation_granularity=strategy,
+            targets=[0],
+        )
 
 
 if __name__ == "__main__":
@@ -308,7 +595,7 @@ if __name__ == "__main__":
         "bert-base-uncased",
         split_points=[
             "cls.predictions.transform.LayerNorm",
-            "bert.encoder.layer.1.output",
+            "bert.encoder.layer.1",
             "bert.encoder.layer.3.attention.self.query",
         ],
         model_autoclass=AutoModelForMaskedLM,  # type: ignore
@@ -324,6 +611,10 @@ if __name__ == "__main__":
     test_order_split_points(multi_split_model)
     test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer)
     test_activation_equivalence_batched_text_token_inputs(multi_split_model)
-    test_get_activations_selection_strategies(splitted_encoder_ml, sentences)
     test_batching(splitted_encoder_ml, sentences * 10, ModelWithSplitPoints.activation_granularities.CLS_TOKEN)
-    evaluate_activations("hf-internal-testing/tiny-random-t5", sentences * 100)
+    evaluate_activations_and_gradients("hf-internal-testing/tiny-random-t5", sentences * 100)
+    get_activation_and_gradient(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
+    get_activation_and_gradient(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
+    activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
+    activation_selection_and_reintegration(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
+    test_index_by_layer_idx(multi_split_model)
