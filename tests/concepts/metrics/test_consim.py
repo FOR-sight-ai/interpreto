@@ -78,7 +78,7 @@ class LLMInterfacePlaceholder(LLMInterface):
         # Format:
         #     Sample_0: "this is the first sample"
         #     Sample_1: "this is the second sample"
-        ep_sample_indices = [int(s.split(":")[0][6:]) for s in ep_samples_str.split("\n") if s]
+        ep_sample_indices = [int(s.split(":")[0][7:]) for s in ep_samples_str.split("\n") if s]
 
         # generate the response, give a random class for each sample
         response = "\n".join([f"Sample_{i}: {classes[i % len(classes)]}" for i in ep_sample_indices])
@@ -94,8 +94,8 @@ def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints, multi_split_mode
 
     # when only one split point is available, it should be chosen automatically
     consim = ConSim(splitted_encoder_ml, llm, classes=classes)
-    assert metric.split_point == splitted_encoder_ml.split_points[0]
-    assert metric.user_llm is llm
+    assert consim.split_point == splitted_encoder_ml.split_points[0]
+    assert consim.user_llm is llm
 
     # invalid split point should raise an error
     with pytest.raises(ValueError):
@@ -117,7 +117,12 @@ def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
 
     # Compute predictions with nnsight
     with splitted_encoder_ml.trace(inputs):
-        nnsight_preds = splitted_encoder_ml.output.save()
+        nnsight_output = (
+            splitted_encoder_ml.nns_output
+            if hasattr(splitted_encoder_ml, "nns_output")
+            else splitted_encoder_ml.output
+        )
+        nnsight_preds = torch.argmax(nnsight_output.logits, dim=-1).save()
 
     # Verify nnsight predictions
     assert isinstance(nnsight_preds, torch.Tensor)
@@ -210,9 +215,8 @@ def test_consim_quantize_importances():
     assert ConSim.quantize_importances(0.1, thr) == "+"
     assert ConSim.quantize_importances(-0.1, thr) == "-"
     assert ConSim.quantize_importances(-0.5, thr) == "--"
-
-    with pytest.raises(ValueError):
-        ConSim.quantize_importances(0.0, thr)
+    assert ConSim.quantize_importances(0.04, thr) is None
+    assert ConSim.quantize_importances(-0.04, thr) is None
 
 
 def test_consim_filter_and_quantize_concepts_importances():
@@ -269,15 +273,13 @@ def test_consim_filter_and_quantize_concepts_importances():
     assert glob_imp["A"]["concept_1"] == "+"  # 0.25
     assert glob_imp["A"]["concept_3"] == "-"  # -0.24
     assert glob_imp["B"]["concept_0"] == "+"  # 0.1
-    assert glob_imp["B"]["concept_1"] == "+"  # 0.49
+    assert glob_imp["B"]["concept_1"] == "++"  # 0.49
     assert glob_imp["B"]["concept_3"] == "--"  # -0.4
 
     # ensure that values have been quantized and have the correct literal
     assert loc_imp[0]["concept_0"] == "--"  # -0.55
-    assert loc_imp[0]["concept_2"] == "++"  # 0.3
     assert loc_imp[1]["concept_0"] == "++"  # 0.3
     assert loc_imp[1]["concept_1"] == "-"  # -0.2
-    assert loc_imp[1]["concept_2"] == "--"  # -0.39
     assert loc_imp[1]["concept_3"] == "+"  # 0.11
 
 
@@ -331,7 +333,7 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     if "local" in prompt_type_name:
         assert prompt_settings.lp_concepts_local_contributions is True
         assert prompt_settings.ep_concepts_local_contributions is False
-    else:
+    elif "upper_bound" not in prompt_type_name:
         assert prompt_settings.lp_concepts_local_contributions is False
     if "upper_bound" in prompt_type_name:
         assert prompt_settings.concepts_interpretation is True
@@ -373,9 +375,9 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     #     global concepts importance
     if prompt_settings.concepts_global_importances:
         if anonymize_classes:
-            assert "Class_0: {concept_0: ++}" in system
+            assert "Class_0: {'concept_0': '++'}" in system
         else:
-            assert "B: {concept_0: -}" in system
+            assert "B: {'concept_0': '-'}" in system
 
     # --------------
     # Learning Phase
@@ -385,7 +387,10 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         assert "Sample_0: s0\nSample_1: s1" in system
         assert "Sample_2" not in system and "Sample_3" not in system
         # labels
-        assert "Sample_0: A\nSample_1: B" in system
+        if anonymize_classes:
+            assert "Sample_0: Class_0\nSample_1: Class_1" in system
+        else:
+            assert "Sample_0: A\nSample_1: B" in system
 
     # local concepts explanation
     if prompt_settings.lp_concepts_local_contributions:
@@ -434,22 +439,22 @@ def test_consim_generate_prompt():
 
     # verify literal predictions
     assert isinstance(literal, list)
-    assert len(literal) == len(sentences)
+    assert len(literal) == len(preds) / 2
     assert all(isinstance(pred, str) for pred in literal)
-    assert literal == ["A", "B", "A", "B"]
+    assert literal == ["A", "B"]
 
     # global importance should have been converted to:
     # glob = {"A": {"concept_0": 0.6}, "B": {"concept_0": -0.6}}
     # with the concept_1 being removed
     assert "concept_1" not in system
     assert "concept_0: word" in system  # E3 includes the concepts interpretation
-    assert "A: {concept_0: ++}" in system  # E3 includes the global concepts importance
-    assert "B: {concept_0: --}" in system  # E3 includes the global concepts importance
+    assert "A: {'concept_0': '++'}" in system  # E3 includes the global concepts importance
+    assert "B: {'concept_0': '--'}" in system  # E3 includes the global concepts importance
     assert "Sample_0: s0\nSample_1: s1" in system
     assert "Sample_2" not in system and "Sample_3" not in system
     assert "Sample_0: A\nSample_1: B" in system
-    assert "Sample_0: {'concept_0': '+'}" in system  # E3 includes the local concepts contribution
-    assert "Sample_1: {'concept_0': '-'}" in system  # E3 includes the local concepts contribution
+    assert "Sample_0: {'concept_0': '++'}" in system  # E3 includes the local concepts contribution
+    assert "Sample_1: {'concept_0': '--'}" in system  # E3 includes the local concepts contribution
     assert "Sample_2: s2\nSample_3: s3" in user
     assert "Sample_0" not in user and "Sample_1" not in user
     assert "concept" not in user  # E3 does not include the concepts contributions in the user prompt
@@ -537,11 +542,12 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     # creating a dummy explainer that will return a gradient of ones
     class DummyExplainer(ConceptAutoEncoderExplainer):
         fitted = True
+        _split_point = splitted_encoder_ml.split_points[0]
 
         def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
             self.model_with_split_points = model_with_split_points
 
-        def concept_output_gradient(self, samples, *args, **kwargs):
+        def concept_output_gradient(self, inputs, *args, **kwargs):
             """
             consim.evaluate calls this method
             """
@@ -552,12 +558,12 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
             ]
             # Furthermore, we ensure it is called only with the necessary elements.
             if prompt_type == PromptTypes.E3_global_and_local_concepts_with_lp:
-                # only lp samples local importances are computed
-                assert samples == ["s0", "s1", "s2", "s3", "s4"]
+                # only lp inputs local importances are computed
+                assert inputs == ["s0", "s1", "s2", "s3", "s4"]
             else:
-                assert samples == ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]
+                assert inputs == ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]
 
-            return torch.ones(len(samples), 1)
+            return [torch.ones(1, 1)] * len(inputs)
 
         def fit(self, *args, **kwargs):
             pass
@@ -622,17 +628,18 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     # construct a dummy explainer that will arbitrary local importances
     class DummyExplainer(ConceptAutoEncoderExplainer):
         fitted = True
+        _split_point = splitted_encoder_ml.split_points[0]
 
         def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
             self.model_with_split_points = model_with_split_points
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
-            local_importances = torch.zeros(len(inputs), len(concepts_interpretation))
+            local_importances = []
             for i, sentence in enumerate(inputs):
                 index = int(sentence[1:])  # remove "s" prefix
                 # generate concepts importances quite arbitrarily
-                local_importances[i] = torch.tensor(
-                    [index % 2, 1 - index % 2, (4 - index % 5) / 4, (2 - index % 3) / 2]
+                local_importances.append(
+                    torch.tensor([index % 2, 1 - i % 2, (4 - index % 5) / 4, (2 - index % 3) / 2])
                 )
             return local_importances
 
@@ -665,3 +672,40 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     )
 
     assert score is None or 0.0 <= score <= 1.0
+
+
+if __name__ == "__main__":
+    from transformers import AutoModelForMaskedLM, AutoModelForSequenceClassification
+
+    mwsp = ModelWithSplitPoints(
+        "hf-internal-testing/tiny-random-bert",
+        split_points=["bert.encoder.layer.1.output"],
+        model_autoclass=AutoModelForSequenceClassification,  # type: ignore
+        batch_size=4,
+        device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    )
+
+    multi_split_model = ModelWithSplitPoints(
+        "hf-internal-testing/tiny-random-bert",
+        split_points=[
+            "bert.encoder.layer.1.output",
+            "bert.encoder.layer.3.attention.self.query",
+        ],
+        model_autoclass=AutoModelForMaskedLM,  # type: ignore
+        batch_size=4,
+        device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    )
+
+    test_consim_init(mwsp, multi_split_model)
+    test_consim_get_predictions(mwsp)
+    test_consim_extract_interesting_elements(mwsp)
+    test_consim_select_examples(mwsp)
+    test_consim_quantize_importances()
+    test_consim_filter_and_quantize_concepts_importances()
+    test_consim_setting_to_prompt(prompt_type=PromptTypes.U1_upper_bound_concepts_at_ep, anonymize_classes=True)
+    test_consim_generate_prompt()
+    test_consim_extract_predictions_from_response()
+    test_consim_predictions_accuracy()
+    test_consim_evaluate(mwsp, prompt_type=PromptTypes.E2_global_concepts_with_lp)
+    if os.environ.get("OPENAI_API_KEY"):
+        test_consim_evaluate_with_openai(mwsp)
