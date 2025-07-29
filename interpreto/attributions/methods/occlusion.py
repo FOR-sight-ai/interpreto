@@ -73,7 +73,6 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         granularity: Granularity = Granularity.WORD,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
-        replace_token_id: int | None = None,
     ):
         """
         Initialize the attribution method.
