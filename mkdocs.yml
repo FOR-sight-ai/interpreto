@@ -24,6 +24,8 @@ nav:
         - Sobol: api/attributions/methods/sobol.md
       - Metrics:
         - Overview: api/attributions/metrics/overview.md
+        - Insertion: api/attributions/metrics/insertion.md
+        - Deletion: api/attributions/metrics/deletion.md
     - Concept Explainers:
       - Overview: api/concepts/overview.md
       - Model Wrapping: api/commons/model_wrapping.md
