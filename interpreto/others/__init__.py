@@ -27,38 +27,4 @@
 # CRIAQ and ANITI - https://www.deel.ai/
 # =====================================================================================
 
-from .attributions import (
-    IntegratedGradients,
-    KernelShap,
-    Lime,
-    Occlusion,
-    Saliency,
-    SmoothGrad,
-    Sobol,
-)
-from .commons import (
-    Granularity,
-)
-from .model_wrapping import ModelWithSplitPoints
-from .others import (
-    LogitLens,
-)
-from .visualizations.attributions import (
-    AttributionVisualization,
-)
-from .visualizations.concepts import (
-    ConceptHighlightVisualization,
-)
-
-
-def get_version() -> str:
-    """Returns the current version of the Interpreto library."""
-    import pkg_resources
-
-    try:
-        return pkg_resources.get_distribution("interpreto").version
-    except pkg_resources.DistributionNotFound:
-        return "unknown"
-
-
-__all__ = []
+from .logit_lens import LogitLens
