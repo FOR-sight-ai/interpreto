@@ -452,6 +452,7 @@ class AttributionExplainer:
         ):
             if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
                 model_task = ModelTask.GENERATION
+                # test
                 classes = None
             elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
                 classes = target
