@@ -458,6 +458,9 @@ class AttributionExplainer:
         ):
             if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
                 model_task = ModelTask.GENERATION
+                t, l = contribution.shape
+                mask = torch.triu(torch.ones((t, l), dtype=torch.bool), diagonal=l - t)
+                contribution[mask] = float("nan")
                 classes = None
             elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
                 classes = target
