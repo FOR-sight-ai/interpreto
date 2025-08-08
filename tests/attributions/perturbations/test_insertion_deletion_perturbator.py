@@ -192,6 +192,59 @@ def test_get_mask_multiple_targets(PerturbatorClass):
     assert (mask == expected_mask).all()
 
 
+@pytest.mark.parametrize("PerturbatorClass", [DeletionPerturbator, InsertionPerturbator])
+def test_get_mask_generation(PerturbatorClass):
+    """Asserts that the get_mask method generates the correct mask for insertion and deletion perturbators in the case
+    of a generation task (i.e. with NaN values in the attributions).
+
+    Several scenarios are tested: different numbers of perturbations and values of max_percentage_perturbed.
+    """
+
+    attributions = torch.tensor(  # shape: (3, 5) => 3 targets, 5 elements
+        [
+            [0.1, 0.3, float("nan"), float("nan"), float("nan")],  # order: [1, 0]
+            [-0.1, -0.8, -0.9, float("nan"), float("nan")],  # order: [0, 1, 2]
+            [0, 0.2, -0.1, 0.3, float("nan")],  # order: [3, 1, 0, 2]
+        ]
+    )
+    num_targets, mask_dim = attributions.shape
+
+    # Test 1: the number of perturbations is equal to mask_dim (+ 1 for the baseline).
+    perturbator = PerturbatorClass(n_perturbations=mask_dim)
+    mask = perturbator.get_mask(mask_dim, attributions)
+
+    expected_mask = torch.Tensor(
+        [
+            # Perturbations for target 0
+            [0, 0, 0, 0, 0],  # baseline
+            [0, 1, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            # Perturbations for target 1
+            [0, 0, 0, 0, 0],  # baseline
+            [1, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0],
+            [1, 1, 1, 0, 0],
+            [1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            # Perturbations for target 2
+            [0, 0, 0, 0, 0],  # baseline
+            [0, 0, 0, 1, 0],
+            [0, 1, 0, 1, 0],
+            [1, 1, 0, 1, 0],
+            [1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+        ]
+    )
+    if PerturbatorClass.__name__ == "InsertionPerturbator":
+        expected_mask = 1 - expected_mask
+
+    assert mask.shape == (num_targets * (mask_dim + 1), mask_dim)
+    assert (mask == expected_mask).all()
+
+
 def test_invalid_perturbation_count():
     """Asserts that a ValueError is raised when the number of perturbations is less than 1."""
     with pytest.raises(ValueError, match="The number of perturbations must be at least 1."):

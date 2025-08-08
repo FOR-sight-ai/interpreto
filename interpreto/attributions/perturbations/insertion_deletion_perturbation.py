@@ -109,10 +109,12 @@ class InsertionDeletionPerturbator(TokenMaskBasedPerturbator):
 
         if attributions.ndim == 1:
             attributions = attributions.unsqueeze(0)
-
-        # Get indices of most important tokens
         num_targets = attributions.shape[0]
-        most_important_idx = torch.argsort(attributions, descending=True)
+
+        # Get indices of most important tokens. Set NaN values to -inf to ensure they are sorted last.
+        attributions_inf = attributions.clone().detach()
+        attributions_inf[torch.isnan(attributions)] = -float("inf")
+        most_important_idx = torch.argsort(attributions_inf, descending=True)
 
         # Compute the real number of perturbations "p": take the minimum between n_perturbations and the number of
         # elements to perturb (+1 for the baseline)
