@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretation/overview/">
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/gradient_shap/">
       
       
+        <link rel="prev" href="../../overview/">
+      
+      
+        <link rel="next" href="../integrated_gradients/">
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
@@ -20,7 +24,7 @@
     
     
       
-        <title>Overview - Interpreto</title>
+        <title>GradientShap - Interpreto</title>
       
     
     
@@ -81,6 +85,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#gradient-shap" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -112,7 +121,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              GradientShap
             
           </span>
         </div>
@@ -263,6 +272,8 @@
   
   
   
+    
+  
   
     
     
@@ -270,11 +281,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../../attributions/overview/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../overview/" class="md-tabs__link">
           
   
   
@@ -543,8 +556,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -556,17 +571,20 @@
     
     
       
+        
+        
+      
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -579,7 +597,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             API Reference
@@ -590,8 +608,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -608,11 +628,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" checked>
         
           
           <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
@@ -628,7 +648,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_1">
             <span class="md-nav__icon md-icon"></span>
             Attribution Explainers
@@ -642,7 +662,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/overview/" class="md-nav__link">
+      <a href="../../overview/" class="md-nav__link">
         
   
   
@@ -662,8 +682,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -694,11 +716,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" checked>
         
           
           <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
@@ -714,7 +736,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_1_2">
             <span class="md-nav__icon md-icon"></span>
             Methods
@@ -725,10 +747,34 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../attributions/methods/gradient_shap/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    GradientShap
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -741,6 +787,134 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GradientShap
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;tokenizer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;batch_size
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity_aggregation_strategy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;inference_mode
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;input_x_gradient
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;n_perturbations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;baseline
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;noise_std
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -753,7 +927,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/integrated_gradients/" class="md-nav__link">
+      <a href="../integrated_gradients/" class="md-nav__link">
         
   
   
@@ -778,7 +952,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/kernelshap/" class="md-nav__link">
+      <a href="../kernelshap/" class="md-nav__link">
         
   
   
@@ -803,7 +977,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/lime/" class="md-nav__link">
+      <a href="../lime/" class="md-nav__link">
         
   
   
@@ -828,7 +1002,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/occlusion/" class="md-nav__link">
+      <a href="../occlusion/" class="md-nav__link">
         
   
   
@@ -853,7 +1027,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/saliency/" class="md-nav__link">
+      <a href="../saliency/" class="md-nav__link">
         
   
   
@@ -878,7 +1052,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/smoothgrad/" class="md-nav__link">
+      <a href="../smoothgrad/" class="md-nav__link">
         
   
   
@@ -903,7 +1077,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/squaregrad/" class="md-nav__link">
+      <a href="../squaregrad/" class="md-nav__link">
         
   
   
@@ -928,7 +1102,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/sobol/" class="md-nav__link">
+      <a href="../sobol/" class="md-nav__link">
         
   
   
@@ -953,7 +1127,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/methods/vargrad/" class="md-nav__link">
+      <a href="../vargrad/" class="md-nav__link">
         
   
   
@@ -1031,7 +1205,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../attributions/metrics/overview/" class="md-nav__link">
+      <a href="../../metrics/overview/" class="md-nav__link">
         
   
   
@@ -1123,7 +1297,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../overview/" class="md-nav__link">
+      <a href="../../../concepts/overview/" class="md-nav__link">
         
   
   
@@ -1224,7 +1398,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../methods/base/" class="md-nav__link">
+      <a href="../../../concepts/methods/base/" class="md-nav__link">
         
   
   
@@ -1249,7 +1423,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../methods/cockatiel/" class="md-nav__link">
+      <a href="../../../concepts/methods/cockatiel/" class="md-nav__link">
         
   
   
@@ -1274,7 +1448,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../methods/neurons_as_concepts/" class="md-nav__link">
+      <a href="../../../concepts/methods/neurons_as_concepts/" class="md-nav__link">
         
   
   
@@ -1299,7 +1473,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../methods/optim/" class="md-nav__link">
+      <a href="../../../concepts/methods/optim/" class="md-nav__link">
         
   
   
@@ -1324,7 +1498,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../methods/sae/" class="md-nav__link">
+      <a href="../../../concepts/methods/sae/" class="md-nav__link">
         
   
   
@@ -1402,7 +1576,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../interpretations/topk_inputs/" class="md-nav__link">
+      <a href="../../../concepts/interpretations/topk_inputs/" class="md-nav__link">
         
   
   
@@ -1486,7 +1660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../metrics/overview/" class="md-nav__link">
+      <a href="../../../concepts/metrics/overview/" class="md-nav__link">
         
   
   
@@ -1511,7 +1685,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../metrics/dictionary_metrics/" class="md-nav__link">
+      <a href="../../../concepts/metrics/dictionary_metrics/" class="md-nav__link">
         
   
   
@@ -1536,7 +1710,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../metrics/reconstruction_metrics/" class="md-nav__link">
+      <a href="../../../concepts/metrics/reconstruction_metrics/" class="md-nav__link">
         
   
   
@@ -1561,7 +1735,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../metrics/sparsity_metrics/" class="md-nav__link">
+      <a href="../../../concepts/metrics/sparsity_metrics/" class="md-nav__link">
         
   
   
@@ -1707,6 +1881,124 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GradientShap
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;tokenizer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;batch_size
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity_aggregation_strategy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;inference_mode
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;input_x_gradient
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;n_perturbations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;baseline
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="md-nav__link">
+    <span class="md-ellipsis">
+      <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;noise_std
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1725,7 +2017,238 @@
   
 
 
-  <h1>Overview</h1>
+<h1 id="gradient-shap">Gradient Shap<a class="headerlink" href="#gradient-shap" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<a id="interpreto.attributions.methods.gradient_shap.GradientShap"></a>
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="interpreto.attributions.base.MultitaskExplainerMixin">MultitaskExplainerMixin</span></code>, <code><span title="interpreto.attributions.base.AttributionExplainer">AttributionExplainer</span></code></p>
+
+
+        <p>GradientSHAP is a gradient-based Shapley value estimator that computes attributions
+by integrating model gradients along a path between a baseline (reference) and
+the input. It approximates Shapley values by averaging multiple stochastic
+integrated gradients across randomly sampled paths.</p>
+<p>By combining ideas from Integrated Gradients and Shapley value theory,
+GradientSHAP provides additive feature attributions with strong consistency
+guarantees, while capturing non-linear effects.</p>
+<p><strong>Reference:</strong>
+Lundberg and Lee (2017). <em>A Unified Approach to Interpreting Model Predictions.</em>
+<a href="https://arxiv.org/abs/1705.07874">Paper</a></p>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">GradientShap</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">method</span> <span class="o">=</span> <span class="n">GradientShap</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span>                      <span class="n">n_perturbations</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span>                      <span class="n">baseline</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span>                      <span class="n">noise_std</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">explanations</span> <span class="o">=</span> <span class="n">method</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="doc doc-heading doc-heading-parameter">                  <code>model</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="transformers.PreTrainedModel">PreTrainedModel</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>model to explain</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="doc doc-heading doc-heading-parameter">                  <code>tokenizer</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="transformers.PreTrainedTokenizer">PreTrainedTokenizer</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Hugging Face tokenizer associated with the model</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="doc doc-heading doc-heading-parameter">                  <code>batch_size</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>batch size for the attribution method</p>
+              </div>
+            </td>
+            <td>
+                  <code>4</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="doc doc-heading doc-heading-parameter">                  <code>granularity</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.Granularity">Granularity</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The level of granularity for the explanation.
+Options are: <code>ALL_TOKENS</code>, <code>TOKEN</code>, <code>WORD</code>, or <code>SENTENCE</code>.
+Defaults to Granularity.WORD.
+To obtain it, <code>from interpreto import Granularity</code> then <code>Granularity.WORD</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.Granularity.WORD">WORD</span></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="doc doc-heading doc-heading-parameter">                  <code>granularity_aggregation_strategy</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.GranularityAggregationStrategy">GranularityAggregationStrategy</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>how to aggregate token-level attributions into granularity scores.
+Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
+Ignored for <code>granularity</code> set to <code>ALL_TOKENS</code> or <code>TOKEN</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="interpreto.commons.granularity.GranularityAggregationStrategy.MEAN">MEAN</span></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="doc doc-heading doc-heading-parameter">                  <code>device</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="torch.device">device</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>device on which the attribution method will be run</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="doc doc-heading doc-heading-parameter">                  <code>inference_mode</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="torch.Tensor">Tensor</span>], <span title="torch.Tensor">Tensor</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The mode used for inference.
+It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="interpreto.model_wrapping.inference_wrapper.InferenceModes.LOGITS">LOGITS</span></code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="doc doc-heading doc-heading-parameter">                  <code>input_x_gradient</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, multiplies the input embeddings with
+their gradients before aggregation. Defaults to <code>True</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="doc doc-heading doc-heading-parameter">                  <code>n_perturbations</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the number of interpolations to generate</p>
+              </div>
+            </td>
+            <td>
+                  <code>10</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="doc doc-heading doc-heading-parameter">                  <code>baseline</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span> | <span title="float">float</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the baseline to use for the interpolations</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="doc doc-heading doc-heading-parameter">                  <code>noise_std</code>
+<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the standard deviation of the noise added to the baseline</p>
+              </div>
+            </td>
+            <td>
+                  <code>0.1</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -1734,6 +2257,34 @@
 
 
 
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+  
+  
 
 
 
@@ -1760,6 +2311,44 @@
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../../overview/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Overview">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Overview
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../integrated_gradients/" class="md-footer__link md-footer__link--next" aria-label="Next: IntegratedGradients">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                IntegratedGradients
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     
   
   <div class="md-footer-meta md-typeset">
