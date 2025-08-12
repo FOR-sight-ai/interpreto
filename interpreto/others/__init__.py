@@ -27,4 +27,4 @@
 # CRIAQ and ANITI - https://www.deel.ai/
 # =====================================================================================
 
-from .logit_lens import LogitLens
+from .logit_lens_general import LogitLens
