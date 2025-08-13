@@ -32,6 +32,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
+from transformers import PreTrainedTokenizer
 
 from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
 from interpreto.commons.granularity import Granularity

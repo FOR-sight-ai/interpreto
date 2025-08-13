@@ -182,3 +182,7 @@ codex.patch
 data/
 quick_test.py
 quick_test.ipynb
+
+# requirements are for the github workflow, people should use the pyproject.toml
+requirements.txt
+requirements-dev.txt

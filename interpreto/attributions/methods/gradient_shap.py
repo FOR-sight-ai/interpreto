@@ -21,10 +21,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-"""
-Integrated Gradients method
-"""
+"""GradientSHAP attribution method."""
 
 from __future__ import annotations
 
@@ -33,32 +30,35 @@ from collections.abc import Callable
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
-from interpreto.attributions.aggregations import TrapezoidalMeanAggregator
+from interpreto.attributions.aggregations import MeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
-from interpreto.attributions.perturbations import LinearInterpolationPerturbator
+from interpreto.attributions.perturbations import GradientShapPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
-class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
+class GradientShap(MultitaskExplainerMixin, AttributionExplainer):
     """
-    Integrated Gradients (IG) is a gradient-based interpretability method that attributes
-    importance scores to input features (e.g., tokens) by integrating the model’s gradients
-    along a path from a baseline input to the actual input.
+    GradientSHAP is a gradient-based Shapley value estimator that computes attributions
+    by integrating model gradients along a path between a baseline (reference) and
+    the input. It approximates Shapley values by averaging multiple stochastic
+    integrated gradients across randomly sampled paths.
 
-    The method is designed to address some of the limitations of standard gradients, such as
-    saturation and noise, by averaging gradients over interpolated inputs rather than relying
-    on a single local gradient.
+    By combining ideas from Integrated Gradients and Shapley value theory,
+    GradientSHAP provides additive feature attributions with strong consistency
+    guarantees, while capturing non-linear effects.
 
     **Reference:**
-    Sundararajan et al. (2017). *Axiomatic Attribution for Deep Networks.*
-    [Paper](http://proceedings.mlr.press/v70/sundararajan17a.html)
+    Lundberg and Lee (2017). *A Unified Approach to Interpreting Model Predictions.*
+    [Paper](https://arxiv.org/abs/1705.07874)
 
     Examples:
-        >>> from interpreto import IntegratedGradients
-        >>> method = IntegratedGradients(model=model, tokenizer=tokenizer,
-        >>>                              batch_size=4, n_perturbations=50)
-        >>> explanations = method.explain(model_inputs=text)
+        >>> from interpreto import GradientShap
+        >>> method = GradientShap(model, tokenizer, batch_size=4,
+        >>>                       n_perturbations=20,
+        >>>                       baseline=0,
+        >>>                       noise_std=0.1,)
+        >>> explanations = method(text)
     """
 
     def __init__(
@@ -73,7 +73,8 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
         input_x_gradient: bool = True,
         n_perturbations: int = 10,
         baseline: torch.Tensor | float | None = None,
-    ):
+        noise_std: float = 0.1,
+    ) -> None:
         """
         Initialize the attribution method.
 
@@ -95,9 +96,13 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
                 their gradients before aggregation. Defaults to ``True``.
             n_perturbations (int): the number of interpolations to generate
             baseline (torch.Tensor | float | None): the baseline to use for the interpolations
+            noise_std (float): the standard deviation of the noise added to the baseline
         """
-        perturbator = LinearInterpolationPerturbator(
-            inputs_embedder=model.get_input_embeddings(), baseline=baseline, n_perturbations=n_perturbations
+        perturbator = GradientShapPerturbator(
+            inputs_embedder=model.get_input_embeddings(),
+            baseline=baseline,
+            n_perturbations=n_perturbations,
+            std=noise_std,
         )
         super().__init__(
             model=model,
@@ -105,7 +110,7 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
             batch_size=batch_size,
             device=device,
             perturbator=perturbator,
-            aggregator=TrapezoidalMeanAggregator(),
+            aggregator=MeanAggregator(),
             granularity=granularity,
             granularity_aggregation_strategy=granularity_aggregation_strategy,
             inference_mode=inference_mode,

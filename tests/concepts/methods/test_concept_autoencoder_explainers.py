@@ -223,7 +223,7 @@ if __name__ == "__main__":
     splitted_encoder_ml: ModelWithSplitPoints = ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
         split_points=["bert.encoder.layer.1.output"],
-        model_autoclass=AutoModelForMaskedLM,  # type: ignore
+        automodel=AutoModelForMaskedLM,  # type: ignore
         device_map=DEVICE,
     )
     activations_dict: dict[str, torch.Tensor] = splitted_encoder_ml.get_activations(

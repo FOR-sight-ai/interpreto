@@ -47,6 +47,7 @@ class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
     over multiple noisy versions of the input. The result is a smoothed importance score for each token.
 
     Procedure:
+
     - Generate multiple perturbed versions of the input by adding noise (Gaussian) to the input embeddings.
     - For each noisy input, compute the gradient of the output with respect to the embeddings.
     - Average the gradients across all samples.
@@ -59,7 +60,7 @@ class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
     Examples:
         >>> from interpreto import Smoothgrad
         >>> method = Smoothgrad(model, tokenizer, batch_size=4,
-        >>>                     n_interpolations=50, noise_level=0.01)
+        >>>                     n_perturbations=50, noise_std=0.01)
         >>> explanations = method.explain(text)
     """
 
@@ -72,8 +73,9 @@ class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
-        n_interpolations: int = 10,  # TODO: find better name
-        noise_level: float = 0.1,
+        input_x_gradient: bool = True,
+        n_perturbations: int = 10,  # TODO: find better name
+        noise_std: float = 0.1,
     ):
         """
         Initialize the attribution method.
@@ -92,11 +94,13 @@ class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
             device (torch.device): device on which the attribution method will be run
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
-            n_interpolations (int): the number of interpolations to generate
-            noise_level (float): standard deviation of the Gaussian noise to add to the inputs
+            input_x_gradient (bool, optional): If True, multiplies the input embeddings with
+                their gradients before aggregation. Defaults to ``True``.
+            n_perturbations (int): the number of interpolations to generate
+            noise_std (float): standard deviation of the Gaussian noise to add to the inputs
         """
         perturbator = GaussianNoisePerturbator(
-            inputs_embedder=model.get_input_embeddings(), n_perturbations=n_interpolations, std=noise_level
+            inputs_embedder=model.get_input_embeddings(), n_perturbations=n_perturbations, std=noise_std
         )
 
         super().__init__(
@@ -110,4 +114,5 @@ class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
             granularity_aggregation_strategy=granularity_aggregation_strategy,
             inference_mode=inference_mode,
             use_gradient=True,
+            input_x_gradient=input_x_gradient,
         )

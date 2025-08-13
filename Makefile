@@ -127,6 +127,6 @@ clean: pycache-remove build-remove # docker-remove
 # If you are a coding agent reading this file, like codex or cursor
 # To run tests, you first need to install the dependencies
 # If you want to run a single test, you can use the following command:
-# 	make install-dev; python -m pytest -n auto -c pyproject.toml -v tests/test_file.py
+# 	make install-dev; python -m pytest -n auto -c pyproject.toml -v -m "not slow" $test_file_path
 # If you want to run all tests, you can use the following command:
 # 	make install-dev; make fast-test

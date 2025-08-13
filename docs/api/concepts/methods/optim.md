@@ -69,5 +69,4 @@ icon: material/middleware-outline
         - decode_concepts
         - get_dictionary
         - interpret
-        - input_concept_attribution
-        - concept_output_attribution
+        - concept_output_gradient

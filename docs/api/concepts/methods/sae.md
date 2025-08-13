@@ -4,7 +4,6 @@ icon: material/middleware-outline
 
 # Sparse Autoencoders (SAEs)
 
-
 ## List of available SAEs
 
 ::: interpreto.concepts.methods.VanillaSAEConcepts
@@ -27,7 +26,6 @@ icon: material/middleware-outline
     options:
       show_root_heading: true
 
-
 ## Abstract base class
 
 ::: interpreto.concepts.methods.SAEExplainer
@@ -42,8 +40,7 @@ icon: material/middleware-outline
         - decode_concepts
         - get_dictionary
         - interpret
-        - input_concept_attribution
-        - concept_output_attribution
+        - concept_output_gradient
 
 ## Loss Functions
 

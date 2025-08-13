@@ -63,7 +63,7 @@ class LLMInterface(ABC):
 class OpenAILLM(LLMInterface):
     def __init__(self, api_key: str, model: str = "o4-mini", num_try: int = 5):
         try:
-            import openai
+            import openai  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
         except ImportError as e:
             raise ImportError("Install openai to use OpenAI API.") from e
 

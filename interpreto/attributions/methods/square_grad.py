@@ -23,7 +23,7 @@
 # SOFTWARE.
 
 """
-Integrated Gradients method
+SmoothGrad method
 """
 
 from __future__ import annotations
@@ -33,32 +33,35 @@ from collections.abc import Callable
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
-from interpreto.attributions.aggregations import TrapezoidalMeanAggregator
+from interpreto.attributions.aggregations import SquaredMeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
-from interpreto.attributions.perturbations import LinearInterpolationPerturbator
+from interpreto.attributions.perturbations import GaussianNoisePerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
-class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
+class SquareGrad(MultitaskExplainerMixin, AttributionExplainer):
     """
-    Integrated Gradients (IG) is a gradient-based interpretability method that attributes
-    importance scores to input features (e.g., tokens) by integrating the model’s gradients
-    along a path from a baseline input to the actual input.
+    SquareGrad is a gradient-based attribution method that computes the variance of input gradients
+    under random perturbations. Unlike methods that average gradients (e.g., SmoothGrad),
+    SquareGrad averages the square of the gradient.
 
-    The method is designed to address some of the limitations of standard gradients, such as
-    saturation and noise, by averaging gradients over interpolated inputs rather than relying
-    on a single local gradient.
+    Procedure:
+
+    - Generate multiple perturbed versions of the input by adding noise (Gaussian) to the input embeddings.
+    - For each noisy input, compute the gradient of the output with respect to the embeddings.
+    - Average the square of the gradients across all samples.
+    - Aggregate the result per token (e.g., by norm with the input) to get the final attribution scores.
 
     **Reference:**
-    Sundararajan et al. (2017). *Axiomatic Attribution for Deep Networks.*
-    [Paper](http://proceedings.mlr.press/v70/sundararajan17a.html)
+    Hooker et al. (2019). *A Benchmark for Interpretability Methods in Deep Neural Networks.*
+    [Paper](https://arxiv.org/abs/1806.10758)
 
     Examples:
-        >>> from interpreto import IntegratedGradients
-        >>> method = IntegratedGradients(model=model, tokenizer=tokenizer,
-        >>>                              batch_size=4, n_perturbations=50)
-        >>> explanations = method.explain(model_inputs=text)
+        >>> from interpreto import SquareGrad
+        >>> method = SquareGrad(model, tokenizer, batch_size=4,
+        >>>                     n_perturbations=50, noise_std=0.01)
+        >>> explanations = method.explain(text)
     """
 
     def __init__(
@@ -71,8 +74,8 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         input_x_gradient: bool = True,
-        n_perturbations: int = 10,
-        baseline: torch.Tensor | float | None = None,
+        n_perturbations: int = 10,  # TODO: find better name
+        noise_std: float = 0.1,
     ):
         """
         Initialize the attribution method.
@@ -94,18 +97,19 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
             input_x_gradient (bool, optional): If True, multiplies the input embeddings with
                 their gradients before aggregation. Defaults to ``True``.
             n_perturbations (int): the number of interpolations to generate
-            baseline (torch.Tensor | float | None): the baseline to use for the interpolations
+            noise_std (float): standard deviation of the Gaussian noise to add to the inputs
         """
-        perturbator = LinearInterpolationPerturbator(
-            inputs_embedder=model.get_input_embeddings(), baseline=baseline, n_perturbations=n_perturbations
+        perturbator = GaussianNoisePerturbator(
+            inputs_embedder=model.get_input_embeddings(), n_perturbations=n_perturbations, std=noise_std
         )
+
         super().__init__(
             model=model,
             tokenizer=tokenizer,
             batch_size=batch_size,
             device=device,
             perturbator=perturbator,
-            aggregator=TrapezoidalMeanAggregator(),
+            aggregator=SquaredMeanAggregator(),
             granularity=granularity,
             granularity_aggregation_strategy=granularity_aggregation_strategy,
             inference_mode=inference_mode,

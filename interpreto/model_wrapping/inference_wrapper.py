@@ -579,17 +579,19 @@ class InferenceWrapper(ABC):
         )
 
     @overload
-    def get_gradients(self, model_inputs: TensorMapping, targets: torch.Tensor) -> torch.Tensor: ...
+    def get_gradients(
+        self, model_inputs: TensorMapping, targets: torch.Tensor, input_x_gradient: bool = False
+    ) -> torch.Tensor: ...
 
     @overload
     def get_gradients(
-        self, model_inputs: Iterable[TensorMapping], targets: Iterable[torch.Tensor]
+        self, model_inputs: Iterable[TensorMapping], targets: Iterable[torch.Tensor], input_x_gradient: bool = False
     ) -> Iterable[torch.Tensor]: ...
 
     # @allow_nested_iterables_of(MutableMapping)
     @singledispatchmethod
     def get_gradients(
-        self, model_inputs: ModelInputs, targets: torch.Tensor
+        self, model_inputs: ModelInputs, targets: torch.Tensor, input_x_gradient: bool = False
     ) -> torch.Tensor | Generator[torch.Tensor, None, None]:
         """
         Get the gradients of the logits associated to a given target with respect to the inputs.
@@ -625,7 +627,7 @@ class InferenceWrapper(ABC):
 
     @get_gradients.register(MutableMapping)  # type: ignore
     def _get_gradients_from_mapping(
-        self, model_inputs: TensorMapping, targets: torch.Tensor
+        self, model_inputs: TensorMapping, targets: torch.Tensor, input_x_gradient: bool = False
     ) -> torch.Tensor:  # TODO: add jaxtyping
         model_inputs = self.embed(model_inputs)
         inputs_embeds = model_inputs["inputs_embeds"]
@@ -637,18 +639,25 @@ class InferenceWrapper(ABC):
 
         # Compute gradient of the selected logits:
         grad_matrix = torch.autograd.functional.jacobian(get_score, inputs_embeds)  # (n, lt, n, l, d)
+
+        grad_matrix = grad_matrix[
+            torch.arange(grad_matrix.shape[0]), :, torch.arange(grad_matrix.shape[0])
+        ]  # (n, lt, l, d)
+        if input_x_gradient:
+            grad_matrix = grad_matrix * inputs_embeds.unsqueeze(1)
+
         grad_matrix = grad_matrix.abs().mean(
             dim=-1
-        )  # (n, lt, n, l)  # average over the embedding dimension  # TODO: discuss if th average should be forced or an argument
-        return grad_matrix[torch.arange(grad_matrix.shape[0]), :, torch.arange(grad_matrix.shape[0]), :]
+        )  # (n, lt, l)  # average over the embedding dimension  # TODO: discuss if th average should be forced or an argument
+        return grad_matrix
 
     @get_gradients.register(Iterable)  # type: ignore
     def _get_gradients_from_iterable(
-        self, model_inputs: Iterable[TensorMapping], targets: Iterable[torch.Tensor]
+        self, model_inputs: Iterable[TensorMapping], targets: Iterable[torch.Tensor], input_x_gradient: bool = False
     ) -> Iterable[torch.Tensor]:
         for model_input, target in zip(model_inputs, targets, strict=True):
             # check that the model input and target have the same batch size
-            result = self._get_gradients_from_mapping(model_input, target)
+            result = self._get_gradients_from_mapping(model_input, target, input_x_gradient=input_x_gradient)
             yield result
 
         # yield from (

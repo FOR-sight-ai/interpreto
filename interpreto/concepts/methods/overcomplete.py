@@ -266,6 +266,8 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         log = train_method(**train_params)
         self.concept_model.fitted = True
 
+        # Manually set `BatchTopKSAEConcepts` `.training` argument to `False`
+        # Because overcomplete does not do it and it changes the `.encode()` method drastically.
         if hasattr(self.concept_model, "training"):
             self.concept_model.training = False
         return log

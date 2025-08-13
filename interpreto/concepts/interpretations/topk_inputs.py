@@ -78,7 +78,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         >>> model_with_split_points = ModelWithSplitPoints(
         ...     "hf-internal-testing/tiny-random-bert",
         ...     split_points=[split],
-        ...     model_autoclass=AutoModelForMaskedLM,
+        ...     automodel=AutoModelForMaskedLM,
         ...     batch_size=4,
         ... )
         >>> # NeuronsAsConcepts do not need to be fitted

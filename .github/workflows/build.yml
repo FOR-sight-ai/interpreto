@@ -105,6 +105,9 @@ jobs:
 
     - name: Run style checks
       run: |
+        source .venv/bin/activate
+        make update-deps
+        uv pip install -r requirements-dev.txt
         make lint
 
     - name: Run fast tests

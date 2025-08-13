@@ -288,7 +288,7 @@ def splitted_encoder() -> ModelWithSplitPoints:
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
         split_points=["bert.encoder.layer.1.output"],
-        model_autoclass=AutoModelForMaskedLM,  # type: ignore
+        automodel=AutoModelForMaskedLM,  # type: ignore
     )
 
 

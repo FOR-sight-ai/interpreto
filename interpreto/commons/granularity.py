@@ -102,9 +102,9 @@ class GranularityAggregationStrategy(Enum):
             case GranularityAggregationStrategy.MEAN:
                 return x.mean(dim=dim, keepdim=True)
             case GranularityAggregationStrategy.MAX:
-                return x.max(dim=dim, keepdim=True)[0]
+                return x.max(dim=dim, keepdim=True).values
             case GranularityAggregationStrategy.MIN:
-                return x.min(dim=dim, keepdim=True)[0]
+                return x.min(dim=dim, keepdim=True).values
             case GranularityAggregationStrategy.SIGNED_MAX:
                 return x.gather(dim, x.abs().max(dim=dim)[1].unsqueeze(dim))
             case _:

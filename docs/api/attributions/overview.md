@@ -21,9 +21,10 @@ The API have two steps:
 - `device` (`torch.device | None = None`): device on which the attribution method will be run,
 - `args`: specifics for each method.
 
-For gradient-based attribution methods, granularity is not calculated at the perturbation mask level, but at the aggregation level. We then aggregate the scores given on the tokens to create scores on the chosen granularity. There may be several ways of aggregating these scores, so we need a new argument, only for gradient-based methods:
+For gradient-based attribution methods, granularity is not calculated at the perturbation mask level, but at the aggregation level. We then aggregate the scores given on the tokens to create scores on the chosen granularity. There may be several ways of aggregating these scores. We can also, in the context of gradient-based methods, have a parameter to choose whether we take the gradients directly or the gradients multiplied by the inputs (inspired by the InputxGradient method). So we need new arguments, only for gradient-based methods:
 
 - `granularity_aggregation_strategy` (`GranularityAggregationStrategy`): If granularity is set to 'WORD', this determines how to aggregate token-level attributions into word-level scores. Options are: 'MEAN', 'MAX', 'MIN', 'SUM' and 'SIGNED_MAX'.
+- `input_x_gradient` (bool, optional): If True, multiplies the input embeddings with their gradients before aggregation. Defaults to ``False``.
 
 **Step 2:** The `AttributionExplainer` class overloads the `__call__` method to directly invoke the `explain` function. Therefore, calling `explainer(inputs, targets)` is equivalent to `explainer.explain(inputs, targets)`. It takes two parameters:
 
@@ -34,16 +35,19 @@ For gradient-based attribution methods, granularity is not calculated at the per
 
 ➡️ **Inference-based Methods:**
 
-- [Kernel SHAP](./methods/kernelshap.md): [Lundberg and Lee, 2017, A Unified Approach to Interpreting Model Predictions](https://arxiv.org/abs/1705.07874).
-- [LIME](./methods/lime.md): [Ribeiro et al. 2013, "Why should i trust you?" explaining the predictions of any classifier](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
-- [Occlusion](./methods/occlusion.md): [Zeiler and Fergus, 2014. Visualizing and understanding convolutional networks](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
-- [Sobol Attribution](./methods/sobol.md): [Fel et al. 2021, Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
+- [Kernel SHAP](./methods/kernelshap.md): [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
+- [LIME](./methods/lime.md): [Ribeiro et al. 2013, *"Why should i trust you?" explaining the predictions of any classifier*](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
+- [Occlusion](./methods/occlusion.md): [Zeiler and Fergus, 2014. *Visualizing and understanding convolutional networks*](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
+- [Sobol Attribution](./methods/sobol.md): [Fel et al. 2021, *Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis*](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
 
 🔁 **Gradient based methods:**
 
-- [Integrated Gradient](./methods/integrated_gradients.md): [Sundararajan et al. 2017, Axiomatic Attribution for Deep Networks](http://proceedings.mlr.press/v70/sundararajan17a.html).
-- [Saliency](./methods/saliency.md): [Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps](https://arxiv.org/abs/1312.6034).
-- [SmoothGrad](./methods/smoothgrad.md): [Smilkov et al. 2017, SmoothGrad: removing noise by adding noise](https://arxiv.org/abs/1706.03825)
+- [Gradient Shap](./methods/gradient_shap.md): [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
+- [Integrated Gradient](./methods/integrated_gradients.md): [Sundararajan et al. 2017, *Axiomatic Attribution for Deep Networks*](http://proceedings.mlr.press/v70/sundararajan17a.html).
+- [Saliency](./methods/saliency.md): [Simonyan et al. 2013, *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps*](https://arxiv.org/abs/1312.6034).
+- [SmoothGrad](./methods/smoothgrad.md): [Smilkov et al. 2017, *SmoothGrad: removing noise by adding noise*](https://arxiv.org/abs/1706.03825)
+- [SquareGrad](./methods/squaregrad.md): [Hooker et al. (2019). *A Benchmark for Interpretability Methods in Deep Neural Networks*](https://arxiv.org/abs/1806.10758).
+- [VarGrad](./methods/vargrad.md): [Richter et al. (2020). *VarGrad: A Low-Variance Gradient Estimator for Variational Inference.*](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html).
 
 # Custom API
 
