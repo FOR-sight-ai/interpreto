@@ -33,7 +33,9 @@
       this.currentOutputId = null;
       this.selectedOutputId = null;
       this.highlightBorder = highlightBorder === "True";
+      console.log("Parsing jsonData ...");
       this.jsonData = JSON.parse(jsonData);
+      console.log("Parsed jsonData: ", this.jsonData);
       this.displayType = displayType;
       // Classes, Inputs, Outputs creation (style is applied when selecting different elements)
       //                inputs    outputs   class
