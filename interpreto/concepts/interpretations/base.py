@@ -191,14 +191,20 @@ class BaseConceptInterpretationMethod(ABC):
         """
         # extract and sort the vocabulary
         vocab_dict: dict[str, int] = self.model_with_split_points.tokenizer.get_vocab()
+        inputs: list[str]
         input_ids: list[int]
         inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
 
         # compute the vocabulary's latent activations
-        input_tensor: Float[torch.Tensor, "v 1"] = torch.tensor(input_ids).unsqueeze(1)
-        activations_dict: dict[str, LatentActivations] = self.model_with_split_points.get_activations(  # type: ignore
-            input_tensor, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
-        )
+        if self.activation_granularity == ActivationGranularity.CLS_TOKEN:
+            activations_dict: dict[str, LatentActivations] = self.model_with_split_points.get_activations(  # type: ignore
+                inputs, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
+            )
+        else:
+            input_tensor: Float[torch.Tensor, "v 1"] = torch.tensor(input_ids).unsqueeze(1)
+            activations_dict: dict[str, LatentActivations] = self.model_with_split_points.get_activations(  # type: ignore
+                input_tensor, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
+            )
         latent_activations = self.model_with_split_points.get_split_activations(
             activations_dict, split_point=self.split_point
         )
@@ -219,7 +225,7 @@ class BaseConceptInterpretationMethod(ABC):
 
         Returns:
             tuple[list[str], list[int]]:
-                - list[str]: The granular texts from the inputs, flatened
+                - list[str]: The granular texts from the inputs, flattened
                 - list[int]: The sample id for each granular text, to keep track of which sample the text belongs to.
         """
         if self.activation_granularity is ActivationGranularity.SAMPLE:

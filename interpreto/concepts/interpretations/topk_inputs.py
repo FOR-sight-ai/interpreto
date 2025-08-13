@@ -28,11 +28,14 @@ Base class for concept interpretation methods.
 
 from __future__ import annotations
 
+import warnings
 from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
 import torch
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
 
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.interpretations.base import (
@@ -44,10 +47,92 @@ from interpreto.model_wrapping.model_with_split_points import ActivationGranular
 from interpreto.typing import ConceptModelProtocol, ConceptsActivations, LatentActivations
 
 
+def extract_unique_words(
+    inputs: list[str],
+    count_min_threshold: int = 1,
+    return_counts: bool = False,
+    lemmatize: bool = False,
+    words_to_ignore: list[str] | None = None,
+) -> list[str] | Counter[str]:
+    """
+    Extract words from a text.
+
+    Depending on parameters, it may select a subset of words or return the counts of each word.
+
+    Args:
+        inputs (str):
+            The text to extract words from.
+
+        count_min_threshold (float, optional):
+            The minimum total number of a occurrence of a word in the whole `inputs`.
+
+        return_counts (bool, optional):
+            Whether to return the counts of each word.
+            Defaults to False.
+
+        words_to_ignore: (list[str], optional):
+            A list of words to ignore.
+
+    Examples:
+        Fastest version as used in `TopKInputs`.
+        >>> extract_unique_words(["Interpreto is the latin for 'to interpret'.", "interpreto is magic"])
+        ["interpreto", "is", "the", "latin", "for", "to", "'", "interpret", ".", "magic"]
+
+        More complex use:
+        >>> from datasets import load_dataset
+        >>> from nltk.corpus import stopwords
+        >>> from interpreto.concepts.interpretations.topk_inputs import extract_unique_words
+        >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
+        >>> extract_unique_words(
+        ...     inputs=dataset,
+        ...     count_min_threshold=20,
+        ...     return_counts=True,
+        ...     lemmatize=True,
+        ...     words_to_ignore=stopwords.words("english"),
+        ... )
+        Counter(TODO)
+
+    Returns:
+        list[str] | Counter[str]:
+            The list of unique words or the counts of each word.
+
+    Raises:
+        ValueError:
+            If the input is not a list of strings.
+    """
+    if lemmatize:
+        lemmatizer = WordNetLemmatizer()
+
+    # counter both list unique words and counts of each word
+    words_count = Counter()
+
+    for text in inputs:
+        for word in word_tokenize(text):
+            # lemmatize words
+            if lemmatize:
+                word = lemmatizer.lemmatize(word)  # type: ignore  # noqa: PLW2901
+
+            # ignore words
+            if words_to_ignore is not None and word in words_to_ignore:
+                continue
+
+            # add word to counter
+            words_count[word] += 1
+
+    # filter too rare words
+    if count_min_threshold > 1:
+        words_count = Counter({key: count for key, count in words_count.items() if count > count_min_threshold})
+
+    if return_counts:
+        return words_count
+
+    return list(words_count.keys())
+
+
 class TopKInputs(BaseConceptInterpretationMethod):
     """Code [:octicons-mark-github-24: `concepts/interpretations/topk_inputs.py`](https://github.com/FOR-sight-ai/interpreto/blob/main/interpreto/concepts/interpretations/topk_inputs.py)
 
-    Implementation of the Top-K Inputs concept interpretation method also called MaxAct.
+    Implementation of the Top-K Inputs concept interpretation method also called MaxAct, or CMAW.
     It associate to each concept the inputs that activates it the most.
     It is the most natural way to interpret a concept, as it is the most natural way to explain a concept.
     Hence several papers used it without describing it.
@@ -107,8 +192,27 @@ class TopKInputs(BaseConceptInterpretationMethod):
         concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
+        use_unique_words: bool = False,
         device: torch.device | str | None = "cpu",
     ):
+        if activation_granularity not in (
+            ActivationGranularity.CLS_TOKEN,
+            ActivationGranularity.TOKEN,
+            ActivationGranularity.WORD,
+            ActivationGranularity.SENTENCE,
+            ActivationGranularity.SAMPLE,
+        ):
+            raise ValueError(
+                f"The granularity {activation_granularity} is not supported. "
+                "Supported `activation_granularities`: CLS_TOKEN, TOKEN, WORD, SENTENCE, and SAMPLE"
+            )
+
+        if use_unique_words and use_vocab:
+            raise ValueError("Cannot use both `use_unique_words` and `use_vocab`. Please use only one of them.")
+
+        if activation_granularity == ActivationGranularity.CLS_TOKEN and not use_unique_words:
+            raise ValueError("Cannot use `activation_granularity` CLS_TOKEN without `use_unique_words` set to True.")
+
         super().__init__(
             model_with_split_points=model_with_split_points,
             concept_model=concept_model,
@@ -118,18 +222,9 @@ class TopKInputs(BaseConceptInterpretationMethod):
             device=device,
         )
 
-        if activation_granularity not in (
-            ActivationGranularity.TOKEN,
-            ActivationGranularity.WORD,
-            ActivationGranularity.SENTENCE,
-            ActivationGranularity.SAMPLE,
-        ):
-            raise ValueError(
-                f"The granularity {activation_granularity} is not supported. Supported `activation_granularities`: TOKEN, WORD, SENTENCE, and SAMPLE"
-            )
-
         self.k = k
         self.use_vocab = use_vocab
+        self.use_unique_words = use_unique_words
 
     def interpret(
         self,
@@ -160,18 +255,38 @@ class TopKInputs(BaseConceptInterpretationMethod):
         """
         # compute the concepts activations from the provided source, can also create inputs from the vocabulary
         if self.use_vocab:
-            sure_inputs, sure_concepts_activations = self.concepts_activations_from_vocab()
-            granular_inputs = sure_inputs
+            granular_inputs, sure_concepts_activations = self.concepts_activations_from_vocab()
         else:
             if inputs is None:
                 raise ValueError("Inputs must be provided when `use_vocab` is False.")
-            sure_inputs = inputs
-            sure_concepts_activations = self.concepts_activations_from_source(
-                inputs=inputs,
-                latent_activations=latent_activations,
-                concepts_activations=concepts_activations,
-            )
-            granular_inputs, _ = self.get_granular_inputs(sure_inputs)
+
+            if self.use_unique_words:
+                # first list unique words from the inputs and compute the activations from them
+                granular_inputs: list[str] = extract_unique_words(inputs=inputs, return_counts=False)  # type: ignore
+                if latent_activations is not None and concepts_activations is not None:
+                    warnings.warn(
+                        "`latent_activations` or `concepts_activations` were provided, "
+                        "but `use_unique_words` is True. "
+                        "Therefore, the inputs and activations will likely mismatch. "
+                        "Either do not provide `latent_activations` and `concepts_activations`, "
+                        "or use `interpreto.concepts.interpretation.topk_inputs.extract_unique_words` yourself, "
+                        "and set `use_unique_words` to False.",
+                        stacklevel=2,
+                    )
+                sure_concepts_activations = self.concepts_activations_from_source(
+                    inputs=granular_inputs,
+                    latent_activations=latent_activations,
+                    concepts_activations=concepts_activations,
+                )
+            else:
+                # default case
+                sure_inputs = inputs
+                sure_concepts_activations = self.concepts_activations_from_source(
+                    inputs=sure_inputs,
+                    latent_activations=latent_activations,
+                    concepts_activations=concepts_activations,
+                )
+                granular_inputs, _ = self.get_granular_inputs(inputs)
 
         concepts_indices = verify_concepts_indices(
             concepts_activations=sure_concepts_activations, concepts_indices=concepts_indices

@@ -66,6 +66,7 @@ classifiers = [
 ]
 dependencies = [
   "transformers[sentencepiece,tokenizers]>=4.22.0",
+  "nltk",
   "torch>=2.0",
   "overcomplete>=0.2.3",
   "nnsight>=0.5.0.dev14",
