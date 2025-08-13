@@ -68,32 +68,33 @@ class PromptTypes(Enum):
     """
     There are six types of prompts, including two baselines and an upper bond:
 
-    - `L1_baseline_without_lp`:
-        IP.1 and EP.1 are included in the prompt.
-        Only the task description, but explanations or learning phase.
+    Attributes:
+        `L1_baseline_without_lp`:
+            IP.1 and EP.1 are included in the prompt.
+            Only the task description, but explanations or learning phase.
 
-    - `E1_global_concepts_without_lp`:
-        IP.1, IP.2, and EP.1 are included in the prompt.
-        Only task description and global concepts explanation, but no learning phase.
+        `E1_global_concepts_without_lp`:
+            IP.1, IP.2, and EP.1 are included in the prompt.
+            Only task description and global concepts explanation, but no learning phase.
 
-    - `L2_baseline_with_lp`:
-        IP.1, LP.1, and EP.1 are included in the prompt.
-        Task description and learning phase, but no explanations.
+        `L2_baseline_with_lp`:
+            IP.1, LP.1, and EP.1 are included in the prompt.
+            Task description and learning phase, but no explanations.
 
-    - `E2_global_concepts_with_lp`:
-        IP.1, IP.2, LP.1, and EP.1 are included in the prompt.
-        Task description, global concepts explanation, and learning phase. But no local concepts explanation.
+        `E2_global_concepts_with_lp`:
+            IP.1, IP.2, LP.1, and EP.1 are included in the prompt.
+            Task description, global concepts explanation, and learning phase. But no local concepts explanation.
 
-    - `E3_global_and_local_concepts_with_lp`:
-        IP.1, IP.2, LP.1, LP.2, and EP.1 are included in the prompt.
-        Task description, learning phase, and both global and local concepts explanation.
+        `E3_global_and_local_concepts_with_lp`:
+            IP.1, IP.2, LP.1, LP.2, and EP.1 are included in the prompt.
+            Task description, learning phase, and both global and local concepts explanation.
 
-    - `U1_upper_bound_concepts_at_ep`:
-        IP.1, IP.2, LP.1, LP.2, EP.1, and EP.2 are included in the prompt.
-        Same as `E3_global_and_local_concepts_with_lp`, but local explanations are also given at evaluation phase.
-        This has a very high probability to leak the initial model predictions via EP local explanations.
-        Warning, this should not be considered as a ConSim score.
-        But it gives an upper bound to the ConSim scores.
+        `U1_upper_bound_concepts_at_ep`:
+            IP.1, IP.2, LP.1, LP.2, EP.1, and EP.2 are included in the prompt.
+            Same as `E3_global_and_local_concepts_with_lp`, but local explanations are also given at evaluation phase.
+            This has a very high probability to leak the initial model predictions via EP local explanations.
+            Warning, this should not be considered as a ConSim score.
+            But it gives an upper bound to the ConSim scores.
     """
 
     L1_baseline_without_lp = PromptSetting()
@@ -121,8 +122,6 @@ class PromptTypes(Enum):
 
 class ConSim:
     """Code: [:octicons-mark-github-24: `concepts/metrics/consim.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/metrics/consim.py)
-
-    # ConSim overview
 
     ConSim for Concept-based Simulatability. Was introduced by Poché et al. in 2025[^1].
 
@@ -157,26 +156,9 @@ class ConSim:
         But we selected interesting examples, so it cannot be compared to a natural accuracy on the dataset.
         Therefore, we need to compare it to a baseline ().
 
-    > **Recommendation**
-    > We highly recommend to do the steps 1 and 2 several times with different seeds to get more statistically significant results.
-    > The initial papers[^1] used five different seeds..
-
-    # Details on the prompts
-
-    The prompts have five parts:
-
-    - Initial Phase (IP.1) the first part is the task description, which is a list of questions to ask the LLM.
-
-    - Initial Phase (IP.2) the second is a global concepts explanation on $f$. Listing the important concepts for each class.
-
-    - Learning Phase (LP.1) the third gives examples of samples and predictions from the model $f$.
-
-    - Learning Phase (LP.2) the fourth is a local concepts explanation on $f$. Listing the important concepts in each example.
-
-    - Evaluation Phase (EP.1) the fifth is a list of samples on which the meta-predictor $\\Psi$ will be asked to predict the model $f$ predictions.
-
-    The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the
-    model $f$ predictions and computes the accuracy of the explanations.
+    Tip:
+        We highly recommend to do the steps 1 and 2 several times with different seeds to get more statistically significant results.
+        The initial papers[^1] used five different seeds..
 
     [^1]:
         A. Poché, A. Jacovi, A.M. Picard, V. Boutin, and F. Jourdan.
@@ -314,21 +296,19 @@ class ConSim:
         Get the predictions of the model on a list of inputs.
         Called by `select_examples`.
 
-        Parameters
-        ----------
-        inputs: list[str]
-            The inputs to predict.
-        batch_size: int
-            The batch size to use for the predictions.
-        device: torch.device | str
-            The device to use for the predictions.
-        tqdm_bar: bool
-            Whether to show a tqdm bar.
+        Arguments:
+            inputs: list[str]
+                The inputs to predict.
+            batch_size: int
+                The batch size to use for the predictions.
+            device: torch.device | str
+                The device to use for the predictions.
+            tqdm_bar: bool
+                Whether to show a tqdm bar.
 
-        Returns
-        -------
-        predictions: torch.Tensor
-            The predictions of the model on the inputs.
+        Returns:
+            predictions: torch.Tensor
+                The predictions of the model on the inputs.
         """
         device = device if device is not None else self.model_with_split_points.device
         all_predictions = []
@@ -373,29 +353,27 @@ class ConSim:
 
         Called by `select_examples`.
 
-        Parameters
-        ----------
-        inputs: list[str]
-            The inputs to predict.
-        labels: torch.Tensor
-            The labels of the inputs.
-        predictions: torch.Tensor
-            The predictions of the model on the inputs.
-        nb_lp_samples: int
-            The number of samples to select for the learning phase.
-        nb_ep_samples: int
-            The number of samples to select for the evaluation phase.
-        seed: int
-            The seed to use for the random selection.
+        Arguments:
+            inputs: list[str]
+                The inputs to predict.
+            labels: torch.Tensor
+                The labels of the inputs.
+            predictions: torch.Tensor
+                The predictions of the model on the inputs.
+            nb_lp_samples: int
+                The number of samples to select for the learning phase.
+            nb_ep_samples: int
+                The number of samples to select for the evaluation phase.
+            seed: int
+                The seed to use for the random selection.
 
-        Returns
-        -------
-        interesting_samples: list[str]
-            The interesting samples.
-        labels: torch.Tensor
-            The labels of the interesting samples.
-        predictions: torch.Tensor
-            The predictions of the model on the interesting samples.
+        Returns:
+            interesting_samples: list[str]
+                The interesting samples.
+            labels: torch.Tensor
+                The labels of the interesting samples.
+            predictions: torch.Tensor
+                The predictions of the model on the interesting samples.
         """
         nb_classes = len(self.classes) if self.classes is not None else len(torch.unique(labels))
         nb_correct = (nb_lp_samples + nb_ep_samples) // 2
@@ -497,31 +475,29 @@ class ConSim:
 
         Therefore, there is no guarantee on the repartition inside learning and evaluation phase.
 
-        Parameters
-        ----------
-        inputs: list[str]
-            The inputs to predict.
-        labels: torch.Tensor
-            The labels of the inputs.
-        nb_lp_samples: int
-            The number of samples to select for the learning phase.
-        nb_ep_samples: int
-            The number of samples to select for the evaluation phase.
-        seed: int
-            The seed to use for the random selection.
-        batch_size: int
-            The batch size to use for the predictions.
-        device: torch.device | str
-            The device to use for the predictions.
+        Arguments:
+            inputs: list[str]
+                The inputs to predict.
+            labels: torch.Tensor
+                The labels of the inputs.
+            nb_lp_samples: int
+                The number of samples to select for the learning phase.
+            nb_ep_samples: int
+                The number of samples to select for the evaluation phase.
+            seed: int
+                The seed to use for the random selection.
+            batch_size: int
+                The batch size to use for the predictions.
+            device: torch.device | str
+                The device to use for the predictions.
 
-        Returns
-        -------
-        interesting_samples: list[str]
-            The interesting samples.
-        labels: torch.Tensor
-            The labels of the interesting samples.
-        predictions: torch.Tensor
-            The predictions of the model on the interesting samples.
+        Returns:
+            interesting_samples: list[str]
+                The interesting samples.
+            labels: torch.Tensor
+                The labels of the interesting samples.
+            predictions: torch.Tensor
+                The predictions of the model on the interesting samples.
         """
         predictions = self._get_predictions(inputs, batch_size=batch_size, device=device)
         return self._extract_interesting_elements(
@@ -543,18 +519,16 @@ class ConSim:
         - "-" for values between -0.05 and -0.3
         - "--" for values below -0.3
 
-        Parameters
-        ----------
-        importance: float
-            The importance to convert.
-        threshold: float
-            The threshold to select the most important concepts for each class.
+        Arguments:
+            importance: float
+                The importance to convert.
+            threshold: float
+                The threshold to select the most important concepts for each class.
 
-        Returns
-        -------
-        literals: str | None
-            The literals corresponding to the importances.
-            None if the importance is below the threshold. This should be filtered afterwards.
+        Returns:
+            literals: str | None
+                The literals corresponding to the importances.
+                None if the importance is below the threshold. This should be filtered afterwards.
         """
         if importance <= -6 * threshold:
             return "--"
@@ -599,39 +573,37 @@ class ConSim:
         Note that this values correspond to the normalized importance of the concepts.
         The normalization is done by dividing the importances by the sum of the absolute values of the importances.
 
-        Parameters
-        ----------
-        concepts_interpretation: dict[str, str]
-            The words that activate the concepts the most and the least.
-            A dictionary with the concepts as keys and another dictionary as values.
-            The inner dictionary has the words as keys and the activations as values.
-        global_importances: dict[str, str]
-            The importance of the concepts for each class.
-            A dictionary with the classes as keys and another dictionary as values.
-            The inner dictionary has the concepts as keys and the importance as values.
-        local_importances: torch.Tensor | None
-            Matrix of concept importances for each sentence. Shape (n_sentences, n_concepts)
-        importance_threshold: float
-            The threshold to select the most important concepts for each class.
-            The threshold correspond to the cumulative importance of the concepts to keep.
+        Arguments:
+            concepts_interpretation: dict[str, str]
+                The words that activate the concepts the most and the least.
+                A dictionary with the concepts as keys and another dictionary as values.
+                The inner dictionary has the words as keys and the activations as values.
+            global_importances: dict[str, str]
+                The importance of the concepts for each class.
+                A dictionary with the classes as keys and another dictionary as values.
+                The inner dictionary has the concepts as keys and the importance as values.
+            local_importances: torch.Tensor | None
+                Matrix of concept importances for each sentence. Shape (n_sentences, n_concepts)
+            importance_threshold: float
+                The threshold to select the most important concepts for each class.
+                The threshold correspond to the cumulative importance of the concepts to keep.
 
-        Returns
-        -------
-        concepts_interpretation: dict[str, str]
-            The words that activate the concepts the most and the least.
-            A dictionary with the concepts as keys and another dictionary as values.
-            The inner dictionary has the words as keys and the activations as values.
-            Filtered to keep only the important concepts.
-        filtered_global_importances: dict[str, dict[str, float]]
-            The importance of the concepts for each class.
-            A dictionary with the classes as keys and another dictionary as values.
-            The inner dictionary has the concepts as keys and the importance as values.
-            Filtered to keep only the important concepts.
-        filtered_local_importances: list[dict[str, str]] | None
-            The importance of concepts for each sentence.
-            A list with each element corresponding to one sentence.
-            Each element of the list if a dictionary with an importance associated to a concept id.
-            Filtered to keep only the important concepts.
+        Returns:
+            concepts_interpretation: dict[str, str]
+                The words that activate the concepts the most and the least.
+                A dictionary with the concepts as keys and another dictionary as values.
+                The inner dictionary has the words as keys and the activations as values.
+                Filtered to keep only the important concepts.
+            filtered_global_importances: dict[str, dict[str, float]]
+                The importance of the concepts for each class.
+                A dictionary with the classes as keys and another dictionary as values.
+                The inner dictionary has the concepts as keys and the importance as values.
+                Filtered to keep only the important concepts.
+            filtered_local_importances: list[dict[str, str]] | None
+                The importance of concepts for each sentence.
+                A list with each element corresponding to one sentence.
+                Each element of the list if a dictionary with an importance associated to a concept id.
+                Filtered to keep only the important concepts.
         """
         # ------------------------------------------------------------------------------------------
         # filter concepts which are important for at least one class
@@ -717,37 +689,35 @@ class ConSim:
 
         Many possibilities are not explored through the `PromptTypes` enum, because they do not make sense.
 
-        Parameter
-        ---------
-        setting: PromptSetting
-            Configuration, it says which elements should be included in the prompt.
-        anonymize_classes: bool
-            Whether to anonymize the classes.
-        sentences: list[str]
-            The sentences, the first half serve as examples and the second half is to be classified.
-        predictions: torch.Tensor
-            The predictions of the model on the sentences.
-        classes: list[str]
-            The classes of the dataset.
-        concepts_interpretation: dict[str, str]
-            The words that activate the concepts the most and the least.
-            A dictionary with the concepts as keys and another dictionary as values.
-            The inner dictionary has the words as keys and the activations as values.
-        global_importances: dict[str, dict[str, str]]
-            The importance of the concepts for each class.
-            A dictionary with the classes as keys and another dictionary as values.
-            The inner dictionary has the concepts as keys and the importance as values.
-        local_importances: list[dict[str, str]]
-            The importance of concepts for each sentence.
-            A list with each element corresponding to one sentence.
-            Each element of the list if a dictionary with an importance associated to a concept id.
+        Arguments:
+            setting: PromptSetting
+                Configuration, it says which elements should be included in the prompt.
+            anonymize_classes: bool
+                Whether to anonymize the classes.
+            sentences: list[str]
+                The sentences, the first half serve as examples and the second half is to be classified.
+            predictions: torch.Tensor
+                The predictions of the model on the sentences.
+            classes: list[str]
+                The classes of the dataset.
+            concepts_interpretation: dict[str, str]
+                The words that activate the concepts the most and the least.
+                A dictionary with the concepts as keys and another dictionary as values.
+                The inner dictionary has the words as keys and the activations as values.
+            global_importances: dict[str, dict[str, str]]
+                The importance of the concepts for each class.
+                A dictionary with the classes as keys and another dictionary as values.
+                The inner dictionary has the concepts as keys and the importance as values.
+            local_importances: list[dict[str, str]]
+                The importance of concepts for each sentence.
+                A list with each element corresponding to one sentence.
+                Each element of the list if a dictionary with an importance associated to a concept id.
 
-        Returns
-        -------
-        system_prompt: str
-            The system prompt for the LLM. All instructions, the initial and learning phases.
-        user_prompt: str
-            The user prompt for the LLM. The examples on with the user-llm should predict, thus the evaluation phase.
+        Returns:
+            system_prompt: str
+                The system prompt for the LLM. All instructions, the initial and learning phases.
+            user_prompt: str
+                The user prompt for the LLM. The examples on with the user-llm should predict, thus the evaluation phase.
         """
         system_prompt_parts = []
         user_prompt_parts = []
@@ -934,52 +904,50 @@ class ConSim:
         First the different elements are processed so that they can be included in the prompt via `ConSim._generate_prompt`.
         Then the elements are integrated into a prompt via `ConSim._setting_to_prompt`.
 
-        Parameters
-        ----------
-        sentences: list[str]
-            The sentences, the first half serve as examples and the second half is to be classified.
-        predictions: list[float]
-            The predictions of the model on the sentences.
-        classes: list[str] | None
-            The classes of the dataset.
-        concepts_interpretation: dict[str, str] | None
-            The interpretation of the concepts, concepts are the keys.
-            For example, an interpretation could be the topk words that activates the most a given concepts.
-        global_importances: dict[str, dict[str, float]] | None
-            The importance of the concepts for each class.
-            A dictionary with the classes as keys and another dictionary as values.
-            The inner dictionary has the concepts as keys and the importance as values.
-        local_importances: torch.Tensor | None
-            Local concepts importances for each sentence.
-            A list of tensors with shape (n_concepts,).
-        prompt_type: PromptTypes
-            The type of prompt to use. Possible values are:
+        Arguments:
+            sentences: list[str]
+                The sentences, the first half serve as examples and the second half is to be classified.
+            predictions: list[float]
+                The predictions of the model on the sentences.
+            classes: list[str] | None
+                The classes of the dataset.
+            concepts_interpretation: dict[str, str] | None
+                The interpretation of the concepts, concepts are the keys.
+                For example, an interpretation could be the topk words that activates the most a given concepts.
+            global_importances: dict[str, dict[str, float]] | None
+                The importance of the concepts for each class.
+                A dictionary with the classes as keys and another dictionary as values.
+                The inner dictionary has the concepts as keys and the importance as values.
+            local_importances: torch.Tensor | None
+                Local concepts importances for each sentence.
+                A list of tensors with shape (n_concepts,).
+            prompt_type: PromptTypes
+                The type of prompt to use. Possible values are:
 
-            - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
+                - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
 
-            - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.
+                - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.
 
-            - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.
+                - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.
 
-            - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.
+                - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.
 
-            - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.
+                - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.
 
-            - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
+                - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
 
-        anonymize_classes: bool
-            Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.
-            It prevents the user-llm to solve the task by simply guessing the class.
-        importance_threshold: float
-            The threshold to select the most important concepts for each class.
-            The threshold correspond to the cumulative importance of the concepts to keep.
+            anonymize_classes: bool
+                Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.
+                It prevents the user-llm to solve the task by simply guessing the class.
+            importance_threshold: float
+                The threshold to select the most important concepts for each class.
+                The threshold correspond to the cumulative importance of the concepts to keep.
 
-        Returns
-        -------
-        prompt: list[tuple[Role, str]]
-            The prompts for the LLM, the format matches the `LLMInterface` API.
-        literal_model_predictions: list[str]
-            The model predictions as a list of strings, it allows easier comparison with the `user_llm` answers.
+        Returns:
+            prompt: list[tuple[Role, str]]
+                The prompts for the LLM, the format matches the `LLMInterface` API.
+            literal_model_predictions: list[str]
+                The model predictions as a list of strings, it allows easier comparison with the `user_llm` answers.
         """
         if classes is None and anonymize_classes is False:
             raise ValueError(
@@ -1072,18 +1040,16 @@ class ConSim:
         Sample_2: nurse
         ```
 
-        Parameters
-        ----------
-        response: str
-            The response from the user-llm or meta-predictor.
-        expected_length: int
-            The expected length of the response.
+        Arguments:
+            response: str
+                The response from the user-llm or meta-predictor.
+            expected_length: int
+                The expected length of the response.
 
-        Returns
-        -------
-        predictions: list[str] | None
-            The model predictions.
-            If the response is empty or the expected length is not respected, returns None.
+        Returns:
+            predictions: list[str] | None
+                The model predictions.
+                If the response is empty or the expected length is not respected, returns None.
         """
         sentences = response.split("\n")
 
@@ -1110,23 +1076,20 @@ class ConSim:
         """
         Compute the accuracy of the model predictions.
 
-        Parameters
-        ----------
-        model_predictions: list[str]
-            The model predictions.
-        user_llm_predictions: list[str]
-            The user-llm predictions.
+        Arguments:
+            model_predictions: list[str]
+                The model predictions.
+            user_llm_predictions: list[str]
+                The user-llm predictions.
 
-        Returns
-        -------
-        accuracy: float | None
-            The accuracy of the model predictions.
-            If the model predictions are empty or the user-llm predictions are empty, returns None.
+        Returns:
+            accuracy: float | None
+                The accuracy of the model predictions.
+                If the model predictions are empty or the user-llm predictions are empty, returns None.
 
-        Raises
-        ------
-        ValueError
-            If the model predictions and the user-llm predictions have different lengths.
+        Raises:
+            ValueError
+                If the model predictions and the user-llm predictions have different lengths.
         """
         if len(model_predictions) == 0 or len(user_llm_predictions) == 0:
             # TODO: discuss if we prefer to return None or raise an error with explicit message
@@ -1165,23 +1128,20 @@ class ConSim:
         Sample_2: nurse
         ```
 
-        Parameters
-        ----------
-        user_llm_response: str
-            The response from the user-llm or meta-predictor.
-        literal_model_predictions: list[str]
-            The model predictions.
+        Arguments:
+            user_llm_response: str
+                The response from the user-llm or meta-predictor.
+            literal_model_predictions: list[str]
+                The model predictions.
 
-        Returns
-        -------
-        score: float | None
-            The score of the ConSim metric.
-            If the model predictions are empty or the user-llm predictions are empty, returns None.
+        Returns:
+            score: float | None
+                The score of the ConSim metric.
+                If the model predictions are empty or the user-llm predictions are empty, returns None.
 
-        Raises
-        ------
-        ValueError
-            If the model predictions and the user-llm predictions have different lengths.
+        Raises:
+            ValueError
+                If the model predictions and the user-llm predictions have different lengths.
         """
         # extract the model predictions
         literal_meta_predictions = ConSim._extract_predictions_from_response(
@@ -1215,61 +1175,79 @@ class ConSim:
         The prompt is sent to the `user_llm` and the model predictions are extracted from the response.
         Finally, the score is computed by comparing the model predictions with the `user_llm` predictions.
 
-        Parameters
-        ----------
-        interesting_samples: list[str]
-            The interesting samples.
-        predictions: torch.Tensor
-            The predictions of the model on the interesting samples.
-        concept_explainer: ConceptAutoEncoderExplainer
-            The concept explainer.
-        concepts_interpretation: dict[str, str]
-            The words that activate the concepts the most and the least.
-            A dictionary with the concepts as keys and another dictionary as values.
-            The inner dictionary has the words as keys and the activations as values.
-        global_importances: dict[str, dict[str, float]]
-            The importance of the concepts for each class.
-            A dictionary with the classes as keys and another dictionary as values.
-            The inner dictionary has the concepts as keys and the importance as values.
-        prompt_type: PromptTypes
-            The type of prompt to use. Possible values are:
+        The prompts have five parts:
 
-            - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
+        - Initial Phase (IP.1) the first part is the task description, which is a list of questions to ask the LLM.
 
-            - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.
+        - Initial Phase (IP.2) the second is a global concepts explanation on $f$. Listing the important concepts for each class.
 
-            - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.
+        - Learning Phase (LP.1) the third gives examples of samples and predictions from the model $f$.
 
-            - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.
+        - Learning Phase (LP.2) the fourth is a local concepts explanation on $f$. Listing the important concepts in each example.
 
-            - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.
+        - Evaluation Phase (EP.1) the fifth is a list of samples on which the meta-predictor $\\Psi$ will be asked to predict the model $f$ predictions.
 
-            - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
+        The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the
+        model $f$ predictions and computes the accuracy of the explanations.
 
-        anonymize_classes: bool
-            Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.
-            It prevents the user-llm to solve the task by simply guessing the class.
-        importance_threshold: float
-            The threshold to select the most important concepts for each class.
-            The threshold correspond to the cumulative importance of the concepts to keep.
+        Arguments:
+            interesting_samples: list[str]
+                The interesting samples.
 
-        Returns
-        -------
-        score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]
-            The score of the ConSim metric.
-            If the user-llm predictions are empty or in the wrong format, returns None.
-            It was chosen to return None,
-            because ConSim should be called a lot of times for statistically significant results.
-            Therefore, having a None score once in a while is better than the script crashing.
+            predictions: torch.Tensor
+                The predictions of the model on the interesting samples.
 
-            If no user_llm is provided, returns the prompts and the model predictions.
-            The user will have to call the ConSim prompts manually.
-            The response of the LLM on the prompts should be compared to the model predictions.
+            concept_explainer: ConceptAutoEncoderExplainer
+                The concept explainer.
 
-        Raises
-        ------
-        ValueError
-            If the model predictions and the user-llm predictions have different lengths.
+            concepts_interpretation: dict[str, str]
+                The words that activate the concepts the most and the least.
+                A dictionary with the concepts as keys and another dictionary as values.
+                The inner dictionary has the words as keys and the activations as values.
+
+            global_importances: dict[str, dict[str, float]]
+                The importance of the concepts for each class.
+                A dictionary with the classes as keys and another dictionary as values.
+                The inner dictionary has the concepts as keys and the importance as values.
+
+            prompt_type: PromptTypes
+                The type of prompt to use. Possible values are:
+
+                - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
+
+                - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.
+
+                - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.
+
+                - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.
+
+                - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.
+
+                - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
+
+            anonymize_classes: bool
+                Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.
+                It prevents the user-llm to solve the task by simply guessing the class.
+
+            importance_threshold: float
+                The threshold to select the most important concepts for each class.
+                The threshold correspond to the cumulative importance of the concepts to keep.
+
+        Returns:
+            score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]
+                The score of the ConSim metric.
+                If the user-llm predictions are empty or in the wrong format, returns None.
+                It was chosen to return None,
+                because ConSim should be called a lot of times for statistically significant results.
+                Therefore, having a None score once in a while is better than the script crashing.
+
+                If no user_llm is provided, returns the prompts and the model predictions.
+                The user will have to call the ConSim prompts manually.
+                The response of the LLM on the prompts should be compared to the model predictions.
+
+        Raises:
+            ValueError
+                If the model predictions and the user-llm predictions have different lengths.
         """
         # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
         if concept_explainer.split_point not in self.model_with_split_points.split_points:
