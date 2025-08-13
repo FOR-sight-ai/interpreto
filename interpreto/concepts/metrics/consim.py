@@ -120,9 +120,11 @@ class PromptTypes(Enum):
 
 
 class ConSim:
-    """Code: [:octicons-mark-github-24: `concepts/metrics/con_sim.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/metrics/con_sim.py)
+    """Code: [:octicons-mark-github-24: `concepts/metrics/consim.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/metrics/consim.py)
 
-    ConSim for Concept-based Simulatability. Was introduced by Poché et al. in 2025 [^1].
+    # ConSim overview
+
+    ConSim for Concept-based Simulatability. Was introduced by Poché et al. in 2025[^1].
 
     It evaluates all three components of the concept-based explanation:
 
@@ -139,6 +141,28 @@ class ConSim:
     a model either from local, or from a remote API, such as OpenAI or HuggingFace.
     Therefore, most of the code correspond to building the prompts for the LLM.
 
+    There are three steps to ConSim:
+
+    - Step 0:
+        Instantiate the ConSim metric
+        with the `model_with_split_points` ($f$) and the `user_llm` ($\\Psi$).
+
+    - Step 1:
+        Select interesting examples for ConSim with the `select_examples` method.
+        Samples are selected to see how well $\\Psi$ can simulate $f$.
+        Thus there are samples for every classes and many initial errors from $f$.
+
+    - Step 2:
+        Evaluate the ConSim score with the `evaluate` method. It is an accuracy score between $\\Psi$ and $f$ predictions.
+        But we selected interesting examples, so it cannot be compared to a natural accuracy on the dataset.
+        Therefore, we need to compare it to a baseline ().
+
+    > **Recommendation**
+    > We highly recommend to do the steps 1 and 2 several times with different seeds to get more statistically significant results.
+    > The initial papers[^1] used five different seeds..
+
+    # Details on the prompts
+
     The prompts have five parts:
 
     - Initial Phase (IP.1) the first part is the task description, which is a list of questions to ask the LLM.
@@ -154,87 +178,15 @@ class ConSim:
     The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the
     model $f$ predictions and computes the accuracy of the explanations.
 
-    Attributes
-    ----------
-    model_with_split_points: ModelWithSplitPoints
-        The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
-    user_llm: LLMInterface | None
-        The LLM interface that will serve as the meta-predictor.
-        If your preferred LLM API is not supported, you can implement your own LLM interface.
-        You just have to implement the `generate` method.
-
-        The format of the prompt is:
-
-        >>> [
-        >>>     (Role.SYSTEM, "system prompt"),
-        >>>     (Role.USER, "user prompt"),
-        >>>     (Role.ASSISTANT, "assistant prompt"),
-        >>> ]
-    split_point: str
-        Where to split the model to explain.
-    classes: list[str] | None
-        The names of classes of the dataset.
-    prompt_types: PromptTypes
-        Enum of the possible prompts types to use.
-
-    References
-    ----------
     [^1]:
-        A. Poch{\'e}, A. Jacovi, A.M. Picard, V. Boutin, and F. Jourdan.
-        ConSim: Measuring Concept-Based Explanations' Effectiveness with Automated Simulatability.
+        A. Poché, A. Jacovi, A.M. Picard, V. Boutin, and F. Jourdan.
+        [ConSim: Measuring Concept-Based Explanations' Effectiveness with Automated Simulatability](https://aclanthology.org/2025.acl-long.279/).
         In the Proceedings of the 2025 Association for Computational Linguistics (ACL).
 
-    Examples  # TODO: validate in practice
-    --------
-
-    >>> import datasets
-    >>> from interpreto import ConSim, ModelWithSplitPoints, ICAConcepts, OpenAILLM
-    >>>
-    >>> # Load a model and wrap it
-    >>> model_with_split_points = ModelWithSplitPoints(
-    ...     "textattack/bert-base-uncased-ag-news",
-    ...     split_points=["bert.encoder.layer.10.output"],
-    ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
-    ...     batch_size=4,
-    ... )
-    >>>
-    >>> # Load a dataset and compute activations
-    >>> dataset = datasets.load_dataset("fancyzhx/ag_news")
-    >>> classes = ["World", "Sports", "Business", "Sci/Tech"]
-    >>> activations = model_with_split_points.get_activations(dataset["train"]["text"])
-    >>>
-    >>> # Fit the concept explainer
-    >>> concept_explainer_1 = ICAConcepts(model_with_split_points, nb_concepts=50)
-    >>> concept_explainer.fit(activations)
-    >>>
-    >>> # Define the User-LLM (the meta-predictor and llm as a judge)
-    >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt4o-mini")
-    >>>
-    >>> con_sim = ConSim(model_with_split_points, user_llm, classes=classes)
-    >>> samples, labels, predictions = con_sim.select_examples(
-    ...     dataset["train"]["text"], dataset["train"]["label"],
-    ... )
-    >>> baseline = con_sim.evaluate(samples, labels, predictions, prompt_type=PromptTypes.L2_baseline_with_lp)
-    >>> con_sim_score = con_sim.evaluate(samples, labels, predictions, concept_explainer_1, prompt_type=PromptTypes.E3_global_and_local_concepts_with_lp)
-    """
-
-    prompt_types = PromptTypes
-
-    def __init__(
-        self,
-        model_with_split_points: ModelWithSplitPoints,
-        user_llm: LLMInterface | None = None,
-        classes: list[str] | None = None,
-        split_point: str | None = None,
-        activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
-    ):
-        """
-        Initialize the ConSim metric.
-
-        Parameters
-        ----------
+    Arguments:
         model_with_split_points: ModelWithSplitPoints
             The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
+
         user_llm: LLMInterface | None
             The LLM interface that will serve as the meta-predictor.
             If not provided the user will have to call the ConSim prompts manually.
@@ -243,18 +195,97 @@ class ConSim:
 
             The format of the prompt is:
 
-            >>> [
-            >>>     (Role.SYSTEM, "system prompt"),
-            >>>     (Role.USER, "user prompt"),
-            >>>     (Role.ASSISTANT, "assistant prompt"),
-            >>> ]
+            `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
+
+        activation_granularity: ActivationGranularity
+            The granularity of the activations to use for the explanations.
 
         classes: list[str] | None
             The names of classes of the dataset.
+
         split_point: str
             Where to split the model to explain.
-        activation_granularity: ActivationGranularity
-            The granularity of the activations to use for the explanations.
+
+    Attributes:
+        classes: list[str] | None
+            The names of classes of the dataset.
+
+        prompt_types: PromptTypes
+            Enum of the possible prompts types to use.
+
+        model_with_split_points: ModelWithSplitPoints
+            The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
+
+        split_point: str
+            Where to split the model to explain.
+
+        user_llm: LLMInterface | None
+            The LLM interface that will serve as the meta-predictor.
+            If your preferred LLM API is not supported, you can implement your own LLM interface.
+            You just have to implement the `generate` method.
+
+            The format of the prompt is:
+
+            `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
+
+    TODO:
+        validate example in practice
+
+    Examples:
+        Preamble to a metric, fit a concept explainer:
+        >>> import datasets
+        >>> from interpreto import ConSim, ModelWithSplitPoints, ICAConcepts, OpenAILLM
+        >>>
+        >>> # ------------------------
+        >>> # Load a model and wrap it
+        >>> model_with_split_points = ModelWithSplitPoints(
+        ...     "textattack/bert-base-uncased-ag-news",
+        ...     split_points=["bert.encoder.layer.10.output"],
+        ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
+        ...     batch_size=4,
+        ... )
+        >>>
+        >>> # --------------------------------------
+        >>> # Load a dataset and compute activations
+        >>> dataset = datasets.load_dataset("fancyzhx/ag_news")
+        >>> classes = ["World", "Sports", "Business", "Sci/Tech"]
+        >>> activations = model_with_split_points.get_activations(dataset["train"]["text"])
+        >>>
+        >>> # -------------------------
+        >>> # Fit the concept explainer
+        >>> concept_explainer_1 = ICAConcepts(model_with_split_points, nb_concepts=50)
+        >>> concept_explainer.fit(activations)
+
+        The two steps of ConSim:
+        >>> # ------------------------------------------------------------------
+        >>> # Step 0: Define the User-LLM and instantiate the ConSim metric
+        >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt4o-mini")
+        >>> consim = ConSim(model_with_split_points, user_llm, classes=classes)
+        >>>
+        >>> # ----------------------------------------------
+        >>> # Step 1: Select interesting examples for ConSim
+        >>> samples, labels, predictions = consim.select_examples(
+        ...     dataset["train"]["text"], dataset["train"]["label"],
+        ... )
+        >>>
+        >>> # -------------------------------------------------------------
+        >>> # Step 2: Evaluate the ConSim score, do not forget the baseline
+        >>> baseline = consim.evaluate(samples, labels, predictions, prompt_type=PromptTypes.L2_baseline_with_lp)
+        >>> consim_score = consim.evaluate(samples, labels, predictions, concept_explainer_1, prompt_type=PromptTypes.E3_global_and_local_concepts_with_lp)
+    """
+
+    prompt_types: type[PromptTypes] = PromptTypes
+
+    def __init__(
+        self,
+        model_with_split_points: ModelWithSplitPoints,
+        user_llm: LLMInterface | None,
+        activation_granularity: ActivationGranularity,
+        classes: list[str] | None = None,
+        split_point: str | None = None,
+    ):
+        """
+        Initialize the ConSim metric.
         """
         self.model_with_split_points = model_with_split_points
         if split_point is None:
@@ -503,7 +534,7 @@ class ConSim:
         )
 
     @staticmethod
-    def quantize_importances(importance: float, threshold: float = 0.05) -> str | None:
+    def _quantize_importances(importance: float, threshold: float = 0.05) -> str | None:
         """
         Convert the normalized importances to literals.
         The literals are:
@@ -639,7 +670,7 @@ class ConSim:
             # iterate over concepts
             for c, importance in concepts_importance.items():
                 # quantize the importance and pass it to string
-                quantized_importance: str | None = ConSim.quantize_importances(importance, importance_threshold)
+                quantized_importance: str | None = ConSim._quantize_importances(importance, importance_threshold)
                 # keep only the concepts that should be shown and are important enough
                 if int(c.split("_")[-1]) in concepts_to_show and quantized_importance is not None:
                     quantized_global_importances[class_name][c] = quantized_importance
@@ -659,7 +690,9 @@ class ConSim:
             # iterate over concepts
             for cpt, importance in enumerate(sentence_concepts_importances):
                 # quantize the importance and pass it to string
-                quantized_importance: str | None = ConSim.quantize_importances(importance.item(), importance_threshold)
+                quantized_importance: str | None = ConSim._quantize_importances(
+                    importance.item(), importance_threshold
+                )
                 # keep only the concepts that should be shown and are important enough
                 if cpt in concepts_to_show and quantized_importance is not None:
                     filtered_sentence_importances[f"concept_{cpt}"] = quantized_importance

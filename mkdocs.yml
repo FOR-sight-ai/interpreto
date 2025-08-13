@@ -40,6 +40,7 @@ nav:
         - TopKInputs: api/concepts/interpretations/topk_inputs.md
       - Metrics:
         - Overview: api/concepts/metrics/overview.md
+        - ConSim: api/concepts/metrics/consim.md
         - Dictionary Metrics: api/concepts/metrics/dictionary_metrics.md
         - Reconstruction Metrics: api/concepts/metrics/reconstruction_metrics.md
         - Sparsity: api/concepts/metrics/sparsity_metrics.md
