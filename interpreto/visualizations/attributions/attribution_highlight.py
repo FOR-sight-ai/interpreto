@@ -29,6 +29,7 @@ Base classes for attributions visualizations
 from __future__ import annotations
 
 import json
+import numpy as np
 
 from interpreto.attributions.base import AttributionOutput, ModelTask
 from interpreto.visualizations.base import BaseAttributionVisualization, tensor_to_list
@@ -91,7 +92,9 @@ class AttributionVisualization(BaseAttributionVisualization):
             else:
                 min_value = -1.0
                 max_value = 1.0
-            assert min_value <= max_value, "The min value should be less than the max value"
+            assert min_value <= max_value, (
+                f"The min value ({min_value}) should be less than the max value ({max_value})"
+            )
 
             self.data = self.adapt_data(
                 input_words=inputs_sentence,
@@ -183,11 +186,14 @@ class AttributionVisualization(BaseAttributionVisualization):
                 does not match the expected shape ({nb_outputs}, {nb_outputs}, 1)"
             )
 
-            # compute the min and max values for the attributions to be used for normalization
             if normalize:
-                min_value = min(attribution_output.attributions.min(), -attribution_output.attributions.max())
-                max_value = max(attribution_output.attributions.max(), -attribution_output.attributions.min())
-                assert min_value <= max_value, "The min value should be less than the max value"
+                # for generation, attribution values for tokens not yet processed are NaN, so we need to handle them
+                attributions_np = attribution_output.attributions.cpu().detach().numpy()
+                min_value = np.nanmin([np.nanmin(attributions_np), -np.nanmax(attributions_np)]).item()
+                max_value = np.nanmax([np.nanmax(attributions_np), -np.nanmin(attributions_np)]).item()
+                assert min_value <= max_value, (
+                    f"The min value ({min_value}) should be less than the max value ({max_value})"
+                )
             else:
                 min_value = -1.0
                 max_value = 1.0
