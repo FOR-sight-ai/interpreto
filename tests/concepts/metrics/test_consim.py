@@ -593,7 +593,9 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `evaluate` method of the ConSim metric with OpenAI API.
     """
     # lazy import to avoid importing openai
-    from interpreto.model_wrapping.llm_interface import OpenAILLM
+    from interpreto.model_wrapping.llm_interface import (
+        OpenAILLM,  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
+    )
 
     open_ai_llm = OpenAILLM(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4o-mini-2024-07-18")
 

@@ -311,7 +311,7 @@ class ConSim:
             batch_inputs = inputs[batch_index : batch_index + batch_size]
             batch_tokens = self.model_with_split_points.tokenizer(
                 batch_inputs, return_tensors="pt", padding=True, truncation=True
-            ).to(device)
+            ).to(device)  # type: ignore
             logits = self.model_with_split_points._model(
                 batch_tokens["input_ids"], batch_tokens["attention_mask"]
             ).logits
@@ -602,7 +602,7 @@ class ConSim:
             Each element of the list if a dictionary with an importance associated to a concept id.
             Filtered to keep only the important concepts.
         """
-
+        # ------------------------------------------------------------------------------------------
         # filter concepts which are important for at least one class
         concepts_to_keep = []
         while len(concepts_to_keep) == 0:
@@ -626,19 +626,23 @@ class ConSim:
             dtype=torch.int64
         )
 
+        # ------------------------------------------------------------------------------------------
         # filter the concepts activating words
         concepts_interpretation = {f"concept_{c}": concepts_interpretation[f"concept_{c}"] for c in concepts_to_show}
 
+        # ------------------------------------------------------------------------------------------
         # filter the concepts importance
-        quantized_global_importances = {
-            class_name: {
-                c: ConSim.quantize_importances(importance, importance_threshold)
-                for c, importance in concepts_importance.items()
-                if int(c.split("_")[-1]) in concepts_to_show
-                and ConSim.quantize_importances(importance, importance_threshold) is not None
-            }
-            for class_name, concepts_importance in global_importances.items()
-        }
+        quantized_global_importances: dict[str, dict[str, str]] = {}
+        # iterate over classes
+        for class_name, concepts_importance in global_importances.items():
+            quantized_global_importances[class_name] = {}
+            # iterate over concepts
+            for c, importance in concepts_importance.items():
+                # quantize the importance and pass it to string
+                quantized_importance: str | None = ConSim.quantize_importances(importance, importance_threshold)
+                # keep only the concepts that should be shown and are important enough
+                if int(c.split("_")[-1]) in concepts_to_show and quantized_importance is not None:
+                    quantized_global_importances[class_name][c] = quantized_importance
 
         if local_importances is None:
             return concepts_interpretation, quantized_global_importances, None
@@ -646,20 +650,25 @@ class ConSim:
         # normalize sentences concepts importances
         local_importances = local_importances / local_importances.abs().sum(dim=1, keepdim=True)
 
+        # ------------------------------------------------------------------------------------------
         # clean elements to leave only the important concepts and quantize values to literals
-        filtered_local_importances = [
-            {
-                f"concept_{cpt}": ConSim.quantize_importances(importance.item())
-                for cpt, importance in enumerate(sentence_concepts_importances)
-                if cpt in concepts_to_show and ConSim.quantize_importances(importance.item()) is not None
-            }
-            for sentence_concepts_importances in local_importances
-        ]
+        filtered_local_importances: list[dict[str, str]] = []
+        # iterate over sentences
+        for sentence_concepts_importances in local_importances:
+            filtered_sentence_importances: dict[str, str] = {}
+            # iterate over concepts
+            for cpt, importance in enumerate(sentence_concepts_importances):
+                # quantize the importance and pass it to string
+                quantized_importance: str | None = ConSim.quantize_importances(importance.item(), importance_threshold)
+                # keep only the concepts that should be shown and are important enough
+                if cpt in concepts_to_show and quantized_importance is not None:
+                    filtered_sentence_importances[f"concept_{cpt}"] = quantized_importance
+            filtered_local_importances.append(filtered_sentence_importances)
 
         return concepts_interpretation, quantized_global_importances, filtered_local_importances
 
     @staticmethod
-    def _setting_to_prompt(
+    def _setting_to_prompt(  # noqa: PLR0912  # ignore too many branches  # too many special cases
         setting: PromptSetting,
         anonymize_classes: bool,
         sentences: list[str],
@@ -1164,7 +1173,7 @@ class ConSim:
         prompt_type: PromptTypes = PromptTypes.E3_global_and_local_concepts_with_lp,
         anonymize_classes: bool = False,
         importance_threshold: float = 0.05,
-    ) -> float | None:
+    ) -> float | None | tuple[list[tuple[Role, str]], list[str]]:
         """
         Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.
 
