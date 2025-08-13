@@ -23,6 +23,6 @@
 # SOFTWARE.
 
 from .llm_labels import LLMLabels
-from .topk_inputs import TopKInputs
+from .topk_inputs import TopKInputs, extract_unique_words
 
-__all__ = ["TopKInputs", "LLMLabels"]
+__all__ = ["TopKInputs", "LLMLabels", "extract_unique_words"]

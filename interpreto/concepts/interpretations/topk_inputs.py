@@ -33,6 +33,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
+import nltk
 import torch
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
@@ -100,6 +101,8 @@ def extract_unique_words(
         ValueError:
             If the input is not a list of strings.
     """
+    nltk.download("punkt")
+    nltk.download("punkt_tab")
     if lemmatize:
         lemmatizer = WordNetLemmatizer()
 
@@ -110,7 +113,7 @@ def extract_unique_words(
         for word in word_tokenize(text):
             # lemmatize words
             if lemmatize:
-                word = lemmatizer.lemmatize(word)  # type: ignore  # noqa: PLW2901
+                word = lemmatizer.lemmatize(word.lower())  # type: ignore  # noqa: PLW2901
 
             # ignore words
             if words_to_ignore is not None and word in words_to_ignore:
@@ -121,7 +124,7 @@ def extract_unique_words(
 
     # filter too rare words
     if count_min_threshold > 1:
-        words_count = Counter({key: count for key, count in words_count.items() if count > count_min_threshold})
+        words_count = Counter({key: count for key, count in words_count.items() if count >= count_min_threshold})
 
     if return_counts:
         return words_count
@@ -144,14 +147,34 @@ class TopKInputs(BaseConceptInterpretationMethod):
         Transformer Circuits, 2023.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model with split points to use for the interpretation.
-        split_point (str): The split point to use for the interpretation.
-        concept_model (ConceptModelProtocol): The concept model to use for the interpretation.
-        activation_granularity (ActivationGranularity): The granularity at which the interpretation is computed.
-            Allowed values are `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
-            Ignored when use_vocab=True.
-        k (int): The number of inputs to use for the interpretation.
-        use_vocab (bool): If True, the interpretation will be computed from the vocabulary of the model.
+        model_with_split_points (ModelWithSplitPoints):
+            The model with split points to use for the interpretation.
+
+        split_point (str):
+            The split point to use for the interpretation.
+
+        concept_model (ConceptModelProtocol):
+            The concept model to use for the interpretation.
+
+        activation_granularity (ActivationGranularity):
+            The granularity at which the interpretation is computed.
+            Allowed values are `CLS_TOKEN`, `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
+            Ignored when `use_vocab=True`.
+
+        k (int):
+            The number of inputs to use for the interpretation.
+
+        use_vocab (bool):
+            If True, the interpretation will be computed from the vocabulary of the model.
+
+        use_unique_words (bool):
+            If True, the interpretation will be computed from the unique words of the model.
+            Required when activation_granularity is `CLS_TOKEN`.
+            Incompatible with `use_vocab=True`.
+            This is built upon the `extract_unique_words` function.
+            For more advanced selection of unique words,
+            please use the `extract_unique_words` function directly,
+            and pass the result to the `TopKInputs` class.
 
     Examples:  # TODO: adapt example to added arguments
         >>> from datasets import load_dataset
