@@ -146,12 +146,9 @@ class TopKInputs(BaseConceptInterpretationMethod):
         [Towards Monosemanticity: Decomposing Language Models With Dictionary Learning](https://transformer-circuits.pub/2023/monosemantic-features)
         Transformer Circuits, 2023.
 
-    Attributes:
+    Arguments:
         model_with_split_points (ModelWithSplitPoints):
             The model with split points to use for the interpretation.
-
-        split_point (str):
-            The split point to use for the interpretation.
 
         concept_model (ConceptModelProtocol):
             The concept model to use for the interpretation.
@@ -160,6 +157,12 @@ class TopKInputs(BaseConceptInterpretationMethod):
             The granularity at which the interpretation is computed.
             Allowed values are `CLS_TOKEN`, `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
             Ignored when `use_vocab=True`.
+
+        split_point (str):
+            The split point to use for the interpretation.
+
+        concept_encoding_batch_size (int):
+            The batch size to use for the concept encoding.
 
         k (int):
             The number of inputs to use for the interpretation.
@@ -176,7 +179,17 @@ class TopKInputs(BaseConceptInterpretationMethod):
             please use the `extract_unique_words` function directly,
             and pass the result to the `TopKInputs` class.
 
-    Examples:  # TODO: adapt example to added arguments
+        device (torch.device | str | None):
+            The device to use for forward passes.
+            If None, use the one from `model_with_split_points`.
+
+    TODO:
+        Adapt example to added arguments, one example for generation, one for classification
+
+        Change API from concept_explainer.interpret(TopKInputs, ...) to
+            topk_inputs = TopKInputs(concept_explainer) and topk_inputs.interpret(...)
+
+    Examples:
         >>> from datasets import load_dataset
         >>> from interpreto import ModelWithSplitPoints
         >>> from interpreto.concepts import NeuronsAsConcepts
