@@ -61,6 +61,8 @@ from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.consim import ConSim, PromptTypes
 from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 
+AG = ModelWithSplitPoints.activation_granularities
+
 
 class LLMInterfacePlaceholder(LLMInterface):
     def __init__(self):
@@ -90,20 +92,20 @@ def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints, multi_split_mode
     Test the `__init__` method of the ConSim metric.
     """
     llm = LLMInterfacePlaceholder()
-    classes = [str(i) for i in range(int(splitted_encoder_ml._model.num_labels))]
+    classes = [str(i) for i in range(int(splitted_encoder_ml._model.num_labels))]  # type: ignore
 
     # when only one split point is available, it should be chosen automatically
-    consim = ConSim(splitted_encoder_ml, llm, classes=classes)
+    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
     assert consim.split_point == splitted_encoder_ml.split_points[0]
     assert consim.user_llm is llm
 
     # invalid split point should raise an error
     with pytest.raises(ValueError):
-        ConSim(splitted_encoder_ml, llm, classes, split_point="wrong.point")
+        ConSim(splitted_encoder_ml, None, AG.TOKEN, classes, split_point="wrong.point")
 
     # when multiple split points exist, omitting split_point must fail
     with pytest.raises(ValueError):
-        ConSim(multi_split_model, llm, classes)
+        ConSim(multi_split_model, None, AG.TOKEN, classes)
 
 
 def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
@@ -111,7 +113,7 @@ def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `_get_predictions` method of the ConSim metric.
     """
     # Initialize the ConSim metric
-    consim = ConSim(splitted_encoder_ml)
+    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN)
 
     inputs = ["This is a first sentence", "Another sentence"]
 
@@ -122,7 +124,7 @@ def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
             if hasattr(splitted_encoder_ml, "nns_output")
             else splitted_encoder_ml.output
         )
-        nnsight_preds = torch.argmax(nnsight_output.logits, dim=-1).save()
+        nnsight_preds = torch.argmax(nnsight_output.logits, dim=-1).save()  # type: ignore
 
     # Verify nnsight predictions
     assert isinstance(nnsight_preds, torch.Tensor)
@@ -144,7 +146,7 @@ def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplit
     Test the `_extract_interesting_elements` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
 
     inputs = [f"sentence {i}" for i in range(6)]
     labels = torch.tensor([0, 1, 0, 1, 0, 1])
@@ -177,7 +179,7 @@ def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `select_examples` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, classes=classes)
+    consim = ConSim(splitted_encoder_ml, None, AG.TOKEN, classes=classes)
 
     # prepare fake methods so we only test the logic of select_examples
     inputs = ["a", "b", "c", "d", "e", "f"]
@@ -211,12 +213,12 @@ def test_consim_quantize_importances():
     Test the `quantize_importances` method of the ConSim metric.
     """
     thr = 0.05
-    assert ConSim.quantize_importances(0.4, thr) == "++"
-    assert ConSim.quantize_importances(0.1, thr) == "+"
-    assert ConSim.quantize_importances(-0.1, thr) == "-"
-    assert ConSim.quantize_importances(-0.5, thr) == "--"
-    assert ConSim.quantize_importances(0.04, thr) is None
-    assert ConSim.quantize_importances(-0.04, thr) is None
+    assert ConSim._quantize_importances(0.4, thr) == "++"
+    assert ConSim._quantize_importances(0.1, thr) == "+"
+    assert ConSim._quantize_importances(-0.1, thr) == "-"
+    assert ConSim._quantize_importances(-0.5, thr) == "--"
+    assert ConSim._quantize_importances(0.04, thr) is None
+    assert ConSim._quantize_importances(-0.04, thr) is None
 
 
 def test_consim_filter_and_quantize_concepts_importances():
@@ -246,7 +248,8 @@ def test_consim_filter_and_quantize_concepts_importances():
     )
 
     # filter and quantize concepts importances
-    interp, glob_imp, loc_imp = ConSim._filter_and_quantize_concepts_importances(
+    loc_imp: list[dict[str, str]]
+    interp, glob_imp, loc_imp = ConSim._filter_and_quantize_concepts_importances(  # type: ignore
         concepts_interpretation,
         global_importances,
         local_importances,
@@ -534,7 +537,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     """
     llm = LLMInterfacePlaceholder()
     classes = ["A", "B", "C", "D"]
-    consim = ConSim(splitted_encoder_ml, llm, classes=classes)
+    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
 
     samples = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]
     preds = torch.tensor([0, 1, 2, 3, 0, 1, 2, 3, 0, 1])
@@ -571,7 +574,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     explainer = DummyExplainer(splitted_encoder_ml)
 
     # evaluate the ConSim metric
-    score = consim.evaluate(
+    score: float | None = consim.evaluate(  # type: ignore
         interesting_samples=samples,
         predictions=preds,
         concept_explainer=explainer,
@@ -625,7 +628,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     # -----------------------------------------------------------------
     # Initialize the ConSim metric with the open_ai_llm api as user_llm
     classes = ["not prime", "prime"]
-    consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, activation_granularity=AG.TOKEN, classes=classes)
 
     # construct a dummy explainer that will arbitrary local importances
     class DummyExplainer(ConceptAutoEncoderExplainer):
@@ -663,7 +666,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     }
 
     # evaluate the ConSim metric
-    score = consim.evaluate(
+    score: float | None = consim.evaluate(  # type: ignore
         interesting_samples=samples,
         predictions=preds,
         concept_explainer=DummyExplainer(splitted_encoder_ml),

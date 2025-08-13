@@ -242,7 +242,12 @@ class ConSim:
         >>> # ------------------------------------------------------------------
         >>> # Step 0: Define the User-LLM and instantiate the ConSim metric
         >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt4o-mini")
-        >>> consim = ConSim(model_with_split_points, user_llm, classes=classes)
+        >>> consim = ConSim(
+        ...     model_with_split_points,
+        ...     user_llm,
+        ...     activation_granularities=ModelWithSplitPoints.activation_granularities.TOKEN,
+        ...     classes=classes,
+        ... )
         >>>
         >>> # ----------------------------------------------
         >>> # Step 1: Select interesting examples for ConSim
