@@ -773,7 +773,7 @@ class ConSim:
                 raise ValueError(
                     "Concepts interpretation must be provided if prompt_type is not a baseline."
                     "`concepts_interpretation` is an argument of the `ConSim.evaluate()` method, but it is None."
-                    "It can be computed via `concept_explainer.interpret`."
+                    "It can be computed via `TopKInputs(concept_explainer).interpret`."
                 )
 
             # for each concept, show 10 words, 5 that aligns the most and 5 that are the most opposed
@@ -970,7 +970,7 @@ class ConSim:
             raise ValueError(
                 "Concepts interpretation must be provided if prompt_type is not a baseline."
                 "`concepts_interpretation` is an argument of the `ConSim.evaluate()` method, but it is None."
-                "It can be computed via `concept_explainer.interpret`."
+                "It can be computed via `TopKInputs(concept_explainer).interpret`."
             )
 
         if prompt_type.value.concepts_global_importances and global_importances is None:
