@@ -75,7 +75,7 @@ class DummyConceptExplainer(ConceptEncoderExplainer):
     def fit(self, activations, *args, **kwargs):  # pragma: no cover - not used
         self._ConceptEncoderExplainer__is_fitted = True
 
-    def encode_activations(self, activations):
+    def encode_activations(self, activations):  # type: ignore
         return self.concept_model.encode(activations)
 
 

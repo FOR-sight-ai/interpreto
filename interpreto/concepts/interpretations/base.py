@@ -327,9 +327,7 @@ class BaseConceptInterpretationMethod(ABC):
         """
         # extract and sort the vocabulary
         vocab_dict: dict[str, int] = self.concept_explainer.model_with_split_points.tokenizer.get_vocab()
-        inputs: tuple[str]
-        input_ids: tuple[int]
-        inputs, input_ids = zip(*vocab_dict.items(), strict=True)
+        inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
         inputs: list[str] = list(inputs)
 
         # compute the vocabulary's latent activations
