@@ -28,109 +28,18 @@ Base class for concept interpretation methods.
 
 from __future__ import annotations
 
-import warnings
 from collections import Counter
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal
 
-import nltk
 import torch
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
 
-from interpreto import ModelWithSplitPoints
+from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
-    verify_concepts_indices,
-    verify_granular_inputs,
 )
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
-from interpreto.typing import ConceptModelProtocol, ConceptsActivations, LatentActivations
-
-
-def extract_unique_words(
-    inputs: list[str],
-    count_min_threshold: int = 1,
-    return_counts: bool = False,
-    lemmatize: bool = False,
-    words_to_ignore: list[str] | None = None,
-) -> list[str] | Counter[str]:
-    """
-    Extract words from a text.
-
-    Depending on parameters, it may select a subset of words or return the counts of each word.
-
-    Args:
-        inputs (str):
-            The text to extract words from.
-
-        count_min_threshold (float, optional):
-            The minimum total number of a occurrence of a word in the whole `inputs`.
-
-        return_counts (bool, optional):
-            Whether to return the counts of each word.
-            Defaults to False.
-
-        words_to_ignore: (list[str], optional):
-            A list of words to ignore.
-
-    Examples:
-        Fastest version as used in `TopKInputs`.
-        >>> extract_unique_words(["Interpreto is the latin for 'to interpret'.", "interpreto is magic"])
-        ["interpreto", "is", "the", "latin", "for", "to", "'", "interpret", ".", "magic"]
-
-        More complex use:
-        >>> from datasets import load_dataset
-        >>> from nltk.corpus import stopwords
-        >>> from interpreto.concepts.interpretations.topk_inputs import extract_unique_words
-        >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> extract_unique_words(
-        ...     inputs=dataset,
-        ...     count_min_threshold=20,
-        ...     return_counts=True,
-        ...     lemmatize=True,
-        ...     words_to_ignore=stopwords.words("english"),
-        ... )
-        Counter(TODO)
-
-    Returns:
-        list[str] | Counter[str]:
-            The list of unique words or the counts of each word.
-
-    Raises:
-        ValueError:
-            If the input is not a list of strings.
-    """
-    nltk.download("wordnet")
-    nltk.download("punkt")
-    nltk.download("punkt_tab")
-    if lemmatize:
-        lemmatizer = WordNetLemmatizer()
-
-    # counter both list unique words and counts of each word
-    words_count = Counter()
-
-    for text in inputs:
-        for word in word_tokenize(text):
-            # lemmatize words
-            if lemmatize:
-                word = lemmatizer.lemmatize(word.lower())  # type: ignore  # noqa: PLW2901
-
-            # ignore words
-            if words_to_ignore is not None and word in words_to_ignore:
-                continue
-
-            # add word to counter
-            words_count[word] += 1
-
-    # filter too rare words
-    if count_min_threshold > 1:
-        words_count = Counter({key: count for key, count in words_count.items() if count >= count_min_threshold})
-
-    if return_counts:
-        return words_count
-
-    return list(words_count.keys())
+from interpreto.typing import ConceptsActivations, LatentActivations
 
 
 class TopKInputs(BaseConceptInterpretationMethod):
@@ -148,19 +57,13 @@ class TopKInputs(BaseConceptInterpretationMethod):
         Transformer Circuits, 2023.
 
     Arguments:
-        model_with_split_points (ModelWithSplitPoints):
-            The model with split points to use for the interpretation.
-
-        concept_model (ConceptModelProtocol):
-            The concept model to use for the interpretation.
+        concept_explainer (ConceptEncoderExplainer):
+            The concept explainer built on top of a `ModelWithSplitPoints`.
 
         activation_granularity (ActivationGranularity):
             The granularity at which the interpretation is computed.
             Allowed values are `CLS_TOKEN`, `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
             Ignored when `use_vocab=True`.
-
-        split_point (str):
-            The split point to use for the interpretation.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -187,9 +90,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
     TODO:
         Adapt example to added arguments, one example for generation, one for classification
 
-        Change API from concept_explainer.interpret(TopKInputs, ...) to
-            topk_inputs = TopKInputs(concept_explainer) and topk_inputs.interpret(...)
-
     Examples:
         >>> from datasets import load_dataset
         >>> from interpreto import ModelWithSplitPoints
@@ -204,13 +104,11 @@ class TopKInputs(BaseConceptInterpretationMethod):
         ...     batch_size=4,
         ... )
         >>> # NeuronsAsConcepts do not need to be fitted
-        >>> concept_model = NeuronsAsConcepts(model_with_split_points=model_with_split_points, split_point=split)
+        >>> concept_explainer = NeuronsAsConcepts(model_with_split_points=model_with_split_points, split_point=split)
         >>> # extracting concept interpretations
         >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> all_top_k_words = concept_model.interpret(
-        ...     interpretation_method=TopKInputs,
-        ...     activation_granularity=TopKInputs.activation_granularities.WORD,
-        ...     k=2,
+        >>> interpretation_method = TopKInputs(concept_explainer)
+        >>> all_top_k_words = interpretation_method.interpret(
         ...     concepts_indices="all",
         ...     inputs=dataset,
         ...     latent_activations=activations,
@@ -222,52 +120,30 @@ class TopKInputs(BaseConceptInterpretationMethod):
     def __init__(
         self,
         *,
-        model_with_split_points: ModelWithSplitPoints,
-        concept_model: ConceptModelProtocol,
+        concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.WORD,
-        split_point: str | None = None,
         concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
         use_unique_words: bool = False,
         device: torch.device | str | None = "cpu",
     ):
-        if activation_granularity not in (
-            ActivationGranularity.CLS_TOKEN,
-            ActivationGranularity.TOKEN,
-            ActivationGranularity.WORD,
-            ActivationGranularity.SENTENCE,
-            ActivationGranularity.SAMPLE,
-        ):
-            raise ValueError(
-                f"The granularity {activation_granularity} is not supported. "
-                "Supported `activation_granularities`: CLS_TOKEN, TOKEN, WORD, SENTENCE, and SAMPLE"
-            )
-
-        if use_unique_words and use_vocab:
-            raise ValueError("Cannot use both `use_unique_words` and `use_vocab`. Please use only one of them.")
-
-        if activation_granularity == ActivationGranularity.CLS_TOKEN and not use_unique_words:
-            raise ValueError("Cannot use `activation_granularity` CLS_TOKEN without `use_unique_words` set to True.")
-
         super().__init__(
-            model_with_split_points=model_with_split_points,
-            concept_model=concept_model,
-            split_point=split_point,
+            concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
             concept_encoding_batch_size=concept_encoding_batch_size,
+            use_vocab=use_vocab,
+            use_unique_words=use_unique_words,
             device=device,
         )
 
         self.k = k
-        self.use_vocab = use_vocab
-        self.use_unique_words = use_unique_words
 
     def interpret(
         self,
-        concepts_indices: int | list[int],
+        concepts_indices: int | list[int] | Literal["all"],
         inputs: list[str] | None = None,
-        latent_activations: LatentActivations | None = None,
+        latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, Any]:
         """
@@ -280,65 +156,41 @@ class TopKInputs(BaseConceptInterpretationMethod):
         If all activations are zero, the corresponding concept interpretation is set to `None`.
 
         Args:
-            concepts_indices (int | list[int]): The indices of the concepts to interpret.
-            inputs (list[str] | None): The inputs to use for the interpretation.
-                Necessary if not `use_vocab`, as examples are extracted from the inputs.
-            latent_activations (Float[torch.Tensor, "nl d"] | None): The latent activations matching the inputs. If not provided, it is computed from the inputs.
-            concepts_activations (Float[torch.Tensor, "nl cpt"] | None): The concepts activations matching the inputs. If not provided, it is computed from the inputs or latent activations.
+            concepts_indices (int | list[int] | Literal["all"]):
+                The indices of the concepts to interpret. If "all", all concepts are interpreted.
+
+            inputs (list[str] | None):
+                The inputs to use for the interpretation.
+                Necessary if not `use_vocab`,as examples are extracted from the inputs.
+
+            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+                The latent activations matching the inputs. If not provided,
+                it is computed from the inputs.
+
+            concepts_activations (Float[torch.Tensor, "nl cpt"] | None):
+                The concepts activations matching the inputs. If not provided,
+                it is computed from the inputs or latent activations.
 
         Returns:
             Mapping[int, Any]: The interpretation of the concepts indices.
 
         """
-        # compute the concepts activations from the provided source, can also create inputs from the vocabulary
-        if self.use_vocab:
-            granular_inputs, sure_concepts_activations = self.concepts_activations_from_vocab()
-        else:
-            if inputs is None:
-                raise ValueError("Inputs must be provided when `use_vocab` is False.")
-
-            if self.use_unique_words:
-                # first list unique words from the inputs and compute the activations from them
-                granular_inputs: list[str] = extract_unique_words(inputs=inputs, return_counts=False)  # type: ignore
-                if latent_activations is not None and concepts_activations is not None:
-                    warnings.warn(
-                        "`latent_activations` or `concepts_activations` were provided, "
-                        "but `use_unique_words` is True. "
-                        "Therefore, the inputs and activations will likely mismatch. "
-                        "Either do not provide `latent_activations` and `concepts_activations`, "
-                        "or use `interpreto.concepts.interpretation.topk_inputs.extract_unique_words` yourself, "
-                        "and set `use_unique_words` to False.",
-                        stacklevel=2,
-                    )
-                sure_concepts_activations = self.concepts_activations_from_source(
-                    inputs=granular_inputs,
-                    latent_activations=latent_activations,
-                    concepts_activations=concepts_activations,
-                )
-            else:
-                # default case
-                sure_inputs = inputs
-                sure_concepts_activations = self.concepts_activations_from_source(
-                    inputs=sure_inputs,
-                    latent_activations=latent_activations,
-                    concepts_activations=concepts_activations,
-                )
-                granular_inputs, _ = self.get_granular_inputs(inputs)
-
-        concepts_indices = verify_concepts_indices(
-            concepts_activations=sure_concepts_activations, concepts_indices=concepts_indices
+        sure_concepts_indices, granular_inputs, sure_concepts_activations, _ = (
+            self.get_granular_inputs_and_concept_activations(
+                concepts_indices=concepts_indices,
+                inputs=inputs,
+                latent_activations=latent_activations,
+                concepts_activations=concepts_activations,
+            )
         )
-        verify_granular_inputs(
-            granular_inputs=granular_inputs,
-            sure_concepts_activations=sure_concepts_activations,
-            latent_activations=latent_activations,
-            concepts_activations=concepts_activations,
-        )
+        sure_concepts_indices: list[int]
+        granular_inputs: list[str]
+        sure_concepts_activations: torch.Tensor
 
         return self._topk_inputs_from_concepts_activations(
             inputs=granular_inputs,
             concepts_activations=sure_concepts_activations,
-            concepts_indices=concepts_indices,
+            concepts_indices=sure_concepts_indices,
         )
 
     def _topk_inputs_from_concepts_activations(
