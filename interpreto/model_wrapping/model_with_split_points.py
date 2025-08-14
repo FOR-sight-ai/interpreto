@@ -938,7 +938,9 @@ class ModelWithSplitPoints(LanguageModel):
                         # for granularities outside of `ALL`
                         if granularity_indices is not None:
                             # adapt predictions to match the granularity indices
-                            repeats = [len(indices) for indices in granularity_indices]
+                            repeats: Float[torch.Tensor, "ng"] = torch.tensor(
+                                [len(indices) for indices in granularity_indices]
+                            )
 
                             # predictions have a shape (n,), which we convert to (ng,)
                             # by repeating each predicted class as many times as the number of granularity elements in a sample
