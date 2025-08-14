@@ -345,9 +345,7 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
         ModelWithSplitPoints.activation_granularities.SAMPLE,
     ],
 )
-def test_llm_labels_granularity(
-    splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity
-):
+def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity):
     split = "bert.encoder.layer.1.output"
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
     interpretation_method = LLMLabels(

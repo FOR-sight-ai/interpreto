@@ -114,7 +114,7 @@ def extract_unique_words(
         for word in word_tokenize(text):
             # lemmatize words
             if lemmatize:
-                word = lemmatizer.lemmatize(word.lower())  # type: ignore  (ignore possibly unbound)
+                word = lemmatizer.lemmatize(word.lower())  # noqa: PLW2901  # type: ignore  (ignore possibly unbound)
 
             # ignore words
             if words_to_ignore is not None and word in words_to_ignore:
