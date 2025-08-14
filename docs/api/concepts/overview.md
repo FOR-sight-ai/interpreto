@@ -33,7 +33,7 @@ concept_explainer = ICAConcepts(model_with_split_points)
 concept_explainer.fit(activations)
 
 # 5. Interpret the obtained concepts
-interpretation = concept_explainer.interpret(TopKInputs, inputs=dataset)
+interpretation = TopKInputs(concept_explainer).interpret(dataset)
 
 # 6. Evaluate concepts' contributions to the output
 concept_gradients = concept_explainer.concept_output_gradient(inputs=dataset)
