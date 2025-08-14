@@ -304,11 +304,9 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
     """
     hidden_size = 32
     split = "bert.encoder.layer.1.output"
-    concept_model = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split).concept_model
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
     interpretation_method = LLMLabels(
-        model_with_split_points=splitted_encoder,
-        split_point=split,
-        concept_model=concept_model,
+        concept_explainer=concept_explainer,
         activation_granularity=ActivationGranularity.TOKEN,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
@@ -347,13 +345,13 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
         ModelWithSplitPoints.activation_granularities.SAMPLE,
     ],
 )
-def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity):
+def test_llm_labels_granularity(
+    splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity
+):
     split = "bert.encoder.layer.1.output"
-    concept_model = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split).concept_model
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
     interpretation_method = LLMLabels(
-        model_with_split_points=splitted_encoder,
-        split_point=split,
-        concept_model=concept_model,
+        concept_explainer=concept_explainer,
         activation_granularity=activation_granularity,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
@@ -397,9 +395,7 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
 
     interpretation_method = LLMLabels(
-        model_with_split_points=splitted_encoder,
-        split_point=split,
-        concept_model=concept_explainer.concept_model,
+        concept_explainer=concept_explainer,
         activation_granularity=ActivationGranularity.TOKEN,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
@@ -459,9 +455,7 @@ def test_llm_labels_from_vocabulary(splitted_encoder: ModelWithSplitPoints):
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
 
     interpretation_method = LLMLabels(
-        model_with_split_points=splitted_encoder,
-        split_point=split,
-        concept_model=concept_explainer.concept_model,
+        concept_explainer=concept_explainer,
         activation_granularity=ActivationGranularity.TOKEN,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
@@ -484,15 +478,16 @@ def test_llm_labels_call_from_concept_module(splitted_encoder: ModelWithSplitPoi
     split = "bert.encoder.layer.1.output"
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
 
-    label = concept_explainer.interpret(
-        interpretation_method=LLMLabels,
+    label = LLMLabels(
+        concept_explainer=concept_explainer,
         activation_granularity=ActivationGranularity.TOKEN,
-        concepts_indices=torch.randperm(hidden_size)[:nb_concepts].tolist(),
         use_vocab=False,
-        inputs=["This is a sentence", "This is another sentence"],
         sampling_method=SamplingMethod.TOP,
         k_context=0,
         llm_interface=LLMInterfaceMock(),
+    ).interpret(
+        concepts_indices=torch.randperm(hidden_size)[:nb_concepts].tolist(),
+        inputs=["This is a sentence", "This is another sentence"],
     )
 
     assert len(label) == nb_concepts
@@ -504,12 +499,12 @@ def test_llm_labels_error_raising(splitted_encoder: ModelWithSplitPoints):
     Test that the `TopKInputs` class raises an error when needed
     """
 
-    concept_model = NeuronsAsConcepts(model_with_split_points=splitted_encoder).concept_model
-
-    method = LLMLabels(
+    concept_explainer = NeuronsAsConcepts(
         model_with_split_points=splitted_encoder,
         split_point="bert.encoder.layer.1.output",
-        concept_model=concept_model,
+    )
+    method = LLMLabels(
+        concept_explainer=concept_explainer,
         activation_granularity=ActivationGranularity.TOKEN,
         use_vocab=False,
         llm_interface=LLMInterfaceMock(),
