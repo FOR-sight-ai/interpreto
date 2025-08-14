@@ -370,11 +370,15 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
     for granularity, expected_shape in granularities_expected_shapes.items():
         # ---------------
         # Get activations
-        activations_dict = mwsp.get_activations(sentences, activation_granularity=granularity)
+        include_predicted_classes = isinstance(mwsp._model, AutoModelForSequenceClassification)
+        activations_dict = mwsp.get_activations(
+            sentences, activation_granularity=granularity, include_predicted_classes=include_predicted_classes
+        )
         activations = activations_dict[split_point]
-        predictions = activations_dict["predictions"]
         assert activations.shape == expected_shape
-        assert predictions.shape[0] == expected_shape[0]
+        if include_predicted_classes:
+            predictions = activations_dict["predictions"]
+            assert predictions.shape[0] == expected_shape[0]
 
         if granularity in [ActivationGranularity.ALL, ActivationGranularity.SAMPLE]:
             # ALL and SAMPLE granularities are not compatible with gradients
