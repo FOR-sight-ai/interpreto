@@ -76,6 +76,17 @@ test_cases = [
             "scores_shape": [(6, 1), (4, 1), (3, 1)],
         },
     },
+    {  # Test case 5: Generation task, Deletion metric with Token granularity and 50 perturbations
+        "task": "generation",
+        "metric_class": Deletion,
+        "granularity": Granularity.TOKEN,
+        "n_perturbations": 50,
+        "expected_results": {
+            "perturbator_type": DeletionPerturbator,
+            "expected_auc": 0.0011420948,
+            "scores_shape": [(51, 20), (32, 20), (29, 20)],
+        },
+    },
 ]
 
 
