@@ -33,6 +33,7 @@ from interpreto.attributions.perturbations import DeletionPerturbator, Insertion
 
 test_cases = [
     {  # Test case 1: Insertion metric with Token granularity and 10 perturbations
+        "task": "classification",
         "metric_class": Insertion,
         "granularity": Granularity.TOKEN,
         "n_perturbations": 10,
@@ -43,6 +44,7 @@ test_cases = [
         },
     },
     {  # Test case 2: Deletion metric with Token granularity and 50 perturbations
+        "task": "classification",
         "metric_class": Deletion,
         "granularity": Granularity.TOKEN,
         "n_perturbations": 50,
@@ -53,6 +55,7 @@ test_cases = [
         },
     },
     {  # Test case 3: Insertion metric with Word granularity and 5 perturbations
+        "task": "classification",
         "metric_class": Insertion,
         "granularity": Granularity.WORD,
         "n_perturbations": 5,
@@ -63,6 +66,7 @@ test_cases = [
         },
     },
     {  # Test case 4: Deletion metric with Word granularity and 5 perturbations
+        "task": "classification",
         "metric_class": Deletion,
         "granularity": Granularity.WORD,
         "n_perturbations": 5,
@@ -79,6 +83,8 @@ def id_names(param):
     """Generate an id for each test case based on its parameter values."""
     return (
         param["metric_class"].__name__
+        + "-task="
+        + param["task"]
         + "-Granularity."
         + param["granularity"].upper()
         + "-n_perturbations="
@@ -89,10 +95,16 @@ def id_names(param):
 @pytest.fixture(params=test_cases, ids=id_names)
 def metric_test_case(request):
     """Fixture to provide test cases for insertion and deletion metrics."""
+    if request.param["task"] == "classification":
+        request.param["model"] = request.getfixturevalue("bert_model")
+        request.param["tokenizer"] = request.getfixturevalue("bert_tokenizer")
+    elif request.param["task"] == "generation":
+        request.param["model"] = request.getfixturevalue("gpt2_model")
+        request.param["tokenizer"] = request.getfixturevalue("gpt2_tokenizer")
     return request.param
 
 
-def test_insertion_deletion_metric(bert_model, bert_tokenizer, sentences, metric_test_case):
+def test_insertion_deletion_metric(sentences, metric_test_case):
     """Test the insertion and deletion metrics with various configurations.
 
     Multiple aspects are assessed:
@@ -102,6 +114,8 @@ def test_insertion_deletion_metric(bert_model, bert_tokenizer, sentences, metric
     - AUC correctness and metric scores shape
     """
 
+    model = metric_test_case["model"]
+    tokenizer = metric_test_case["tokenizer"]
     metric_class = metric_test_case["metric_class"]
     granularity = metric_test_case["granularity"]
     n_perturbations = metric_test_case["n_perturbations"]
@@ -110,20 +124,20 @@ def test_insertion_deletion_metric(bert_model, bert_tokenizer, sentences, metric
     torch.manual_seed(0)
 
     metric = metric_class(
-        model=bert_model,
-        tokenizer=bert_tokenizer,
+        model=model,
+        tokenizer=tokenizer,
         granularity=granularity,
         n_perturbations=n_perturbations,
     )
 
     # Assert that the "[REPLACE]" token has correctly been added to the tokenizer
-    assert "[REPLACE]" in bert_tokenizer.get_vocab()
+    assert "[REPLACE]" in metric.tokenizer.get_vocab()
 
     # Assert that the perturbator stored its params correctly
     assert isinstance(metric.perturbator, expected_results["perturbator_type"])
     assert metric.perturbator.n_perturbations == n_perturbations
     assert metric.perturbator.granularity == granularity
-    replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")  # the token ID should match what we just added
+    replace_id = metric.tokenizer.convert_tokens_to_ids("[REPLACE]")  # the token ID should match what we just added
     assert metric.perturbator.replace_token_id == replace_id
 
     # Assert the aggregator type
@@ -138,7 +152,7 @@ def test_insertion_deletion_metric(bert_model, bert_tokenizer, sentences, metric
     assert mask.shape == ((seq_len + 1) * num_targets, seq_len)
 
     # Assert AUC correctness and metric scores shape using sentences from conftest
-    explainer = Occlusion(bert_model, bert_tokenizer, granularity=granularity)
+    explainer = Occlusion(model, tokenizer, granularity=granularity)
     attributions = explainer.explain(sentences)
     auc, metric_scores = metric.evaluate(attributions)
 
