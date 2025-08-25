@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import gc
 from collections.abc import Callable, Iterable
 from enum import Enum
 from math import ceil
@@ -1095,8 +1096,8 @@ class ModelWithSplitPoints(LanguageModel):
         tqdm_wrapped_batch_generator = tqdm(
             batch_generator,
             desc="Computing gradients",
-            unit="sample",
-            total=len(inputs),
+            unit="batches",
+            total=ceil(len(inputs) / grad_batch_size),
             disable=not tqdm_bar,
         )
 
@@ -1159,6 +1160,7 @@ class ModelWithSplitPoints(LanguageModel):
 
                     # encode activations into concepts
                     concept_activations: Float[torch.Tensor, "{ng} c"] = encode_activations(selected_activations)
+                    del selected_activations
                     c = concept_activations.shape[-1]
 
                     # decode concepts back into activations
@@ -1172,6 +1174,7 @@ class ModelWithSplitPoints(LanguageModel):
                         activation_granularity=activation_granularity,
                         aggregation_strategy=aggregation_strategy,
                     )
+                    del decoded_activations, raw_activations
 
                     # reintegrate the reconstructed activations into the original layer outputs
                     if isinstance(layer_outputs, tuple):
@@ -1203,7 +1206,7 @@ class ModelWithSplitPoints(LanguageModel):
 
                     # compute gradients for each target
                     if self.targets is None:
-                        current_targets: Iterable[int] = range(logits.shape[1])
+                        current_targets: Iterable[int] = range(logits.shape[0])
                     else:
                         current_targets: Iterable[int] = self.targets
 
@@ -1228,6 +1231,7 @@ class ModelWithSplitPoints(LanguageModel):
                     targets_gradients: Float[torch.Tensor, t, ng, d] = (
                         torch.stack(targets_gradients_list, dim=0).detach().cpu().save()  # type: ignore  (nnsight under specification)
                     )
+                    del targets_gradients_list, concept_activations, concept_activations_grad, logits, all_logits
 
                     # split gradients for each input sentence from (t, ng, d) to n * (t, g, d)
                     start = 0
@@ -1235,6 +1239,8 @@ class ModelWithSplitPoints(LanguageModel):
                         end = start + len(indices_list)
                         gradients_list.append(targets_gradients[:, start:end, :])
                         start = end
+
+                    gc.collect()
 
                 # free memory after each batch, necessary with nnsight, overwise, memory piles up
                 torch.cuda.empty_cache()
