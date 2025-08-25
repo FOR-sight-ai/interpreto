@@ -216,7 +216,6 @@ class BaseConceptInterpretationMethod(ABC):
         self.use_vocab: bool = use_vocab
         self.use_unique_words: bool = use_unique_words
         self.device: torch.device | str | None = device
-        self.__call__ = self.interpret
 
     @abstractmethod
     def interpret(
