@@ -453,14 +453,6 @@ def test_topk_inputs_error_raising(
             use_unique_words=True,
         )
 
-    # granularity=CLS_TOKEN and use_unique_words=False
-    with pytest.raises(ValueError):
-        method = TopKInputs(
-            concept_explainer=concept_explainer,
-            activation_granularity=AG.CLS_TOKEN,
-            use_unique_words=False,
-        )
-
     # wrong indices
     for wrong_indices in [-1, activations.shape[1], [-1, 0, 1], ["?"], (0, 1, 2), "str other than 'all'"]:
         with pytest.raises(ValueError):

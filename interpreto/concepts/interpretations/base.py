@@ -233,9 +233,6 @@ class BaseConceptInterpretationMethod(ABC):
         if use_unique_words and use_vocab:
             raise ValueError("Cannot use both `use_unique_words` and `use_vocab`. Please use only one of them.")
 
-        if activation_granularity == ActivationGranularity.CLS_TOKEN and not use_unique_words:
-            raise ValueError("Cannot use `activation_granularity` CLS_TOKEN without `use_unique_words` set to True.")
-
         self.concept_explainer: ConceptEncoderExplainer = concept_explainer
         self.activation_granularity: ActivationGranularity = activation_granularity
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
