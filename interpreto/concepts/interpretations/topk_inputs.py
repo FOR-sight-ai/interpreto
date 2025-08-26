@@ -83,6 +83,10 @@ class TopKInputs(BaseConceptInterpretationMethod):
             please use the `extract_unique_words` function directly,
             and pass the result to the `TopKInputs` class.
 
+        unique_words_kwargs (dict):
+            The kwargs to pass to the `extract_unique_words` function.
+            see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+
         device (torch.device | str | None):
             The device to use for forward passes.
             If None, use the one from `model_with_split_points`.
@@ -126,6 +130,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         k: int = 5,
         use_vocab: bool = False,
         use_unique_words: bool = False,
+        unique_words_kwargs: dict = {},
         device: torch.device | str | None = "cpu",
     ):
         super().__init__(
@@ -134,6 +139,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
             concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
+            unique_words_kwargs=unique_words_kwargs,
             device=device,
         )
 

@@ -20,3 +20,9 @@ icon: material/robot-outline
       inherited_members: true
       members:
         - generate
+
+::: interpreto.concepts.interpretations.extract_unique_words
+    handler: python
+    options:
+      show_root_heading: true
+      show_source: true

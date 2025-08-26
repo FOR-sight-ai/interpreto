@@ -181,6 +181,31 @@ class BaseConceptInterpretationMethod(ABC):
     Its goal is to make the dimensions of the concept space interpretable by humans.
 
     Attributes:
+        concept_explainer (ConceptEncoderExplainer):
+            The concept explainer used to compute the concept activations.
+
+        activation_granularity (ActivationGranularity):
+            The granularity of the activations to use for the interpretation.
+
+        concept_encoding_batch_size (int):
+            The batch size to use for the concept encoding.
+
+        use_vocab (bool):
+            Whether to use the vocabulary to extract the granular inputs.
+            If True, the granular inputs are extracted from the vocabulary.
+            If False, the granular inputs are extracted from the inputs.
+
+        use_unique_words (bool):
+            Whether to use unique words to extract the granular inputs.
+            If True, the granular inputs are extracted from the unique words in the inputs.
+            If False, the granular inputs are extracted from the inputs.
+
+        unique_words_kwargs (dict):
+            The kwargs to pass to the `extract_unique_words` function.
+            see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+
+        device (torch.device | str | None):
+            The device to use for the interpretation.
     """
 
     def __init__(
@@ -190,6 +215,7 @@ class BaseConceptInterpretationMethod(ABC):
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
         use_unique_words: bool = False,
+        unique_words_kwargs: dict = {},
         device: torch.device | str | None = "cpu",
     ):
         if activation_granularity not in (
@@ -215,6 +241,7 @@ class BaseConceptInterpretationMethod(ABC):
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
         self.use_unique_words: bool = use_unique_words
+        self.unique_words_kwargs: dict = unique_words_kwargs
         self.device: torch.device | str | None = device
 
     @abstractmethod
@@ -365,7 +392,7 @@ class BaseConceptInterpretationMethod(ABC):
                 - list[str]: The granular texts from the inputs, flattened
                 - list[int]: The sample id for each granular text, to keep track of which sample the text belongs to.
         """
-        if self.activation_granularity is ActivationGranularity.SAMPLE:
+        if self.activation_granularity in (ActivationGranularity.SAMPLE, ActivationGranularity.CLS_TOKEN):
             # no activation_granularity is needed
             return inputs, list(range(len(inputs)))
 
@@ -451,7 +478,9 @@ class BaseConceptInterpretationMethod(ABC):
                 # ----------------------------------------------------------------------------------
                 # Case 2: use_unique_words=True
                 # first list unique words from the inputs and compute the activations from them
-                granular_inputs: list[str] = extract_unique_words(inputs=inputs, return_counts=False)  # type: ignore  (sure list[str] with return_counts=False)
+                granular_inputs: list[str] = extract_unique_words(
+                    inputs=inputs, return_counts=False, **self.unique_words_kwargs
+                )  # type: ignore  (sure list[str] with return_counts=False)
                 if latent_activations is not None and concepts_activations is not None:
                     warnings.warn(
                         "`latent_activations` or `concepts_activations` were provided, "

@@ -138,6 +138,10 @@ class LLMLabels(BaseConceptInterpretationMethod):
             please use the `extract_unique_words` function directly,
             and pass the result to the `LLMLabels` class.
 
+        unique_words_kwargs (dict):
+            The kwargs to pass to the `extract_unique_words` function.
+            see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+
         k_quantile (int):
             The number of quantiles to use for sampling the inputs, if `sampling_method` is `QUANTILE`.
 
@@ -156,6 +160,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         k_context: int = 0,
         use_vocab: bool = False,
         use_unique_words: bool = False,
+        unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,
         device: torch.device | str | None = "cpu",
@@ -165,6 +170,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
             activation_granularity=activation_granularity,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
+            unique_words_kwargs=unique_words_kwargs,
             device=device,
         )
 
