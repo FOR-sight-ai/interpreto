@@ -101,9 +101,9 @@ def extract_unique_words(
         ValueError:
             If the input is not a list of strings.
     """
-    nltk.download("wordnet")
-    nltk.download("punkt")
-    nltk.download("punkt_tab")
+    nltk.download("wordnet", quiet=True)
+    nltk.download("punkt", quiet=True)
+    nltk.download("punkt_tab", quiet=True)
     if lemmatize:
         lemmatizer = WordNetLemmatizer()
 
