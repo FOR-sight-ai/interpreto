@@ -130,17 +130,15 @@ class LLMLabels(BaseConceptInterpretationMethod):
             If True, the interpretation will be computed from the vocabulary of the model.
 
         use_unique_words (bool):
-            If True, the interpretation will be computed from the unique words of the model.
-            Required when activation_granularity is `CLS_TOKEN`.
+            If True, the interpretation will be computed from the unique words of the inputs.
             Incompatible with `use_vocab=True`.
-            This is built upon the `extract_unique_words` function.
-            For more advanced selection of unique words,
-            please use the `extract_unique_words` function directly,
-            and pass the result to the `LLMLabels` class.
+            Default unique words selects all different word from the input.
+            It can be tuned through the `unique_words_kwargs` argument.
 
         unique_words_kwargs (dict):
             The kwargs to pass to the `extract_unique_words` function.
             see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+            Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         k_quantile (int):
             The number of quantiles to use for sampling the inputs, if `sampling_method` is `QUANTILE`.
