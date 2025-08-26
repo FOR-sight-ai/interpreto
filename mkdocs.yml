@@ -26,9 +26,8 @@ nav:
         - Sobol: api/attributions/methods/sobol.md
         - VarGrad: api/attributions/methods/vargrad.md
       - Metrics:
-        - Overview: api/attributions/metrics/overview.md
-        - Insertion: api/attributions/metrics/insertion.md
         - Deletion: api/attributions/metrics/deletion.md
+        - Insertion: api/attributions/metrics/insertion.md
     - Concept Explainers:
       - Overview: api/concepts/overview.md
       - ModelWithSplitPoints: api/concepts/model_with_split_points.md
