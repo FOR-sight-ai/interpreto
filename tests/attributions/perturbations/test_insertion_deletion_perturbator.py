@@ -25,7 +25,10 @@
 import pytest
 import torch
 
-from interpreto.attributions.perturbations import DeletionPerturbator, InsertionPerturbator
+from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
+    DeletionPerturbator,
+    InsertionPerturbator,
+)
 
 
 @pytest.mark.parametrize("PerturbatorClass, expected_value", [(DeletionPerturbator, 0), (InsertionPerturbator, 1)])

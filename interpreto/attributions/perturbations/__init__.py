@@ -25,7 +25,8 @@
 from .base import TokenMaskBasedPerturbator
 from .gaussian_noise_perturbation import GaussianNoisePerturbator
 from .gradient_shap_perturbation import GradientShapPerturbator
-from .insertion_deletion_perturbation import DeletionPerturbator, InsertionPerturbator
+
+# from .insertion_deletion_perturbation import DeletionPerturbator, InsertionPerturbator
 from .linear_interpolation_perturbation import LinearInterpolationPerturbator
 from .occlusion_perturbation import OcclusionPerturbator
 from .random_perturbation import RandomMaskedTokenPerturbator

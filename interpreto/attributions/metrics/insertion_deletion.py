@@ -41,7 +41,10 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 
 from interpreto.attributions.aggregations.insertion_deletion_aggregation import InsertionDeletionAggregator
 from interpreto.attributions.base import AttributionExplainer, AttributionOutput, MultitaskExplainerMixin
-from interpreto.attributions.perturbations import DeletionPerturbator, InsertionPerturbator
+from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
+    DeletionPerturbator,
+    InsertionPerturbator,
+)
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import Granularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
@@ -114,7 +117,7 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
         """
         raise NotImplementedError()
 
-    def explain(*args, **kwargs):
+    def explain(*args, **kwargs):  # type: ignore (incoherent override)
         """This method, inherited from AttributionExplainer, is not implemented for Insertion and Deletion metrics."""
 
         raise NotImplementedError(
@@ -122,7 +125,7 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
             "Use the `evaluate` method to evaluate the deletion metric."
         )
 
-    def evaluate(self, attributions_outputs: Iterable[AttributionOutput]):
+    def evaluate(self, attributions_outputs: Iterable[AttributionOutput]) -> tuple[float, list[np.ndarray]]:
         """
         Evaluates the insertion or deletion metric based on the provided attributions.
 
@@ -183,6 +186,7 @@ class Insertion(InsertionDeletionBase):
     A curve is built by computing the prediction score while iteratively inserting the most important elements,
     starting from a masked sequence. The area under this curve (AUC) is then computed to quantify the quality of the
     attribution method. The `evaluate` method returns both:
+
     - the average AUC across all sequences and targets,
     - for each sequence-target pair, the scores associated to the successive insertions.
 
@@ -232,6 +236,7 @@ class Deletion(InsertionDeletionBase):
     A curve is built by computing the prediction score while iteratively masking the most important elements,
     starting from the whole sequence. The area under this curve (AUC) is then computed to quantify the quality of the
     attribution method. The `evaluate` method returns both:
+
     - the average AUC across all sequences and targets,
     - for each sequence-target pair, the scores associated to the successive insertions.
 

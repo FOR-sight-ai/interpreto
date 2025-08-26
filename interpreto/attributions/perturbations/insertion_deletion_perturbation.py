@@ -35,6 +35,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from transformers.tokenization_utils import PreTrainedTokenizer
 
+from interpreto.attributions.base import SingleAttribution
 from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
 from interpreto.commons.granularity import Granularity
 
@@ -96,7 +97,9 @@ class InsertionDeletionPerturbator(TokenMaskBasedPerturbator):
         raise NotImplementedError()
 
     @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int, attributions) -> Float[torch.Tensor, "p l"]:
+    def get_mask(
+        self, mask_dim: int, attributions: SingleAttribution
+    ) -> Float[torch.Tensor, "total_perturbations {mask_dim}"]:
         """Return a mask performing single-token insertions/deletions based on the attributions.
 
         Args:
@@ -109,7 +112,12 @@ class InsertionDeletionPerturbator(TokenMaskBasedPerturbator):
 
         if attributions.ndim == 1:
             attributions = attributions.unsqueeze(0)
-        num_targets = attributions.shape[0]
+        t, l = attributions.shape[:2]
+
+        if l != mask_dim:
+            raise ValueError(
+                f"The mask dimension ({mask_dim}) must be equal to the length of the sequence in the attribution ({l})."
+            )
 
         # Get indices of most important tokens. Set NaN values to -inf to ensure they are sorted last.
         attributions_inf = attributions.clone().detach()
@@ -122,10 +130,10 @@ class InsertionDeletionPerturbator(TokenMaskBasedPerturbator):
         p = min(self.n_perturbations, max(num_elements_to_perturb, 1)) + 1
 
         # Build the mask
-        mask: Float[torch.Tensor, "p l"] = self._baseline_mask((p * num_targets, mask_dim))
+        mask: Float[torch.Tensor, p * t, l] = self._baseline_mask((p * t, mask_dim))
         steps = np.linspace(0, max(1, num_elements_to_perturb), p)
         fill_value = int(1 - mask[0, 0])  # Value to fill the mask with (1 for deletion, 0 for insertion)
-        for j in range(num_targets):
+        for j in range(t):
             for i, step in enumerate(steps):
                 mask[(p * j) + i, most_important_idx[j, : int(step)]] = fill_value
 
@@ -136,7 +144,8 @@ class DeletionPerturbator(InsertionDeletionPerturbator):
     """Perturbator for deletion metric."""
 
     def _baseline_mask(self, dims) -> Float[torch.Tensor, "p l"]:
-        """Return the baseline mask for the perturbator, i.e. a mask full of zeros."""
+        """Return the baseline mask for the perturbator, i.e. a mask full of zeros.
+        Which means that initially nothing is perturbed"""
         return torch.zeros(dims)
 
 
@@ -144,5 +153,6 @@ class InsertionPerturbator(InsertionDeletionPerturbator):
     """Perturbator for insertion metric."""
 
     def _baseline_mask(self, dims) -> Float[torch.Tensor, "p l"]:
-        """Return the baseline mask for the perturbator, i.e. a mask full of ones."""
+        """Return the baseline mask for the perturbator, i.e. a mask full of ones.
+        Which means that initially everything is perturbed"""
         return torch.ones(dims)

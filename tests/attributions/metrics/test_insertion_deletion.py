@@ -29,7 +29,10 @@ import torch
 from interpreto import Granularity, Occlusion
 from interpreto.attributions.aggregations.insertion_deletion_aggregation import InsertionDeletionAggregator
 from interpreto.attributions.metrics import Deletion, Insertion
-from interpreto.attributions.perturbations import DeletionPerturbator, InsertionPerturbator
+from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
+    DeletionPerturbator,
+    InsertionPerturbator,
+)
 
 test_cases = [
     {  # Test case 1: Insertion metric with Token granularity and 10 perturbations

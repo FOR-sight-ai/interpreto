@@ -29,6 +29,7 @@ Base classes for attributions visualizations
 from __future__ import annotations
 
 import json
+
 import numpy as np
 
 from interpreto.attributions.base import AttributionOutput, ModelTask
