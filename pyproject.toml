@@ -68,7 +68,7 @@ dependencies = [
   "transformers[sentencepiece,tokenizers]>=4.22.0",
   "torch>=2.0",
   "overcomplete>=0.2.3",
-  "nnsight>=0.5.0",
+  "nnsight>=0.5.1",
   "jaxtyping<=0.2.36",
   "beartype",
   "mknotebooks",
