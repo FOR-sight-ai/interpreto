@@ -21,7 +21,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-from collections.abc import Iterable, MutableMapping
+from collections.abc import MutableMapping
 
 import pytest
 import torch
@@ -93,7 +93,6 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
     """test all perturbators respect the API"""
     assert issubclass(perturbator_class, MaskBasedIdsPerturbator)
     p = 10
-    inputs_embedder = bert_model.get_input_embeddings()
 
     replace_token = "[REPLACE]"
     if replace_token not in bert_tokenizer.get_vocab():
