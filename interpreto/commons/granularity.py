@@ -28,9 +28,9 @@ Definition of different granularity levels for explainers (tokens, words, senten
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from enum import Enum
 from functools import lru_cache
-from typing import Protocol
 
 import torch
 from beartype import beartype
@@ -85,22 +85,7 @@ class GranularityAggregationStrategy(Enum):
     SIGNED_MAX = staticmethod(lambda x, dim: x.gather(dim, x.abs().argmax(dim=dim).unsqueeze(dim)))
 
 
-class AggregationProtocol(Protocol):
-    """Protocol for aggregation strategies used in :meth:`ModelWithSplitPoints.get_activations`."""
-
-    def __call__(self, x: torch.Tensor, dim: int) -> torch.Tensor:
-        """Aggregate activations.
-
-        Args:
-            x (torch.Tensor): The tensor to aggregate.
-
-        Returns:
-            torch.Tensor: The aggregated tensor.
-        """
-        ...
-
-
-class Granularity:
+class Granularity(Enum):
     """
     Enumerations of the different granularity levels supported for masking perturbations
     Allows to define token-wise masking, word-wise masking...
@@ -112,7 +97,6 @@ class Granularity:
     SENTENCE = "sentence"  # Sentences of the input
     # PARAGRAPH = "paragraph"  # Not supported yet, the "\n\n" characters are replaced by spaces in many tokenizers.
     DEFAULT = ALL_TOKENS
-    aggregation_strategies = GranularityAggregationStrategy
 
     @staticmethod
     # @jaxtyped(typechecker=beartype)
@@ -245,18 +229,18 @@ class Granularity:
                 raise NotImplementedError(f"Granularity level {granularity} not implemented")
 
     @staticmethod
-    def __all_tokens_get_indices(tokens_ids) -> list[list[int]]:
+    def __all_tokens_get_indices(tokens_ids: torch.Tensor) -> list[list[int]]:
         """Indices for :pyattr:`ALL_TOKENS` – every position kept."""
         length = len(tokens_ids)
         return [[i] for i in range(length)]
 
     @staticmethod
-    def __token_get_indices(tokens_ids, special_ids) -> list[list[int]]:
+    def __token_get_indices(tokens_ids: torch.Tensor, special_ids: list[int]) -> list[list[int]]:
         """Indices for :pyattr:`TOKEN` – skip special tokens."""
         return [[i] for i, tok_id in enumerate(tokens_ids) if tok_id not in special_ids]
 
     @staticmethod
-    def __word_get_indices(word_ids) -> list[list[int]]:
+    def __word_get_indices(word_ids: torch.Tensor) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         mapping: dict[int, list[int]] = {}
         for idx, wid in enumerate(word_ids):
@@ -419,7 +403,7 @@ class Granularity:
     def aggregate_score_for_gradient_method(
         contribution: torch.Tensor,
         granularity: Granularity | None,
-        granularity_aggregation_strategy: AggregationProtocol | None = None,
+        granularity_aggregation_strategy: Callable[[torch.Tensor, int], torch.Tensor] | None = None,
         inputs: BatchEncoding | None = None,
         tokenizer: PreTrainedTokenizer | None = None,
     ) -> Float[torch.Tensor, "t g"]:

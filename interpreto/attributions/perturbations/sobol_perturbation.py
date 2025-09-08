@@ -36,7 +36,7 @@ from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
+from interpreto.attributions.perturbations.base import MaskBasedIdsPerturbator
 from interpreto.commons.granularity import Granularity
 
 
@@ -50,11 +50,10 @@ class SequenceSamplers(Enum):
     LatinHypercube = qmc.LatinHypercube
 
 
-class SobolTokenPerturbator(TokenMaskBasedPerturbator):
+class SobolTokenPerturbator(MaskBasedIdsPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        inputs_embedder: torch.nn.Module | None = None,
         granularity: Granularity = Granularity.TOKEN,
         replace_token_id: int = 0,
         n_token_perturbations: int = 30,
@@ -72,7 +71,6 @@ class SobolTokenPerturbator(TokenMaskBasedPerturbator):
         """
         super().__init__(
             tokenizer=tokenizer,
-            inputs_embedder=inputs_embedder,
             granularity=granularity,
             n_perturbations=-1,  # TODO: find a better way to handle this, I guess, it should not be an attribute of the parent class
             replace_token_id=replace_token_id,

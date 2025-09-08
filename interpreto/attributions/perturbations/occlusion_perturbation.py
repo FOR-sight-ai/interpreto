@@ -29,11 +29,11 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
+from interpreto.attributions.perturbations.base import MaskBasedIdsPerturbator
 from interpreto.commons.granularity import Granularity
 
 
-class OcclusionPerturbator(TokenMaskBasedPerturbator):
+class OcclusionPerturbator(MaskBasedIdsPerturbator):
     """
     Basic class for occlusion perturbations
     """
@@ -43,7 +43,6 @@ class OcclusionPerturbator(TokenMaskBasedPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        inputs_embedder: torch.nn.Module | None = None,
         granularity: Granularity = Granularity.TOKEN,
         replace_token_id: int = 0,
     ) -> None:
@@ -59,7 +58,6 @@ class OcclusionPerturbator(TokenMaskBasedPerturbator):
         super().__init__(
             tokenizer=tokenizer,
             replace_token_id=replace_token_id,
-            inputs_embedder=inputs_embedder,
             n_perturbations=-1,
             granularity=granularity,
         )

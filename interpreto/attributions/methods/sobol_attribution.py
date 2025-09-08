@@ -105,7 +105,6 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
 
         perturbator = SobolTokenPerturbator(
             tokenizer=tokenizer,
-            inputs_embedder=model.get_input_embeddings(),
             granularity=granularity,
             replace_token_id=replace_token_id,
             n_token_perturbations=n_token_perturbations,

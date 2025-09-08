@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
@@ -42,7 +43,7 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
-from interpreto.commons.granularity import AggregationProtocol, Granularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.splitting_utils import get_layer_by_idx, sort_paths, validate_path, walk_modules
 from interpreto.model_wrapping.transformers_classes import (
     get_supported_hf_transformer_autoclasses,
@@ -320,7 +321,7 @@ class ModelWithSplitPoints(LanguageModel):
         inputs: BatchEncoding | torch.Tensor,
         activations: Float[torch.Tensor, "n l d"],
         activation_granularity: ActivationGranularity,
-        aggregation_strategy: AggregationProtocol,
+        aggregation_strategy: Callable[[torch.Tensor, int], torch.Tensor],
     ) -> torch.Tensor:
         """Apply selection strategy to activations.
 
@@ -329,7 +330,7 @@ class ModelWithSplitPoints(LanguageModel):
                 In the case of a `torch.Tensor`, we assume a batch dimension and token ids.
             activations (InterventionProxy): Activations to apply selection strategy to.
             activation_granularity (ActivationGranularity): Selection strategy to apply. see :meth:`ModelWithSplitPoints.get_activations`.
-            aggregation_strategy (AggregationProtocol): Aggregation strategy to apply. see :meth:`ModelWithSplitPoints.get_activations`.
+            aggregation_strategy (Callable[[torch.Tensor, int], torch.Tensor]): Aggregation strategy to apply. see :meth:`ModelWithSplitPoints.get_activations`.
 
         Returns:
             torch.Tensor: The aggregated activations.
@@ -418,7 +419,7 @@ class ModelWithSplitPoints(LanguageModel):
         self,
         inputs: list[str] | torch.Tensor | BatchEncoding,
         activation_granularity: ActivationGranularity = ActivationGranularity.ALL_TOKENS,
-        aggregation_strategy: AggregationProtocol = GranularityAggregationStrategy.MEAN,
+        aggregation_strategy: Callable[[torch.Tensor, int], torch.Tensor] = GranularityAggregationStrategy.MEAN,
         pad_side: str = "left",
         **kwargs,
     ) -> dict[str, LatentActivations]:
