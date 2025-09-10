@@ -83,8 +83,8 @@ class GranularityAggregationStrategy(Enum):
     MIN = "min"
     SUM = "sum"
     SIGNED_MAX = "signed_max"
-    FIRST = "first"  # TODO: test
-    LAST = "last"  # TODO: test
+    FIRST = "first"
+    LAST = "last"
 
     @staticmethod
     def aggregate(
