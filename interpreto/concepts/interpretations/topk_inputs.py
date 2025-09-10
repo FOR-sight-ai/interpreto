@@ -145,7 +145,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
 
     def interpret(
         self,
-        concepts_indices: int | list[int] | Literal["all"],
+        concepts_indices: int | list[int] | Literal["all"] = "all",
         inputs: list[str] | None = None,
         latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
@@ -223,7 +223,9 @@ class TopKInputs(BaseConceptInterpretationMethod):
         ):
             interpretation_dict[cpt_idx] = {}
             # iterate over k
-            for activation, input_index in zip(topk_activations, topk_indices, strict=True):
+            for activation, input_index in zip(
+                topk_activations, topk_indices, strict=True
+            ):
                 # ensure that the input is not already in the interpretation
                 if len(interpretation_dict[cpt_idx]) >= self.k:
                     break
