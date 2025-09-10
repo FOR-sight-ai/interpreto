@@ -27,7 +27,7 @@ class SklearnProbe:
 
     def encode(self, x):
         """Encode the given activations using the concept model."""
-        return self.model.decision_function(x)
+        return self.model.predict(x)
 
 
 class ProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
