@@ -79,11 +79,10 @@ class AttributionVisualization(BaseAttributionVisualization):
             class_id = int(attribution_output.classes[0])
             if class_names is None:
                 class_name_str = f"class #{class_id}"
+            elif class_id in class_names:
+                class_name_str = class_names[class_id]
             else:
-                if class_id in class_names:
-                    class_name_str = class_names[class_id]
-                else:
-                    class_name_str = f"class #{class_id}"
+                class_name_str = f"class #{class_id}"
 
             # compute the min and max values for the attributions to be used for normalization
             if normalize:
