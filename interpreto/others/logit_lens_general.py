@@ -36,14 +36,13 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import PreTrainedTokenizer, BatchEncoding
+from transformers import PreTrainedTokenizer, BatchEncoding, AutoModel, AutoModelForCausalLM, AutoModelForMaskedLM, AutoModelForSequenceClassification
 from transformers.models.auto import modeling_auto
 import numpy as np
 from IPython.display import display, HTML
 from abc import ABC, abstractmethod
 
 from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
-
 
 class BaseLogitLens(ABC):
     """
@@ -57,25 +56,115 @@ class BaseLogitLens(ABC):
                  model: ModelWithSplitPoints,
                  tokenizer: PreTrainedTokenizer,
                  head_name: str | None = None,
+                 model_head: nn.Module | None = None,
                  features_dim: int | None = None,
                  normalization: bool = False,
                  normalization_method: nn.Module | None = nn.LayerNorm,
+                 device: torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  batch_size: int = 8):
         
+        # Check for meta tensors and reload model directly if needed
         self.splitted_model = model
         self.model = model._model
+        self.device = device
         self.tokenizer = tokenizer
+        
         self.model_head = None
         self.activations = None
         self.head_name = head_name
         self.normalization = normalization
         self.normalization_method = normalization_method
-        self.device = model.device if hasattr(model, 'device') else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.layer_names = None
         self.batch_size = batch_size
         
         # Initialize model head and features dimension
         self._initialize_head_and_features(features_dim)
+        self.model_head = model_head.to(self.device) if model_head is not None else self.model_head
+
+        if self.needs_model_reload():
+            print("⚠️ Head access failed, likely due to meta tensors in model.")
+            print("💡 This happens when you use ModelWithSplitPoints with automatic loading.")
+            print("🔄 Reloading the model directly to get proper weights for the model head...")
+
+            # Get the model path/repo_id from the original model
+            model_path = self._get_model_or_repo_id()
+            
+            # Determine the appropriate model class and load directly
+            model_autoclass = self.splitted_model.model_autoclass
+            target_device = self.device
+            
+            if model_autoclass == modeling_auto.AutoModelForCausalLM:
+                self.model = AutoModelForCausalLM.from_pretrained(model_path, device_map=target_device)
+            elif model_autoclass == modeling_auto.AutoModelForMaskedLM:
+                self.model = AutoModelForMaskedLM.from_pretrained(model_path, device_map=target_device)
+            elif model_autoclass == modeling_auto.AutoModelForSequenceClassification:
+                self.model = AutoModelForSequenceClassification.from_pretrained(model_path, device_map=target_device)
+            else:
+                # Fallback to AutoModel for other cases
+                self.model = AutoModel.from_pretrained(model_path, device_map=target_device)
+            
+            print(f"✅ Successfully reloaded model directly with proper weights on {target_device}.")
+            # Re-initialize model head
+            self.head_name = head_name
+            self._initialize_head_and_features(features_dim)
+        
+        if self.needs_model_reload(verbose=True):
+            raise RuntimeError("Failed to access model head even after reloading the model. Please check the model and head configuration.")
+
+    def needs_model_reload(self, verbose: bool = False) -> bool:
+        """Test if head access actually fails"""
+        try:
+            # Try to access and use the model head
+            test_tensor = torch.randn(1, 10, self.features_dim).to(self.device)
+            model_head = self.model_head.to(self.device)
+            H = model_head(test_tensor)
+            if torch.all(H < 1e-14) and torch.all(H > -1e-14):
+                if verbose:
+                    print("Model head returned all-zero output, indicating potential meta tensor issue.")
+                return True  # Head likely has meta tensors
+            return False  # Head works fine
+        except Exception as e:
+            if verbose:
+                print(f"Model head access failed: {e}")
+            return True   # Head access failed
+    
+    def _get_model_or_repo_id(self) -> str:
+        """
+        Retrieve the original model_or_repo_id parameter.
+        
+        Returns:
+            str: The repository ID or model path
+        """
+        # Try to get repo_id from the model
+        if hasattr(self.splitted_model, 'repo_id') and self.splitted_model.repo_id:
+            return self.splitted_model.repo_id
+        
+        # Fallback to model config name_or_path
+        if hasattr(self.model, 'config') and hasattr(self.model.config, 'name_or_path'):
+            return self.model.config.name_or_path
+        
+        # If all else fails, return a default indication
+        return "unknown_model_path"
+    
+    
+    def has_meta_tensors(self) -> bool:
+        """
+        Check if the model contains meta tensors.
+        
+        Returns:
+            bool: True if meta tensors are detected, False otherwise.
+        """
+        # Check main model
+        try:
+            for param in self.model.parameters():
+                if param.device.type == 'meta':
+                    return True
+        except:
+            print("Warning: Could not check for meta tensors.")
+            pass
+                
+        return False
+    
     
     def _initialize_head_and_features(self, features_dim: int | None = None):
         """Initialize the model head and determine features dimension."""
@@ -187,7 +276,6 @@ class BaseLogitLens(ABC):
                     inputs_model.pop(key)
         else:
             inputs_model = inputs
-        
         self.activations = self.splitted_model.get_activations(
             inputs_model, 
             ModelWithSplitPoints.activation_granularities.ALL
@@ -199,10 +287,8 @@ class BaseLogitLens(ABC):
         for layer in layers_name:
             if layer not in self.activations:
                 raise ValueError(f"Layer '{layer}' not found in the model activations.")
-
         # Validate activations
         self._validate_activations(layers_name)
-
         if isinstance(layers_name, str):
             layers_name = [layers_name]
 
@@ -212,8 +298,23 @@ class BaseLogitLens(ABC):
         logits_dict = {}
         for layer in layers_name:
             logits_dict[layer] = self.do_lens(self.activations[layer], inputs_model)
-        
         return self._process_logits(logits_dict, inputs_model)
+    
+    def _safe_item(self, tensor):
+        """Safely extract item from tensor, handling meta tensors."""
+        if tensor.device.type == 'meta':
+            raise RuntimeError(
+                "Cannot extract item from meta tensor. Please ensure your model is properly loaded."
+            )
+        return tensor.detach().cpu().item()
+    
+    def _safe_tensor_to_cpu(self, tensor):
+        """Safely move tensor to CPU, handling meta tensors."""
+        if tensor.device.type == 'meta':
+            raise RuntimeError(
+                "Cannot move meta tensor to CPU. Please ensure your model is properly loaded."
+            )
+        return tensor.detach().cpu()
     
     @abstractmethod
     def _validate_activations(self, layers_name: list[str]):
@@ -279,7 +380,6 @@ class BaseLogitLens(ABC):
                 else:
                     # Merge batch results
                     self._merge_batch_results(merged_results[layer], data)
-
         return merged_results
     
     @abstractmethod
@@ -335,7 +435,6 @@ class LanguageModelLogitLens(BaseLogitLens):
         # Handle cases where model head returns tuple
         if isinstance(logits, tuple):
             logits = logits[0]  # The first element should be the logits
-            
         return logits
     
     def _validate_activations(self, layers_name: list[str]):
@@ -359,7 +458,7 @@ class LanguageModelLogitLens(BaseLogitLens):
             results[layer] = {
                 'tokens': np.array([
                     [
-                        [self.tokenizer.decode([index.item()]) for index in top_k_indices[batch_idx, seq_idx]]
+                        [self.tokenizer.decode([self._safe_item(index)]) for index in top_k_indices[batch_idx, seq_idx]]
                         for seq_idx in range(top_k_indices.shape[1])
                     ]
                     for batch_idx in range(top_k_indices.shape[0])
@@ -750,27 +849,84 @@ class ClassificationLogitLens(BaseLogitLens):
                  **kwargs):
         
         self.pooling_strategy = pooling_strategy
+        self.original_pooling_strategy = pooling_strategy  # Keep track of original strategy
         super().__init__(model, tokenizer, **kwargs)
+        
+        # Check if the head has its own pooling and adjust strategy accordingly
+        self._detect_and_handle_head_pooling()
         
         # Get number of classes from the model head
         self.num_classes = self._get_num_classes()
     
     def _get_num_classes(self) -> int:
         """Get the number of classes from the model head."""
+        # Common case: direct out_features attribute
         if hasattr(self.model_head, 'out_features'):
             return self.model_head.out_features
+        # Check for decoder submodule
         elif hasattr(self.model_head, 'decoder') and hasattr(self.model_head.decoder, 'out_features'):
             return self.model_head.decoder.out_features
         else:
-            # Try to find any linear layer within the head
-            for name, module in self.model_head.named_modules():
-                if isinstance(module, nn.Linear) and hasattr(module, 'out_features'):
-                    return module.out_features
+            # Find all nn.Linear modules inside the head
+            linear_modules = [
+                module for name, module in self.model_head.named_modules()
+                if isinstance(module, nn.Linear)
+            ]
+            if len(linear_modules) == 1:
+                # Only one linear layer, use its out_features
+                return linear_modules[0].out_features
+            elif len(linear_modules) > 1:
+                # More than one linear layer, pick the last one (usually the classifier output)
+                return linear_modules[-1].out_features
         raise ValueError("Could not determine number of classes from the model head. Please set the number of classes manually using `set_num_classes`.")
 
     def set_num_classes(self, num_classes: int):
         """Set the number of classes for the classification head."""
         self.num_classes = num_classes
+
+    def _detect_and_handle_head_pooling(self):
+        """
+        Detect if the model head performs its own pooling and adjust the pooling strategy accordingly.
+        This handles cases like RobertaClassificationHead that expect full sequences and pool internally.
+        """
+        if not self.model_head:
+            return
+            
+        head_class_name = self.model_head.__class__.__name__.lower()
+        
+        # List of known head types that perform their own pooling
+        pooling_head_patterns = [
+            'classificationhead',
+            'sequenceclassificationhead', 
+            'clshead',
+            'classification_head'
+        ]
+        
+        # Check if head class name suggests it does its own pooling
+        has_internal_pooling = any(pattern in head_class_name for pattern in pooling_head_patterns)
+        
+        # Additional check: Look for pooling-related attributes/modules in the head
+        if not has_internal_pooling:
+            for name, module in self.model_head.named_modules():
+                if any(pooling_term in name.lower() for pooling_term in ['pool', 'cls', 'dense']):
+                    # Check if it's not just a simple linear layer
+                    if not (isinstance(module, nn.Linear) and len(list(self.model_head.named_modules())) <= 2):
+                        has_internal_pooling = True
+                        break
+        
+        if has_internal_pooling:
+            print(f"⚠️  Warning: Detected that {self.model_head.__class__.__name__} likely performs its own pooling.")
+            print(f"   Disabling external pooling strategy (was: '{self.original_pooling_strategy}') to avoid conflicts.")
+            print(f"   The head will receive the full sequence and handle pooling internally.")
+            self.pooling_strategy = None
+        else:
+            # Check if head is complex but pooling strategy is enabled
+            head_modules = list(self.model_head.named_modules())
+            if len(head_modules) > 2 and self.pooling_strategy is not None:  # More than just the head itself and one linear layer
+                print(f"⚠️  Warning: {self.model_head.__class__.__name__} appears to be a complex head with multiple layers.")
+                print(f"   Current pooling strategy: '{self.pooling_strategy}'")
+                print(f"   If you encounter dimension mismatches, the head might be incompatible with external pooling.")
+                print(f"   Consider setting pooling_strategy=None if issues arise.")
 
     def _get_sequence_representation(self, activation: torch.Tensor, 
                                    attention_mask: torch.Tensor = None) -> torch.Tensor:
@@ -782,9 +938,12 @@ class ClassificationLogitLens(BaseLogitLens):
             attention_mask: Optional attention mask
             
         Returns:
-            Tensor of shape (batch_size, hidden_dim)
+            Tensor of shape (batch_size, hidden_dim) or (batch_size, seq_len, hidden_dim) if no pooling
         """
-        if self.pooling_strategy == "cls":
+        if self.pooling_strategy is None:
+            # No pooling - return the full sequence (head will handle it)
+            return activation
+        elif self.pooling_strategy == "cls":
             # Use [CLS] token (first token) 
             return activation[:, 0, :]
         elif self.pooling_strategy == "last":
@@ -820,26 +979,43 @@ class ClassificationLogitLens(BaseLogitLens):
         if not self.model_head:
             raise ValueError("Model head is not set.")
 
-        # Get attention mask from inputs if available
-        attention_mask = None
-        if inputs_model is not None:
-            attention_mask = inputs_model.get("attention_mask", None)
-
-        # Handle case where activation is already pooled (batch_size, hidden_dim)
-        if activation.dim() == 2:
-            sequence_repr = activation
-        elif activation.dim() == 3:
-            # Get sequence-level representation using pooling
-            sequence_repr = self._get_sequence_representation(activation, attention_mask)
+        # If pooling_strategy is None, pass the full activation to the head (it will do its own pooling)
+        if self.pooling_strategy is None:
+            if activation.dim() == 2:
+                # If activation is already pooled but head expects sequences, this might be an issue
+                print(f"⚠️  Warning: Activation is already pooled (shape: {activation.shape}) but head expects to do its own pooling.")
+                print("   This might cause issues. Consider checking your model architecture.")
+            
+            # Pass the full activation (or pooled if that's what we have) to the head
+            input_to_head = activation
         else:
-            raise ValueError(f"Unexpected activation tensor shape: {activation.shape}. Expected 2D (batch_size, hidden_dim) or 3D (batch_size, seq_len, hidden_dim).")
+            # Get attention mask from inputs if available
+            attention_mask = None
+            if inputs_model is not None:
+                attention_mask = inputs_model.get("attention_mask", None)
+
+            # Handle case where activation is already pooled (batch_size, hidden_dim)
+            if activation.dim() == 2:
+                input_to_head = activation
+            elif activation.dim() == 3:
+                # Get sequence-level representation using pooling
+                input_to_head = self._get_sequence_representation(activation, attention_mask)
+            else:
+                raise ValueError(f"Unexpected activation tensor shape: {activation.shape}. Expected 2D (batch_size, hidden_dim) or 3D (batch_size, seq_len, hidden_dim).")
         
         if self.normalization:
-            sequence_repr = self.normalization_method(sequence_repr.size(-1))(sequence_repr)
-        
-        sequence_repr = sequence_repr.to(self.device)
-        logits = self.model_head(sequence_repr)
-        
+            if input_to_head.dim() == 3:
+                # Apply normalization to the last dimension for 3D tensors
+                norm_layer = self.normalization_method(input_to_head.size(-1))
+                input_to_head = norm_layer(input_to_head)
+            else:
+                # Apply normalization for 2D tensors
+                norm_layer = self.normalization_method(input_to_head.size(-1))
+                input_to_head = norm_layer(input_to_head)
+                
+        input_to_head = input_to_head.to(self.device)
+        logits = self.model_head(input_to_head)
+
         # Handle cases where model head returns tuple
         if isinstance(logits, tuple):
             logits = logits[0]  # The first element should be the logits
@@ -898,8 +1074,8 @@ class ClassificationLogitLens(BaseLogitLens):
             for batch_idx in range(batch_size):
                 batch_predictions = []
                 for k_idx in range(top_k_indices.shape[-1]):
-                    class_idx = top_k_indices[batch_idx, k_idx].item()
-                    class_prob = top_k_values[batch_idx, k_idx].item()
+                    class_idx = self._safe_item(top_k_indices[batch_idx, k_idx])
+                    class_prob = self._safe_item(top_k_values[batch_idx, k_idx])
                     class_label = class_labels.get(class_idx, f"Class_{class_idx}")
                     batch_predictions.append({
                         'class_id': class_idx,
@@ -912,7 +1088,7 @@ class ClassificationLogitLens(BaseLogitLens):
                 'logits': logits.detach().cpu().numpy(),
                 'probabilities': proba.detach().cpu().numpy(),
                 'predicted_classes': predicted_classes.detach().cpu().numpy(),
-                'predicted_labels': [class_labels.get(idx.item(), f"Class_{idx.item()}") 
+                'predicted_labels': [class_labels.get(self._safe_item(idx), f"Class_{self._safe_item(idx)}") 
                                    for idx in predicted_classes],
                 'top_k_predictions': top_k_predictions,
                 'class_labels': class_labels,
@@ -1113,11 +1289,52 @@ class ClassificationLogitLens(BaseLogitLens):
         self.visualize_classification_lens(inputs, layers_name)
 
 
-class GeneralLogitLens:
+class LogitLens:
     """
-    General Logit Lens factory class that automatically chooses the appropriate
-    implementation based on the model type.
+    Factory class for creating LogitLens implementations.
+        
+    The Logit Lens technique is a mechanistic interpretability method that analyzes 
+    what a transformer model "thinks" at each layer by projecting intermediate 
+    activations through the model's final prediction head (e.g., language modeling head 
+    or classification head). This allows us to observe how the model's predictions 
+    evolve layer by layer, providing insights into the model's internal reasoning process.
 
+    The technique works by:
+    1. Running a forward pass through the model and collecting activations at each layer
+    2. Taking these intermediate representations and passing them through the final 
+       prediction head (bypassing the remaining layers)
+    3. Converting the resulting logits to probabilities to see what the model would 
+       predict if it stopped processing at that layer
+    4. Visualizing how predictions change and confidence builds up across layers
+
+    Originally introduced in "Interpreting GPT: the logit lens" by nostalgebraist:
+    https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens
+
+    Automatically chooses the appropriate implementation based on the model type:
+    - **Language Models** (AutoModelForCausalLM, AutoModelForMaskedLM): Uses LanguageModelLogitLens
+    - **Classification Models** (AutoModelForSequenceClassification): Uses ClassificationLogitLens
+    Args:
+        model: The wrapped model to analyze
+        tokenizer: The tokenizer corresponding to the model
+        **kwargs: Additional arguments passed to the specific LogitLens implementation
+    
+    Returns:
+        Appropriate LogitLens implementation (LanguageModelLogitLens or ClassificationLogitLens)
+
+    Example usage:
+        # Create a LogitLens instance for language models
+        logit_lens = LogitLens(splitted_model, tokenizer, 
+                              normalization=True, 
+                              nb_token=6, 
+                              batch_size=2)
+        
+        # Analyze how predictions evolve across layers
+        logit_lens.lens("The cat sat on the")
+        
+        # For classification models
+        cls_lens = LogitLens(classification_model, tokenizer, 
+                           pooling_strategy="cls")
+        cls_lens.lens("This movie is great!")
     """
     
     # Mapping of model types to their corresponding LogitLens implementations
@@ -1172,15 +1389,3 @@ class GeneralLogitLens:
                 f"Model class: {model_class_name}. "
                 f"Supported autoclasses: {list(cls._model_type_to_lens.keys())}"
             )
-
-
-# Function for backward compatibility
-def LogitLens(model: ModelWithSplitPoints, 
-              tokenizer: PreTrainedTokenizer,
-              **kwargs) -> BaseLogitLens:
-    """
-    Create a LogitLens instance that automatically adapts to the model type.
-    
-    This is the main entry point that users should use.
-    """
-    return GeneralLogitLens(model, tokenizer, **kwargs)

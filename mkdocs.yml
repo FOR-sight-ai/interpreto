@@ -11,6 +11,7 @@ nav:
   - Tutorials:
     - Use Attribution Methods: notebooks/attribution_walkthrough.ipynb
     - Training a Concept Explainer: notebooks/concept_examples.ipynb
+    - Other Interpretability Methods: notebooks/other_methods_walkthrough.ipynb
   - API Reference:
     - Attribution Explainers:
       - Overview: api/attributions/overview.md
@@ -40,6 +41,10 @@ nav:
         - Dictionary Metrics: api/concepts/metrics/dictionary_metrics.md
         - Reconstruction Metrics: api/concepts/metrics/reconstruction_metrics.md
         - Sparsity: api/concepts/metrics/sparsity_metrics.md
+    - Other Methods:
+      - Overview: api/others/overview.md
+      - Methods:
+        - Logit Lens: api/others/methods/logit_lens.md
   - Roadmap: roadmap.md
   - Contributing: contributing.md
   - About: about.md
