@@ -16,11 +16,11 @@
         <link rel="prev" href="../../attributions/metrics/overview/">
       
       
-        <link rel="next" href="../../commons/model_wrapping/">
+        <link rel="next" href="../model_with_split_points/">
       
       
       <link rel="icon" href="../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.16">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.19">
     
     
       
@@ -1193,6 +1193,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#tutorials" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tutorials
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#common-api" class="md-nav__link">
     <span class="md-ellipsis">
       Common API
@@ -1248,9 +1257,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#step-6-not-yet-implemented-evaluate-concepts-contributions-to-the-output" class="md-nav__link">
+  <a href="#step-6-evaluate-concepts-contributions-to-the-output" class="md-nav__link">
     <span class="md-ellipsis">
-      Step 6: [Not yet implemented] Evaluate concepts' contributions to the output
+      Step 6: Evaluate concepts' contributions to the output
     </span>
   </a>
   
@@ -1277,14 +1286,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../commons/model_wrapping/" class="md-nav__link">
+      <a href="../model_with_split_points/" class="md-nav__link">
         
   
   
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 3h2v2H5v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 0 0-2-2H0v-2h1a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2m14 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3zm-7 12a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-4 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m8 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1"/></svg>
   
   <span class="md-ellipsis">
-    Model Wrapping
+    ModelWithSplitPoints
     
   </span>
   
@@ -1848,6 +1857,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#tutorials" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tutorials
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#common-api" class="md-nav__link">
     <span class="md-ellipsis">
       Common API
@@ -1903,9 +1921,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#step-6-not-yet-implemented-evaluate-concepts-contributions-to-the-output" class="md-nav__link">
+  <a href="#step-6-evaluate-concepts-contributions-to-the-output" class="md-nav__link">
     <span class="md-ellipsis">
-      Step 6: [Not yet implemented] Evaluate concepts' contributions to the output
+      Step 6: Evaluate concepts' contributions to the output
     </span>
   </a>
   
@@ -1936,8 +1954,13 @@
 
 
 <h1 id="api-concept-based-methods">API: Concept-based Methods<a class="headerlink" href="#api-concept-based-methods" title="Permanent link">&para;</a></h1>
-<p>Checkout a <a href="https://github.com/FOR-sight-ai/interpreto/blob/main/docs/notebooks/concept_examples.ipynb">concrete example notebook</a> to see how to use the concept-based explainers.</p>
+<h2 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../../notebooks/concept_examples/">Concept Explanations Examples</a></li>
+</ul>
 <h2 id="common-api">Common API<a class="headerlink" href="#common-api" title="Permanent link">&para;</a></h2>
+<p>This code snippet will not work in practice as some of the parameters are not defined.
+Nonetheless, it shows the common API for all concept-based explainers.</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelWithSplitPoints</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts</span><span class="w"> </span><span class="kn">import</span> <span class="n">ICAConcepts</span>  <span class="c1"># Many other possibilities here</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.interpretations</span><span class="w"> </span><span class="kn">import</span> <span class="n">TopKInputs</span>
@@ -1946,7 +1969,7 @@
 <span class="n">model_with_split_points</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="p">(</span>
     <span class="s2">&quot;your_model_id&quot;</span><span class="p">,</span>
     <span class="n">split_points</span><span class="o">=</span><span class="s2">&quot;your_split_point&quot;</span><span class="p">,</span>
-    <span class="n">model_autoclass</span><span class="o">=</span><span class="s2">&quot;your_model_autoclass&quot;</span><span class="p">,</span>
+    <span class="n">automodel</span><span class="o">=</span><span class="s2">&quot;your_automodel&quot;</span><span class="p">,</span>
     <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
     <span class="n">device_map</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span>
 <span class="p">)</span>
@@ -1954,14 +1977,15 @@
 <span class="c1"># 2. Compute the model activations on the split_point</span>
 <span class="n">activations</span> <span class="o">=</span> <span class="n">model_with_split_points</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
 
-<span class="c1"># 3. Instantiate the concept-based explainer</span>
+<span class="c1"># 3. Instantiate and fit the concept-based explainer on the activations</span>
 <span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">)</span>
-
-<span class="c1"># 4. Fit the concept-based explainer on the activations</span>
 <span class="n">concept_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
 
-<span class="c1"># 5. Interpret the obtained concepts</span>
+<span class="c1"># 4. Interpret the obtained concepts</span>
 <span class="n">interpretation</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span><span class="n">TopKInputs</span><span class="p">,</span> <span class="n">inputs</span><span class="o">=</span><span class="n">dataset</span><span class="p">)</span>
+
+<span class="c1"># 5. Evaluate concepts&#39; contributions to the output</span>
+<span class="n">concept_gradients</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">dataset</span><span class="p">)</span>
 </code></pre></div>
 
 <p>The API has five steps for now but will have 6 in the future:</p>
@@ -1970,20 +1994,23 @@
 It allows to obtain activations on a specific split point.
 The main method is thus <code>get_activations</code> which takes inputs and returns a dictionary of activations.</p>
 <p>It can be initialized from the model repo id or from a model instance.</p>
-<p>More details in the <a href="./model_with_split_points.md"><code>ModelWithSplitPoints</code> documentation</a>.</p>
+<p>More details in the <a href="../model_with_split_points/"><code>ModelWithSplitPoints</code> documentation</a>.</p>
 <h3 id="step-2-compute-the-model-activations-on-the-split_point">Step 2: Compute the model activations on the split_point<a class="headerlink" href="#step-2-compute-the-model-activations-on-the-split_point" title="Permanent link">&para;</a></h3>
 <p>At this step, there are two important parameters:</p>
 <ul>
-<li>
-<p><code>activation_granularity</code>: specifies which of the <code>(n, l, d)</code> activations to return.
-It can be one of <code>ALL</code>, <code>CLS_TOKEN</code>, <code>ALL_TOKENS</code>, <code>TOKEN</code>, <code>WORD</code>, <code>SENTENCE</code>, <code>SAMPLE</code>.
-Use <code>activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN</code> to specify it.</p>
-</li>
-<li>
-<p><code>aggregation_strategy</code>: the mode used for inference.
+<li><code>activation_granularity</code>: specifies which of the <code>(n, l, d)</code> activations to return.
+It can be one of <code>CLS_TOKEN</code>, <code>ALL_TOKENS</code>, <code>TOKEN</code>, <code>WORD</code>, <code>SENTENCE</code>, or <code>SAMPLE</code>.
+Use <code>activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN</code> to specify it.</li>
+</ul>
+<blockquote>
+<p><strong>Recommendations:</strong>
+If you are using a classification model, you can use <code>CLS_TOKEN</code> to get the first token activation.
+In the case of a generation model, you can use <code>TOKEN</code> to get the most probable token activation.</p>
+</blockquote>
+<ul>
+<li><code>aggregation_strategy</code>: the mode used for inference.
 It can be one of <code>SUM</code>, <code>MEAN</code>, <code>MAX</code>, or <code>SIGNED_MAX</code>.
-Use <code>aggregation_strategy=ModelWithSplitPoints.aggregation_strategies.MEAN</code> to specify it.</p>
-</li>
+Use <code>aggregation_strategy=ModelWithSplitPoints.aggregation_strategies.MEAN</code> to specify it.</li>
 </ul>
 <h3 id="step-3-instantiate-the-concept-based-explainer">Step 3: Instantiate the concept-based explainer<a class="headerlink" href="#step-3-instantiate-the-concept-based-explainer" title="Permanent link">&para;</a></h3>
 <p>The concept-based explainer is an object use to define the concept space.
@@ -2005,10 +2032,20 @@ To interpret the concepts, we need to communicate what they correspond to to the
 For now, the only method is <a href="../interpretations/topk_inputs/">TopKInputs</a>,
 which associate each concept to the topk inputs that activates it the most.
 These inputs can be tokens, words, sentences, or samples.</p>
-<h3 id="step-6-not-yet-implemented-evaluate-concepts-contributions-to-the-output">Step 6: [Not yet implemented] Evaluate concepts' contributions to the output<a class="headerlink" href="#step-6-not-yet-implemented-evaluate-concepts-contributions-to-the-output" title="Permanent link">&para;</a></h3>
+<h3 id="step-6-evaluate-concepts-contributions-to-the-output">Step 6: Evaluate concepts' contributions to the output<a class="headerlink" href="#step-6-evaluate-concepts-contributions-to-the-output" title="Permanent link">&para;</a></h3>
 <p>There are often a lot of concepts, but only few are contributing to the output.
 This is often less than the number of activated concepts.
 To do so, we apply contribution methods from the concept space to the model output.</p>
+<p>For now only the gradient of the concept to output function is implemented.
+Use the <code>concept_output_gradient</code> method to compute the gradient of the concept to output function.</p>
+<p>There are few important parameters:</p>
+<ul>
+<li><code>targets</code>: specify which outputs of the model should be used to compute the gradients.</li>
+<li><code>activation_granularity</code>: use the same as step 2.</li>
+<li><code>aggregation_strategy</code>: use the same as step 2.</li>
+<li><code>concepts_x_gradients</code>: set to <code>True</code> to multiply the gradient by the concepts activations.</li>
+<li><code>batch_size</code>: Batch size for the model. As this function computes gradients, it will be smaller than the batch size used in the <code>get_activations</code> method.</li>
+</ul>
 
 
 
@@ -2063,13 +2100,13 @@ To do so, we apply contribution methods from the concept space to the model outp
         
         
           
-          <a href="../../commons/model_wrapping/" class="md-footer__link md-footer__link--next" aria-label="Next: Model Wrapping">
+          <a href="../model_with_split_points/" class="md-footer__link md-footer__link--next" aria-label="Next: ModelWithSplitPoints">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Model Wrapping
+                ModelWithSplitPoints
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2097,7 +2134,8 @@ To do so, we apply contribution methods from the concept space to the model outp
   
 </div>
       
-        <div class="md-social">
+        
+<div class="md-social">
   
     
     
@@ -2143,16 +2181,16 @@ To do so, we apply contribution methods from the concept space to the model outp
     
     
       
-      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.50899def.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="../../../assets/js/custom.js"></script>
       
         <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-      
-        <script src="../../../assets/js/custom.js"></script>
       
     
   </body>
