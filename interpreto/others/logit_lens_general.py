@@ -542,7 +542,7 @@ class LanguageModelLogitLens(BaseLogitLens):
         existing_data["tokens"] = merged_tokens
         existing_data["proba"] = merged_proba
 
-    def visualize_logit_lens_interactive(
+    def visualize_logit_lens_interactive( # noqa: PLR0912  # ignore too many branches  # too many special cases
         self, inputs: str | list[str] | "BatchEncoding" | "torch.Tensor", layers_name: str | list[str] | None = None
     ):
         """
@@ -834,15 +834,6 @@ class LanguageModelLogitLens(BaseLogitLens):
 
         if isinstance(layers_name, str):
             layers_name = [layers_name]
-
-        if isinstance(inputs, list):
-            pass  # List of strings input
-        elif isinstance(inputs, str):
-            pass  # Single string input
-        elif isinstance(inputs, BatchEncoding):
-            pass  # Batch encoding input
-        else:
-            pass  # Other input types
 
         if isinstance(inputs, torch.Tensor) and len(inputs.shape) == 2:
             inputs = inputs.unsqueeze(0)
