@@ -34,6 +34,7 @@ import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -44,6 +45,7 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
     with respect to its input embeddings to estimate which input tokens most influence the output.
 
     Procedure:
+
     - Pass the input through the model to obtain an output (e.g., class logit, token probability).
     - Compute the gradient of the output with respect to the input embeddings.
     - For each token, reduce the gradient vector (e.g., via norm with the embedding) to obtain a scalar importance score.
@@ -63,8 +65,11 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
         model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
+        granularity: Granularity = Granularity.WORD,
+        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
+        input_x_gradient: bool = True,
     ):
         """
         Initialize the attribution method.
@@ -73,9 +78,18 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
             model (PreTrainedModel): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
+            granularity (Granularity, optional): The level of granularity for the explanation.
+                Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
+                Defaults to Granularity.WORD.
+                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+            granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
+                Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
+                Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
             device (torch.device): device on which the attribution method will be run
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
+            input_x_gradient (bool, optional): If True, multiplies the input embeddings with
+                their gradients before aggregation. Defaults to ``True``.
         """
 
         super().__init__(
@@ -85,6 +99,9 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
             device=device,
             perturbator=None,
             aggregator=None,
+            granularity=granularity,
+            granularity_aggregation_strategy=granularity_aggregation_strategy,
             inference_mode=inference_mode,
             use_gradient=True,
+            input_x_gradient=input_x_gradient,
         )

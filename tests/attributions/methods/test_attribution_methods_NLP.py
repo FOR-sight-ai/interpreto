@@ -36,6 +36,7 @@ from transformers import (
 )
 
 from interpreto.attributions import (
+    GradientShap,
     IntegratedGradients,
     KernelShap,
     Lime,
@@ -43,9 +44,11 @@ from interpreto.attributions import (
     Saliency,
     SmoothGrad,
     Sobol,
+    SquareGrad,
+    VarGrad,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import _HAS_SPACY, Granularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
 
@@ -54,18 +57,35 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 attribution_method_kwargs = {
     # -----------------------
     # Gradient based methods:
+    GradientShap: {
+        "baseline": 0.0,
+        "n_perturbations": 2,
+        "noise_std": 0.001,
+    },
     Saliency: {},
-    IntegratedGradients: {"n_interpolations": 3, "baseline": 0.0},
-    SmoothGrad: {"n_interpolations": 3, "noise_level": 0.1},
+    IntegratedGradients: {"n_perturbations": 3, "baseline": 0.0},
+    SmoothGrad: {
+        "n_perturbations": 3,
+        "noise_std": 0.1,
+    },
+    VarGrad: {
+        "inference_mode": InferenceModes.LOG_SOFTMAX,
+        "input_x_gradient": False,
+        "n_perturbations": 2,
+        "noise_std": 0.05,
+    },
+    SquareGrad: {
+        "n_perturbations": 2,
+        "noise_std": 0.12,
+    },
     # ---------------------------
     # Perturbation based methods:
-    Occlusion: {"granularity": Granularity.TOKEN, "inference_mode": InferenceModes.SOFTMAX},
+    Occlusion: {"inference_mode": InferenceModes.SOFTMAX},
     KernelShap: {
         "n_perturbations": 3,
         "inference_mode": InferenceModes.LOG_SOFTMAX,
-        "granularity": Granularity.TOKEN,  # TODO: change to ALL_TOKENS
     },
-    Lime: {"n_perturbations": 3, "granularity": Granularity.WORD},
+    Lime: {"n_perturbations": 3},
     Sobol: {"n_token_perturbations": 3},
 }
 
@@ -107,17 +127,72 @@ def is_ci() -> bool:
 @pytest.mark.parametrize("model_name", CI_MODEL_LOADERS)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_with_text_short(model_name, attribution_explainer):
-    evaluate_attribution_methods_with_text(model_name, attribution_explainer)
+    evaluate_attribution_methods_with_text(
+        model_name, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
+    )
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", [k for k in ALL_MODEL_LOADERS.keys() if k not in CI_MODEL_LOADERS])
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_with_text_long(model_name, attribution_explainer):
-    evaluate_attribution_methods_with_text(model_name, attribution_explainer)
+    evaluate_attribution_methods_with_text(
+        model_name, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
+    )
 
 
-def evaluate_attribution_methods_with_text(model_name, attribution_explainer):
+@pytest.mark.parametrize(
+    "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
+)
+@pytest.mark.parametrize(
+    "attribution_explainer",
+    [Occlusion, KernelShap, Lime, Sobol, GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
+)
+@pytest.mark.parametrize(
+    "granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE]
+)
+def test_attribution_methods_granularity(model_name, attribution_explainer, granularity):
+    if not _HAS_SPACY and granularity == Granularity.SENTENCE:
+        pytest.skip("spaCy not available – skipping SENTENCE granularity")
+    evaluate_attribution_methods_with_text(
+        model_name=model_name,
+        attribution_explainer=attribution_explainer,
+        granularity=granularity,
+        aggregation_strategy=None,
+    )
+
+
+@pytest.mark.parametrize(
+    "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
+)
+@pytest.mark.parametrize(
+    "attribution_explainer",
+    [GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
+)
+@pytest.mark.parametrize("granularity", [Granularity.WORD, Granularity.SENTENCE])
+@pytest.mark.parametrize(
+    "aggregation_strategy",
+    [
+        Granularity.aggregation_strategies.MAX,
+        Granularity.aggregation_strategies.MIN,
+        Granularity.aggregation_strategies.SUM,
+        Granularity.aggregation_strategies.SIGNED_MAX,
+    ],
+)
+def test_attribution_methods_granularity_aggregation_strategy(
+    model_name, attribution_explainer, granularity, aggregation_strategy
+):
+    if not _HAS_SPACY and granularity == Granularity.SENTENCE:
+        pytest.skip("spaCy not available – skipping SENTENCE granularity")
+    evaluate_attribution_methods_with_text(
+        model_name=model_name,
+        attribution_explainer=attribution_explainer,
+        granularity=granularity,
+        aggregation_strategy=aggregation_strategy,
+    )
+
+
+def evaluate_attribution_methods_with_text(model_name, attribution_explainer, granularity, aggregation_strategy):
     """Tests all combinations of models and loaders with an attribution method"""
 
     # Test are too memory heavy for the CI, hence we only run them on a subset of models:
@@ -134,7 +209,11 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer):
 
     # To be changed according to the final form of the explainer:
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {})
-    explainer = attribution_explainer(model, tokenizer=tokenizer, batch_size=3, device=DEVICE, **explainer_kwargs)
+    if aggregation_strategy is not None:
+        explainer_kwargs["granularity_aggregation_strategy"] = aggregation_strategy
+    explainer = attribution_explainer(
+        model, tokenizer=tokenizer, batch_size=3, device=DEVICE, granularity=granularity, **explainer_kwargs
+    )
 
     # we need to test both type of inputs: text, list_text, tokenized_text, tokenized_list_text:
     text = "He is my best friend"

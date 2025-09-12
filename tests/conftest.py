@@ -49,10 +49,10 @@ def multi_split_model() -> ModelWithSplitPoints:
         "hf-internal-testing/tiny-random-bert",
         split_points=[
             "cls.predictions.transform.LayerNorm",
-            "bert.encoder.layer.1.output",
+            "bert.encoder.layer.1",
             "bert.encoder.layer.3.attention.self.query",
         ],
-        model_autoclass=AutoModelForMaskedLM,  # type: ignore
+        automodel=AutoModelForMaskedLM,  # type: ignore
         batch_size=4,
     )
 
@@ -63,7 +63,7 @@ def splitted_encoder_ml() -> ModelWithSplitPoints:
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
         split_points=["bert.encoder.layer.1.output"],
-        model_autoclass=AutoModelForSequenceClassification,  # type: ignore
+        automodel=AutoModelForSequenceClassification,  # type: ignore
         batch_size=4,
         device_map=device,
     )

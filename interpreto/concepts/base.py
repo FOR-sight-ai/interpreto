@@ -35,11 +35,17 @@ from textwrap import dedent
 from typing import Any, Generic, Literal, TypeVar
 
 import torch
+from jaxtyping import Float
 from overcomplete.base import BaseDictionaryLearning
+from transformers.tokenization_utils_base import BatchEncoding
 
 from interpreto.attributions.base import AttributionExplainer
 from interpreto.concepts.interpretations.base import BaseConceptInterpretationMethod
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.model_wrapping.model_with_split_points import (
+    ActivationGranularity,
+    GranularityAggregationStrategy,
+    ModelWithSplitPoints,
+)
 from interpreto.typing import ConceptModelProtocol, ConceptsActivations, LatentActivations, ModelInputs
 
 ConceptModel = TypeVar("ConceptModel", bound=ConceptModelProtocol)
@@ -77,6 +83,8 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
     """
 
+    has_differentiable_concept_encoder = False
+
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
@@ -102,7 +110,6 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         self._concept_model = concept_model
         self.split_point = split_point  # Verified by `split_point.setter`
         self.__is_fitted: bool = False
-        self.has_differentiable_concept_encoder = False
 
     @property
     def concept_model(self) -> ConceptModelProtocol:
@@ -304,6 +311,8 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
     """
 
+    has_differentiable_concept_decoder = False
+
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
@@ -322,7 +331,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         """
         self.concept_model: BaseDictionaryLearning
         super().__init__(model_with_split_points, concept_model, split_point)
-        self.has_differentiable_concept_decoder = False
 
     @property
     def is_fitted(self) -> bool:
@@ -348,7 +356,9 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The encoded concept activations.
         """
-        self._sanitize_activations(activations)
+        if hasattr(self.concept_model, "device") and self.concept_model.device != activations.device:
+            activations = activations.to(self.concept_model.device, non_blocking=True)
+            self.concept_model.to(activations.device)
         return self.concept_model.encode(activations)  # type: ignore
 
     @check_fitted
@@ -361,6 +371,9 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The decoded model activations.
         """
+        if hasattr(self.concept_model, "device") and self.concept_model.device != concepts.device:
+            concepts = concepts.to(self.concept_model.device, non_blocking=True)
+            self.concept_model.to(concepts.device)
         return self.concept_model.decode(concepts)  # type: ignore
 
     @check_fitted
@@ -393,3 +406,133 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             A list of attribution scores for each concept.
         """
         raise NotImplementedError("Concept-to-output attribution method is not implemented yet.")
+
+    @check_fitted
+    def concept_output_gradient(
+        self,
+        inputs: torch.Tensor | list[str] | BatchEncoding,
+        targets: list[int] | None = None,
+        split_point: str | None = None,
+        activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        concepts_x_gradients: bool = True,
+        tqdm_bar: bool = True,
+        batch_size: int | None = None,
+    ) -> list[Float[torch.Tensor, "t g c"]]:
+        """
+        Compute the gradients of the predictions with respect to the concepts.
+
+        To clarify what this function does, lets detail some notations.
+        Suppose the initial model was splitted such that $f = g \\circ h$.
+        Hence the concept model was fitted on $A = h(X)$ with $X$ a dataset of samples.
+        The resulting concept model encoders and decoders are noted $t$ and $t^{-1}$.
+        $t$ can be seen as projections from the latent space to the concept space.
+        Hence, the function going from the inputs to the concepts is $f_{ic} = t \\circ h$
+        and the function going from the concepts to the outputs is $f_{co} = g \\circ t^-1$.
+
+        Given a set of samples $X$, and the functions $(h, t, t^{-1}, g)$
+        This function first compute $C = t(A) = t \\circ h(X)$, then returns $\\nabla{f_{co}}(C)$.
+
+        In practice all computations are done by `ModelWithSplitPoints._get_concept_output_gradients`,
+        which relies on NNsight. The current method only forwards the $t$ and $t^{-1}$,
+        respectively `self.encode_activations` and `self.decode_concepts` methods.
+
+        Args:
+            inputs (list[str] | torch.Tensor | BatchEncoding):
+                The input data, either a list of samples, the tokenized input or a batch of samples.
+
+            targets (list[int] | None):
+                Specify which outputs of the model should be used to compute the gradients.
+                Note that $f_{co}$ often has several outputs, by default gradients are computed for each output.
+                The `t` dimension of the returned tensor is equal to the number of selected targets.
+                (For classification, those are the classes logits and for generation, those are the most probable tokens probabilities).
+
+            split_point (str | None):
+                The split point used to train the `concept_model`.
+                If None, tries to use the split point of `model_with_split_points` if a single one is defined.
+
+            activation_granularity (ActivationGranularity):
+                The granularity of the activations to use for the attribution.
+                It is highly recommended to to use the same granularity as the one used in the `fit` method.
+                Possibles values are:
+
+                - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:
+                    only the first token (e.g. ``[CLS]``) activation is returned ``(batch, d_model)``.
+
+                - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:
+                    every token activation is treated as a separate element ``(batch x seq_len, d_model)``.
+
+                - ``ModelWithSplitPoints.activation_granularities.TOKEN``: remove special tokens.
+
+                - ``ModelWithSplitPoints.activation_granularities.WORD``:
+                    aggregate by words following the split defined by
+                    :class:`~interpreto.commons.granularity.Granularity.WORD`.
+
+                - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
+                    aggregate by sentences following the split defined by
+                    :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.
+                    Requires `spacy` to be installed.
+
+            aggregation_strategy:
+                Strategy to aggregate token activations into larger inputs granularities.
+                Applied for `WORD` and `SENTENCE` activation strategies.
+                Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.
+                The concatenated into (ng, d) tensors.
+                Existing strategies are:
+
+                - ``ModelWithSplitPoints.aggregation_strategies.SUM``:
+                    Tokens activations are summed along the sequence length dimension.
+
+                - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:
+                    Tokens activations are averaged along the sequence length dimension.
+
+                - ``ModelWithSplitPoints.aggregation_strategies.MAX``:
+                    The maximum of the token activations along the sequence length dimension is selected.
+
+                - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:
+                    The maximum of the absolute value of the activations multiplied by its initial sign.
+                    signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]
+
+            concepts_x_gradients (bool):
+                If the resulting gradients should be multiplied by the concepts activations.
+                True by default (similarly to attributions), because of mathematical properties.
+                Therefore the out put is $C * \\nabla{f_{co}}(C)$.
+
+            tqdm_bar (bool):
+                Whether to display a progress bar.
+
+            batch_size (int | None):
+                Batch size for the model.
+                It might be different from the one used in `ModelWithSplitPoints.get_activations`
+                because gradients have a much larger impact on the memory.
+
+        Returns:
+            list[Float[torch.Tensor, "t g c"]]:
+                The gradients of the model output with respect to the concept activations.
+                List length: correspond to the number of inputs.
+                    Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of
+                    concepts.
+        """
+        if not self.has_differentiable_concept_decoder:
+            raise ValueError(
+                "The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. "
+                f"Current explainer class: {self.__class__.__name__}."
+            )
+
+        # put everything on device
+        self.concept_model.to(self.model_with_split_points.device)
+
+        # forward all computations to
+        gradients = self.model_with_split_points._get_concept_output_gradients(
+            inputs=inputs,
+            targets=targets,
+            encode_activations=self.encode_activations,
+            decode_concepts=self.decode_concepts,
+            split_point=split_point,
+            activation_granularity=activation_granularity,
+            aggregation_strategy=aggregation_strategy,
+            concepts_x_gradients=concepts_x_gradients,
+            tqdm_bar=tqdm_bar,
+            batch_size=batch_size,
+        )
+        return gradients

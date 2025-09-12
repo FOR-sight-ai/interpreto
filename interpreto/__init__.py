@@ -28,6 +28,7 @@
 # =====================================================================================
 
 from .attributions import (
+    GradientShap,
     IntegratedGradients,
     KernelShap,
     Lime,
@@ -35,6 +36,8 @@ from .attributions import (
     Saliency,
     SmoothGrad,
     Sobol,
+    SquareGrad,
+    VarGrad,
 )
 from .commons import (
     Granularity,
@@ -53,7 +56,7 @@ from .visualizations.concepts import (
 
 def get_version() -> str:
     """Returns the current version of the Interpreto library."""
-    import pkg_resources
+    import pkg_resources  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
 
     try:
         return pkg_resources.get_distribution("interpreto").version

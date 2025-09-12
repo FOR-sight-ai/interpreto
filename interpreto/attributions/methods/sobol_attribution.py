@@ -90,7 +90,10 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
             model (PreTrainedModel): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
-            granularity (Granularity): The level of granularity for the explanation (e.g., token, word, sentence).
+            granularity (Granularity, optional): The level of granularity for the explanation.
+                Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
+                Defaults to Granularity.WORD.
+                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             n_token_perturbations (int): the number of perturbations to generate

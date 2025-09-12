@@ -103,9 +103,8 @@ class MSE(ReconstructionError):
 
     With $A$ latent activations obtained through $A = h(X)$,
     $t$ and $t^{-1}$ the concept encoder and decoders, the MSE is defined as:
-    $$ \sum_{a}^{A} ||t^{-1}(t(a)) - a||_2 $$
 
-    TODO: make formula work
+    $$ \sum_{a}^{A} ||t^{-1}(t(a)) - a||_2 $$
 
     Attributes:
         concept_explainer (ConceptAutoEncoderExplainer): The explainer used to compute concepts.
@@ -136,8 +135,6 @@ class FID(ReconstructionError):
     $\mathcal{W}_1$ the 1-Wassertein distance, the FID is defined as:
 
     $$ \mathcal{W}_1(A, t^{-1}(t(A))) $$
-
-    TODO: make formula work
 
     [^1]:
         Fel, T., Boutin, V., Béthune, L., Cadène, R., Moayeri, M., Andéol, L., Chavidal, M., & Serre, T.

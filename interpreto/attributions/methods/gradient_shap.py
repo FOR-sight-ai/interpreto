@@ -21,10 +21,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-"""
-Kernel SHAP attribution method
-"""
+"""GradientSHAP attribution method."""
 
 from __future__ import annotations
 
@@ -33,36 +30,34 @@ from collections.abc import Callable
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
-from interpreto.attributions.aggregations.linear_regression_aggregation import (
-    Kernels,
-    LinearRegressionAggregator,
-)
+from interpreto.attributions.aggregations import MeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
-from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.attributions.perturbations import GradientShapPerturbator
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
-class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
+class GradientShap(MultitaskExplainerMixin, AttributionExplainer):
     """
-    KernelSHAP is a model‑agnostic Shapley value estimator that interprets predictions
-    by computing Shapley values through a weighted linear regression in the space of
-    feature coalitions.
+    GradientSHAP is a gradient-based Shapley value estimator that computes attributions
+    by integrating model gradients along a path between a baseline (reference) and
+    the input. It approximates Shapley values by averaging multiple stochastic
+    integrated gradients across randomly sampled paths.
 
-    By unifying ideas from LIME and Shapley value theory, KernelSHAP provides additive
-    feature attributions with strong consistency guarantees.
+    By combining ideas from Integrated Gradients and Shapley value theory,
+    GradientSHAP provides additive feature attributions with strong consistency
+    guarantees, while capturing non-linear effects.
 
     **Reference:**
     Lundberg and Lee (2017). *A Unified Approach to Interpreting Model Predictions.*
     [Paper](https://arxiv.org/abs/1705.07874)
 
     Examples:
-        >>> from interpreto import Granularity, KernelShap
-        >>> from interpreto.attributions import InferenceModes
-        >>> method = KernelShap(model, tokenizer, batch_size=4,
-        >>>                     inference_mode=InferenceModes.SOFTMAX,
-        >>>                     n_perturbations=20,
-        >>>                     granularity=Granularity.WORD)
+        >>> from interpreto import GradientShap
+        >>> method = GradientShap(model, tokenizer, batch_size=4,
+        >>>                       n_perturbations=20,
+        >>>                       baseline=0,
+        >>>                       noise_std=0.1,)
         >>> explanations = method(text)
     """
 
@@ -72,10 +67,14 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
-        inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
-        n_perturbations: int = 1000,
+        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         device: torch.device | None = None,
-    ):
+        inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
+        input_x_gradient: bool = True,
+        n_perturbations: int = 10,
+        baseline: torch.Tensor | float | None = None,
+        noise_std: float = 0.1,
+    ) -> None:
         """
         Initialize the attribution method.
 
@@ -87,38 +86,34 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
                 Defaults to Granularity.WORD.
                 To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+            granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
+                Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
+                Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
+            device (torch.device): device on which the attribution method will be run
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
-            n_perturbations (int): the number of perturbations to generate
-            distance_function (DistancesFromMaskProtocol): distance function used to compute weights of perturbed samples in the linear model training.
-            similarity_kernel (SimilarityKernelProtocol): similarity kernel used to compute weights of perturbed samples in the linear model training.
-            kernel_width (float | Callable): kernel width used in the `similarity_kernel`
-            device (torch.device): device on which the attribution method will be run
+            input_x_gradient (bool, optional): If True, multiplies the input embeddings with
+                their gradients before aggregation. Defaults to ``True``.
+            n_perturbations (int): the number of interpolations to generate
+            baseline (torch.Tensor | float | None): the baseline to use for the interpolations
+            noise_std (float): the standard deviation of the noise added to the baseline
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
-
-        perturbator = ShapTokenPerturbator(
-            tokenizer=tokenizer,
+        perturbator = GradientShapPerturbator(
             inputs_embedder=model.get_input_embeddings(),
-            granularity=granularity,
-            replace_token_id=replace_token_id,
+            baseline=baseline,
             n_perturbations=n_perturbations,
-            device=device,
+            std=noise_std,
         )
-
-        aggregator = LinearRegressionAggregator(
-            distance_function=None,  # Kernel SHAP does not use distance function
-            similarity_kernel=Kernels.ONES,
-        )
-
         super().__init__(
             model=model,
             tokenizer=tokenizer,
-            perturbator=perturbator,
-            aggregator=aggregator,
             batch_size=batch_size,
-            granularity=granularity,
-            inference_mode=inference_mode,
             device=device,
-            use_gradient=False,
+            perturbator=perturbator,
+            aggregator=MeanAggregator(),
+            granularity=granularity,
+            granularity_aggregation_strategy=granularity_aggregation_strategy,
+            inference_mode=inference_mode,
+            use_gradient=True,
+            input_x_gradient=input_x_gradient,
         )

@@ -3,7 +3,6 @@
 <br/>
 
 [![Build status](https://img.shields.io/github/actions/workflow/status/FOR-sight-ai/interpreto/build.yml?branch=main)](https://github.com/FOR-sight-ai/interpreto/actions?query=workflow%3Abuild)
-[![Docs status](https://github.com/FOR-sight-ai/interpreto/actions/workflows/pages-build-deployment/badge.svg)](https://for-sight-ai.github.io/interpreto/)
 [![Version](https://img.shields.io/pypi/v/interpreto?color=blue)](https://pypi.org/project/interpreto/)
 [![Python Version](https://img.shields.io/pypi/pyversions/interpreto.svg?color=blue)](https://pypi.org/project/interpreto/)
 [![Downloads](https://static.pepy.tech/badge/interpreto)](https://pepy.tech/project/interpreto)
@@ -14,14 +13,6 @@
   <br>
 
 </div>
-
-## ⚠️ Warning
-
-This library is currently in beta and many functions may not work. If you use it anyway, we welcome your comments; please open an issue!
-
-The API might change and the documentation is not up to date.
-
-In particular, it is not yet possible to obtain interpretable concept-based explanations.
 
 ## 📚 Table of contents
 
@@ -56,22 +47,21 @@ Interpreto 🪄 provides a modular framework encompassing Attribution Methods, C
 
 **Inference-based Methods:**
 
-- Occlusion: [Zeiler and Fergus, 2014. Visualizing and understanding convolutional networks](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
-- LIME: [Ribeiro et al. 2013, "Why should i trust you?" explaining the predictions of any classifier](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
-- Kernel SHAP: [Lundberg and Lee, 2017, A Unified Approach to Interpreting Model Predictions](https://arxiv.org/abs/1705.07874).
-- Sobol Attribution: [Fel et al. 2021, Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
+- Kernel SHAP: [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
+- LIME: [Ribeiro et al. 2013, *"Why should i trust you?" explaining the predictions of any classifier*](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
+- Occlusion: [Zeiler and Fergus, 2014. *Visualizing and understanding convolutional networks*](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
+- Sobol Attribution: [Fel et al. 2021, *Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis*](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
 
 **Gradient based methods:**
 
-- Saliency: [Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps](https://arxiv.org/abs/1312.6034).
-- Integrated Gradient: [Sundararajan et al. 2017, Axiomatic Attribution for Deep Networks](http://proceedings.mlr.press/v70/sundararajan17a.html).
-- SmoothGrad: [Smilkov et al. 2017, SmoothGrad: removing noise by adding noise](https://arxiv.org/abs/1706.03825)
+- Gradient Shap: [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
+- InputxGradient: [Simonyan et al. 2013, *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps*](https://arxiv.org/abs/1312.6034).
+- Integrated Gradient: [Sundararajan et al. 2017, *Axiomatic Attribution for Deep Networks*](http://proceedings.mlr.press/v70/sundararajan17a.html).
+- Saliency: [Simonyan et al. 2013, *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps*](https://arxiv.org/abs/1312.6034).
+- SmoothGrad: [Smilkov et al. 2017, *SmoothGrad: removing noise by adding noise*](https://arxiv.org/abs/1706.03825)
+ - SquareGrad: [Hooker et al. (2019). *A Benchmark for Interpretability Methods in Deep Neural Networks*](https://arxiv.org/abs/1806.10758).
+- VarGrad: [Richter et al. 2020, *VarGrad: A Low-Variance Gradient Estimator for Variational Inference*](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
 
-*We will be adding these methods soon (Gradient based methods):*
-
-- InputxGradient: [Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps](https://arxiv.org/abs/1312.6034).
-- DeepLift: [Shrikumar et al. 2017, Learning Important Features Through Propagating Activation Differences](http://proceedings.mlr.press/v70/shrikumar17a).
-- VarGrad: [Richter et al. 2020, VarGrad: A Low-Variance Gradient Estimator for Variational Inference](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
 
 </details>
 
@@ -90,13 +80,14 @@ Interpreto generalizes these methods through three core steps:
 **Concept Discovery Techniques** (via [Overcomplete](https://github.com/KempnerInstitute/overcomplete)):
 
 - NMF, Semi-NMF, ConvexNMF
-- ICA, SVD, PCA
+- ICA, SVD, PCA, KMeans
 - SAE variants (Vanilla SAE, TopK SAE, JumpReLU SAE, BatchTopK SAE)
 
 **Available Concept Interpretation Techniques:**
 
 - Top-k tokens from tokenizer vocabulary
 - Top-k tokens/words/sentences/samples from specific datasets
+- LLM Labeling ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
 
 *Concept Interpretation Techniques Added Soon:*
 
@@ -105,7 +96,6 @@ Interpreto generalizes these methods through three core steps:
 
 *Concept Interpretation Techniques Added Later:*
 
-- OpenAI Interpretation ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
 - Aligning concepts with human labels ([Sajjad et al. 2022](https://aclanthology.org/2022.naacl-main.225/))
 - Word cloud visualizations of concepts ([Dalvi et al. 2022](https://arxiv.org/abs/2205.07237))
 - VocabProj & TokenChange ([Gur-Arieh et al. 2025](https://arxiv.org/abs/2501.08319))
@@ -171,7 +161,7 @@ This project received funding from the French ”Investing for the Future – PI
 
 ## 👨‍🎓 Creators
 
-Interpreto 🪄 is a project of the FOR and the [DEEL](https://www.deel.ai) teams at the [IRT Saint-Exupéry](https://www.irt-saintexupery.com/) in Toulouse, France.
+Interpreto 🪄 is a project of the [FOR](https://www.irt-saintexupery.com/fr/for-program/) and the [DEEL](https://www.deel.ai) teams at the [IRT Saint-Exupéry](https://www.irt-saintexupery.com/) in Toulouse, France.
 
 ## 🗞️ Citation
 

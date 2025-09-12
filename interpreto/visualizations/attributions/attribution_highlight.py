@@ -75,7 +75,7 @@ class AttributionVisualization(BaseAttributionVisualization):
             # nb_sentences * (1, nb_words, 1) with the first dimension beeing the number
             # of generated outputs (here set to 1 because no generation)
             # and the last the number of classes (here set to 1 because only one class)
-            inputs_attribution = attribution_output.attributions.unsqueeze(0).unsqueeze(-1)
+            inputs_attribution = attribution_output.attributions.T.unsqueeze(0)
             class_id = int(attribution_output.classes[0])
             if class_names is None:
                 class_name_str = f"class #{class_id}"

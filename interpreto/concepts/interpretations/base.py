@@ -55,6 +55,8 @@ class BaseConceptInterpretationMethod(ABC):
         concept_model: ConceptModelProtocol,
         activation_granularity: ActivationGranularity,
         split_point: str | None = None,
+        concept_encoding_batch_size: int = 1024,
+        device: torch.device | str | None = "cpu",
     ):
         if not hasattr(concept_model, "encode"):
             raise TypeError(
@@ -80,6 +82,8 @@ class BaseConceptInterpretationMethod(ABC):
         self.split_point: str = split_point
         self.concept_model: ConceptModelProtocol = concept_model
         self.activation_granularity: ActivationGranularity = activation_granularity
+        self.concept_encoding_batch_size: int = concept_encoding_batch_size
+        self.device: torch.device | str | None = device
 
     @abstractmethod
     def interpret(
@@ -130,15 +134,33 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if latent_activations is not None:
-            if hasattr(self.concept_model, "device"):
-                latent_activations = latent_activations.to(self.concept_model.device)  # type: ignore
-            concepts_activations = self.concept_model.encode(latent_activations)  # type: ignore
-            if isinstance(concepts_activations, tuple):
-                concepts_activations = concepts_activations[1]  # temporary fix, issue #65
-            return concepts_activations  # type: ignore
+            # TODO: remove the if case when all overcomplete models are nn modules
+            if hasattr(self.concept_model, "to") and self.device is not None:
+                self.concept_model.to(self.device)  # type: ignore
+
+            # batch over latent activations for concept encoding
+            concepts_activations_list = []
+            for batch_idx in range(0, latent_activations.shape[0], self.concept_encoding_batch_size):
+                # extract and encode a batch of latent activations
+                batch_latent_activations = latent_activations[batch_idx : batch_idx + self.concept_encoding_batch_size]
+
+                if hasattr(batch_latent_activations, "to"):
+                    batch_latent_activations = batch_latent_activations.to(self.device)  # type: ignore
+                batch_concepts_activations = self.concept_model.encode(batch_latent_activations)
+
+                # SAEs outputs from overcomplete are tuples, we need to get the codes
+                if isinstance(batch_concepts_activations, tuple):
+                    batch_concepts_activations = batch_concepts_activations[1]  # temporary fix, issue #65
+
+                concepts_activations_list.append(batch_concepts_activations.cpu())  # type: ignore
+            concepts_activations = torch.cat(concepts_activations_list, dim=0)
+
+            if hasattr(self.concept_model, "to"):
+                self.concept_model.to("cpu")  # type: ignore
+            return concepts_activations
 
         if inputs is not None:
-            activations_dict: dict[str, LatentActivations] = self.model_with_split_points.get_activations(  # type: ignore
+            activations_dict: dict[str, LatentActivations] = self.model_with_split_points.get_activations(
                 inputs,
                 activation_granularity=self.activation_granularity,
             )

@@ -27,21 +27,6 @@ repos:
       - id: ruff-format
       - id: ruff
 
-  - repo: local
-    hooks:
-      - id: fast-test
-        name: fast-test
-        entry: make
-        args: ["fast-test"]
-        language: system
-        pass_filenames: false
-      - id: clean
-        name: clean
-        entry: make
-        args: ["clean"]
-        language: system
-        pass_filenames: false
-
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:
@@ -70,5 +55,20 @@ repos:
         name: build docs
         entry: make
         args: ["build-docs"]
+        language: system
+        pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: fast-test
+        name: fast-test
+        entry: make
+        args: ["fast-test"]
+        language: system
+        pass_filenames: false
+      - id: clean
+        name: clean
+        entry: make
+        args: ["clean"]
         language: system
         pass_filenames: false

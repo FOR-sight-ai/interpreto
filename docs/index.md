@@ -9,13 +9,6 @@ template: home.html
 [![Python Version](https://img.shields.io/pypi/pyversions/interpreto.svg?color=blue)](https://pypi.org/project/interpreto/)
 [![Downloads](https://static.pepy.tech/badge/interpreto)](https://pepy.tech/project/interpreto)
 [![License](https://img.shields.io/github/license/FOR-sight-ai/interpreto.svg)](https://github.com/FOR-sight-ai/interpreto/blob/main/LICENSE)
-> **Warning**
->
-> This library is currently in beta and many functions may not work. If you use it anyway, we welcome your comments; please open an issue!
->
-> The API might change and the documentation is not up to date.
->
-> In particular, it is not yet possible to obtain interpretable concept-based explanations.
 
 ## 📚 Table of contents
 
@@ -47,22 +40,22 @@ Interpreto 🪄 provides a modular framework encompassing Attribution Methods, C
 
     **Inference-based Methods:**
 
-    - Occlusion: [Zeiler and Fergus, 2014. Visualizing and understanding convolutional networks](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
-    - LIME: [Ribeiro et al. 2013, "Why should i trust you?" explaining the predictions of any classifier](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
-    - Kernel SHAP: [Lundberg and Lee, 2017, A Unified Approach to Interpreting Model Predictions](https://arxiv.org/abs/1705.07874).
-    - Sobol Attribution: [Fel et al. 2021, Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
+    - Kernel SHAP: [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
+    - LIME: [Ribeiro et al. 2013, *"Why should i trust you?" explaining the predictions of any classifier*](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
+    - Occlusion: [Zeiler and Fergus, 2014. *Visualizing and understanding convolutional networks*](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
+    - Sobol Attribution: [Fel et al. 2021, *Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis*](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
 
     **Gradient based methods:**
 
-    - Saliency: [Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps](https://arxiv.org/abs/1312.6034).
-    - Integrated Gradient: [Sundararajan et al. 2017, Axiomatic Attribution for Deep Networks](http://proceedings.mlr.press/v70/sundararajan17a.html).
-    - SmoothGrad: [Smilkov et al. 2017, SmoothGrad: removing noise by adding noise](https://arxiv.org/abs/1706.03825)
+    - Gradient Shap: [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
+    - InputxGradient: [Simonyan et al. 2013, *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps*](https://arxiv.org/abs/1312.6034).
+    - Integrated Gradient: [Sundararajan et al. 2017, *Axiomatic Attribution for Deep Networks*](http://proceedings.mlr.press/v70/sundararajan17a.html).
+    - Saliency: [Simonyan et al. 2013, *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps*](https://arxiv.org/abs/1312.6034).
+    - SmoothGrad: [Smilkov et al. 2017, *SmoothGrad: removing noise by adding noise*](https://arxiv.org/abs/1706.03825).
+    - SquareGrad: [Hooker et al. (2019). *A Benchmark for Interpretability Methods in Deep Neural Networks*](https://arxiv.org/abs/1806.10758).
+    - VarGrad: [Richter et al. 2020, *VarGrad: A Low-Variance Gradient Estimator for Variational Inference*](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html).
 
-    Will be implemented soon.
 
-    - InputxGradient: [Simonyan et al. 2013, Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps](https://arxiv.org/abs/1312.6034).
-    - DeepLift: [Shrikumar et al. 2017, Learning Important Features Through Propagating Activation Differences](http://proceedings.mlr.press/v70/shrikumar17a).
-    - VarGrad: [Richter et al. 2020, VarGrad: A Low-Variance Gradient Estimator for Variational Inference](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
 
 ### Concept-Based Methods
 
@@ -80,7 +73,7 @@ Interpreto 🪄 provides a modular framework encompassing Attribution Methods, C
 
     - NMF, Semi-NMF, ConvexNMF
 
-    - ICA, SVD, PCA
+    - ICA, SVD, PCA, KMeans
 
     - SAE variants (Vanilla SAE, TopK SAE, JumpReLU SAE, BatchTopK SAE)
 
@@ -90,14 +83,14 @@ Interpreto 🪄 provides a modular framework encompassing Attribution Methods, C
 
     - Top-k tokens/words/sentences/samples from specific datasets
 
+    - LLM Labeling ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
+
     *Concept Interpretation Techniques Added Soon:*
 
     - Input-to-concept attribution from dataset examples ([Jourdan et al. 2023](https://aclanthology.org/2023.findings-acl.317/))
     - Theme prediction via LLMs from top-k tokens/sentences
 
     *Concept Interpretation Techniques Added Later:*
-
-    - OpenAI Interpretation ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
 
     - Aligning concepts with human labels ([Sajjad et al. 2022](https://aclanthology.org/2022.naacl-main.225/))
 

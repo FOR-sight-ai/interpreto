@@ -12,5 +12,4 @@ icon: material/middleware-outline
       inherited_members: true
       members:
         - interpret
-        - input_concept_attribution
-        - concept_output_attribution
+        - concept_output_gradient

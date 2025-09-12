@@ -29,6 +29,7 @@ import torch
 
 from interpreto.attributions.perturbations import (
     GaussianNoisePerturbator,
+    GradientShapPerturbator,
     LinearInterpolationPerturbator,
     OcclusionPerturbator,
     RandomMaskedTokenPerturbator,
@@ -42,6 +43,7 @@ from interpreto.commons.granularity import Granularity
 embeddings_perturbators = [
     GaussianNoisePerturbator,
     LinearInterpolationPerturbator,
+    GradientShapPerturbator,
 ]
 
 tokens_perturbators = [

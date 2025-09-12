@@ -68,7 +68,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         k (int): The number of inputs to use for the interpretation.
         use_vocab (bool): If True, the interpretation will be computed from the vocabulary of the model.
 
-    Examples:
+    Examples:  # TODO: adapt example to added arguments
         >>> from datasets import load_dataset
         >>> from interpreto import ModelWithSplitPoints
         >>> from interpreto.concepts import NeuronsAsConcepts
@@ -78,7 +78,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         >>> model_with_split_points = ModelWithSplitPoints(
         ...     "hf-internal-testing/tiny-random-bert",
         ...     split_points=[split],
-        ...     model_autoclass=AutoModelForMaskedLM,
+        ...     automodel=AutoModelForMaskedLM,
         ...     batch_size=4,
         ... )
         >>> # NeuronsAsConcepts do not need to be fitted
@@ -104,14 +104,18 @@ class TopKInputs(BaseConceptInterpretationMethod):
         concept_model: ConceptModelProtocol,
         activation_granularity: ActivationGranularity = ActivationGranularity.WORD,
         split_point: str | None = None,
+        concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
+        device: torch.device | str | None = "cpu",
     ):
         super().__init__(
             model_with_split_points=model_with_split_points,
             concept_model=concept_model,
             split_point=split_point,
             activation_granularity=activation_granularity,
+            concept_encoding_batch_size=concept_encoding_batch_size,
+            device=device,
         )
 
         if activation_granularity not in (
