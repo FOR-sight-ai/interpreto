@@ -58,6 +58,17 @@ class SkLearnWrapper(BaseOptimDictionaryLearning):
         random_state: int = 0,
         device: torch.device | str = "cpu",
     ):
+        """
+        Abstract concept model built around scikit-learn.
+        The inheriting classes convert sklearn models into torch modules.
+
+        Args:
+            nb_concepts (int): Number of concepts to extract.
+            input_size (int): Size of the input to the model. Often referred to as d in our code.
+            random_state (int): Random state for the model.
+            device (torch.device | str): Device to use for the model.
+
+        """
         super().__init__(nb_concepts, device=device)  # type:ignore[override]
         self.input_size = input_size
         self.random_state = random_state
