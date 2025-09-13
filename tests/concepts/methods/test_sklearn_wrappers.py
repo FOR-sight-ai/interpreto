@@ -56,20 +56,36 @@ def test_sklearn_wrapper_encode_decode(wrapper_cls):
 
     # Compare encodings
     encoded_wrapper = sk_wrapper.encode(data)
+    assert encoded_wrapper is not None, f"{wrapper_cls.__name__}.encode returned None"
     encoded_sklearn = torch.as_tensor(sk_model.transform(data.cpu().numpy()), dtype=torch.float32)
 
-    assert isinstance(encoded_wrapper, torch.Tensor)
-    assert encoded_wrapper.shape == encoded_sklearn.shape == torch.Size([n, c])
-    assert torch.allclose(encoded_wrapper.cpu(), encoded_sklearn, atol=1e-5, rtol=1e-5)
+    assert isinstance(encoded_wrapper, torch.Tensor), (
+        f"{wrapper_cls.__name__}.encode returned type {type(encoded_wrapper)} instead of torch.Tensor"
+    )
+    assert encoded_wrapper.shape == encoded_sklearn.shape == torch.Size([n, c]), (
+        f"Encoded shape mismatch for {wrapper_cls.__name__}:\n"
+        f"wrapper={tuple(encoded_wrapper.shape)}, sklearn={tuple(encoded_sklearn.shape)}, expected={(n, c)}"
+    )
+    assert torch.allclose(encoded_wrapper.cpu(), encoded_sklearn, atol=1e-5, rtol=1e-5), (
+        f"Encoded values differ from sklearn baseline for {wrapper_cls.__name__} beyond tolerance"
+    )
 
     # Compare reconstructions
     if not isinstance(sk_wrapper, KMeansWrapper):
         decoded_wrapper = sk_wrapper.decode(encoded_wrapper)
+        assert decoded_wrapper is not None, f"{wrapper_cls.__name__}.decode returned None"
         decoded_sklearn = torch.as_tensor(sk_model.inverse_transform(encoded_sklearn.numpy()), dtype=torch.float32)
 
-        assert isinstance(decoded_wrapper, torch.Tensor)
-        assert decoded_wrapper.shape == decoded_sklearn.shape, data.shape == torch.Size([n, d])
-        assert torch.allclose(decoded_wrapper.cpu(), decoded_sklearn, atol=1e-5, rtol=1e-5)
+        assert isinstance(decoded_wrapper, torch.Tensor), (
+            f"{wrapper_cls.__name__}.decode returned type {type(decoded_wrapper)} instead of torch.Tensor"
+        )
+        assert decoded_wrapper.shape == decoded_sklearn.shape == torch.Size([n, d]), (
+            f"Decoded shape mismatch for {wrapper_cls.__name__}:\n"
+            f"wrapper={tuple(decoded_wrapper.shape)}, sklearn={tuple(decoded_sklearn.shape)}, expected={(n, d)}"
+        )
+        assert torch.allclose(decoded_wrapper.cpu(), decoded_sklearn, atol=1e-5, rtol=1e-5), (
+            f"Decoded values differ for {wrapper_cls.__name__} beyond tolerance"
+        )
 
 
 if __name__ == "__main__":

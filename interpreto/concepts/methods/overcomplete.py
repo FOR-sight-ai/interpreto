@@ -125,6 +125,47 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
         has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
         has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+
+    Examples:
+        >>> import datasets
+        >>> from transformers import AutoModelForCausalLM, AutoTokenizer
+        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto.concepts import VanillaSAE
+        >>> from interpreto.concepts.interpretations import TopKInputs
+        >>> CLS_TOKEN = ModelWithSplitPoints.activation_granularities.CLS_TOKEN
+        >>> WORD = ModelWithSplitPoints.activation_granularities.WORD
+        ...
+        >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
+        >>> repo_id = "Qwen/Qwen3-0.6B"
+        >>> model = AutoModelForCausalLM.from_pretrained(repo_id, device_map="auto")
+        >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
+        ...
+        >>> # 1. Split your model in two parts
+        >>> splitted_model = ModelWithSplitPoints(
+        >>>     model, tokenizer=tokenizer, split_points=[5],
+        >>> )
+        ...
+        >>> # 2. Compute a dataset of activations
+        >>> activations = splitted_model.get_activations(
+        >>>     dataset, activation_granularity=WORD
+        >>> )
+        ...
+        >>> # 3. Fit a concept model on the dataset
+        >>> explainer = VanillaSAE(splitted_model, nb_concepts=100, device="cuda")
+        >>> explainer.fit(activations, lr=1e-3, nb_epochs=20, batch_size=1024)
+        ...
+        >>> # 4. Interpret the concepts
+        >>> interpreter = TopKInputs(
+        >>>     concept_explainer=explainer,
+        >>>     activation_granularity=WORD,
+        >>> )
+        >>> interpretations = interpreter.interpret(
+        >>>     inputs=dataset, latent_activations=activations
+        >>> )
+        ...
+        >>> # Print the interpretations
+        >>> for id, words in interpretations.items():
+        >>>     print(f"Concept {id}: {list(words.keys()) if words else None}")
     """
 
     has_differentiable_concept_encoder = True
@@ -316,6 +357,47 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
         has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
         has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+
+    Examples:
+        >>> import datasets
+        >>> from transformers import AutoModelForCausalLM, AutoTokenizer
+        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto.concepts import ICAConcepts
+        >>> from interpreto.concepts.interpretations import TopKInputs
+        >>> CLS_TOKEN = ModelWithSplitPoints.activation_granularities.CLS_TOKEN
+        >>> WORD = ModelWithSplitPoints.activation_granularities.WORD
+        ...
+        >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
+        >>> repo_id = "Qwen/Qwen3-0.6B"
+        >>> model = AutoModelForCausalLM.from_pretrained(repo_id, device_map="auto")
+        >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
+        ...
+        >>> # 1. Split your model in two parts
+        >>> splitted_model = ModelWithSplitPoints(
+        >>>     model, tokenizer=tokenizer, split_points=[5],
+        >>> )
+        ...
+        >>> # 2. Compute a dataset of activations
+        >>> activations = splitted_model.get_activations(
+        >>>     dataset, activation_granularity=WORD
+        >>> )
+        ...
+        >>> # 3. Fit a concept model on the dataset
+        >>> explainer = ICAConcepts(splitted_model, nb_concepts=20)
+        >>> explainer.fit(activations)
+        ...
+        >>> # 4. Interpret the concepts
+        >>> interpreter = TopKInputs(
+        >>>     concept_explainer=explainer,
+        >>>     activation_granularity=WORD,
+        >>> )
+        >>> interpretations = interpreter.interpret(
+        >>>     inputs=dataset, latent_activations=activations
+        >>> )
+        ...
+        >>> # Print the interpretations
+        >>> for id, words in interpretations.items():
+        >>>     print(f"Concept {id}: {list(words.keys())}")
     """
 
     @property

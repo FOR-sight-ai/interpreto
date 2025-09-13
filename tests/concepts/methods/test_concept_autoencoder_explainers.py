@@ -118,28 +118,50 @@ def test_overcomplete_cbe(
     else:
         raise ValueError(f"Unknown method_class {method_class}")
 
-    assert hasattr(cbe, "concept_model")
-    assert hasattr(cbe.concept_model, "nb_concepts")
-    assert hasattr(cbe, "model_with_split_points")
-    assert cbe.concept_model.fitted
-    assert cbe.is_fitted
-    assert cbe.split_point == split
-    assert hasattr(cbe, "has_differentiable_concept_encoder")
-    assert hasattr(cbe, "has_differentiable_concept_decoder")
+    assert hasattr(cbe, "concept_model"), f"Explainer {method_class.__name__} missing attribute 'concept_model'"
+    assert hasattr(cbe.concept_model, "nb_concepts"), f"Concept model in {method_class.__name__} missing 'nb_concepts'"
+    assert hasattr(cbe, "model_with_split_points"), (
+        f"Explainer {method_class.__name__} missing 'model_with_split_points'"
+    )
+    assert cbe.concept_model.fitted, f"Concept model in {method_class.__name__} not fitted"
+    assert cbe.is_fitted, f"Explainer {method_class.__name__} reports not fitted"
+    assert cbe.split_point == split, f"Split point mismatch: expected {split}, got {cbe.split_point}"
+    assert hasattr(cbe, "has_differentiable_concept_encoder"), (
+        f"Explainer {method_class.__name__} missing 'has_differentiable_concept_encoder'"
+    )
+    assert hasattr(cbe, "has_differentiable_concept_decoder"), (
+        f"Explainer {method_class.__name__} missing 'has_differentiable_concept_decoder'"
+    )
 
     concepts = cbe.encode_activations(activations)
+    assert concepts is not None, f"{method_class.__name__}.encode_activations returned None"
     reconstructed_activations = cbe.decode_concepts(concepts)
-    assert reconstructed_activations.shape == (n, d)
+    assert reconstructed_activations is not None, f"{method_class.__name__}.decode_concepts returned None"
+    assert reconstructed_activations.shape == (n, d), (
+        f"Explainer {method_class.__name__} encode-decode reconstructed activations shape mismatch: ",
+        f"got {tuple(reconstructed_activations.shape)}, expected {(n, d)}",
+    )
 
     dictionary = cbe.get_dictionary()
+    assert dictionary is not None, f"{method_class.__name__}.get_dictionary returned None"
     if method_class == NeuronsAsConcepts:
-        assert cbe.concept_model.nb_concepts == d
-        assert concepts.shape == (n, d)
-        assert torch.allclose(dictionary, torch.eye(d))
+        assert cbe.concept_model.nb_concepts == d, (
+            f"nb_concepts mismatch for NeuronsAsConcepts: got {cbe.concept_model.nb_concepts}, expected {d}"
+        )
+        assert concepts.shape == (n, d), (
+            f"Concepts shape mismatch for NeuronsAsConcepts: got {tuple(concepts.shape)}, expected {(n, d)}"
+        )
+        assert torch.allclose(dictionary, torch.eye(d)), "Dictionary not identity for NeuronsAsConcepts"
     else:
-        assert cbe.concept_model.nb_concepts == nb_concepts
-        assert concepts.shape == (n, nb_concepts)
-        assert dictionary.shape == (nb_concepts, d)
+        assert cbe.concept_model.nb_concepts == nb_concepts, (
+            f"{method_class.__name__}.nb_concepts mismatch: got {cbe.concept_model.nb_concepts}, expected {nb_concepts}"
+        )
+        assert concepts.shape == (n, nb_concepts), (
+            f"{method_class.__name__}: Concepts shape mismatch: got {tuple(concepts.shape)}, expected {(n, nb_concepts)}"
+        )
+        assert dictionary.shape == (nb_concepts, d), (
+            f"{method_class.__name__}: Dictionary shape mismatch: got {tuple(dictionary.shape)}, expected {(nb_concepts, d)}"
+        )
 
 
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
@@ -192,10 +214,16 @@ def test_concept_output_gradient(
         targets=[0],
         activation_granularity=granularity,
     )
-    assert isinstance(gradients, list)
-    assert len(gradients) == len(sentences)
+    assert gradients is not None, f"{method_class.__name__}.concept_output_gradient returned None"
+    assert isinstance(gradients, list), (
+        f"{method_class.__name__}.concept_output_gradient returned type {type(gradients)} instead of list"
+    )
+    assert len(gradients) == len(sentences), (
+        f"Gradients list length mismatch: got {len(gradients)}, expected {len(sentences)}"
+    )
     for grad, sentence in zip(gradients, sentences, strict=True):
-        assert isinstance(grad, torch.Tensor)
+        assert grad is not None, "A gradient entry is None"
+        assert isinstance(grad, torch.Tensor), f"Gradient entry has type {type(grad)} instead of torch.Tensor"
 
         tokenizer = splitted_encoder_ml.tokenizer
         tokens = tokenizer(
@@ -207,7 +235,10 @@ def test_concept_output_gradient(
         )
         indices_list = Granularity.get_indices(tokens, granularity.value, tokenizer)  # type: ignore
         nb_granularity_elements = len(indices_list[0])
-        assert grad.shape == (1, nb_granularity_elements, concepts_dim)
+        assert grad.shape == (1, nb_granularity_elements, concepts_dim), (
+            "Gradient shape mismatch: got "
+            f"{tuple(grad.shape)}, expected {(1, nb_granularity_elements, concepts_dim)} for sentence '{sentence}'"
+        )
 
 
 if __name__ == "__main__":
