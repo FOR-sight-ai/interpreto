@@ -4,6 +4,22 @@ icon: material/middleware-outline
 
 # Sparse Autoencoders (SAEs)
 
+## Abstract base class
+
+::: interpreto.concepts.methods.SAEExplainer
+    handler: python
+    options:
+      show_root_heading: true
+      show_source: true
+      inherited_members: true
+      members:
+        - fit
+        - encode_activations
+        - decode_concepts
+        - get_dictionary
+        - interpret
+        - concept_output_gradient
+
 ## List of available SAEs
 
 ::: interpreto.concepts.methods.VanillaSAEConcepts
@@ -25,22 +41,6 @@ icon: material/middleware-outline
     handler: python
     options:
       show_root_heading: true
-
-## Abstract base class
-
-::: interpreto.concepts.methods.SAEExplainer
-    handler: python
-    options:
-      show_root_heading: true
-      show_source: true
-      inherited_members: true
-      members:
-        - fit
-        - encode_activations
-        - decode_concepts
-        - get_dictionary
-        - interpret
-        - concept_output_gradient
 
 ## Loss Functions
 

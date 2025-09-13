@@ -26,16 +26,14 @@ model_with_split_points = ModelWithSplitPoints(
 # 2. Compute the model activations on the split_point
 activations = model_with_split_points.get_activations(dataset)
 
-# 3. Instantiate the concept-based explainer
+# 3. Instantiate and fit the concept-based explainer on the activations
 concept_explainer = ICAConcepts(model_with_split_points)
-
-# 4. Fit the concept-based explainer on the activations
 concept_explainer.fit(activations)
 
-# 5. Interpret the obtained concepts
+# 4. Interpret the obtained concepts
 interpretation = concept_explainer.interpret(TopKInputs, inputs=dataset)
 
-# 6. Evaluate concepts' contributions to the output
+# 5. Evaluate concepts' contributions to the output
 concept_gradients = concept_explainer.concept_output_gradient(inputs=dataset)
 ```
 
