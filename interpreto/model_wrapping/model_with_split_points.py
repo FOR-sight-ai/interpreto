@@ -53,15 +53,51 @@ class InitializationError(ValueError):
 
 
 class ActivationGranularity(Enum):
-    """Activation selection strategies for `ModelWithSplitPoints.get_activations()`."""
+    """
+    Activation selection strategies for `ModelWithSplitPoints.get_activations()`.
+
+    - ``ALL``:
+        the raw activations are returned as is ``(n, l, d)``.
+        They are padded manually so that each batch of activations can be concatenated.
+
+    - ``ALL_TOKENS``:
+        the raw activations are flattened ``(n x l, d)``.
+        Hence, each token activation is now considered as a separate element.
+        This includes special tokens such as [CLS], [SEP], [EOS], [PAD], etc.
+
+    - ``CLS_TOKEN``:
+        for each sample, only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.
+        This will raise an error if the model is not `ForSequenceClassification`.
+
+    - ``SAMPLE``:
+        special tokens are removed and the remaining ones are aggregated on the whole sample ``(n, d)``.
+
+    - ``SENTENCE``:
+        special tokens are removed and the remaining ones are aggregate by sentences.
+        Then the activations are flattened.
+        ``(n x g, d)`` where `g` is the number of sentences in the input.
+        The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
+        Requires `spacy` to be installed.
+
+    - ``TOKEN``:
+        the raw activations are flattened, but the special tokens are removed.
+        ``(n x g, d)`` where `g` is the number of non-special tokens in the input.
+        This is the default granularity.
+
+    - ``WORD``:
+        the special tokens are removed and the remaining ones are aggregate by words.
+        Then the activations are flattened.
+        ``(n x g, d)`` where `g` is the number of words in the input.
+        The split is defined by `interpreto.commons.granularity.Granularity.WORD`.
+    """
 
     ALL = "all"
-    CLS_TOKEN = "cls_token"
     ALL_TOKENS = Granularity.ALL_TOKENS
+    CLS_TOKEN = "cls_token"
+    SAMPLE = "sample"
+    SENTENCE = Granularity.SENTENCE
     TOKEN = Granularity.TOKEN
     WORD = Granularity.WORD
-    SENTENCE = Granularity.SENTENCE
-    SAMPLE = "sample"
 
 
 AG = ActivationGranularity
@@ -276,13 +312,18 @@ class ModelWithSplitPoints(LanguageModel):
         self.batch_size = batch_size
 
         if not isinstance(model_or_repo_id, str):
+            # `device_map` is ignored by `nnsight` in this case, hence we manage it manually
             if device_map is not None:
                 if device_map == "auto":
                     raise ValueError(
                         "'auto' device_map is only supported when loading a generation model from a repository id. "
                         "Please specify a device_map, e.g. 'cuda' or 'cpu'."
                     )
+                    # pass the provided model to the specified device
                 self.to(device_map)  # type: ignore  (under specification from NNsight)
+            else:
+                # we leave the model on its device
+                pass
 
         if self.tokenizer is None:
             raise ValueError("Tokenizer is not set. When providing a model instance, the tokenizer must be set.")
@@ -748,29 +789,38 @@ class ModelWithSplitPoints(LanguageModel):
                 Available options are:
 
                 - ``ModelWithSplitPoints.activation_granularities.ALL``:
-                    the activations are returned as is ``(n, l, d)``.
+                    the raw activations are returned as is ``(n, l, d)``.
                     They are padded manually so that each batch of activations can be concatenated.
 
-                - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:
-                    only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.
-
                 - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:
-                    every token activation is treated as a separate element ``(n x l, d)``.
+                    the raw activations are flattened ``(n x l, d)``.
+                    Hence, each token activation is now considered as a separate element.
                     This includes special tokens such as [CLS], [SEP], [EOS], [PAD], etc.
 
-                - ``ModelWithSplitPoints.activation_granularities.TOKEN``: remove special tokens.
-
-                - ``ModelWithSplitPoints.activation_granularities.WORD``:
-                    aggregate by words following the split defined by
-                    `interpreto.commons.granularity.Granularity.WORD`.
-
-                - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
-                    aggregate by sentences following the split defined by
-                    :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.
-                    Requires `spacy` to be installed.
+                - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:
+                    for each sample, only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.
+                    This will raise an error if the model is not `ForSequenceClassification`.
 
                 - ``ModelWithSplitPoints.activation_granularities.SAMPLE``:
-                    activations are aggregated on the whole sample.
+                    special tokens are removed and the remaining ones are aggregated on the whole sample ``(n, d)``.
+
+                - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
+                    special tokens are removed and the remaining ones are aggregate by sentences.
+                    Then the activations are flattened.
+                    ``(n x g, d)`` where `g` is the number of sentences in the input.
+                    The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
+                    Requires `spacy` to be installed.
+
+                - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
+                    the raw activations are flattened, but the special tokens are removed.
+                    ``(n x g, d)`` where `g` is the number of non-special tokens in the input.
+                    This is the default granularity.
+
+                - ``ModelWithSplitPoints.activation_granularities.WORD``:
+                    the special tokens are removed and the remaining ones are aggregate by words.
+                    Then the activations are flattened.
+                    ``(n x g, d)`` where `g` is the number of words in the input.
+                    The split is defined by `interpreto.commons.granularity.Granularity.WORD`.
 
             aggregation_strategy (GranularityAggregationStrategy):
                 Strategy to aggregate token activations into larger inputs granularities.
@@ -795,6 +845,7 @@ class ModelWithSplitPoints(LanguageModel):
 
             pad_side (str | None):
                 'left' or 'right' — side on which to apply padding along dim=1 only for ALL strategy.
+                Forced right for classification models and left for causal LMs.
 
             tqdm_bar (bool):
                 Whether to display a progress bar.
@@ -812,10 +863,13 @@ class ModelWithSplitPoints(LanguageModel):
                 for the given `inputs`.
         """
         # set default pad side value and catch unsupported cases
-        if self._model.__class__.__name__.endswith("Classification"):
-            pad_side = pad_side or "right"
+        if self._model.__class__.__name__.endswith("ForSequenceClassification"):
+            pad_side = "right"
         else:
-            pad_side = pad_side or "left"
+            if self._model.__class__.__name__.endswith("ForCausalLM"):
+                pad_side = "left"
+            else:
+                pad_side = pad_side or "left"
             if include_predicted_classes:
                 raise ValueError(
                     "`include_predicted_classes` is only supported for classification models. "
@@ -1000,23 +1054,32 @@ class ModelWithSplitPoints(LanguageModel):
             activation_granularity (ActivationGranularity):
                 Selection strategy for activations. Options are:
 
-                - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:
-                    only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.
-
                 - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:
-                    every token activation is treated as a separate element ``(n x l, d)``.
+                    the raw activations are flattened ``(n x l, d)``.
+                    Hence, each token activation is now considered as a separate element.
                     This includes special tokens such as [CLS], [SEP], [EOS], [PAD], etc.
 
-                - ``ModelWithSplitPoints.activation_granularities.TOKEN``: remove special tokens.
-
-                - ``ModelWithSplitPoints.activation_granularities.WORD``:
-                    aggregate by words following the split defined by
-                    :class:`~interpreto.commons.granularity.Granularity.WORD`.
+                - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:
+                    for each sample, only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.
+                    This will raise an error if the model is not `ForSequenceClassification`.
 
                 - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
-                    aggregate by sentences following the split defined by
-                    :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.
+                    special tokens are removed and the remaining ones are aggregate by sentences.
+                    Then the activations are flattened.
+                    ``(n x g, d)`` where `g` is the number of sentences in the input.
+                    The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
                     Requires `spacy` to be installed.
+
+                - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
+                    the raw activations are flattened, but the special tokens are removed.
+                    ``(n x g, d)`` where `g` is the number of non-special tokens in the input.
+                    This is the default granularity.
+
+                - ``ModelWithSplitPoints.activation_granularities.WORD``:
+                    the special tokens are removed and the remaining ones are aggregate by words.
+                    Then the activations are flattened.
+                    ``(n x g, d)`` where `g` is the number of words in the input.
+                    The split is defined by `interpreto.commons.granularity.Granularity.WORD`.
 
             aggregation_strategy:
                 Strategy to aggregate token activations into larger inputs granularities.
@@ -1221,7 +1284,10 @@ class ModelWithSplitPoints(LanguageModel):
                         # sum over samples but compute the gradients for each target separately
                         with logits[t].backward(retain_graph=True):  # type: ignore
                             # compute the gradient of the concept activations
-                            concept_activations_grad: Float[torch.Tensor, ng, c] = concept_activations.grad  # type: ignore
+                            concept_activations_grad: Float[torch.Tensor, ng, c] = concept_activations.grad.clone()  # type: ignore
+
+                            # clean gradient for following operations
+                            concept_activations.grad.zero_()  # type: ignore
 
                             # for gradient x concepts, multiply by concepts
                             if concepts_x_gradients:
@@ -1231,7 +1297,7 @@ class ModelWithSplitPoints(LanguageModel):
                     targets_gradients: Float[torch.Tensor, t, ng, d] = (
                         torch.stack(targets_gradients_list, dim=0).detach().cpu().save()  # type: ignore  (nnsight under specification)
                     )
-                    del targets_gradients_list, concept_activations, concept_activations_grad, logits, all_logits
+                    del targets_gradients_list, concept_activations, concept_activations_grad, logits, all_logits  # type: ignore (possibly unbound grad)
 
                     # split gradients for each input sentence from (t, ng, d) to n * (t, g, d)
                     start = 0
