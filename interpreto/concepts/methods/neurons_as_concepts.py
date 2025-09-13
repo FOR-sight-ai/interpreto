@@ -101,7 +101,7 @@ class IdentityConceptModel(BaseDictionaryLearning):
         self.device = "cpu"
 
 
-class NeuronsAsConcepts(ConceptAutoEncoderExplainer):
+class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
     """Code: [:octicons-mark-github-24: `concepts/methods/neurons_as_concepts.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/neurons_as_concepts.py)
     Concept Bottleneck Explainer where the latent space is considered as the concept space.
 
