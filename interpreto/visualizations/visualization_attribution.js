@@ -103,21 +103,30 @@
           alpha = alpha / max;
         }
       }
-      
+
       // Compute the color of the word based on the alpha value     
       let color = alpha < 0 ? negativeColor : positiveColor;
       // convert str color to array of numbers
       color = this.hexToRgb(color);
-      
+
       const alphaRatio = this.highlightBorder ? 0.5 : 1.0;
       const borderColor = [...color, Math.abs(alpha)];
       const backgroundColor = [...color, Math.abs(alpha) * alphaRatio]; // we actually dim the inside of the word to highlight the border
+
+      // Helper: compute perceived brightness (0-255)
+      const brightness = 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2];
+      const effectiveAlpha = Math.abs(alpha) * alphaRatio;
 
       var style = `background-color: rgba(${backgroundColor.join(",")});`;
       if (this.highlightBorder === true) {
         style += `outline-color: rgba(${borderColor.join(",")});`;
       } else {
         style += "outline-color: transparent;";
+      }
+      // If background overlay is dark enough and strong, switch text to white for readability
+      // This especially helps for strong reds/blues on light themes
+      if (effectiveAlpha >= 0.35 && brightness < 150) {
+        style += "color: white;";
       }
       return style;
     }
@@ -352,16 +361,16 @@
     traceIds(prefix) {
       console.log(
         "\t[" +
-          prefix +
-          "]" +
-          "\tclass selected:" +
-          this.selectedClassId +
-          "/activated:" +
-          this.activatedClassId +
-          "\toutput selected:" +
-          this.selectedOutputId +
-          "/current:" +
-          this.currentOutputId
+        prefix +
+        "]" +
+        "\tclass selected:" +
+        this.selectedClassId +
+        "/activated:" +
+        this.activatedClassId +
+        "\toutput selected:" +
+        this.selectedOutputId +
+        "/current:" +
+        this.currentOutputId
       );
     }
 
@@ -423,9 +432,9 @@
       }
       console.log(
         "\tReactivation of the saved selectedOutputId: " +
-          this.selectedOutputId +
-          " and classId: " +
-          this.selectedClassId
+        this.selectedOutputId +
+        " and classId: " +
+        this.selectedClassId
       );
       this.activateOutput(this.selectedOutputId);
     }
@@ -476,8 +485,8 @@
      */
     normalizeSpecialChars(word) {
       let normalizedWord = word.replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t');
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
       return normalizedWord;
     }
 
@@ -496,7 +505,7 @@
       for (let i = 0; i < this.jsonData.outputs.words.length; i++) {
         var word = this.jsonData.outputs.words[i];
         word = this.normalizeSpecialChars(word);
-       
+
         console.log("Output " + i + ": " + word);
         var outputElement = document.createElement("button");
         outputElement.classList.add("common-word-style");
@@ -554,7 +563,7 @@
         if (this.activatedClassId != null && i < this.currentOutputId) {
           alpha =
             this.jsonData.outputs.attributions[this.currentOutputId][i][
-              this.activatedClassId
+            this.activatedClassId
             ];
           let minValue = this.jsonData.classes[this.activatedClassId].min;
           let maxValue = this.jsonData.classes[this.activatedClassId].max;
