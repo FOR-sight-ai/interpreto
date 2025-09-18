@@ -444,7 +444,7 @@ class ModelWithSplitPoints(LanguageModel):
                 if inputs_tensor[0, 0] != self.tokenizer.cls_token_id:
                     raise ValueError(
                         "The first token of the input tensor is not the CLS token. "
-                        "Please provide a tensor with the CLS token as the first token."
+                        "Please provide a tensor with the CLS token as the first token. "
                         "This may happen if you asking for a ``CLS_TOKEN`` granularity while not doing classification."
                     )
 
@@ -464,7 +464,7 @@ class ModelWithSplitPoints(LanguageModel):
             case AG.TOKEN | AG.WORD | AG.SENTENCE | AG.SAMPLE:
                 if not isinstance(inputs, BatchEncoding):
                     raise ValueError(
-                        "Cannot get indices without a tokenizer if granularity is TOKEN or SAMPLE."
+                        "Cannot get indices without a tokenizer if granularity is TOKEN or SAMPLE. "
                         + "Please provide a tokenizer or set granularity to ALL_TOKENS."
                         + f"Got: {type(inputs)}"
                     )
@@ -916,11 +916,16 @@ class ModelWithSplitPoints(LanguageModel):
                 batch_generator.append(
                     {key: value[i:end_idx] for key, value in inputs.items()}
                 )
-        else:  # sequence of inputs or tensors
+        elif isinstance(inputs, list | torch.Tensor):
             # create a generator for iterable of inputs and tensors
             batch_generator = (
                 inputs[i : min(i + self.batch_size, len(inputs))]
                 for i in range(0, len(inputs), self.batch_size)
+            )
+        else:
+            raise TypeError(
+                f"Invalid inputs type: {type(inputs)}. "
+                "Expected: list[str] | torch.Tensor | BatchEncoding."
             )
 
         # wrap generator in tqdm for progress bar
@@ -1067,7 +1072,11 @@ class ModelWithSplitPoints(LanguageModel):
 
         # validate that activations have the expected type
         for layer, act in activations.items():
-            if not isinstance(act, torch.Tensor):
+            act_is_tensor = isinstance(act, torch.Tensor)
+            act_is_list_of_tensors = isinstance(act, list) and all(
+                isinstance(a, torch.Tensor) for a in act
+            )
+            if not (act_is_tensor or act_is_list_of_tensors):
                 raise RuntimeError(
                     f"Invalid output for layer '{layer}'. Expected torch.Tensor activation, got {type(act)}: {act}"
                 )
@@ -1400,8 +1409,10 @@ class ModelWithSplitPoints(LanguageModel):
         return gradients_list
 
     def get_split_activations(
-        self, activations: dict[str, LatentActivations], split_point: str | None = None
-    ) -> LatentActivations:
+        self,
+        activations: dict[str, LatentActivations] | dict[str, list[LatentActivations]],
+        split_point: str | None = None,
+    ) -> LatentActivations | list[LatentActivations]:
         """
         Extract activations for the specified split point.
         If no split point is specified, it works if and only if the `model_with_split_points` has only one split point.
@@ -1450,12 +1461,18 @@ class ModelWithSplitPoints(LanguageModel):
         else:
             local_split_point: str = self.split_points[0]
 
-        if not isinstance(activations, dict) or not all(
+        act_is_dict_of_tensors = isinstance(activations, dict) and all(
             isinstance(act, torch.Tensor) for act in activations.values()
-        ):
+        )
+        act_is_dict_of_list_of_tensors = isinstance(activations, dict) and all(
+            isinstance(act, list) and all(isinstance(a, torch.Tensor) for a in act)
+            for act in activations.values()
+        )
+        if not (act_is_dict_of_tensors or act_is_dict_of_list_of_tensors):
             raise TypeError(
                 "Invalid activations for the concept explainer. "
-                "Activations should be a dictionary of model paths and torch.Tensor activations. "
+                "Activations should be a dictionary of model paths and torch.Tensor activations, "
+                "or a dictionary of model paths and list of torch.Tensor activations. "
                 f"Got: '{type(activations)}'"
             )
         activations_split_points: list[str] = list(activations.keys())  # type: ignore
