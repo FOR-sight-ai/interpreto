@@ -80,7 +80,7 @@ class Perturbator:
             model_inputs (TensorMapping): output of the tokenizers
         """
         # add perturbation dimension
-        if model_inputs["input_ids"].ndim() <= 1:
+        if model_inputs["input_ids"].ndim <= 1:
             model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
         #model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
         #if "inputs_embeds" in model_inputs:
