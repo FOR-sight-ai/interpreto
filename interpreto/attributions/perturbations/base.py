@@ -32,7 +32,7 @@ from abc import abstractmethod
 
 import torch
 from beartype import beartype
-from jaxtyping import Float, Real, jaxtyped
+from jaxtyping import Float, Int, jaxtyped
 from transformers.tokenization_utils import PreTrainedTokenizer
 
 from interpreto.commons.granularity import Granularity
@@ -80,9 +80,11 @@ class Perturbator:
             model_inputs (TensorMapping): output of the tokenizers
         """
         # add perturbation dimension
-        model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        if "inputs_embeds" in model_inputs:
-            model_inputs["inputs_embeds"] = model_inputs["inputs_embeds"].unsqueeze(0)
+        if model_inputs["input_ids"].ndim() <= 1:
+            model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
+        #model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
+        #if "inputs_embeds" in model_inputs:
+        #    model_inputs["inputs_embeds"] = model_inputs["inputs_embeds"].unsqueeze(0)
         # TODO : eventually add perturbation dimension to other keys in the mapping ?
 
         return model_inputs, torch.zeros_like(model_inputs["input_ids"], dtype=torch.float)
@@ -90,31 +92,6 @@ class Perturbator:
     def __call__(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         return self.perturb(model_inputs)
 
-
-class IdsPerturbator(Perturbator):
-    """
-    Specific abstract class for perturbators working on input IDs
-    All perturbators working on input IDs only should inherit from this class
-    """
-
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        return self.perturb_ids(model_inputs)
-
-    @abstractmethod
-    @jaxtyped(typechecker=beartype)
-    def perturb_ids(self, model_inputs: TensorMapping) -> tuple[TensorMapping, Float[torch.Tensor, "p g"] | None]:
-        """
-        Perturb the input of the model, given as token ids
-
-        Args:
-            model_inputs (MutableMapping): Mapping given by the tokenizer, should contain "input_ids"
-
-        Returns:
-            TensorMapping: Perturbed mapping
-            Float[torch.Tensor, "p g"] | None: Perturbation mask, if applicable
-        """
-        model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        return model_inputs, torch.zeros_like(model_inputs["input_ids"], dtype=torch.float)
 
 
 class EmbeddingsPerturbator(Perturbator):
@@ -198,18 +175,18 @@ class EmbeddingsPerturbator(Perturbator):
         # If input ids are present, get the embeddings and add them to the model inputs
         if "input_ids" in model_inputs:
             base_shape = model_inputs["input_ids"].shape
-            flatten_embeds = self.inputs_embedder(model_inputs.pop("input_ids").flatten(0, -2).to(self.device))
+            flatten_embeds = self.inputs_embedder(model_inputs["input_ids"].flatten(0, -2).to(self.device))
             model_inputs["inputs_embeds"] = flatten_embeds.view(*base_shape, flatten_embeds.shape[-1])
             return model_inputs
         # If neither input ids nor input embeds are present, raise an error
         raise ValueError("model_inputs should contain either 'input_ids' or 'inputs_embeds'")
 
 
-class MaskBasedIdsPerturbator(IdsPerturbator):
+class IdsPerturbator(Perturbator):
     """
     Base class for perturbations consisting in applying masks on token (or groups of tokens)
+    All perturbators working on input IDs by applying a mask should inherit from this class
     """
-
     __slots__ = ("tokenizer", "n_perturbations", "replace_token_id", "granularity")
 
     def __init__(
@@ -231,13 +208,16 @@ class MaskBasedIdsPerturbator(IdsPerturbator):
         # in most commons cases, this should be set to Granularity.TOKEN
         self.granularity = granularity
 
+    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+        return self.perturb_ids(model_inputs)
+
     @jaxtyped(typechecker=beartype)
     @staticmethod
     def apply_mask(
-        inputs: Real[torch.Tensor, "l d"],
-        mask: Real[torch.Tensor, "p g"],
+        inputs: Int[torch.Tensor, "l 1"],
+        mask: Float[torch.Tensor, "p g"],
         mask_value: torch.Tensor,
-    ) -> Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p l"]:
+    ) -> Float[torch.Tensor, "p l"]:
         """
         Basic mask application method.
 
@@ -252,17 +232,17 @@ class MaskBasedIdsPerturbator(IdsPerturbator):
         Returns:
             torch.Tensor: masked inputs
         """
-        base: Real[torch.Tensor, "p l d"] = inputs.unsqueeze(-3) * (1 - mask).unsqueeze(
+        base: Float[torch.Tensor, "p l d"] = inputs.unsqueeze(-3) * (1 - mask).unsqueeze(
             -1
         )  # torch.einsum("ld,pl->pld", inputs, 1 - mask)
-        masked: Real[torch.Tensor, "p l d"] = mask_value * mask.unsqueeze(
+        masked: Float[torch.Tensor, "p l d"] = mask_value * mask.unsqueeze(
             -1
         )  # torch.einsum("pl,d->pld", mask, mask_value)
         return (base + masked).squeeze(-1)
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod
-    def get_mask(self, mask_dim: int) -> Real[torch.Tensor, "{self.n_perturbations} {mask_dim}"]:
+    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "{self.n_perturbations} {mask_dim}"]:
         """
         Method returning a perturbation mask for a given set of inputs
         This method should be implemented in subclasses
@@ -298,17 +278,17 @@ class MaskBasedIdsPerturbator(IdsPerturbator):
             )
 
         # compute association matrix between the granularity level and ALL_TOKENS
-        association_matrix: Real[torch.Tensor, "g l"] = (
+        association_matrix: Int[torch.Tensor, "g l"] = (
             Granularity.get_association_matrix(model_inputs, self.granularity, self.tokenizer)[0]
             .float()
             .to(self.device)
         )
 
         # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)
-        gran_mask: Real[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0]).to(self.device)
+        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0]).to(self.device)
 
         # compute real perturbation mask
-        real_mask: Real[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, association_matrix)
+        real_mask: Float[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, association_matrix)
 
         model_inputs["input_ids"] = (
             self.apply_mask(

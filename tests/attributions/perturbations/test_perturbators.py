@@ -35,7 +35,7 @@ from interpreto.attributions.perturbations import (
     ShapTokenPerturbator,
     SobolTokenPerturbator,
 )
-from interpreto.attributions.perturbations.base import MaskBasedIdsPerturbator
+from interpreto.attributions.perturbations.base import IdsPerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import Granularity
 
@@ -58,7 +58,7 @@ DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 @pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
 def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
-    assert not issubclass(perturbator_class, MaskBasedIdsPerturbator)
+    assert not issubclass(perturbator_class, IdsPerturbator)
     p = 10
     d = 32
     inputs_embedder = bert_model.get_input_embeddings()
@@ -91,7 +91,7 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
 @pytest.mark.parametrize("perturbator_class", tokens_perturbators)
 def test_token_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
-    assert issubclass(perturbator_class, MaskBasedIdsPerturbator)
+    assert issubclass(perturbator_class, IdsPerturbator)
     p = 10
 
     replace_token = "[REPLACE]"
@@ -167,29 +167,29 @@ def test_basic_mask_based_methods():
 
     # tests
     assert torch.equal(
-        MaskBasedIdsPerturbator.apply_mask(embeddings, all_mask, mask_embed),
+        IdsPerturbator.apply_mask(embeddings, all_mask, mask_embed),
         mask_embed.reshape(1, 1, embedding_dim).repeat(1, sequence_length, 1),
     )
-    assert torch.equal(MaskBasedIdsPerturbator.apply_mask(embeddings, no_mask, mask_embed), embeddings.unsqueeze(0))
+    assert torch.equal(IdsPerturbator.apply_mask(embeddings, no_mask, mask_embed), embeddings.unsqueeze(0))
     assert torch.equal(
-        MaskBasedIdsPerturbator.apply_mask(ids, all_mask, mask_id),
+        IdsPerturbator.apply_mask(ids, all_mask, mask_id),
         (mask_id * torch.ones_like(ids)).unsqueeze(0).squeeze(-1),
     )
-    assert torch.equal(MaskBasedIdsPerturbator.apply_mask(ids, no_mask, mask_id), ids.unsqueeze(0).squeeze(-1))
+    assert torch.equal(IdsPerturbator.apply_mask(ids, no_mask, mask_id), ids.unsqueeze(0).squeeze(-1))
     assert torch.equal(
-        MaskBasedIdsPerturbator.apply_mask(ids, float_mask, mask_id),
+        IdsPerturbator.apply_mask(ids, float_mask, mask_id),
         (ids.unsqueeze(0) * (1 - float_mask).unsqueeze(-1) + mask_id * float_mask.unsqueeze(-1)).squeeze(-1),
     )
     assert torch.equal(
-        MaskBasedIdsPerturbator.apply_mask(ids, binary_mask, mask_id),
+        IdsPerturbator.apply_mask(ids, binary_mask, mask_id),
         (ids.unsqueeze(0) * (1 - binary_mask).unsqueeze(-1) + mask_id * binary_mask.unsqueeze(-1)).squeeze(-1),
     )
     assert torch.equal(
-        MaskBasedIdsPerturbator.apply_mask(embeddings, float_mask, mask_embed),
+        IdsPerturbator.apply_mask(embeddings, float_mask, mask_embed),
         embeddings.unsqueeze(0) * (1 - float_mask).unsqueeze(-1) + mask_embed * float_mask.unsqueeze(-1),
     )
     assert torch.equal(
-        MaskBasedIdsPerturbator.apply_mask(embeddings, binary_mask, mask_embed),
+        IdsPerturbator.apply_mask(embeddings, binary_mask, mask_embed),
         embeddings.unsqueeze(0) * (1 - binary_mask).unsqueeze(-1) + mask_embed * binary_mask.unsqueeze(-1),
     )
 

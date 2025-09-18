@@ -34,11 +34,11 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import MaskBasedIdsPerturbator
+from interpreto.attributions.perturbations.base import IdsPerturbator
 from interpreto.commons.granularity import Granularity
 
 
-class ShapTokenPerturbator(MaskBasedIdsPerturbator):
+class ShapTokenPerturbator(IdsPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,

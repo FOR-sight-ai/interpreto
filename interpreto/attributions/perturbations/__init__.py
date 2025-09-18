@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .base import MaskBasedIdsPerturbator
+from .base import IdsPerturbator
 from .gaussian_noise_perturbation import GaussianNoisePerturbator
 from .gradient_shap_perturbation import GradientShapPerturbator
 from .linear_interpolation_perturbation import LinearInterpolationPerturbator
