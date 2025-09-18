@@ -155,7 +155,7 @@ def test_basic_mask_based_methods():
     nb_perturbations = 2
 
     # embeddings = torch.ones(sequence_length, embedding_dim)
-    ids = torch.ones(sequence_length, 1)
+    ids = torch.ones(sequence_length, 1).int()
 
     # basic masks and mask values
     mask_id = torch.rand(1)
