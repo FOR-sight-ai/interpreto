@@ -88,8 +88,20 @@ class IdentityConceptModel(BaseDictionaryLearning):
         """
         return torch.eye(self.nb_concepts)
 
+    def to(self, device: torch.device | str) -> None:  # type: ignore
+        """
+        Move the concept model to the given device.
+        """
+        self.device = device
 
-class NeuronsAsConcepts(ConceptAutoEncoderExplainer):
+    def cpu(self) -> None:  # type: ignore
+        """
+        Move the concept model to the CPU.
+        """
+        self.device = "cpu"
+
+
+class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
     """Code: [:octicons-mark-github-24: `concepts/methods/neurons_as_concepts.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/neurons_as_concepts.py)
     Concept Bottleneck Explainer where the latent space is considered as the concept space.
 

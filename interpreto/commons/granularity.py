@@ -78,11 +78,63 @@ class GranularityAggregationStrategy(Enum):
                         For example, given scores [3, -1, 7], returns 7; for [3, -1, -7], returns -7.
     """
 
-    MEAN = staticmethod(lambda x, dim: x.mean(dim=dim, keepdim=True))
-    MAX = staticmethod(lambda x, dim: x.max(dim=dim, keepdim=True).values)
-    MIN = staticmethod(lambda x, dim: x.min(dim=dim, keepdim=True).values)
-    SUM = staticmethod(lambda x, dim: x.sum(dim=dim, keepdim=True))
-    SIGNED_MAX = staticmethod(lambda x, dim: x.gather(dim, x.abs().argmax(dim=dim).unsqueeze(dim)))
+    MEAN = "mean"
+    MAX = "max"
+    MIN = "min"
+    SUM = "sum"
+    SIGNED_MAX = "signed_max"
+
+    @staticmethod
+    def aggregate(
+        x: Float[torch.Tensor, "l d"], strategy: GranularityAggregationStrategy, dim: int
+    ) -> Float[torch.Tensor, "1 d"]:
+        """
+        Aggregate activations.
+        Args:
+            x (torch.Tensor): The tensor to aggregate, shape: (l, d).
+            strategy (AggregationStrategy): The aggregation strategy to use.
+        Returns:
+            torch.Tensor: The aggregated tensor, shape (1, d).
+        """
+        match strategy:
+            case GranularityAggregationStrategy.SUM:
+                return x.sum(dim=dim, keepdim=True)
+            case GranularityAggregationStrategy.MEAN:
+                return x.mean(dim=dim, keepdim=True)
+            case GranularityAggregationStrategy.MAX:
+                return x.max(dim=dim, keepdim=True).values
+            case GranularityAggregationStrategy.MIN:
+                return x.min(dim=dim, keepdim=True).values
+            case GranularityAggregationStrategy.SIGNED_MAX:
+                return x.gather(dim, x.abs().max(dim=dim)[1].unsqueeze(dim))
+            case _:
+                raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
+
+    @staticmethod
+    def unfold(
+        x: Float[torch.Tensor, "1 d"], strategy: GranularityAggregationStrategy, new_dim_length: int
+    ) -> Float[torch.Tensor, "{new_dim_length} d"]:
+        """
+        Unfold activations.
+        Args:
+            x (torch.Tensor): The tensor to unfold, shape: (1, d).
+            strategy (AggregationStrategy): The aggregation strategy initially used.
+            new_dim_length (int): The new dimension length.
+        Returns:
+            torch.Tensor: The unfolded tensor, shape: (l, d).
+        """
+        match strategy:
+            case GranularityAggregationStrategy.SUM:
+                return (x / new_dim_length).repeat(new_dim_length, 1)
+            case (
+                GranularityAggregationStrategy.MEAN
+                | GranularityAggregationStrategy.MAX
+                | GranularityAggregationStrategy.MIN
+                | GranularityAggregationStrategy.SIGNED_MAX
+            ):
+                return x.repeat(new_dim_length, 1)
+            case _:
+                raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
 
 
 class Granularity(Enum):
@@ -403,7 +455,7 @@ class Granularity(Enum):
     def aggregate_score_for_gradient_method(
         contribution: torch.Tensor,
         granularity: Granularity | None,
-        granularity_aggregation_strategy: Callable[[torch.Tensor, int], torch.Tensor] | None = None,
+        granularity_aggregation_strategy: GranularityAggregationStrategy | None = None,
         inputs: BatchEncoding | None = None,
         tokenizer: PreTrainedTokenizer | None = None,
     ) -> Float[torch.Tensor, "t g"]:
@@ -471,8 +523,8 @@ class Granularity(Enum):
                         aggregated_contribution[:, [aggregation_index]] = tokens_contribution
                     else:
                         # aggregate token contribution for each word/sentence
-                        aggregated_contribution[:, [aggregation_index]] = granularity_aggregation_strategy(
-                            tokens_contribution, dim=1
+                        aggregated_contribution[:, [aggregation_index]] = GranularityAggregationStrategy.aggregate(
+                            tokens_contribution, strategy=granularity_aggregation_strategy, dim=1
                         )
                 return aggregated_contribution
             case _:

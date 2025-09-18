@@ -28,7 +28,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interpreto"
-version = "0.3.4"
+version = "0.4.0"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -68,10 +68,11 @@ dependencies = [
   "transformers[sentencepiece,tokenizers]>=4.22.0",
   "torch>=2.0",
   "overcomplete>=0.2.3",
-  "nnsight>=0.4.0",
+  "nnsight>=0.5.1",
   "jaxtyping<=0.2.36",
   "beartype",
   "mknotebooks",
+  "pymdown-extensions",
   "nvidia-cublas-cu11>=11.10.3.66; sys_platform=='Linux'",
   "nvidia-cuda-cupti-cu11>=11.7.101; sys_platform=='Linux'",
   "nvidia-cuda-nvrtc-cu11>=11.7.99; sys_platform=='Linux'",

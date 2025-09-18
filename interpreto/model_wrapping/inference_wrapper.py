@@ -41,8 +41,8 @@ from typing import Any, overload
 
 import torch
 import torch.nn.functional as F
-from transformers import PreTrainedModel
 from transformers.modeling_outputs import BaseModelOutput
+from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.typing import IncompatibilityError, ModelInputs, TensorMapping
 

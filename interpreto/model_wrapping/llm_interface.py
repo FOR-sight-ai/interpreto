@@ -41,7 +41,7 @@ class LLMInterface(ABC):
 
 
 # class HuggingFaceLLM(LLMInterface):  # TODO: use what we already have in nnsight
-#     def __init__(self, model_name: str, device: str | torch.device | None = None):
+#     def __init__(self, model_name: str, device: torch.device | str | None = None):
 #         try:
 #             from transformers import AutoModelForCausalLM, AutoTokenizer
 #         except ImportError as e:
@@ -63,7 +63,7 @@ class LLMInterface(ABC):
 class OpenAILLM(LLMInterface):
     def __init__(self, api_key: str, model: str = "o4-mini", num_try: int = 5):
         try:
-            import openai
+            import openai  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
         except ImportError as e:
             raise ImportError("Install openai to use OpenAI API.") from e
 

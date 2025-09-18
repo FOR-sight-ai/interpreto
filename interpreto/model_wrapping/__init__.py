@@ -22,6 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .model_with_split_points import ActivationGranularity, ModelWithSplitPoints
+from .model_with_split_points import ModelWithSplitPoints
 
-__all__ = ["ActivationGranularity", "ModelWithSplitPoints"]
+__all__ = ["ModelWithSplitPoints"]

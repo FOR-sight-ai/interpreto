@@ -30,19 +30,21 @@ from .overcomplete import (
     DeadNeuronsReanimationLoss,
     DictionaryLearningConcepts,
     DictionaryLearningExplainer,
-    ICAConcepts,
     JumpReLUSAEConcepts,
-    KMeansConcepts,
     MSELoss,
     NMFConcepts,
-    PCAConcepts,
     SAEExplainer,
     SAELossClasses,
     SemiNMFConcepts,
     SparsePCAConcepts,
-    SVDConcepts,
     TopKSAEConcepts,
     VanillaSAEConcepts,
+)
+from .sklearn_wrappers import (
+    ICAConcepts,
+    KMeansConcepts,
+    PCAConcepts,
+    SVDConcepts,
 )
 
 __all__ = [

@@ -29,7 +29,7 @@ nav:
         - Overview: api/attributions/metrics/overview.md
     - Concept Explainers:
       - Overview: api/concepts/overview.md
-      - Model Wrapping: api/commons/model_wrapping.md
+      - ModelWithSplitPoints: api/concepts/model_with_split_points.md
       - Methods:
         - Base Classes: api/concepts/methods/base.md
         - Cockatiel: api/concepts/methods/cockatiel.md
@@ -127,6 +127,8 @@ theme:
     code: Roboto Mono
 
 markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.keys
   - pymdownx.details
   - pymdownx.highlight:
@@ -166,9 +168,9 @@ extra_css:
   - assets/css/custom.css
 
 extra_javascript:
+  - assets/js/custom.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
-  - assets/js/custom.js
 
 extra:
   social:
