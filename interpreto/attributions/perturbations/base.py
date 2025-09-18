@@ -208,9 +208,6 @@ class IdsPerturbator(Perturbator):
         # in most commons cases, this should be set to Granularity.TOKEN
         self.granularity = granularity
 
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        return self.perturb_ids(model_inputs)
-
     @jaxtyped(typechecker=beartype)
     @staticmethod
     def apply_mask(
@@ -258,7 +255,7 @@ class IdsPerturbator(Perturbator):
         """
         raise NotImplementedError()
 
-    def perturb_ids(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         """
         Method called to perturb the inputs of the model
 
