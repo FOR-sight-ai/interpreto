@@ -597,6 +597,7 @@ class ModelWithSplitPoints(LanguageModel):
 
                 # iterate over samples
                 for i, indices in enumerate(granularity_indices):  # type: ignore
+                    sample_activations_list: list[Float[torch.Tensor, "1 d"]] = []
                     # iterate over activations
                     for index in indices:
                         # select activation for the current granularity element
@@ -611,7 +612,13 @@ class ModelWithSplitPoints(LanguageModel):
                             )
                         )
 
-                        activation_list.append(aggregated_activations)
+                        sample_activations_list.append(aggregated_activations)
+
+                    # cat activations for the current sample
+                    sample_activations: Float[torch.Tensor, "g d"] = torch.cat(
+                        sample_activations_list, dim=0
+                    )
+                    activation_list.append(sample_activations)
 
                 return activation_list
 
@@ -782,7 +789,7 @@ class ModelWithSplitPoints(LanguageModel):
         pad_side: str | None = None,
         tqdm_bar: bool = False,
         include_predicted_classes: bool = False,
-        flatten_activations: bool = True,
+        flatten_activations: bool = True,  # TODO: test
         model_forward_kwargs: dict[str, Any] = {},
     ) -> dict[str, LatentActivations] | dict[str, list[LatentActivations]]:
         """
