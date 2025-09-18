@@ -82,8 +82,8 @@ class Perturbator:
         # add perturbation dimension
         if model_inputs["input_ids"].ndim <= 1:
             model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        #model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        #if "inputs_embeds" in model_inputs:
+        # model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
+        # if "inputs_embeds" in model_inputs:
         #    model_inputs["inputs_embeds"] = model_inputs["inputs_embeds"].unsqueeze(0)
         # TODO : eventually add perturbation dimension to other keys in the mapping ?
 
@@ -91,7 +91,6 @@ class Perturbator:
 
     def __call__(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         return self.perturb(model_inputs)
-
 
 
 class EmbeddingsPerturbator(Perturbator):
@@ -187,6 +186,7 @@ class IdsPerturbator(Perturbator):
     Base class for perturbations consisting in applying masks on token (or groups of tokens)
     All perturbators working on input IDs by applying a mask should inherit from this class
     """
+
     __slots__ = ("tokenizer", "n_perturbations", "replace_token_id", "granularity")
 
     def __init__(

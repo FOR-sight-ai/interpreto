@@ -151,15 +151,15 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
 def test_basic_mask_based_methods():
     # basic test data
     sequence_length = 4
-    embedding_dim = 5
+    # embedding_dim = 5
     nb_perturbations = 2
 
-    embeddings = torch.ones(sequence_length, embedding_dim)
+    # embeddings = torch.ones(sequence_length, embedding_dim)
     ids = torch.ones(sequence_length, 1)
 
     # basic masks and mask values
     mask_id = torch.rand(1)
-    #mask_embed = torch.rand(embedding_dim)
+    # mask_embed = torch.rand(embedding_dim)
     all_mask = torch.ones(1, sequence_length)
     no_mask = torch.zeros(1, sequence_length)
     float_mask = torch.rand(nb_perturbations, sequence_length)

@@ -28,7 +28,6 @@ Definition of different granularity levels for explainers (tokens, words, senten
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
 from enum import Enum
 from functools import lru_cache
 
