@@ -89,9 +89,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
             The device to use for forward passes.
             If None, use the one from `model_with_split_points`.
 
-    TODO:
-        Adapt example to added arguments, one example for generation, one for classification
-
     Examples:
         **Minimal example**, finding the topk tokens activating a neuron, similar to Geva et al. (2022) [^1]:
         >>> from transformers import AutoModelForCausalLM
