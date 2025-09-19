@@ -23,6 +23,7 @@
 # SOFTWARE.
 
 from .base import ConceptAutoEncoderExplainer, ConceptEncoderExplainer
+from .interpretations import LLMLabels, TopKInputs
 from .methods import (
     BatchTopKSAEConcepts,
     Cockatiel,
@@ -43,22 +44,24 @@ from .methods import (
 )
 
 __all__ = [
+    "BatchTopKSAEConcepts",
+    "Cockatiel",
     "ConceptAutoEncoderExplainer",
     "ConceptEncoderExplainer",
-    "Cockatiel",
-    "NeuronsAsConcepts",
-    "VanillaSAEConcepts",
-    "TopKSAEConcepts",
-    "BatchTopKSAEConcepts",
-    "JumpReLUSAEConcepts",
-    "SAELossClasses",
-    "NMFConcepts",
-    "SemiNMFConcepts",
     "ConvexNMFConcepts",
-    "PCAConcepts",
-    "ICAConcepts",
-    "KMeansConcepts",
     "DictionaryLearningConcepts",
+    "ICAConcepts",
+    "JumpReLUSAEConcepts",
+    "KMeansConcepts",
+    "LLMLabels",
+    "NeuronsAsConcepts",
+    "NMFConcepts",
+    "PCAConcepts",
+    "SAELossClasses",
+    "SemiNMFConcepts",
     "SparsePCAConcepts",
     "SVDConcepts",
+    "TopKInputs",
+    "TopKSAEConcepts",
+    "VanillaSAEConcepts",
 ]
