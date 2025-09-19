@@ -82,7 +82,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
 
         unique_words_kwargs (dict):
             The kwargs to pass to the `extract_unique_words` function.
-            see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+            See [`extract_unique_words`][interpreto.concepts.interpretations.extract_unique_words] for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         device (torch.device | str | None):
@@ -93,28 +93,129 @@ class TopKInputs(BaseConceptInterpretationMethod):
         Adapt example to added arguments, one example for generation, one for classification
 
     Examples:
-        >>> from datasets import load_dataset
+        **Minimal example**, finding the topk tokens activating a neuron, similar to Geva et al. (2022) [^1]:
+        >>> from transformers import AutoModelForCausalLM
+        >>>
         >>> from interpreto import ModelWithSplitPoints
-        >>> from interpreto.concepts import NeuronsAsConcepts
-        >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> # load and split the model
-        >>> split = "bert.encoder.layer.1.output"
-        >>> model_with_split_points = ModelWithSplitPoints(
-        ...     "hf-internal-testing/tiny-random-bert",
-        ...     split_points=[split],
-        ...     automodel=AutoModelForMaskedLM,
-        ...     batch_size=4,
+        >>> from interpreto.concepts import NeuronsAsConcepts, TopKInputs
+        >>>
+        >>> # load and split the the GPT2 model
+        >>> mwsp = ModelWithSplitPoints(
+        ...     "gpt2",
+        ...     split_points=[11],           # split at the 12th layer
+        ...     automodel=AutoModelForCausalLM,
+        ...     device_map="auto",
+        ...     batch_size=2048,
         ... )
-        >>> # NeuronsAsConcepts do not need to be fitted
-        >>> concept_explainer = NeuronsAsConcepts(model_with_split_points=model_with_split_points, split_point=split)
-        >>> # extracting concept interpretations
-        >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> interpretation_method = TopKInputs(concept_explainer)
-        >>> all_top_k_words = interpretation_method.interpret(
-        ...     concepts_indices="all",
-        ...     inputs=dataset,
-        ...     latent_activations=activations,
+        >>>
+        >>> # Use `NeuronsAsConcepts` to use the concept-based pipeline with neurons
+        >>> concept_explainer = NeuronsAsConcepts(mwsp)
+        >>>
+        >>> method = TopKInputs(
+        ...     concept_explainer=concept_explainer,
+        ...     use_vocab=True,             # use the vocabulary of the model and test all tokens (50257 with GPT2)
+        ...     k=10,                       # get the top 10 tokens for each neuron
         ... )
+        >>>
+        >>> topk_tokens = method.interpret(
+        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
+        ... )
+        >>>
+        >>> print(list(topk_tokens[1].keys()))
+        ['hostages', 'choke', 'infring', 'herpes', 'nuns', 'phylogen', 'watched', 'alitarian', 'tattoos', 'fisher']
+        >>> # Results are not interpretable, due to superposition and such.
+        >>> # This is why we use dictionary to find concept direction!
+
+        **Classification example**, we should fit concepts on the [CLS] token activations,
+        then use `TopKInputs` with `use_unique_words=True` and `activation_granularity=CSL_TOKEN`:
+        >>> from datasets import load_dataset
+        >>> from transformers import AutoModelForSequenceClassification
+        >>>
+        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto.concepts import ICAConcepts, TopKInputs
+        >>>
+        >>> CLS_TOKEN = ModelWithSplitPoints.activation_granularities.CLS_TOKEN
+        >>>
+        >>> # load and split an IMDB classification model
+        >>> mwsp = ModelWithSplitPoints(
+        ...     "textattack/bert-base-uncased-imdb",
+        ...     split_points=[11],              # split at the last layer
+        ...     automodel=AutoModelForSequenceClassification,
+        ...     device_map="cuda",
+        ...     batch_size=64,
+        ... )
+        >>>
+        >>> # load the IMDB dataset and compute a dataset of [CLS] token activations
+        >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
+        >>> activations = mwsp.get_activations(imdb, activation_granularity=CLS_TOKEN)
+        >>>
+        >>> # Load an fit a concept-based explainer
+        >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=20)
+        >>> concept_explainer.fit(activations)
+        >>>
+        >>> method = TopKInputs(
+        ...     concept_explainer=concept_explainer,
+        ...     activation_granularity=CLS_TOKEN,
+        ...     k=5,                            # get the top 10 tokens for each concept
+        ...     use_unique_words=True,          # necessary to get topk words on the [CLS] token
+        ...     unique_words_kwargs={
+        ...         "count_min_threshold": 5,   # only consider words that appear at least 5 times in the dataset
+        ...         "lemmatize": True,          # group words by their lemma (e.g., "bad" and "badly" are grouped together)
+        ...     }
+        ... )
+        >>>
+        >>> topk_words = method.interpret(
+        ...     inputs=imdb,
+        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
+        ... )
+        >>>
+        >>> print(list(topk_words[1].keys()))
+        ['bad', 'bad.', 'hackneyed', 'clichéd', 'cannibal']
+
+        **Generation example**, use either `TOKEN` or `WORD` granularity for activations.
+        `WORD` allows to select the topk words for each concept without recomputing the activations.
+        >>> from datasets import load_dataset
+        >>> from transformers import AutoModelForCausalLM
+        >>>
+        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto.concepts import ICAConcepts, TopKInputs
+        >>>
+        >>> WORD = ModelWithSplitPoints.activation_granularities.WORD
+        >>>
+        >>> # load and split the the GPT2 model
+        >>> mwsp = ModelWithSplitPoints(
+        ...     "Qwen/Qwen3-0.6B",
+        ...     split_points=[9],              # split at the 10th layer
+        ...     automodel=AutoModelForCausalLM,
+        ...     device_map="auto",
+        ...     batch_size=16,
+        ... )
+        >>>
+        >>> # load the IMDB dataset and compute a dataset of words activations
+        >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
+        >>> activations = mwsp.get_activations(imdb, activation_granularity=WORD)
+        >>>
+        >>> # Load an fit a concept-based explainer
+        >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=10)
+        >>> concept_explainer.fit(activations)
+        >>>
+        >>> method = TopKInputs(
+        ...     concept_explainer=concept_explainer,
+        ...     activation_granularity=WORD,    # we want the topk words for each concept
+        ...     k=10,                           # get the top 10 words for each concept
+        ...     device="cuda",
+        ... )
+        >>>
+        >>> topk_tokens = method.interpret(
+        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
+        ...     inputs=imdb,
+        ...     latent_activations=activations, # use previously computed activations (same granularity)
+        ... )
+
+        [^1]: [Mor Geva, Avi Caciularu, Kevin Wang, and Yoav Goldberg. 2022.
+        Transformer Feed-Forward Layers Build Predictions by Promoting Concepts in the Vocabulary Space.
+        In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing, pages 30–45, Abu Dhabi, United Arab Emirates. Association for Computational Linguistics.](https://aclanthology.org/2022.emnlp-main.3/)
+
     """
 
     activation_granularities = ActivationGranularity
