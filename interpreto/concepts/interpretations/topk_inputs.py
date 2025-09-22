@@ -90,7 +90,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
             If None, use the one from `model_with_split_points`.
 
     Examples:
-        **Minimal example**, finding the topk tokens activating a neuron, similar to Geva et al. (2022) [^1]:
+        **Minimal example**, finding the topk tokens activating a neuron:
         >>> from transformers import AutoModelForCausalLM
         >>>
         >>> from interpreto import ModelWithSplitPoints
@@ -208,10 +208,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
         ...     inputs=imdb,
         ...     latent_activations=activations, # use previously computed activations (same granularity)
         ... )
-
-        [^1]: [Mor Geva, Avi Caciularu, Kevin Wang, and Yoav Goldberg. 2022.
-        Transformer Feed-Forward Layers Build Predictions by Promoting Concepts in the Vocabulary Space.
-        In Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing, pages 30–45, Abu Dhabi, United Arab Emirates. Association for Computational Linguistics.](https://aclanthology.org/2022.emnlp-main.3/)
 
     """
 
