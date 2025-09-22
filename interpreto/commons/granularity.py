@@ -182,7 +182,7 @@ class Granularity(Enum):
 
         Args:
             inputs_mapping (BatchEncoding): Tokenized inputs, the output of
-                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True)`
+                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             granularity (Granularity | None, optional): Desired granularity level. Defaults to
                 :attr:`DEFAULT`.
             tokenizer (PreTrainedTokenizer): Hugging-Face tokenizer used downstream.
@@ -313,7 +313,7 @@ class Granularity(Enum):
         Creates the matrix to pass from one granularity level to ALL_TOKENS granularity level (finally used by the perturbator)
 
         Args:
-            inputs (BatchEncoding): Tokenized inputs, the output of `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True)`
+            inputs (BatchEncoding): Tokenized inputs, the output of `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             granularity (Granularity | None, optional): Desired granularity level. Defaults to
                 :attr:`DEFAULT`.
             tokenizer (PreTrainedTokenizer): Hugging-Face tokenizer used downstream.
@@ -362,7 +362,7 @@ class Granularity(Enum):
 
         Args:
             inputs (BatchEncoding): Tokenized inputs to decompose, the output of
-                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True)`
+                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             granularity (Granularity | None, optional): Desired granularity level. Defaults to
                 :attr:`DEFAULT`.
             tokenizer (PreTrainedTokenizer): Huggingface tokenizer used downstream.
