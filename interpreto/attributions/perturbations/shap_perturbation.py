@@ -68,7 +68,7 @@ class ShapTokenPerturbator(TokenMaskBasedPerturbator):
         self.device = device  # type: ignore
 
     @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int) -> Float[Tensor, "{self.n_perturbations} {mask_dim}"]:
+    def get_mask(self, mask_dim: int) -> Float[Tensor, "p {mask_dim}"]:
         """
         Generates a binary mask for each token in the sequence.
 
@@ -89,10 +89,18 @@ class ShapTokenPerturbator(TokenMaskBasedPerturbator):
             mask_dim (int): Length of the input sequence.
 
         Returns:
-            masks (torch.Tensor): A tensor of shape ``((mask_dim + 1) * k, mask_dim)``.
+            masks (torch.Tensor):
+                A tensor of shape ``(self.n_perturbations, mask_dim)``.
+                Might be ``(2**mask_dim, mask_dim)`` if self.n_perturbations is too big.
         """
         # Simplify typing
         p, l = self.n_perturbations, mask_dim
+
+        # If the requested number of perturbations is greater than the possible number of perturbations
+        # we set it to the maximum possible number of perturbations
+        # This solves the issue 68, which arise when l = 2 and p at least greater than 30
+        if l < 20 and p > 2**l:
+            p = 2**l
 
         if l == 1:
             return (torch.rand(p, l, dtype=torch.float) < 0.5).float()
