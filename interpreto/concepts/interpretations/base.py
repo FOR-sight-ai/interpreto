@@ -42,7 +42,6 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
 from interpreto import Granularity, ModelWithSplitPoints
-from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
@@ -206,11 +205,6 @@ class BaseConceptInterpretationMethod(ABC):
 
         activation_granularity (ActivationGranularity):
             The granularity of the activations to use for the interpretation.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
-
-        aggregation_strategy (GranularityAggregationStrategy):
-            The aggregation strategy to use for the activations.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -239,7 +233,6 @@ class BaseConceptInterpretationMethod(ABC):
         self,
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity,
-        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
         use_unique_words: bool = False,
@@ -265,7 +258,6 @@ class BaseConceptInterpretationMethod(ABC):
 
         self.concept_explainer: ConceptEncoderExplainer = concept_explainer
         self.activation_granularity: ActivationGranularity = activation_granularity
-        self.aggregation_strategy: GranularityAggregationStrategy = aggregation_strategy
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
         self.use_unique_words: bool = use_unique_words
@@ -359,14 +351,13 @@ class BaseConceptInterpretationMethod(ABC):
                 self.concept_explainer.model_with_split_points.get_activations(
                     inputs,
                     activation_granularity=self.activation_granularity,
-                    aggregation_strategy=self.aggregation_strategy,
                 )
-            )  # type: ignore
+            )
             latent_activations = (
                 self.concept_explainer.model_with_split_points.get_split_activations(
                     activations_dict, split_point=self.concept_explainer.split_point
                 )
-            )  # type: ignore
+            )
             return self.concepts_activations_from_source(
                 latent_activations=latent_activations, inputs=inputs
             )
@@ -399,27 +390,29 @@ class BaseConceptInterpretationMethod(ABC):
         inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
         inputs: list[str] = list(inputs)
 
-        inputs_or_ids: list[str] | Float[torch.Tensor, "v 1"]
-        if self.aggregation_strategy == ActivationGranularity.CLS_TOKEN:
-            inputs_or_ids = torch.tensor(input_ids).unsqueeze(1)
-        else:
-            inputs_or_ids = inputs
-
         # compute the vocabulary's latent activations
-        activations_dict: dict[str, LatentActivations] = (
-            self.concept_explainer.model_with_split_points.get_activations(
-                inputs_or_ids,
-                activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS,
-                aggregation_strategy=self.aggregation_strategy,
+        if self.activation_granularity == ActivationGranularity.CLS_TOKEN:
+            activations_dict: dict[str, LatentActivations] = (
+                self.concept_explainer.model_with_split_points.get_activations(
+                    inputs,
+                    activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS,
+                )
             )
-        )  # type: ignore
-
-        # compute the vocabulary's concepts activations
-        latent_activations: LatentActivations = (
+        else:
+            input_tensor: Float[torch.Tensor, "v 1"] = torch.tensor(
+                input_ids
+            ).unsqueeze(1)
+            activations_dict: dict[str, LatentActivations] = (
+                self.concept_explainer.model_with_split_points.get_activations(
+                    input_tensor,
+                    activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS,
+                )
+            )
+        latent_activations = (
             self.concept_explainer.model_with_split_points.get_split_activations(
                 activations_dict, split_point=self.concept_explainer.split_point
             )
-        )  # type: ignore
+        )
         concepts_activations = self.concept_explainer.encode_activations(
             latent_activations
         )
@@ -437,15 +430,9 @@ class BaseConceptInterpretationMethod(ABC):
             inputs (list[str]): n text samples
 
         Returns:
-            granular_flattened_texts (list[str]):
-                The granular texts elements from the inputs, flattened.
-                [Example1_Tok1, Example1_Tok2, ... Example2_Tok1, Example2_Tok2, ...]
-
-            granular_flattened_sample_id (list[int]):
-                The sample id for each granular text, to keep track of which sample the text belongs to.
-                It should have the same length as `granular_flattened_texts`.
-                It elements indicates the sample if for the corresponding granular text in `granular_flattened_texts`.
-                [0, 0, ... 1, 1, ...]
+            tuple[list[str], list[int]]:
+                - list[str]: The granular texts from the inputs, flattened
+                - list[int]: The sample id for each granular text, to keep track of which sample the text belongs to.
         """
         if self.activation_granularity in (
             ActivationGranularity.SAMPLE,
@@ -514,8 +501,6 @@ class BaseConceptInterpretationMethod(ABC):
 
             granular_sample_ids (list[int]):
                 The granular sample ids for the specified concepts.
-                Each element of the list is the index of the input sample from which the corresponding granular input was extracted.
-                It has the same length as `granular_inputs`.
 
         """
         if concepts_indices == "all":
