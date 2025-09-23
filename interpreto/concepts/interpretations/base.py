@@ -80,18 +80,35 @@ def extract_unique_words(
         ["interpreto", "is", "the", "latin", "for", "to", "'", "interpret", ".", "magic"]
 
         More complex use:
+        >>> import nltk
         >>> from datasets import load_dataset
         >>> from nltk.corpus import stopwords
-        >>> from interpreto.concepts.interpretations.topk_inputs import extract_unique_words
+        >>>
+        >>> from interpreto.concepts.interpretations import extract_unique_words
+        >>>
+        >>> nltk.download("stopwords")
+        >>>
         >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
         >>> extract_unique_words(
         ...     inputs=dataset,
         ...     count_min_threshold=20,
         ...     return_counts=True,
         ...     lemmatize=True,
-        ...     words_to_ignore=stopwords.words("english"),
+        ...     words_to_ignore=stopwords.words("english") + [".", ",", "'s", "n't", "--", "``", "'"],
         ... )
-        Counter(TODO)
+        Counter({'film': 1402,
+                 'movie': 1243,
+                 'one': 594,
+                 'like': 574,
+                 'ha': 563,
+                 'make': 437,
+                 'story': 417,
+        ...
+                 'pop': 20,
+                 'college': 20,
+                 'bear': 20,
+                 'plain': 20,
+                 'generic': 20})
 
     Returns:
         list[str] | Counter[str]:

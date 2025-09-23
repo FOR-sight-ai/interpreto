@@ -105,7 +105,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         [Language models can explain neurons in language models](https://openaipublic.blob.core.windows.net/neuron-explainer/paper/index.html)
         2023.
 
-    Attributes:
+    Arguments:
         concept_explainer (ConceptEncoderExplainer):
             The fitted concept explainer used for encoding activations.
 
@@ -137,7 +137,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
         unique_words_kwargs (dict):
             The kwargs to pass to the `extract_unique_words` function.
-            see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+            See [`extract_unique_words`][interpreto.concepts.interpretations.extract_unique_words] for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         k_quantile (int):
