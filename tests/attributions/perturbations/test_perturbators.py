@@ -21,7 +21,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
 from collections.abc import MutableMapping
 
 import pytest
@@ -36,7 +35,7 @@ from interpreto.attributions.perturbations import (
     ShapTokenPerturbator,
     SobolTokenPerturbator,
 )
-from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
+from interpreto.attributions.perturbations.base import IdsPerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import Granularity
 
@@ -59,7 +58,7 @@ DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 @pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
 def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
-    assert not issubclass(perturbator_class, TokenMaskBasedPerturbator)
+    assert not issubclass(perturbator_class, IdsPerturbator)
     p = 10
     d = 32
     inputs_embedder = bert_model.get_input_embeddings()
@@ -92,9 +91,8 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
 @pytest.mark.parametrize("perturbator_class", tokens_perturbators)
 def test_token_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
-    assert issubclass(perturbator_class, TokenMaskBasedPerturbator)
+    assert issubclass(perturbator_class, IdsPerturbator)
     p = 10
-    inputs_embedder = bert_model.get_input_embeddings()
 
     replace_token = "[REPLACE]"
     if replace_token not in bert_tokenizer.get_vocab():
@@ -106,14 +104,12 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         # the number of perturbations depends on the sequence length
         perturbator = perturbator_class(
             tokenizer=bert_tokenizer,
-            inputs_embedder=inputs_embedder,
             granularity=Granularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
         )
     else:
         perturbator = perturbator_class(
             tokenizer=bert_tokenizer,
-            inputs_embedder=inputs_embedder,
             granularity=Granularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
             n_perturbations=p,
@@ -152,11 +148,51 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         assert perturbed_inputs["attention_mask"].shape == (real_p, l)
 
 
-# TODO: test apply mask
+def test_basic_mask_based_methods():
+    # basic test data
+    sequence_length = 4
+    # embedding_dim = 5
+    nb_perturbations = 2
 
-# TODO: test granularity functions and resulting masks
+    # embeddings = torch.ones(sequence_length, embedding_dim)
+    ids = torch.ones(sequence_length, 1).int()
 
-# TODO: test granularity perturbation application on inputs
+    # basic masks and mask values
+    mask_id = torch.rand(1)
+    # mask_embed = torch.rand(embedding_dim)
+    all_mask = torch.ones(1, sequence_length)
+    no_mask = torch.zeros(1, sequence_length)
+    float_mask = torch.rand(nb_perturbations, sequence_length)
+    binary_mask = (float_mask > 0.5).float()
+
+    # tests
+    # assert torch.equal(
+    #     IdsPerturbator.apply_mask(embeddings, all_mask, mask_embed),
+    #     mask_embed.reshape(1, 1, embedding_dim).repeat(1, sequence_length, 1),
+    # )
+    # assert torch.equal(IdsPerturbator.apply_mask(embeddings, no_mask, mask_embed), embeddings.unsqueeze(0))
+
+    assert torch.equal(
+        IdsPerturbator.apply_mask(ids, all_mask, mask_id),
+        (mask_id * torch.ones_like(ids)).unsqueeze(0).squeeze(-1),
+    )
+    assert torch.equal(IdsPerturbator.apply_mask(ids, no_mask, mask_id), ids.unsqueeze(0).squeeze(-1))
+    assert torch.equal(
+        IdsPerturbator.apply_mask(ids, float_mask, mask_id),
+        (ids.unsqueeze(0) * (1 - float_mask).unsqueeze(-1) + mask_id * float_mask.unsqueeze(-1)).squeeze(-1),
+    )
+    assert torch.equal(
+        IdsPerturbator.apply_mask(ids, binary_mask, mask_id),
+        (ids.unsqueeze(0) * (1 - binary_mask).unsqueeze(-1) + mask_id * binary_mask.unsqueeze(-1)).squeeze(-1),
+    )
+    # assert torch.equal(
+    #     IdsPerturbator.apply_mask(embeddings, float_mask, mask_embed),
+    #     embeddings.unsqueeze(0) * (1 - float_mask).unsqueeze(-1) + mask_embed * float_mask.unsqueeze(-1),
+    # )
+    # assert torch.equal(
+    #     IdsPerturbator.apply_mask(embeddings, binary_mask, mask_embed),
+    #     embeddings.unsqueeze(0) * (1 - binary_mask).unsqueeze(-1) + mask_embed * binary_mask.unsqueeze(-1),
+    # )
 
 
 def test_linear_interpolation_perturbation_adjust_baseline():
@@ -238,7 +274,6 @@ def test_linear_interpolation_perturbation_adjust_baseline_invalid():
 def test_sobol_masks(sampler):
     k = 10
     perturbator = SobolTokenPerturbator(
-        inputs_embedder=None,
         n_token_perturbations=k,
         sampler=sampler,
     )
@@ -260,7 +295,7 @@ def test_sobol_masks(sampler):
 
 
 def test_occlusion_masks():
-    perturbator = OcclusionPerturbator(inputs_embedder=None)
+    perturbator = OcclusionPerturbator()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))
@@ -273,6 +308,8 @@ if __name__ == "__main__":
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
         "Interpreto is magical",
         "Testing interpreto",
+        "Magma is a bad album",
+        "This is a string mith multiples sentences. I assume it works too! Right? I hope so.",
     ]
     bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
     bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")

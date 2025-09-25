@@ -28,11 +28,11 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.base import Perturbator
+from interpreto.attributions.perturbations.base import EmbeddingsPerturbator
 from interpreto.typing import TensorMapping
 
 
-class GaussianNoisePerturbator(Perturbator):
+class GaussianNoisePerturbator(EmbeddingsPerturbator):
     """
     Perturbator adding gaussian noise to the input tensor
     """

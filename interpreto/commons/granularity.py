@@ -30,7 +30,6 @@ from __future__ import annotations
 import os
 from enum import Enum
 from functools import lru_cache
-from typing import Protocol
 
 import torch
 from beartype import beartype
@@ -137,22 +136,7 @@ class GranularityAggregationStrategy(Enum):
                 raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
 
 
-class AggregationProtocol(Protocol):
-    """Protocol for aggregation strategies used in :meth:`ModelWithSplitPoints.get_activations`."""
-
-    def __call__(self, x: torch.Tensor, dim: int) -> torch.Tensor:
-        """Aggregate activations.
-
-        Args:
-            x (torch.Tensor): The tensor to aggregate.
-
-        Returns:
-            torch.Tensor: The aggregated tensor.
-        """
-        ...
-
-
-class Granularity:
+class Granularity(Enum):
     """
     Enumerations of the different granularity levels supported for masking perturbations
     Allows to define token-wise masking, word-wise masking...
@@ -164,7 +148,6 @@ class Granularity:
     SENTENCE = "sentence"  # Sentences of the input
     # PARAGRAPH = "paragraph"  # Not supported yet, the "\n\n" characters are replaced by spaces in many tokenizers.
     DEFAULT = ALL_TOKENS
-    aggregation_strategies = GranularityAggregationStrategy
 
     @staticmethod
     # @jaxtyped(typechecker=beartype)
@@ -199,7 +182,7 @@ class Granularity:
 
         Args:
             inputs_mapping (BatchEncoding): Tokenized inputs, the output of
-                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True)`
+                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             granularity (Granularity | None, optional): Desired granularity level. Defaults to
                 :attr:`DEFAULT`.
             tokenizer (PreTrainedTokenizer): Hugging-Face tokenizer used downstream.
@@ -297,18 +280,18 @@ class Granularity:
                 raise NotImplementedError(f"Granularity level {granularity} not implemented")
 
     @staticmethod
-    def __all_tokens_get_indices(tokens_ids) -> list[list[int]]:
+    def __all_tokens_get_indices(tokens_ids: torch.Tensor) -> list[list[int]]:
         """Indices for :pyattr:`ALL_TOKENS` – every position kept."""
         length = len(tokens_ids)
         return [[i] for i in range(length)]
 
     @staticmethod
-    def __token_get_indices(tokens_ids, special_ids) -> list[list[int]]:
+    def __token_get_indices(tokens_ids: torch.Tensor, special_ids: list[int]) -> list[list[int]]:
         """Indices for :pyattr:`TOKEN` – skip special tokens."""
         return [[i] for i, tok_id in enumerate(tokens_ids) if tok_id not in special_ids]
 
     @staticmethod
-    def __word_get_indices(word_ids) -> list[list[int]]:
+    def __word_get_indices(word_ids: torch.Tensor) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         mapping: dict[int, list[int]] = {}
         for idx, wid in enumerate(word_ids):
@@ -330,7 +313,7 @@ class Granularity:
         Creates the matrix to pass from one granularity level to ALL_TOKENS granularity level (finally used by the perturbator)
 
         Args:
-            inputs (BatchEncoding): Tokenized inputs, the output of `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True)`
+            inputs (BatchEncoding): Tokenized inputs, the output of `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             granularity (Granularity | None, optional): Desired granularity level. Defaults to
                 :attr:`DEFAULT`.
             tokenizer (PreTrainedTokenizer): Hugging-Face tokenizer used downstream.
@@ -379,7 +362,7 @@ class Granularity:
 
         Args:
             inputs (BatchEncoding): Tokenized inputs to decompose, the output of
-                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True)`
+                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             granularity (Granularity | None, optional): Desired granularity level. Defaults to
                 :attr:`DEFAULT`.
             tokenizer (PreTrainedTokenizer): Huggingface tokenizer used downstream.
