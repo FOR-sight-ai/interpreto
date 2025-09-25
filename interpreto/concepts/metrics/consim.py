@@ -1037,7 +1037,7 @@ class ConSim:
         return prompt, literal_model_predictions
 
     @staticmethod
-    def _extract_predictions_from_response(response: str, expected_length: int) -> list[str] | None:
+    def _extract_predictions_from_response(response: str | None, expected_length: int) -> list[str] | None:
         """
         Extract the model predictions from the response.
         The response is expected to be a list of predictions for each sample.
@@ -1106,9 +1106,12 @@ class ConSim:
                 If the model predictions and the user-llm predictions have different lengths.
         """
         if len(model_predictions) != len(user_llm_predictions):
-            raise ValueError(
-                f"Predictions between model and user-llm have different lengths, respectively: {len(model_predictions)} and {len(user_llm_predictions)}."
+            warnings.warn(
+                "Predictions between model and user-llm have different lengths, returning None"
+                f"respectively: {len(model_predictions)} and {len(user_llm_predictions)}.",
+                stacklevel=2,
             )
+            return None
 
         n_correct = len(
             [
@@ -1122,7 +1125,7 @@ class ConSim:
 
     @staticmethod
     def _compute_score(
-        user_llm_response: str,
+        user_llm_response: str | None,
         literal_model_predictions: list[str],
     ) -> float | None:
         """
@@ -1159,9 +1162,10 @@ class ConSim:
 
         if literal_meta_predictions is None or len(literal_meta_predictions) == 0:
             warnings.warn(
-                "The user-llm responses are empty or the format is not respected. Returning None. "\
+                "The user-llm responses are empty or the format is not respected. Returning None. "
                 f"The response was: '{user_llm_response}'",
-                stacklevel=2)
+                stacklevel=2,
+            )
             return None
 
         # compute the accuracy

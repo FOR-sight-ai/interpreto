@@ -180,8 +180,9 @@ def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
     assert consim_preds.shape == (len(inputs),), "consim._get_predictions outputs lengths should match the inputs"
 
     # Check that both predictions are equal
-    assert torch.allclose(nnsight_preds, consim_preds, atol=1e-6),\
+    assert torch.allclose(nnsight_preds, consim_preds, atol=1e-6), (
         "consim._get_predictions outputs should match manually computed ones"
+    )
 
 
 def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplitPoints):
@@ -201,15 +202,18 @@ def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplit
     )
 
     # ensure samples, labels, and predictions all have 4 elements, 2 correct and 2 incorrect
-    assert len(samples) == 4,\
-        "number of samples from `consim._extract_interesting_elements`"\
+    assert len(samples) == 4, (
+        "number of samples from `consim._extract_interesting_elements`"
         "should match the sum of nb_lp_samples and nb_ep_samples"
-    assert labels.shape == (4,),\
-        "number of labels from `consim._extract_interesting_elements`"\
+    )
+    assert labels.shape == (4,), (
+        "number of labels from `consim._extract_interesting_elements`"
         "should match the sum of nb_lp_samples and nb_ep_samples"
-    assert predictions.shape == (4,)\
-        "number of predictions from `consim._extract_interesting_elements`"\
+    )
+    assert predictions.shape == (4,), (
+        "number of predictions from `consim._extract_interesting_elements`"
         "should match the sum of nb_lp_samples and nb_ep_samples"
+    )
 
     # ensure exactly half of the predictions match the labels
     assert torch.sum(labels == predictions) == 2, "exactly half of the predictions should match the labels"
@@ -245,15 +249,15 @@ def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
     samples, labels, predictions = consim.select_examples(inputs, labels, nb_lp_samples=2, nb_ep_samples=2, seed=0)
 
     # ensure samples, labels, and predictions all have 4 elements, 2 correct and 2 incorrect
-    assert len(samples) == 4,\
-        "number of samples from `consim.select_examples`"\
-        "should match the sum of nb_lp_samples and nb_ep_samples"
-    assert labels.shape == (4,),\
-        "number of labels from `consim.select_examples`"\
-        "should match the sum of nb_lp_samples and nb_ep_samples"
-    assert predictions.shape == (4,),\
-        "number of predictions from `consim.select_examples`"\
-        "should match the sum of nb_lp_samples and nb_ep_samples"
+    assert len(samples) == 4, (
+        "number of samples from `consim.select_examples`should match the sum of nb_lp_samples and nb_ep_samples"
+    )
+    assert labels.shape == (4,), (
+        "number of labels from `consim.select_examples`should match the sum of nb_lp_samples and nb_ep_samples"
+    )
+    assert predictions.shape == (4,), (
+        "number of predictions from `consim.select_examples`should match the sum of nb_lp_samples and nb_ep_samples"
+    )
 
     # ensure exactly half of the predictions match the labels
     assert torch.sum(labels == predictions) == 2, "exactly half of the predictions should match the labels"
@@ -269,11 +273,19 @@ def test_consim_quantize_importances():
     """
     thr = 0.05
     assert ConSim._quantize_importances(0.4, thr) == "++", "quantize_importances should return '++' for values > 0.3"
-    assert ConSim._quantize_importances(0.1, thr) == "+", "quantize_importances should return '+' for values between 0.05 and 0.3"
-    assert ConSim._quantize_importances(-0.1, thr) == "-", "quantize_importances should return '-' for values between -0.3 and -0.05"
+    assert ConSim._quantize_importances(0.1, thr) == "+", (
+        "quantize_importances should return '+' for values between 0.05 and 0.3"
+    )
+    assert ConSim._quantize_importances(-0.1, thr) == "-", (
+        "quantize_importances should return '-' for values between -0.3 and -0.05"
+    )
     assert ConSim._quantize_importances(-0.5, thr) == "--", "quantize_importances should return '--' for values < -0.3"
-    assert ConSim._quantize_importances(0.04, thr) is None, "quantize_importances should return None for values between -0.05 and 0.05"
-    assert ConSim._quantize_importances(-0.04, thr) is None, "quantize_importances should return None for values between -0.05 and 0.05"
+    assert ConSim._quantize_importances(0.04, thr) is None, (
+        "quantize_importances should return None for values between -0.05 and 0.05"
+    )
+    assert ConSim._quantize_importances(-0.04, thr) is None, (
+        "quantize_importances should return None for values between -0.05 and 0.05"
+    )
 
 
 def test_consim_filter_and_quantize_concepts_importances():
@@ -313,8 +325,12 @@ def test_consim_filter_and_quantize_concepts_importances():
 
     # global concepts under the threshold should be removed globally, in this case concept_2
     assert "concept_2" not in interp, "concepts with low global importance should be removed from the interpretation"
-    assert all("concept_2" not in gi for gi in glob_imp.values()), "concepts with low global importance should be removed from the global importances"
-    assert all("concept_2" not in li for li in loc_imp), "concepts with low global importance should be removed from the local importances"
+    assert all("concept_2" not in gi for gi in glob_imp.values()), (
+        "concepts with low global importance should be removed from the global importances"
+    )
+    assert all("concept_2" not in li for li in loc_imp), (
+        "concepts with low global importance should be removed from the local importances"
+    )
 
     # ensure other concepts are not removed
     for c in ["concept_0", "concept_1", "concept_3"]:
@@ -323,8 +339,12 @@ def test_consim_filter_and_quantize_concepts_importances():
         assert c in glob_imp["B"], "concepts with high global importance should be kept in the global importances"
 
     # local concepts under the threshold should be removed locally, in this case concept_1 and concept_3 in the first sample
-    assert "concept_1" not in loc_imp[0], "concepts with low local importance should be removed from the local importances"
-    assert "concept_3" not in loc_imp[0], "concepts with low local importance should be removed from the local importances"
+    assert "concept_1" not in loc_imp[0], (
+        "concepts with low local importance should be removed from the local importances"
+    )
+    assert "concept_3" not in loc_imp[0], (
+        "concepts with low local importance should be removed from the local importances"
+    )
 
     # ensure that values have been quantized and have the correct literal
     assert glob_imp["A"]["concept_0"] == "++", "wrong global importance quantization"  # 0.5
@@ -433,9 +453,13 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     #     global concepts importance
     if prompt_settings.concepts_global_importances:
         if anonymize_classes:
-            assert "Class_0: {'concept_0': '++'}" in system, "system prompt should contain the anonymized global concepts importance"
+            assert "Class_0: {'concept_0': '++'}" in system, (
+                "system prompt should contain the anonymized global concepts importance"
+            )
         else:
-            assert "B: {'concept_0': '-'}" in system, "system prompt should contain the anonymized global concepts importance"
+            assert "B: {'concept_0': '-'}" in system, (
+                "system prompt should contain the anonymized global concepts importance"
+            )
 
     # --------------
     # Learning Phase
@@ -446,7 +470,9 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         assert "Sample_2" not in system and "Sample_3" not in system, "system prompt should not contain the ep samples"
         # labels
         if anonymize_classes:
-            assert "Sample_0: Class_0\nSample_1: Class_1" in system, "system prompt should contain the anonymized predictions"
+            assert "Sample_0: Class_0\nSample_1: Class_1" in system, (
+                "system prompt should contain the anonymized predictions"
+            )
         else:
             assert "Sample_0: A\nSample_1: B" in system, "system prompt should contain the predictions"
 
@@ -505,17 +531,29 @@ def test_consim_generate_prompt():
     # glob = {"A": {"concept_0": 0.6}, "B": {"concept_0": -0.6}}
     # with the concept_1 being removed
     assert "concept_1" not in system, "concepts with low global importance should be removed from the system prompt"
-    assert "concept_0: word" in system, "high global importance concepts should be in the system prompt"  # E3 includes the concepts interpretation
-    assert "A: {'concept_0': '++'}" in system, "high global importance concepts should be in the system prompt"  # E3 includes the global concepts importance
-    assert "B: {'concept_0': '--'}" in system, "high global importance concepts should be in the system prompt"  # E3 includes the global concepts importance
+    assert "concept_0: word" in system, (
+        "high global importance concepts should be in the system prompt"
+    )  # E3 includes the concepts interpretation
+    assert "A: {'concept_0': '++'}" in system, (
+        "high global importance concepts should be in the system prompt"
+    )  # E3 includes the global concepts importance
+    assert "B: {'concept_0': '--'}" in system, (
+        "high global importance concepts should be in the system prompt"
+    )  # E3 includes the global concepts importance
     assert "Sample_0: s0\nSample_1: s1" in system, "system prompt should contain the lp samples"
     assert "Sample_2" not in system and "Sample_3" not in system, "system prompt should not contain the ep samples"
     assert "Sample_0: A\nSample_1: B" in system, "system prompt should contain the predictions"
-    assert "Sample_0: {'concept_0': '++'}" in system, "system prompt should contain the local concept importance"  # E3 includes the local concepts contribution
-    assert "Sample_1: {'concept_0': '--'}" in system, "system prompt should contain the local concept importance"  # E3 includes the local concepts contribution
+    assert "Sample_0: {'concept_0': '++'}" in system, (
+        "system prompt should contain the local concept importance"
+    )  # E3 includes the local concepts contribution
+    assert "Sample_1: {'concept_0': '--'}" in system, (
+        "system prompt should contain the local concept importance"
+    )  # E3 includes the local concepts contribution
     assert "Sample_2: s2\nSample_3: s3" in user, "user prompt should contain the ep samples"
     assert "Sample_0" not in user and "Sample_1" not in user, "user prompt should not contain the lp samples"
-    assert "concept" not in user, "user prompt should not contain the local importance"  # E3 does not include the concepts contributions in the user prompt
+    assert "concept" not in user, (
+        "user prompt should not contain the local importance"
+    )  # E3 does not include the concepts contributions in the user prompt
 
 
 def test_consim_extract_predictions_from_response():
@@ -527,10 +565,14 @@ def test_consim_extract_predictions_from_response():
     assert preds == ["a", "b"], "extracted predictions from response should match the expected ones"
 
     # wrong length should return None
-    assert ConSim._extract_predictions_from_response("Sample_0: A", expected_length=2) is None, "wrong length should return None"
+    assert ConSim._extract_predictions_from_response("Sample_0: A", expected_length=2) is None, (
+        "wrong length should return None"
+    )
 
     # wrong format should return None
-    assert ConSim._extract_predictions_from_response("[A, B]", expected_length=2) is None, "wrong format should return None"
+    assert ConSim._extract_predictions_from_response("[A, B]", expected_length=2) is None, (
+        "wrong format should return None"
+    )
 
 
 def test_consim_predictions_accuracy():
@@ -542,13 +584,10 @@ def test_consim_predictions_accuracy():
     score = ConSim._predictions_accuracy(preds1, preds2)
     assert score == 2 / 3, "predictions accuracy should match the expected value"
 
-    # empty predictions should return None
+    # empty predictions or different lengths should return None
     assert ConSim._predictions_accuracy([], ["a", "b"]) is None, "empty predictions should return None"
     assert ConSim._predictions_accuracy(["a", "b"], []) is None, "empty predictions should return None"
-
-    # different lengths should raise a ValueError
-    with pytest.raises(ValueError):
-        ConSim._predictions_accuracy(["a"], ["a", "b"])
+    assert ConSim._predictions_accuracy(["a"], ["a", "b"]) is None, "different prediction and llm responses should return None"
 
 
 def test_consim_compute_score(splitted_encoder_ml: ModelWithSplitPoints):
@@ -773,7 +812,9 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
         anonymize_classes=True,
     )
 
-    assert score is None or 0.0 <= score <= 1.0, "consim score should be between 0 and 1 or None if something went wrong"
+    assert score is None or 0.0 <= score <= 1.0, (
+        "consim score should be between 0 and 1 or None if something went wrong"
+    )
 
 
 if __name__ == "__main__":
