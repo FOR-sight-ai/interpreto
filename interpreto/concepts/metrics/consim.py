@@ -524,7 +524,7 @@ class ConSim:
     def _quantize_importances(importance: float, threshold: float = 0.05) -> str | None:
         """
         Convert the normalized importances to literals.
-        The literals are:
+        The literals and ranges (values for the default threshold value of 0.05) are:
         - "++" for values above 0.3
         - "+" for values between 0.05 and 0.3
         - "-" for values between -0.05 and -0.3
@@ -571,7 +571,7 @@ class ConSim:
         Only the intersection between the two are kept.
 
         The concepts importance are quantized to literals.
-        The corresponding literals are:
+        The corresponding literals and ranges (values for the default threshold value of 0.05) are:
 
         - "++" for values above 0.3
 
@@ -1249,15 +1249,19 @@ class ConSim:
 
         Returns:
             score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]
-                The score of the ConSim metric.
-                If the user-llm predictions are empty or in the wrong format, returns None.
-                It was chosen to return None,
-                because ConSim should be called a lot of times for statistically significant results.
-                Therefore, having a None score once in a while is better than the script crashing.
+                Possible outputs:
 
-                If no user_llm is provided, returns the prompts and the model predictions.
-                The user will have to call the ConSim prompts manually.
-                The response of the LLM on the prompts should be compared to the model predictions.
+                - score (float): The score of the ConSim metric. (The nominal behavior)
+                - None: If the model predictions are empty or the user-llm predictions are empty.
+                    It was chosen to return None,
+                    because ConSim should be called a lot of times for statistically significant results.
+                    Therefore, having a None score once in a while is better than the script crashing.
+                - prompts and model predictions (tuple[list[tuple[Role, str]], list[str]]):
+                    If no user_llm is provided, returns the prompts and the model predictions.
+                    The prompt is the first element of the tuple (list[tuple[Role, str]]).
+                    The predictions are the second element of the tuple (list[str]).
+                    The user will have to call the ConSim prompts manually.
+                    The response of the LLM on the prompts should be compared to the model predictions.
 
         Raises:
             ValueError
