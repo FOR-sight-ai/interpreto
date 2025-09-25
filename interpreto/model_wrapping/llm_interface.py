@@ -54,7 +54,7 @@ class LLMInterface(ABC):
 
 #     def generate(self, system_prompt: str, user_prompt: str, max_new_tokens: int = 200) -> str:
 #         prompt = f"{system_prompt}\n\nUser: {user_prompt}\nAssistant:"
-#         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+#         inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True).to(self.device)
 #         output_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=True)
 #         output = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
 #         return output[len(prompt) :].strip()

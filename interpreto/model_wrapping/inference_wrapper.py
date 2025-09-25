@@ -270,6 +270,12 @@ class InferenceWrapper(ABC):
                 f"Batch size of {inputs_embeds.shape[0]} is greater than the wrapper's batch size of {self.batch_size}. "
                 f"Consider adjust the batch size or the wrapper of split your data.",
             )
+        # Check sequence length
+        if input_ids is not None and getattr(self.model.config, "max_position_embeddings", False) and input_ids.shape[-1] > self.model.config.max_position_embeddings:
+            raise ValueError(
+                f"Input sequence length ({input_ids.shape[1]}) exceeds model's maximum "
+                f"input length ({self.model.config.max_position_embeddings}). Please truncate your inputs by specifying 'truncation=True' or 'max_length={self.model.config.max_position_embeddings}' to the tokenizer call or change the model."
+            )
 
         # send input to device
         if input_ids is not None:

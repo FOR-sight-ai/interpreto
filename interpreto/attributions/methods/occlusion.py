@@ -94,7 +94,6 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
 
         perturbator = OcclusionPerturbator(
             tokenizer=tokenizer,
-            inputs_embedder=model.get_input_embeddings(),
             granularity=granularity,
             replace_token_id=replace_token_id,
         )

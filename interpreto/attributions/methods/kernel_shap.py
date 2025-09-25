@@ -99,7 +99,6 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
 
         perturbator = ShapTokenPerturbator(
             tokenizer=tokenizer,
-            inputs_embedder=model.get_input_embeddings(),
             granularity=granularity,
             replace_token_id=replace_token_id,
             n_perturbations=n_perturbations,
