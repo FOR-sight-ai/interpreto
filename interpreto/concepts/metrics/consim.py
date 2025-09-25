@@ -384,6 +384,12 @@ class ConSim:
         nb_correct = (nb_lp_samples + nb_ep_samples) // 2
         nb_mistakes = nb_lp_samples + nb_ep_samples - nb_correct
 
+        if nb_classes > nb_lp_samples:
+            raise ValueError(
+                f"Not enough samples ({nb_lp_samples}) to represent the {nb_classes} classes in the learning phase."
+                "Please increase the number of learning phase samples or take a subset of classes."
+            )
+
         # Find the correct and incorrect indices
         is_prediction_correct = predictions == labels
         correct_indices = torch.nonzero(is_prediction_correct)
@@ -393,7 +399,7 @@ class ConSim:
         if len(correct_indices) < nb_correct or len(incorrect_indices) < nb_mistakes:
             raise ValueError(
                 f"Not enough correct or incorrect predictions to select {nb_correct} correct and {nb_mistakes} incorrect."
-                f"Either provide more inputs (actually {len(correct_indices)} correct and {len(incorrect_indices)} incorrect)"
+                f"Either provide more inputs (currently {len(correct_indices)} correct and {len(incorrect_indices)} incorrect)"
                 "or reduce the number of samples to select."
             )
 
