@@ -1062,7 +1062,7 @@ class ConSim:
                 The model predictions.
                 If the response is empty or the expected length is not respected, returns None.
         """
-        if response == "":
+        if response == "" or response is None:
             return None
 
         sentences = response.split("\n")
@@ -1105,11 +1105,6 @@ class ConSim:
             ValueError
                 If the model predictions and the user-llm predictions have different lengths.
         """
-        if len(model_predictions) == 0 or len(user_llm_predictions) == 0:
-            # TODO: discuss if we prefer to return None or raise an error with explicit message
-            # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
-            return None
-
         if len(model_predictions) != len(user_llm_predictions):
             raise ValueError(
                 f"Predictions between model and user-llm have different lengths, respectively: {len(model_predictions)} and {len(user_llm_predictions)}."
@@ -1162,9 +1157,11 @@ class ConSim:
             response=user_llm_response, expected_length=len(literal_model_predictions)
         )
 
-        if literal_meta_predictions is None:
-            # TODO: discuss if we prefer to return None or raise an error with explicit message
-            # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
+        if literal_meta_predictions is None or len(literal_meta_predictions) == 0:
+            warnings.warn(
+                "The user-llm responses are empty or the format is not respected. Returning None. "\
+                f"The response was: '{user_llm_response}'",
+                stacklevel=2)
             return None
 
         # compute the accuracy
@@ -1266,6 +1263,8 @@ class ConSim:
         Raises:
             ValueError
                 If the model predictions and the user-llm predictions have different lengths.
+            Warnings
+                If the user-llm response is empty or the format is not respected.
         """
         # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
         if concept_explainer.split_point not in self.model_with_split_points.split_points:
@@ -1325,11 +1324,7 @@ class ConSim:
 
         user_llm_response = self.user_llm.generate(prompts)
 
-        if user_llm_response is None:
-            # TODO: discuss if we prefer to return None or raise an error with explicit message
-            # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
-            return None
-
+        # raise warnings if the response is empty or the format is not respected
         return self._compute_score(
             user_llm_response=user_llm_response,
             literal_model_predictions=literal_model_predictions,
