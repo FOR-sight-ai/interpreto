@@ -1062,6 +1062,9 @@ class ConSim:
                 The model predictions.
                 If the response is empty or the expected length is not respected, returns None.
         """
+        if response == "":
+            return None
+
         sentences = response.split("\n")
 
         while sentences[-1] == "":
