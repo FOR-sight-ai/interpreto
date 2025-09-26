@@ -112,6 +112,8 @@ cleanup() {
     if ! $committed; then
         git checkout -- pyproject.toml >/dev/null 2>&1 || true
     fi
+    # Optional: surface unexpected failures
+    echo -e "${RED}Error:${RESET} Unexpected failure (see steps above)."
 }
 trap cleanup ERR INT
 
