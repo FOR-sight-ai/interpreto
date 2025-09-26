@@ -128,19 +128,19 @@ else
     error "Version number was not updated."
 fi
 
-# git commit -m "${current_version} -> ${next_version}"
-# committed=true
+git commit -m "${current_version} -> ${next_version}"
+committed=true
 
-# if ! git push; then
-#     error "Failed to push commit to upstream."
-# fi
+if ! git push; then
+    error "Failed to push commit to upstream."
+fi
 
-# if ! git tag "${tag_name}"; then
-#     error "Failed to create tag ${tag_name}."
-# fi
+if ! git tag "${tag_name}"; then
+    error "Failed to create tag ${tag_name}."
+fi
 
-# if ! git push origin "${tag_name}"; then
-#     error "Failed to push tag ${tag_name} to origin."
-# fi
+if ! git push origin "${tag_name}"; then
+    error "Failed to push tag ${tag_name} to origin."
+fi
 
 echo -e "${GREEN}Version bumped from ${current_version} to ${next_version}.${RESET}"
