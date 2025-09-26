@@ -66,18 +66,9 @@ current_version=${current_version%\"}
 IFS='.' read -r major minor patch <<<"$current_version"
 
 case "$part" in
-    major)
-        ((major++))
-        minor=0
-        patch=0
-        ;;
-    minor)
-        ((minor++))
-        patch=0
-        ;;
-    patch)
-        ((patch++))
-        ;;
+  major) ((++major)); minor=0; patch=0 ;;
+  minor) ((++minor)); patch=0 ;;
+  patch) ((++patch)) ;;
 esac
 
 next_version="${major}.${minor}.${patch}"
