@@ -188,4 +188,4 @@ requirements.txt
 requirements-dev.txt
 
 # TODO: remove from .gitignore
-.github/bump_version.sh
+*bump_version.sh

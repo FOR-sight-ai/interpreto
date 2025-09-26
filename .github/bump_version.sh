@@ -56,8 +56,8 @@ version_line=$(grep -E '^version = "[0-9]+\.[0-9]+\.[0-9]+"' pyproject.toml || t
 if [[ -z "$version_line" ]]; then
     error "Could not find a semantic version in pyproject.toml."
 fi
-current_version=${version_line#version = "}
-current_version=${current_version%"}
+current_version=${version_line#version = \"}
+current_version=${current_version%\"}
 IFS='.' read -r major minor patch <<<"$current_version"
 
 case "$part" in
