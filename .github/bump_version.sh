@@ -105,20 +105,18 @@ trap cleanup ERR INT
 
 if ! NEXT_VERSION="$next_version" python - <<'PY'
 from pathlib import Path
-import re
-import os
+import os, re
 
 path = Path("pyproject.toml")
 text = path.read_text()
-pattern = re.compile(r'^(version = ")([0-9]+\.[0-9]+\.[0-9]+)("$)', re.MULTILINE)
 
+pattern = re.compile(r'^(version\s*=\s*")(\d+\.\d+\.\d+)(")$', re.MULTILINE)
 next_version = os.environ["NEXT_VERSION"]
 
 if not pattern.search(text):
     raise SystemExit(1)
 
-updated, count = pattern.subn(rf'\1{next_version}\3', text, count=1)
-
+updated, count = pattern.subn(r'\g<1>' + next_version + r'\g<3>', text, count=1)
 if count != 1:
     raise SystemExit(1)
 
