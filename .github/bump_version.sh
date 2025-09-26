@@ -49,7 +49,7 @@ if ! git fetch origin main; then
 fi
 
 if ! git merge-base --is-ancestor origin/main HEAD; then
-    error "Current branch is not up to date with origin/main. Please rebase or merge the latest changes. `git pull origin main`"
+    error "Current branch is not up to date with origin/main. Please rebase or merge the latest changes. 'git pull origin main'"
 fi
 
 version_line=$(grep -E '^version = "[0-9]+\.[0-9]+\.[0-9]+"' pyproject.toml || true)
