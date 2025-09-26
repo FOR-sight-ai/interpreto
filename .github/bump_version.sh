@@ -52,13 +52,25 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
     error "Current branch is not up to date with origin/main. Please rebase or merge the latest changes. 'git pull origin main'"
 fi
 
-version_line=$(grep -E '^version = "[0-9]+\.[0-9]+\.[0-9]+"' pyproject.toml || true)
+# Be flexible about whitespace and anchor at start of line.
+version_line=$(grep -E '^[[:space:]]*version[[:space:]]*=[[:space:]]*"[0-9]+\.[0-9]+\.[0-9]+"' pyproject.toml || true)
 if [[ -z "$version_line" ]]; then
     error "Could not find a semantic version in pyproject.toml."
 fi
-current_version=${version_line#version = \"}
+
+# Strip the key and the trailing quote, regardless of whitespace around '='
+current_version=${version_line#*[Vv]ersion*\"}
 current_version=${current_version%\"}
-IFS='.' read -r major minor patch <<<"$current_version"
+
+# Validate and split safely; avoid silent exit under `set -e`
+if [[ ! "$current_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    error "Parsed version '$current_version' is not MAJOR.MINOR.PATCH."
+fi
+
+# Use a guarded read so a mismatch can't kill the script silently
+if ! IFS='.' read -r major minor patch <<<"$current_version"; then
+    error "Failed to parse version components from '$current_version'."
+fi
 
 case "$part" in
     major)
