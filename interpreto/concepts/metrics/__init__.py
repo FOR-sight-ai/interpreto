@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from .consim import ConSim
 from .dictionary_metrics import ConceptMatchingAlgorithm, Stability
 from .reconstruction_metrics import (
     FID,
@@ -33,6 +34,7 @@ from .sparsity_metrics import Sparsity, SparsityRatio
 
 __all__ = [
     "ConceptMatchingAlgorithm",
+    "ConSim",
     "Stability",
     "ReconstructionError",
     "MSE",
