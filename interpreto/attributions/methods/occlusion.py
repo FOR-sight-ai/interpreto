@@ -73,7 +73,6 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         granularity: Granularity = Granularity.WORD,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
-        replace_token_id: int | None = None,
     ):
         """
         Initialize the attribution method.
@@ -93,14 +92,14 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         model, replace_token_id = self._set_tokenizer(model, tokenizer)
 
         perturbator = OcclusionPerturbator(
-            tokenizer=tokenizer,
+            tokenizer=self.tokenizer,
             granularity=granularity,
             replace_token_id=replace_token_id,
         )
 
         super().__init__(
             model=model,
-            tokenizer=tokenizer,
+            tokenizer=self.tokenizer,
             batch_size=batch_size,
             device=device,
             perturbator=perturbator,
