@@ -25,7 +25,6 @@
 from __future__ import annotations
 
 import gc
-import warnings
 from collections.abc import Callable, Iterable
 from enum import Enum
 from math import ceil
