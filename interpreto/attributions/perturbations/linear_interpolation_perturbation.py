@@ -28,11 +28,11 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int64, jaxtyped
 
-from interpreto.attributions.perturbations.base import Perturbator
+from interpreto.attributions.perturbations.base import EmbeddingsPerturbator
 from interpreto.typing import TensorBaseline, TensorMapping
 
 
-class LinearInterpolationPerturbator(Perturbator):
+class LinearInterpolationPerturbator(EmbeddingsPerturbator):
     """
     Perturbation using linear interpolation between a reference point (baseline) and the input.
     This class can serve as a base for different interpolation-based perturbators.

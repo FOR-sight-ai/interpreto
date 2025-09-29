@@ -384,6 +384,12 @@ class ConSim:
         nb_correct = (nb_lp_samples + nb_ep_samples) // 2
         nb_mistakes = nb_lp_samples + nb_ep_samples - nb_correct
 
+        if nb_classes > nb_lp_samples:
+            raise ValueError(
+                f"Not enough samples ({nb_lp_samples}) to represent the {nb_classes} classes in the learning phase."
+                "Please increase the number of learning phase samples or take a subset of classes."
+            )
+
         # Find the correct and incorrect indices
         is_prediction_correct = predictions == labels
         correct_indices = torch.nonzero(is_prediction_correct)
@@ -393,7 +399,7 @@ class ConSim:
         if len(correct_indices) < nb_correct or len(incorrect_indices) < nb_mistakes:
             raise ValueError(
                 f"Not enough correct or incorrect predictions to select {nb_correct} correct and {nb_mistakes} incorrect."
-                f"Either provide more inputs (actually {len(correct_indices)} correct and {len(incorrect_indices)} incorrect)"
+                f"Either provide more inputs (currently {len(correct_indices)} correct and {len(incorrect_indices)} incorrect)"
                 "or reduce the number of samples to select."
             )
 
@@ -518,7 +524,7 @@ class ConSim:
     def _quantize_importances(importance: float, threshold: float = 0.05) -> str | None:
         """
         Convert the normalized importances to literals.
-        The literals are:
+        The literals and ranges (values for the default threshold value of 0.05) are:
         - "++" for values above 0.3
         - "+" for values between 0.05 and 0.3
         - "-" for values between -0.05 and -0.3
@@ -565,7 +571,7 @@ class ConSim:
         Only the intersection between the two are kept.
 
         The concepts importance are quantized to literals.
-        The corresponding literals are:
+        The corresponding literals and ranges (values for the default threshold value of 0.05) are:
 
         - "++" for values above 0.3
 
@@ -1031,7 +1037,7 @@ class ConSim:
         return prompt, literal_model_predictions
 
     @staticmethod
-    def _extract_predictions_from_response(response: str, expected_length: int) -> list[str] | None:
+    def _extract_predictions_from_response(response: str | None, expected_length: int) -> list[str] | None:
         """
         Extract the model predictions from the response.
         The response is expected to be a list of predictions for each sample.
@@ -1056,6 +1062,9 @@ class ConSim:
                 The model predictions.
                 If the response is empty or the expected length is not respected, returns None.
         """
+        if response == "" or response is None:
+            return None
+
         sentences = response.split("\n")
 
         while sentences[-1] == "":
@@ -1096,15 +1105,13 @@ class ConSim:
             ValueError
                 If the model predictions and the user-llm predictions have different lengths.
         """
-        if len(model_predictions) == 0 or len(user_llm_predictions) == 0:
-            # TODO: discuss if we prefer to return None or raise an error with explicit message
-            # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
-            return None
-
         if len(model_predictions) != len(user_llm_predictions):
-            raise ValueError(
-                f"Predictions between model and user-llm have different lengths, respectively: {len(model_predictions)} and {len(user_llm_predictions)}."
+            warnings.warn(
+                "Predictions between model and user-llm have different lengths, returning None"
+                f"respectively: {len(model_predictions)} and {len(user_llm_predictions)}.",
+                stacklevel=2,
             )
+            return None
 
         n_correct = len(
             [
@@ -1118,7 +1125,7 @@ class ConSim:
 
     @staticmethod
     def _compute_score(
-        user_llm_response: str,
+        user_llm_response: str | None,
         literal_model_predictions: list[str],
     ) -> float | None:
         """
@@ -1153,9 +1160,12 @@ class ConSim:
             response=user_llm_response, expected_length=len(literal_model_predictions)
         )
 
-        if literal_meta_predictions is None:
-            # TODO: discuss if we prefer to return None or raise an error with explicit message
-            # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
+        if literal_meta_predictions is None or len(literal_meta_predictions) == 0:
+            warnings.warn(
+                "The user-llm responses are empty or the format is not respected. Returning None. "
+                f"The response was: '{user_llm_response}'",
+                stacklevel=2,
+            )
             return None
 
         # compute the accuracy
@@ -1240,19 +1250,25 @@ class ConSim:
 
         Returns:
             score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]
-                The score of the ConSim metric.
-                If the user-llm predictions are empty or in the wrong format, returns None.
-                It was chosen to return None,
-                because ConSim should be called a lot of times for statistically significant results.
-                Therefore, having a None score once in a while is better than the script crashing.
+                Possible outputs:
 
-                If no user_llm is provided, returns the prompts and the model predictions.
-                The user will have to call the ConSim prompts manually.
-                The response of the LLM on the prompts should be compared to the model predictions.
+                - score (float): The score of the ConSim metric. (The nominal behavior)
+                - None: If the model predictions are empty or the user-llm predictions are empty.
+                    It was chosen to return None,
+                    because ConSim should be called a lot of times for statistically significant results.
+                    Therefore, having a None score once in a while is better than the script crashing.
+                - prompts and model predictions (tuple[list[tuple[Role, str]], list[str]]):
+                    If no user_llm is provided, returns the prompts and the model predictions.
+                    The prompt is the first element of the tuple (list[tuple[Role, str]]).
+                    The predictions are the second element of the tuple (list[str]).
+                    The user will have to call the ConSim prompts manually.
+                    The response of the LLM on the prompts should be compared to the model predictions.
 
         Raises:
             ValueError
                 If the model predictions and the user-llm predictions have different lengths.
+            Warnings
+                If the user-llm response is empty or the format is not respected.
         """
         # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
         if concept_explainer.split_point not in self.model_with_split_points.split_points:
@@ -1312,11 +1328,7 @@ class ConSim:
 
         user_llm_response = self.user_llm.generate(prompts)
 
-        if user_llm_response is None:
-            # TODO: discuss if we prefer to return None or raise an error with explicit message
-            # I argue for returning 0, as most of the problems come for the user_llm giving incoherent responses
-            return None
-
+        # raise warnings if the response is empty or the format is not respected
         return self._compute_score(
             user_llm_response=user_llm_response,
             literal_model_predictions=literal_model_predictions,

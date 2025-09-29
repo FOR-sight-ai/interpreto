@@ -4,6 +4,7 @@ Base classes for visualizations used in the lib
 
 from __future__ import annotations
 
+import math
 import os
 import uuid
 from abc import ABC, abstractmethod
@@ -12,10 +13,20 @@ import torch
 from IPython.display import HTML, display
 
 
+def replace_nan_with_none(data_list):
+    """Recursively replace NaN values with None in nested lists."""
+    if isinstance(data_list, list):
+        return [replace_nan_with_none(item) for item in data_list]
+    elif isinstance(data_list, float) and (math.isnan(data_list) or not math.isfinite(data_list)):
+        return None
+    return data_list
+
+
 def tensor_to_list(obj):
     """Convert tensors to lists."""
     if isinstance(obj, torch.Tensor):
-        return obj.tolist()
+        # Convert tensors to lists and replace NaN values with None since NaN values are not JSON serializable
+        return replace_nan_with_none(obj.tolist())
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 

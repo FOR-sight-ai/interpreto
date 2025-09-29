@@ -48,7 +48,7 @@ from interpreto.attributions import (
     VarGrad,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.commons.granularity import _HAS_SPACY, Granularity
+from interpreto.commons.granularity import _HAS_SPACY, Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
 
@@ -173,10 +173,10 @@ def test_attribution_methods_granularity(model_name, attribution_explainer, gran
 @pytest.mark.parametrize(
     "aggregation_strategy",
     [
-        Granularity.aggregation_strategies.MAX,
-        Granularity.aggregation_strategies.MIN,
-        Granularity.aggregation_strategies.SUM,
-        Granularity.aggregation_strategies.SIGNED_MAX,
+        GranularityAggregationStrategy.MAX,
+        GranularityAggregationStrategy.MIN,
+        GranularityAggregationStrategy.SUM,
+        GranularityAggregationStrategy.SIGNED_MAX,
     ],
 )
 def test_attribution_methods_granularity_aggregation_strategy(
@@ -290,10 +290,6 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
             len(attribution.elements) == (attribution.attributions).shape[-1] for attribution in attributions
         ), "In the AttributionOutput class, elements and attributions must have the same length."
 
-
-# TODO: test granularity
-
-# TODO: test inference_mode
 
 # TODO: test that targets are correctly processed
 
