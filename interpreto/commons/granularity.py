@@ -87,7 +87,9 @@ class GranularityAggregationStrategy(Enum):
 
     @staticmethod
     def aggregate(
-        x: Float[torch.Tensor, "l d"], strategy: GranularityAggregationStrategy, dim: int
+        x: Float[torch.Tensor, "l d"],
+        strategy: GranularityAggregationStrategy,
+        dim: int,
     ) -> Float[torch.Tensor, "1 d"]:
         """
         Aggregate activations.
@@ -115,11 +117,15 @@ class GranularityAggregationStrategy(Enum):
                 # Select the last element along the aggregation dimension, keepdim=True
                 return x.narrow(dim, start=x.size(dim) - 1, length=1)
             case _:
-                raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
+                raise NotImplementedError(
+                    f"Aggregation strategy {strategy} not implemented."
+                )
 
     @staticmethod
     def unfold(
-        x: Float[torch.Tensor, "1 d"], strategy: GranularityAggregationStrategy, new_dim_length: int
+        x: Float[torch.Tensor, "1 d"],
+        strategy: GranularityAggregationStrategy,
+        new_dim_length: int,
     ) -> Float[torch.Tensor, "{new_dim_length} d"]:
         """
         Unfold activations.
@@ -143,7 +149,9 @@ class GranularityAggregationStrategy(Enum):
             ):
                 return x.repeat(new_dim_length, 1)
             case _:
-                raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
+                raise NotImplementedError(
+                    f"Aggregation strategy {strategy} not implemented."
+                )
 
 
 class Granularity(Enum):
@@ -231,7 +239,10 @@ class Granularity(Enum):
         match granularity or Granularity.DEFAULT:
             case Granularity.ALL_TOKENS:
                 input_ids: Int[torch.Tensor, "n l"] = inputs["input_ids"]  # type: ignore
-                return [Granularity.__all_tokens_get_indices(tokens_ids) for tokens_ids in input_ids]
+                return [
+                    Granularity.__all_tokens_get_indices(tokens_ids)
+                    for tokens_ids in input_ids
+                ]
             case Granularity.TOKEN:
                 if tokenizer is None:
                     raise ValueError(
@@ -241,7 +252,10 @@ class Granularity(Enum):
 
                 special_ids = tokenizer.all_special_ids
                 input_ids: Int[torch.Tensor, "n l"] = inputs["input_ids"]  # type: ignore
-                return [Granularity.__token_get_indices(tokens_ids, special_ids) for tokens_ids in input_ids]
+                return [
+                    Granularity.__token_get_indices(tokens_ids, special_ids)
+                    for tokens_ids in input_ids
+                ]
             case Granularity.WORD:
                 if tokenizer is None:
                     raise ValueError(
@@ -253,7 +267,10 @@ class Granularity(Enum):
                     raise NoWordIdsError()
 
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
-                return [Granularity.__word_get_indices(inputs.word_ids(i)) for i in range(n_inputs)]
+                return [
+                    Granularity.__word_get_indices(inputs.word_ids(i))
+                    for i in range(n_inputs)
+                ]
             # spaCy-based levels (require offset_mapping & fast tokenizer)
             case Granularity.SENTENCE as level:
                 if tokenizer is None:
@@ -287,7 +304,9 @@ class Granularity(Enum):
                     for i in range(n_inputs)
                 ]
             case _:
-                raise NotImplementedError(f"Granularity level {granularity} not implemented")
+                raise NotImplementedError(
+                    f"Granularity level {granularity} not implemented"
+                )
 
     @staticmethod
     def __all_tokens_get_indices(tokens_ids: torch.Tensor) -> list[list[int]]:
@@ -296,7 +315,9 @@ class Granularity(Enum):
         return [[i] for i in range(length)]
 
     @staticmethod
-    def __token_get_indices(tokens_ids: torch.Tensor, special_ids: list[int]) -> list[list[int]]:
+    def __token_get_indices(
+        tokens_ids: torch.Tensor, special_ids: list[int]
+    ) -> list[list[int]]:
         """Indices for :pyattr:`TOKEN` – skip special tokens."""
         return [[i] for i, tok_id in enumerate(tokens_ids) if tok_id not in special_ids]
 
@@ -338,7 +359,9 @@ class Granularity(Enum):
                     and ``lp`` is the padded sequence length.
         """
         # get indices correspondence between granularity and ALL_TOKENS
-        indices_list: list[list[list[int]]] = Granularity.get_indices(inputs, granularity, tokenizer)
+        indices_list: list[list[list[int]]] = Granularity.get_indices(
+            inputs, granularity, tokenizer
+        )
 
         # iterate over the samples
         assoc_matrix_list: list[Bool[torch.Tensor, g, lp]] = []
@@ -347,7 +370,9 @@ class Granularity(Enum):
             lp = inputs["input_ids"].shape[1]  # type: ignore
 
             # set to true matching positions in the matrix
-            assoc_matrix: Bool[torch.Tensor, g, lp] = torch.zeros((g, lp), dtype=torch.bool)
+            assoc_matrix: Bool[torch.Tensor, g, lp] = torch.zeros(
+                (g, lp), dtype=torch.bool
+            )
             for j, gran_indices in enumerate(indices):
                 assoc_matrix[j, gran_indices] = True
             assoc_matrix_list.append(assoc_matrix)
@@ -403,7 +428,10 @@ class Granularity(Enum):
                 ids = [int(input_ids[idx].item()) for idx in gran_indices]
                 # TODO: additional testing of this, it might cause issues for the TopKInputs concept interpretation method
                 if return_text:
-                    text = tokenizer.decode(ids, skip_special_tokens=granularity is not Granularity.ALL_TOKENS)  # type: ignore
+                    text = tokenizer.decode(
+                        ids,
+                        skip_special_tokens=granularity is not Granularity.ALL_TOKENS,
+                    )  # type: ignore
                     decomposition.append(text)
                 else:
                     decomposition.append(ids)
@@ -454,7 +482,10 @@ class Granularity(Enum):
             token_indices = [
                 i
                 for i, (s, e) in enumerate(offsets)
-                if s is not None and e is not None and s >= span.start_char and e <= span.end_char + 1
+                if s is not None
+                and e is not None
+                and s >= span.start_char
+                and e <= span.end_char + 1
             ]
             if token_indices:  # skip empty groups (can happen on only-punct spans)
                 groups.append(token_indices)
@@ -525,16 +556,29 @@ class Granularity(Enum):
                 )
                 for aggregation_index, token_indices in enumerate(indices_list[0]):
                     # extract token contribution for each word/sentence
-                    tokens_contribution: Float[torch.Tensor, "t gi"] = contribution[:, token_indices]
+                    tokens_contribution: Float[torch.Tensor, "t gi"] = contribution[
+                        :, token_indices
+                    ]
 
-                    if tokens_contribution.dim() == 1 or tokens_contribution.shape[1] == 1:
+                    if (
+                        tokens_contribution.dim() == 1
+                        or tokens_contribution.shape[1] == 1
+                    ):
                         # if only one token, no aggregation needed
-                        aggregated_contribution[:, [aggregation_index]] = tokens_contribution
+                        aggregated_contribution[:, [aggregation_index]] = (
+                            tokens_contribution
+                        )
                     else:
                         # aggregate token contribution for each word/sentence
-                        aggregated_contribution[:, [aggregation_index]] = GranularityAggregationStrategy.aggregate(
-                            tokens_contribution, strategy=granularity_aggregation_strategy, dim=1
+                        aggregated_contribution[:, [aggregation_index]] = (
+                            GranularityAggregationStrategy.aggregate(
+                                tokens_contribution,
+                                strategy=granularity_aggregation_strategy,
+                                dim=1,
+                            )
                         )
                 return aggregated_contribution
             case _:
-                raise NotImplementedError(f"Invalid granularity for aggregation: {granularity}")
+                raise NotImplementedError(
+                    f"Invalid granularity for aggregation: {granularity}"
+                )
