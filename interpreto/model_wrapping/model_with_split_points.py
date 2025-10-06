@@ -44,7 +44,12 @@ from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
-from interpreto.model_wrapping.splitting_utils import get_layer_by_idx, sort_paths, validate_path, walk_modules
+from interpreto.model_wrapping.splitting_utils import (
+    get_layer_by_idx,
+    sort_paths,
+    validate_path,
+    walk_modules,
+)
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -301,7 +306,9 @@ class ModelWithSplitPoints(LanguageModel):
 
         # set split points
         self._model_paths = list(walk_modules(self._model))
-        self.split_points = split_points  # this uses the setter which handles validation
+        self.split_points = (
+            split_points  # this uses the setter which handles validation
+        )
         self._model: PreTrainedModel  # specify type of `_model` attribute from NNsight
         if self.repo_id is None:
             self.repo_id = self._model.config.name_or_path
@@ -322,7 +329,9 @@ class ModelWithSplitPoints(LanguageModel):
                 pass
 
         if self.tokenizer is None:
-            raise ValueError("Tokenizer is not set. When providing a model instance, the tokenizer must be set.")
+            raise ValueError(
+                "Tokenizer is not set. When providing a model instance, the tokenizer must be set."
+            )
         self.output_tuple_index = output_tuple_index
 
     @property
@@ -330,10 +339,14 @@ class ModelWithSplitPoints(LanguageModel):
         return self._split_points
 
     @split_points.setter
-    def split_points(self, split_points: str | int | list[str] | list[int] | tuple[str] | tuple[int]) -> None:
+    def split_points(
+        self, split_points: str | int | list[str] | list[int] | tuple[str] | tuple[int]
+    ) -> None:
         """Split points are automatically validated and sorted upon setting"""
         # sanitize split points to a list of strings and ints
-        pre_conversion_split_points = split_points if isinstance(split_points, list | tuple) else [split_points]
+        pre_conversion_split_points = (
+            split_points if isinstance(split_points, list | tuple) else [split_points]
+        )
 
         # convert layer idx to full path
         post_conversion_split_points: list[str] = []
@@ -349,11 +362,15 @@ class ModelWithSplitPoints(LanguageModel):
             validate_path(self._model, str_split)
 
         # Sort split points to match execution order
-        self._split_points: list[str] = sort_paths(post_conversion_split_points, model_paths=self._model_paths)
+        self._split_points: list[str] = sort_paths(
+            post_conversion_split_points, model_paths=self._model_paths
+        )
 
     @staticmethod
     def _pad_and_concat(
-        tensor_list: list[Float[torch.Tensor, "n_i l_i d"]], pad_side: str, pad_value: float
+        tensor_list: list[Float[torch.Tensor, "n_i l_i d"]],
+        pad_side: str,
+        pad_value: float,
     ) -> Float[torch.Tensor, "sum(n_i) max_l d"]:
         """
         Concatenates a list of 3D tensors along dim=0 after padding their second dimension to the same length.
@@ -418,7 +435,9 @@ class ModelWithSplitPoints(LanguageModel):
         match activation_granularity:
             case AG.CLS_TOKEN:
                 # get either the tensor or the input_ids tensor
-                inputs_tensor: torch.Tensor = inputs if isinstance(inputs, torch.Tensor) else inputs["input_ids"]  # type: ignore
+                inputs_tensor: torch.Tensor = (
+                    inputs if isinstance(inputs, torch.Tensor) else inputs["input_ids"]
+                )  # type: ignore
                 n = inputs_tensor.shape[0]
 
                 if inputs_tensor[0, 0] != self.tokenizer.cls_token_id:
@@ -461,7 +480,9 @@ class ModelWithSplitPoints(LanguageModel):
                 )
 
             case _:
-                raise ValueError(f"Invalid activation selection strategy: {activation_granularity}")
+                raise ValueError(
+                    f"Invalid activation selection strategy: {activation_granularity}"
+                )
 
     @jaxtyped(typechecker=beartype)
     def _apply_selection_strategy(
@@ -538,7 +559,9 @@ class ModelWithSplitPoints(LanguageModel):
 
             case AG.TOKEN | AG.SAMPLE:
                 if aggregation_strategy is None and activation_granularity == AG.SAMPLE:
-                    raise ValueError("aggregation_strategy cannot be None when activation_granularity is SAMPLE.")
+                    raise ValueError(
+                        "aggregation_strategy cannot be None when activation_granularity is SAMPLE."
+                    )
 
                 # select activations based on indices
                 activation_list: list[Float[torch.Tensor, "g d"]] = []
@@ -580,8 +603,12 @@ class ModelWithSplitPoints(LanguageModel):
                         granular_activations = activations[i, index]
 
                         # aggregate token activations over the granularity element
-                        aggregated_activations = GranularityAggregationStrategy.aggregate(
-                            granular_activations, strategy=aggregation_strategy, dim=-2
+                        aggregated_activations = (
+                            GranularityAggregationStrategy.aggregate(
+                                granular_activations,
+                                strategy=aggregation_strategy,
+                                dim=-2,
+                            )
                         )
 
                         sample_activations_list.append(aggregated_activations)
@@ -595,7 +622,9 @@ class ModelWithSplitPoints(LanguageModel):
                 return activation_list
 
             case _:
-                raise ValueError(f"Invalid activation selection strategy: {activation_granularity}")
+                raise ValueError(
+                    f"Invalid activation selection strategy: {activation_granularity}"
+                )
 
     @jaxtyped(typechecker=beartype)
     def _reintegrate_selected_activations(
@@ -665,9 +694,13 @@ class ModelWithSplitPoints(LanguageModel):
                     indices: list[list[int]]
                     # iterate over activations
                     for index in indices:
-                        index: list[int]  # list of token indices for a given granularity element (word/sentence)
+                        index: list[
+                            int
+                        ]  # list of token indices for a given granularity element (word/sentence)
                         # extract the activations for the current word/sentence
-                        aggregated_activations = new_activations[current_index : current_index + 1]
+                        aggregated_activations = new_activations[
+                            current_index : current_index + 1
+                        ]
 
                         # repeat the activations to match the length of the word/sentence
                         unfolded_activations = GranularityAggregationStrategy.unfold(
@@ -676,7 +709,9 @@ class ModelWithSplitPoints(LanguageModel):
                         torch_index = torch.tensor(index).to(initial_activations.device)
 
                         # reintegrate the repeated granular activations into the initial activations
-                        initial_activations[i, torch_index] = unfolded_activations.to(initial_activations.device)
+                        initial_activations[i, torch_index] = unfolded_activations.to(
+                            initial_activations.device
+                        )
                         current_index += 1
                 return initial_activations
 
@@ -687,9 +722,13 @@ class ModelWithSplitPoints(LanguageModel):
                 )
 
             case _:
-                raise ValueError(f"Invalid activation selection strategy: {activation_granularity}")
+                raise ValueError(
+                    f"Invalid activation selection strategy: {activation_granularity}"
+                )
 
-    def _manage_output_tuple(self, activations: torch.Tensor | tuple[torch.Tensor], split_point: str) -> torch.Tensor:
+    def _manage_output_tuple(
+        self, activations: torch.Tensor | tuple[torch.Tensor], split_point: str
+    ) -> torch.Tensor:
         """
         Handles the case in which the model has a tuple of outputs,
         and we need to know which element is the hidden state.
@@ -932,7 +971,9 @@ class ModelWithSplitPoints(LanguageModel):
                         # special case for T5 in a generation setting
                         if isinstance(self.args[0], T5ForConditionalGeneration):
                             # TODO: find a way for this not to be necessary
-                            tokenized_inputs["decoder_input_ids"] = tokenized_inputs["input_ids"]
+                            tokenized_inputs["decoder_input_ids"] = tokenized_inputs[
+                                "input_ids"
+                            ]
                     else:
                         # the input was already tokenized
                         tokenized_inputs = batch_inputs
@@ -955,7 +996,9 @@ class ModelWithSplitPoints(LanguageModel):
                     # call model forward pass and save split point outputs
                     with self.trace(tokenized_inputs, **model_forward_kwargs) as tracer:
                         # nnsight quick way to obtain the activations for all split points
-                        batch_activations = tracer.cache(modules=[self.get(sp) for sp in self.split_points])  # type: ignore  (under specification from NNsight)
+                        batch_activations = tracer.cache(
+                            modules=[self.get(sp) for sp in self.split_points]
+                        )  # type: ignore  (under specification from NNsight)
 
                         # for classification optionally compute and save the predictions
                         if include_predicted_classes:
@@ -971,12 +1014,16 @@ class ModelWithSplitPoints(LanguageModel):
                     for sp in self.split_points:
                         # extracting the activations for the current split point
                         sp_module = batch_activations["model." + sp]
-                        output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
+                        output_name = (
+                            "nns_output"
+                            if hasattr(sp_module, "nns_output")
+                            else "output"
+                        )
                         batch_outputs = getattr(sp_module, output_name)
 
                         # manage the output tuple and extract the (n, l, d) activations from it
-                        batch_sp_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
-                            batch_outputs, sp
+                        batch_sp_activations: Float[torch.Tensor, "n l d"] = (
+                            self._manage_output_tuple(batch_outputs, sp)
                         )
 
                         # select relevant activations with respect to the granularity strategy
@@ -1050,7 +1097,8 @@ class ModelWithSplitPoints(LanguageModel):
         targets: list[int] | None = None,
         split_point: str | None = None,
         activation_granularity: ActivationGranularity = AG.TOKEN,
-        aggregation_strategy: GranularityAggregationStrategy | None = GranularityAggregationStrategy.MEAN,
+        aggregation_strategy: GranularityAggregationStrategy
+        | None = GranularityAggregationStrategy.MEAN,
         concepts_x_gradients: bool = False,
         tqdm_bar: bool = False,
         batch_size: int | None = None,
@@ -1151,7 +1199,9 @@ class ModelWithSplitPoints(LanguageModel):
                 "The `model_with_split_points` model do not have `split_point` defined. "
             )
         elif len(self.split_points) > 1:
-            raise ValueError("Cannot determine the split point with multiple `model_with_split_points` split points. ")
+            raise ValueError(
+                "Cannot determine the split point with multiple `model_with_split_points` split points. "
+            )
         else:
             local_split_point: str = self.split_points[0]
 
@@ -1162,11 +1212,14 @@ class ModelWithSplitPoints(LanguageModel):
             # manage key by key batching for BatchEncoding
             for i in range(0, len(inputs), grad_batch_size):
                 end_idx = min(i + grad_batch_size, len(inputs))
-                batch_generator.append({key: value[i:end_idx] for key, value in inputs.items()})
+                batch_generator.append(
+                    {key: value[i:end_idx] for key, value in inputs.items()}
+                )
         else:  # sequence of inputs or tensors
             # create a generator for iterable of inputs and tensors
             batch_generator = (
-                inputs[i : min(i + grad_batch_size, len(inputs))] for i in range(0, len(inputs), grad_batch_size)
+                inputs[i : min(i + grad_batch_size, len(inputs))]
+                for i in range(0, len(inputs), grad_batch_size)
             )
 
         # wrap generator in tqdm for progress bar
@@ -1189,16 +1242,24 @@ class ModelWithSplitPoints(LanguageModel):
                     if activation_granularity == AG.CLS_TOKEN:
                         self.tokenizer.padding_side = "right"
                     tokenized_inputs = self.tokenizer(
-                        batch_inputs, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
+                        batch_inputs,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
+                        return_offsets_mapping=True,
                     )
                     if isinstance(self.args[0], T5ForConditionalGeneration):
                         # TODO: find a way for this not to be necessary
-                        tokenized_inputs["decoder_input_ids"] = tokenized_inputs["input_ids"]
+                        tokenized_inputs["decoder_input_ids"] = tokenized_inputs[
+                            "input_ids"
+                        ]
                 else:
                     tokenized_inputs = batch_inputs
 
-                granularity_indices: list[list[list[int]]] = self._get_granularity_indices(  # type: ignore  (cannot be None with given activation granularity)
-                    tokenized_inputs, activation_granularity
+                granularity_indices: list[list[list[int]]] = (
+                    self._get_granularity_indices(  # type: ignore  (cannot be None with given activation granularity)
+                        tokenized_inputs, activation_granularity
+                    )
                 )
 
                 # extract offset mapping not supported by forward but necessary for word/sentence selection strategy
@@ -1216,15 +1277,21 @@ class ModelWithSplitPoints(LanguageModel):
                 with self.trace(tokenized_inputs, **model_forward_kwargs):
                     curr_module = self.get(local_split_point)
                     # Handle case in which module has .output attribute, and .nns_output gets overridden instead
-                    module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
+                    module_out_name = (
+                        "nns_output" if hasattr(curr_module, "nns_output") else "output"
+                    )
 
                     # get activations
                     layer_outputs = getattr(curr_module, module_out_name)
-                    raw_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
-                        layer_outputs, local_split_point
+                    raw_activations: Float[torch.Tensor, "n l d"] = (
+                        self._manage_output_tuple(layer_outputs, local_split_point)
                     )
-                    n, l, d = raw_activations.shape  # number of samples, sequence length, and model dimension
-                    ng = sum([len(indices) for indices in granularity_indices])  # number of granularity elements
+                    n, l, d = (
+                        raw_activations.shape
+                    )  # number of samples, sequence length, and model dimension
+                    ng = sum(
+                        [len(indices) for indices in granularity_indices]
+                    )  # number of granularity elements
 
                     # apply selection strategy
                     selected_activations: list[Float[torch.Tensor, g, d]]
@@ -1245,22 +1312,28 @@ class ModelWithSplitPoints(LanguageModel):
                     c = concept_activations.shape[-1]
 
                     # decode concepts back into activations
-                    decoded_activations: Float[torch.Tensor, ng, d] = decode_concepts(concept_activations)
+                    decoded_activations: Float[torch.Tensor, ng, d] = decode_concepts(
+                        concept_activations
+                    )
 
                     # reintegrate decoded activations into the original activations
-                    reconstructed_activations: Float[torch.Tensor, n, l, d] = self._reintegrate_selected_activations(
-                        initial_activations=raw_activations,
-                        new_activations=decoded_activations,
-                        granularity_indices=granularity_indices,
-                        activation_granularity=activation_granularity,
-                        aggregation_strategy=aggregation_strategy,
+                    reconstructed_activations: Float[torch.Tensor, n, l, d] = (
+                        self._reintegrate_selected_activations(
+                            initial_activations=raw_activations,
+                            new_activations=decoded_activations,
+                            granularity_indices=granularity_indices,
+                            activation_granularity=activation_granularity,
+                            aggregation_strategy=aggregation_strategy,
+                        )
                     )
                     del decoded_activations, raw_activations
 
                     # reintegrate the reconstructed activations into the original layer outputs
                     if isinstance(layer_outputs, tuple):
                         layer_outputs = list(layer_outputs)
-                        layer_outputs[self.output_tuple_index] = reconstructed_activations  # type: ignore
+                        layer_outputs[self.output_tuple_index] = (
+                            reconstructed_activations  # type: ignore
+                        )
                     else:
                         layer_outputs = reconstructed_activations
 
@@ -1273,7 +1346,9 @@ class ModelWithSplitPoints(LanguageModel):
                     # ----------------------------------------------------------------------------------
                     # Manipulate logits and targets to prepare gradients computation
                     # get logits
-                    logits: Float[torch.Tensor, "{n} t_all"]  # number of samples and number of possible targets
+                    logits: Float[
+                        torch.Tensor, "{n} t_all"
+                    ]  # number of samples and number of possible targets
                     all_logits = self.output.logits
 
                     if len(all_logits.shape) == 3:  # generation (n, l, v)
@@ -1302,7 +1377,9 @@ class ModelWithSplitPoints(LanguageModel):
                         # sum over samples but compute the gradients for each target separately
                         with logits[t].backward(retain_graph=True):  # type: ignore
                             # compute the gradient of the concept activations
-                            concept_activations_grad: Float[torch.Tensor, ng, c] = concept_activations.grad.clone()  # type: ignore
+                            concept_activations_grad: Float[torch.Tensor, ng, c] = (
+                                concept_activations.grad.clone()
+                            )  # type: ignore
 
                             # clean gradient for following operations
                             concept_activations.grad.zero_()  # type: ignore
@@ -1384,7 +1461,9 @@ class ModelWithSplitPoints(LanguageModel):
                 "The `model_with_split_points` model do not have `split_point` defined. "
             )
         elif len(self.split_points) > 1:
-            raise ValueError("Cannot determine the split point with multiple `model_with_split_points` split points. ")
+            raise ValueError(
+                "Cannot determine the split point with multiple `model_with_split_points` split points. "
+            )
         else:
             local_split_point: str = self.split_points[0]
 
@@ -1431,7 +1510,9 @@ class ModelWithSplitPoints(LanguageModel):
         with self.scan(self._example_input if inputs is None else inputs):
             for split_point in self.split_points:
                 curr_module = self.get(split_point)
-                module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
+                module_out_name = (
+                    "nns_output" if hasattr(curr_module, "nns_output") else "output"
+                )
                 module = getattr(curr_module, module_out_name)
                 if isinstance(module, tuple):
                     for candidate in module:
