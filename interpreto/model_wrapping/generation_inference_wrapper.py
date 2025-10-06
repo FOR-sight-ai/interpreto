@@ -126,11 +126,11 @@ class GenerationInferenceWrapper(InferenceWrapper):
         )
 
     @get_targeted_logits.register(MutableMapping)
-    def _(
+    def _get_targeted_logits_from_mapping(
         self,
         model_inputs: TensorMapping,
         targets: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         """Retrieve logits for a single batch of inputs.
 
         Args:

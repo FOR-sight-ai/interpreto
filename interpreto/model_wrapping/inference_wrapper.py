@@ -271,7 +271,11 @@ class InferenceWrapper(ABC):
                 f"Consider adjust the batch size or the wrapper of split your data.",
             )
         # Check sequence length
-        if input_ids is not None and getattr(self.model.config, "max_position_embeddings", False) and input_ids.shape[-1] > self.model.config.max_position_embeddings:
+        if (
+            input_ids is not None
+            and getattr(self.model.config, "max_position_embeddings", False)
+            and input_ids.shape[-1] > self.model.config.max_position_embeddings
+        ):
             raise ValueError(
                 f"Input sequence length ({input_ids.shape[1]}) exceeds model's maximum "
                 f"input length ({self.model.config.max_position_embeddings}). Please truncate your inputs by specifying 'truncation=True' or 'max_length={self.model.config.max_position_embeddings}' to the tokenizer call or change the model."
@@ -584,6 +588,13 @@ class InferenceWrapper(ABC):
             f"get_targeted_logits not implemented for {self.__class__.__name__}. Implement this method is necessary to use gradient-based methods."
         )
 
+    @get_targeted_logits.register(MutableMapping)
+    @abstractmethod
+    def _get_targeted_logits_from_mapping(self, model_inputs: TensorMapping, targets: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError(
+            f"get_targeted_logits not implemented for {self.__class__.__name__}. Implement this method is necessary to use gradient-based methods."
+        )
+
     @overload
     def get_gradients(
         self, model_inputs: TensorMapping, targets: torch.Tensor, input_x_gradient: bool = False
@@ -631,31 +642,99 @@ class InferenceWrapper(ABC):
             f"type {type(model_inputs)} not supported for method get_gradients in class {self.__class__.__name__}"
         )
 
+    # @get_gradients.register(MutableMapping)  # type: ignore
+    # def _get_gradients_from_mapping(
+    #     self,
+    #     model_inputs: TensorMapping,
+    #     targets: torch.Tensor,  # (n, t)
+    #     input_x_gradient: bool = False,
+    # ) -> torch.Tensor:
+    #     model_inputs = self.embed(model_inputs)
+    #     inputs_embeds = model_inputs["inputs_embeds"].detach().requires_grad_(True)  # (n, l, d)
+    #     attention_mask = model_inputs["attention_mask"]  # (n, l)
+
+    #     # prepare targets we want a tensor of shape (n, t)
+    #     if targets.dim() == 1:
+    #         targets = targets.unsqueeze(0)
+
+    #     if targets.shape[0] == 1:
+    #         targets = targets.expand(inputs_embeds.shape[0], -1)
+
+    #     # define the function to map over
+    #     def sample_wise_jacobian(inputs_embeds_s, attention_mask_s, targets_s):
+    #         # define the forward function for this sample
+    #         # sample_wise_forward: (l, d) -> (t,)
+    #         def sample_wise_forward(x):
+    #             out = self.get_targeted_logits(  # _get_targeted_logits_from_mapping -> _get_logits_from_mapping -> batch over call_model -> self.model(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
+    #                 {"inputs_embeds": x.unsqueeze(0), "attention_mask": attention_mask_s.unsqueeze(0)},
+    #                 targets_s.unsqueeze(0),
+    #             )  # (1, t)
+    #             return out.squeeze(0)  # (t,)
+
+    #         # Jacobian: (t, l, d) for this sample
+    #         jacobian_matrix = jacrev(sample_wise_forward)(inputs_embeds_s)
+
+    #         if input_x_gradient:
+    #             jacobian_matrix = jacobian_matrix * inputs_embeds_s.unsqueeze(0)  # broadcast to (t, l, d)
+
+    #         # Reduce over embedding dim right away
+    #         return jacobian_matrix.abs().mean(dim=-1)  # (t, l)
+
+    #     # Map over samples
+    #     grad_matrix = vmap(sample_wise_jacobian, in_dims=(0, 0, 0))(
+    #         inputs_embeds, attention_mask, targets
+    #     )  # (n, t, l)
+
+    #     return grad_matrix
+
+    # TODO: add jaxtyping
+    # TODO: put in a with torch.no_grad(): (removes grads on the weights)
     @get_gradients.register(MutableMapping)  # type: ignore
     def _get_gradients_from_mapping(
-        self, model_inputs: TensorMapping, targets: torch.Tensor, input_x_gradient: bool = False
-    ) -> torch.Tensor:  # TODO: add jaxtyping
+        self,
+        model_inputs: TensorMapping,
+        targets: torch.Tensor,  # (n, t) | (1, t) | (t,)
+        input_x_gradient: bool = False,
+    ) -> torch.Tensor:
         model_inputs = self.embed(model_inputs)
-        inputs_embeds = model_inputs["inputs_embeds"]
+        inputs_embeds = model_inputs["inputs_embeds"].detach().requires_grad_(True)  # (n,l,d)
+        attention_mask = model_inputs["attention_mask"]  # (n, l)
 
-        def get_score(inputs_embeds: torch.Tensor):
-            return self.get_targeted_logits(
-                {"inputs_embeds": inputs_embeds, "attention_mask": model_inputs["attention_mask"]}, targets
-            )
+        # Compute logits for ALL classes once if that’s cheaper in your model
+        # and select later inside get_targeted_logits via gather.
+        logits = self._get_targeted_logits_from_mapping(
+            {"inputs_embeds": inputs_embeds, "attention_mask": attention_mask}, targets
+        )  # (n, t)
 
-        # Compute gradient of the selected logits:
-        grad_matrix = torch.autograd.functional.jacobian(get_score, inputs_embeds)  # (n, lt, n, l, d)
+        t = targets.shape[-1]
+        list_of_target_wise_grads = []
+        for k in range(t):
+            # specify from which target to compute the gradient
+            # the gradient is computed for the k-th targeted logit
+            grad_outputs = torch.zeros_like(logits)
+            grad_outputs[:, k] = 1.0
 
-        grad_matrix = grad_matrix[
-            torch.arange(grad_matrix.shape[0]), :, torch.arange(grad_matrix.shape[0])
-        ]  # (n, lt, l, d)
-        if input_x_gradient:
-            grad_matrix = grad_matrix * inputs_embeds.unsqueeze(1)
+            # compute the gradient for the k-th targeted logit
+            target_wise_grads = torch.autograd.grad(
+                outputs=logits,
+                inputs=inputs_embeds,
+                grad_outputs=grad_outputs,
+                retain_graph=(k != t - 1),
+                create_graph=False,
+            )[0]  # (n, l, d)
 
-        grad_matrix = grad_matrix.abs().mean(
-            dim=-1
-        )  # (n, lt, l)  # average over the embedding dimension  # TODO: discuss if th average should be forced or an argument
-        return grad_matrix
+            # apply the input_x_gradient trick if required
+            if input_x_gradient:
+                target_wise_grads = target_wise_grads * inputs_embeds
+
+            # Aggregate over the hidden dimension 'd'
+            # TODO: see if we should force the aggregation to be mean of absolute values
+            aggregated_target_wise_grads = target_wise_grads.abs().mean(dim=-1)  # (n, l)
+
+            list_of_target_wise_grads.append(aggregated_target_wise_grads)  # t * (n, l)
+
+        # stack the target-wise gradients to get the gradient matrix
+        return torch.stack(list_of_target_wise_grads, dim=1)  # (n, t, l)
 
     @get_gradients.register(Iterable)  # type: ignore
     def _get_gradients_from_iterable(

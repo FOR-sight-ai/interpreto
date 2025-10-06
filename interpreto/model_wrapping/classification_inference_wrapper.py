@@ -181,7 +181,7 @@ class ClassificationInferenceWrapper(InferenceWrapper):
         self,
         model_inputs: TensorMapping,
         targets: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         """
         Get the logits associated to a collection of targets.
         registered for MutableMapping type.
