@@ -82,6 +82,8 @@ class GranularityAggregationStrategy(Enum):
     MIN = "min"
     SUM = "sum"
     SIGNED_MAX = "signed_max"
+    FIRST = "first"  # TODO: test
+    LAST = "last"  # TODO: test
 
     @staticmethod
     def aggregate(
@@ -106,6 +108,12 @@ class GranularityAggregationStrategy(Enum):
                 return x.min(dim=dim, keepdim=True).values
             case GranularityAggregationStrategy.SIGNED_MAX:
                 return x.gather(dim, x.abs().max(dim=dim)[1].unsqueeze(dim))
+            case GranularityAggregationStrategy.FIRST:
+                # Select the first element along the aggregation dimension, keepdim=True
+                return x.narrow(dim, start=0, length=1)
+            case GranularityAggregationStrategy.LAST:
+                # Select the last element along the aggregation dimension, keepdim=True
+                return x.narrow(dim, start=x.size(dim) - 1, length=1)
             case _:
                 raise NotImplementedError(f"Aggregation strategy {strategy} not implemented.")
 
@@ -130,6 +138,8 @@ class GranularityAggregationStrategy(Enum):
                 | GranularityAggregationStrategy.MAX
                 | GranularityAggregationStrategy.MIN
                 | GranularityAggregationStrategy.SIGNED_MAX
+                | GranularityAggregationStrategy.FIRST
+                | GranularityAggregationStrategy.LAST
             ):
                 return x.repeat(new_dim_length, 1)
             case _:
