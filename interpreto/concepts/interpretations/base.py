@@ -437,9 +437,15 @@ class BaseConceptInterpretationMethod(ABC):
             inputs (list[str]): n text samples
 
         Returns:
-            tuple[list[str], list[int]]:
-                - list[str]: The granular texts from the inputs, flattened
-                - list[int]: The sample id for each granular text, to keep track of which sample the text belongs to.
+            granular_flattened_texts (list[str]):
+                The granular texts elements from the inputs, flattened.
+                [Example1_Tok1, Example1_Tok2, ... Example2_Tok1, Example2_Tok2, ...]
+
+            granular_flattened_sample_id (list[int]):
+                The sample id for each granular text, to keep track of which sample the text belongs to.
+                It should have the same length as `granular_flattened_texts`.
+                It elements indicates the sample if for the corresponding granular text in `granular_flattened_texts`.
+                [0, 0, ... 1, 1, ...]
         """
         if self.activation_granularity in (
             ActivationGranularity.SAMPLE,
@@ -508,6 +514,8 @@ class BaseConceptInterpretationMethod(ABC):
 
             granular_sample_ids (list[int]):
                 The granular sample ids for the specified concepts.
+                Each element of the list is the index of the input sample from which the corresponding granular input was extracted.
+                It has the same length as `granular_inputs`.
 
         """
         if concepts_indices == "all":
