@@ -180,11 +180,13 @@ def verify_granular_inputs(
             raise ValueError(
                 f"The lengths of the granulated inputs do not match the number of provided latent activations {len(granular_inputs)} != {len(latent_activations)}"
                 "If you provide latent activations, make sure they have the same granularity as the inputs."
+                "This might happen if you use `use_vocab=True` and `use_unique_words=True` and provide `latent_activations`."
             )
         if concepts_activations is not None and len(granular_inputs) != len(concepts_activations):
             raise ValueError(
                 f"The lengths of the granulated inputs do not match the number of provided concepts activations {len(granular_inputs)} != {len(concepts_activations)}"
                 "If you provide concepts activations, make sure they have the same granularity as the inputs."
+                "This might happen if you use `use_vocab=True` and `use_unique_words=True` and provide `concepts_activations`."
             )
         raise ValueError(
             f"The lengths of the granulated inputs do not match the number of concepts activations {len(granular_inputs)} != {len(sure_concepts_activations)}"
@@ -404,9 +406,15 @@ class BaseConceptInterpretationMethod(ABC):
             inputs (list[str]): n text samples
 
         Returns:
-            tuple[list[str], list[int]]:
-                - list[str]: The granular texts from the inputs, flattened
-                - list[int]: The sample id for each granular text, to keep track of which sample the text belongs to.
+            granular_flattened_texts (list[str]):
+                The granular texts elements from the inputs, flattened.
+                [Example1_Tok1, Example1_Tok2, ... Example2_Tok1, Example2_Tok2, ...]
+
+            granular_flattened_sample_id (list[int]):
+                The sample id for each granular text, to keep track of which sample the text belongs to.
+                It should have the same length as `granular_flattened_texts`.
+                It elements indicates the sample if for the corresponding granular text in `granular_flattened_texts`.
+                [0, 0, ... 1, 1, ...]
         """
         if self.activation_granularity in (ActivationGranularity.SAMPLE, ActivationGranularity.CLS_TOKEN):
             # no activation_granularity is needed
@@ -466,6 +474,8 @@ class BaseConceptInterpretationMethod(ABC):
 
             granular_sample_ids (list[int]):
                 The granular sample ids for the specified concepts.
+                Each element of the list is the index of the input sample from which the corresponding granular input was extracted.
+                It has the same length as `granular_inputs`.
 
         """
         if concepts_indices == "all":

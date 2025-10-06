@@ -365,19 +365,19 @@ def _format_examples(
     k_context: int,
 ) -> list[Example]:
     """Format examples for the LLM input. If k_context > 0, it will add context around
-    the selected text (for instance tokens befor and after the selected token). Concept
+    the selected text (for instance tokens before and after the selected token). Concept
     activations are normalized to a scale of 0 to 10, 10 being the maximum activation
     for the concept in the set of inputs.
 
     Args:
         example_ids (list[int]): selected example ids to provide to the LLM.
-        inputs (list[str]): the list of all granular texts from the inputs, flatened.
+        inputs (list[str]): the list of all granular texts from the inputs, flattened.
         concept_activations (Float[torch.Tensor, &quot;ng&quot;]): the concept activations for each granular text.
         sample_ids (list[int]): the id of which sample each granular text belongs to.
 
     Raises:
         ValueError: if concept_activations is not a 1D tensor
-        ValueError: if the lenght of inputs, sample_ids, and concept_activations do not match.
+        ValueError: if the length of inputs, sample_ids, and concept_activations do not match.
 
     Returns:
         list[Example]: list of Example objects, each containing the texts and normalized concept
