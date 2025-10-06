@@ -33,6 +33,7 @@ from typing import Literal, NamedTuple
 import torch
 from jaxtyping import Float
 
+from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
@@ -110,9 +111,12 @@ class LLMLabels(BaseConceptInterpretationMethod):
             The fitted concept explainer used for encoding activations.
 
         activation_granularity (ActivationGranularity):
-            The granularity at which the interpretation is computed.
-            Allowed values are `CLS_TOKEN`, `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
-            Ignored when use_vocab=True.
+            The granularity of the activations to use for the interpretation.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+
+        aggregation_strategy (GranularityAggregationStrategy):
+            The aggregation strategy to use for the activations.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         llm_interface (LLMInterface):
             The LLM interface to use for the interpretation.
@@ -158,6 +162,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         *,
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         llm_interface: LLMInterface,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
@@ -172,6 +177,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         super().__init__(
             concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
+            aggregation_strategy=aggregation_strategy,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
@@ -244,13 +250,16 @@ class LLMLabels(BaseConceptInterpretationMethod):
         granular_inputs: list[str]
         sure_concepts_activations: Float[torch.Tensor, "nl cpt"]
         granular_sample_ids: list[int]
-        sure_concepts_indices, granular_inputs, sure_concepts_activations, granular_sample_ids = (
-            self.get_granular_inputs_and_concept_activations(
-                concepts_indices=concepts_indices,
-                inputs=inputs,
-                latent_activations=latent_activations,
-                concepts_activations=concepts_activations,
-            )
+        (
+            sure_concepts_indices,
+            granular_inputs,
+            sure_concepts_activations,
+            granular_sample_ids,
+        ) = self.get_granular_inputs_and_concept_activations(
+            concepts_indices=concepts_indices,
+            inputs=inputs,
+            latent_activations=latent_activations,
+            concepts_activations=concepts_activations,
         )
 
         labels: Mapping[int, str | None] = {}
@@ -301,7 +310,9 @@ def _sample_top(
         )
     non_zero_samples = torch.argwhere(concept_activations != 0).squeeze(-1)
     k_examples = min(k_examples, non_zero_samples.size(0))
-    inputs_indices = non_zero_samples[torch.topk(concept_activations[non_zero_samples], k=k_examples).indices]
+    inputs_indices = non_zero_samples[
+        torch.topk(concept_activations[non_zero_samples], k=k_examples).indices
+    ]
 
     return inputs_indices.tolist()  # type: ignore
 
@@ -327,7 +338,9 @@ def _sample_random(
             f"concept_activations should be a 1D tensor, got tensor of shape {concept_activations.size()}"
         )
     non_zero_samples = torch.argwhere(concept_activations != 0).squeeze(-1)
-    inputs_indices = non_zero_samples[torch.randperm(len(non_zero_samples))][:k_examples]
+    inputs_indices = non_zero_samples[torch.randperm(len(non_zero_samples))][
+        :k_examples
+    ]
     return inputs_indices.tolist()  # type: ignore
 
 
@@ -349,7 +362,9 @@ def _sample_quantile(
         list[int]: the indexes of the examples to provide to the LLM for labeling the concept.
     """
     if k_examples < k_quantile:
-        raise ValueError(f"k_examples ({k_examples}) should be greater than k_quantile ({k_quantile}).")
+        raise ValueError(
+            f"k_examples ({k_examples}) should be greater than k_quantile ({k_quantile})."
+        )
     if len(concept_activations.size()) > 1:
         raise ValueError(
             f"concept_activations should be a 1D tensor, got tensor of shape {concept_activations.size()}"
@@ -366,15 +381,21 @@ def _sample_quantile(
     quantile_size = non_zero_samples.size(0) // k_quantile
     samples_per_quantile = k_examples // k_quantile
 
-    sorted_indexes = torch.argsort(concept_activations, descending=True)[: non_zero_samples.size(0)]
+    sorted_indexes = torch.argsort(concept_activations, descending=True)[
+        : non_zero_samples.size(0)
+    ]
     sample_indices: list[int] = []
     for i in range(k_quantile):
         if i == k_quantile - 1:
             # Last quantile (minimally activating samples) may have more samples
             quantile_samples = sorted_indexes[i * quantile_size :]
         else:
-            quantile_samples = sorted_indexes[i * quantile_size : (i + 1) * quantile_size]
-        selected_samples = quantile_samples[torch.randperm(len(quantile_samples))[:samples_per_quantile]]
+            quantile_samples = sorted_indexes[
+                i * quantile_size : (i + 1) * quantile_size
+            ]
+        selected_samples = quantile_samples[
+            torch.randperm(len(quantile_samples))[:samples_per_quantile]
+        ]
         sample_indices.extend(selected_samples.tolist())  # type: ignore
     return sample_indices
 
@@ -425,7 +446,11 @@ def _format_examples(
             example = Example(
                 texts=[
                     text
-                    for text, id in zip(inputs[left_idx:right_idx], sample_ids[left_idx:right_idx], strict=False)
+                    for text, id in zip(
+                        inputs[left_idx:right_idx],
+                        sample_ids[left_idx:right_idx],
+                        strict=False,
+                    )
                     if id == sample_idx
                 ],
                 activations=[
@@ -441,7 +466,9 @@ def _format_examples(
         else:
             example = Example(
                 texts=inputs[example_id],
-                activations=round(concept_activations[example_id].item() / max_act * 10),
+                activations=round(
+                    concept_activations[example_id].item() / max_act * 10
+                ),
             )
         examples.append(example)
     return examples
@@ -475,7 +502,9 @@ def _build_example_prompt(examples: list[Example]) -> str:
     for i, example in enumerate(examples):
         if isinstance(example.texts, str) and isinstance(example.activations, int):
             # Text without context
-            example_prompts.append(f"Example {i + 1}: {example.texts} (activation: {example.activations})")
+            example_prompts.append(
+                f"Example {i + 1}: {example.texts} (activation: {example.activations})"
+            )
         elif isinstance(example.texts, list) and isinstance(example.activations, list):
             # Text with context
             max_text_pos = example.activations.index(max(example.activations))
@@ -490,7 +519,9 @@ def _build_example_prompt(examples: list[Example]) -> str:
                 + ", ".join(
                     [
                         f'("{text}", {activation})'
-                        for text, activation in zip(example.texts, example.activations, strict=False)
+                        for text, activation in zip(
+                            example.texts, example.activations, strict=False
+                        )
                     ]
                 )
             )

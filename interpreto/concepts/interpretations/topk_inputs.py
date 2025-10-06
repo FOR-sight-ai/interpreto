@@ -34,6 +34,7 @@ from typing import Any, Literal
 
 import torch
 
+from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
@@ -61,9 +62,12 @@ class TopKInputs(BaseConceptInterpretationMethod):
             The concept explainer built on top of a `ModelWithSplitPoints`.
 
         activation_granularity (ActivationGranularity):
-            The granularity at which the interpretation is computed.
-            Allowed values are `CLS_TOKEN`, `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
-            Ignored when `use_vocab=True`.
+            The granularity of the activations to use for the interpretation.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+
+        aggregation_strategy (GranularityAggregationStrategy):
+            The aggregation strategy to use for the activations.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -218,6 +222,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         *,
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.WORD,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
@@ -228,6 +233,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         super().__init__(
             concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
+            aggregation_strategy=aggregation_strategy,
             concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
@@ -239,7 +245,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
 
     def interpret(
         self,
-        concepts_indices: int | list[int] | Literal["all"],
+        concepts_indices: int | list[int] | Literal["all"] = "all",
         inputs: list[str] | None = None,
         latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
@@ -317,7 +323,9 @@ class TopKInputs(BaseConceptInterpretationMethod):
         ):
             interpretation_dict[cpt_idx] = {}
             # iterate over k
-            for activation, input_index in zip(topk_activations, topk_indices, strict=True):
+            for activation, input_index in zip(
+                topk_activations, topk_indices, strict=True
+            ):
                 # ensure that the input is not already in the interpretation
                 if len(interpretation_dict[cpt_idx]) >= self.k:
                     break
