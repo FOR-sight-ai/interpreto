@@ -34,8 +34,8 @@ from transformers import (
     AutoTokenizer,
 )
 
-from interpreto import Granularity
 from interpreto import ModelWithSplitPoints as MWSP
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity, InitializationError
 
 AG = MWSP.activation_granularities
@@ -53,7 +53,6 @@ BERT_SPLIT_POINTS_SORTED = [
 ]
 
 GRANULARITIES = [
-    ActivationGranularity.ALL,
     ActivationGranularity.ALL_TOKENS,
     ActivationGranularity.CLS_TOKEN,
     ActivationGranularity.TOKEN,
@@ -67,6 +66,8 @@ AGGREGATIONS = [
     MWSP.aggregation_strategies.SUM,
     MWSP.aggregation_strategies.MAX,
     MWSP.aggregation_strategies.SIGNED_MAX,
+    MWSP.aggregation_strategies.FIRST,
+    MWSP.aggregation_strategies.LAST,
 ]
 
 
@@ -166,13 +167,13 @@ def test_manage_output_tuple():
 
 def test_get_split_activations(splitted_encoder_ml: MWSP, sentences: list[str]):
     """Test activation extraction for a specific split."""
-    acts = splitted_encoder_ml.get_activations(sentences, activation_granularity=AG.ALL)
+    acts = splitted_encoder_ml.get_activations(sentences, activation_granularity=AG.ALL_TOKENS)
     assert acts is not None, "get_activations returned None"
     split = splitted_encoder_ml.split_points[0]
     assert split in acts, f"Split '{split}' not found in activations dict"
     extracted = splitted_encoder_ml.get_split_activations(acts, split)
     assert extracted is not None, "get_split_activations returned None"
-    assert torch.equal(extracted, acts[split]), "Extracted activations do not match activations dict at split"
+    assert torch.equal(extracted, acts[split]), "Extracted activations do not match activations dict at split"  # type: ignore
 
     with pytest.raises(ValueError):
         splitted_encoder_ml.get_split_activations({}, "unknown")  # type: ignore
@@ -184,15 +185,73 @@ def test_get_split_activations(splitted_encoder_ml: MWSP, sentences: list[str]):
 def test_get_latent_shape(splitted_encoder_ml: MWSP, sentences: list[str]):
     """Shapes returned by ``get_latent_shape`` match activation shapes."""
     shapes = splitted_encoder_ml.get_latent_shape(sentences)
-    acts = splitted_encoder_ml.get_activations(sentences, activation_granularity=ActivationGranularity.ALL)
+    acts_dict = splitted_encoder_ml.get_activations(
+        sentences, activation_granularity=ActivationGranularity.ALL_TOKENS, flatten_activations=False
+    )
+
     assert shapes is not None, "get_latent_shape returned None"
-    assert acts is not None, "get_activations returned None"
+    assert acts_dict is not None, "get_activations returned None"
     for sp in splitted_encoder_ml.split_points:
         assert sp in shapes, f"Split '{sp}' missing in shapes"
-        assert sp in acts, f"Split '{sp}' missing in activations"
-        assert shapes[sp] == acts[sp].shape, (
-            f"Latent shape mismatch for split '{sp}': shapes={shapes[sp]}, activations={acts[sp].shape}"
+        assert sp in acts_dict, f"Split '{sp}' missing in activations"
+        acts = torch.stack(acts_dict[sp])
+        assert shapes[sp] == acts.shape, (
+            f"Latent shape mismatch for split '{sp}': shapes={shapes[sp]}, activations={acts.shape}"
         )
+
+
+@pytest.mark.parametrize(
+    "granularity, aggregation_strategy",
+    [
+        (AG.ALL_TOKENS, None),
+        (AG.CLS_TOKEN, None),
+        (AG.TOKEN, None),
+        *itertools.product([AG.WORD, AG.SENTENCE, AG.SAMPLE], AGGREGATIONS),
+    ],
+)
+def test_flatten_activations(
+    splitted_encoder_ml: MWSP,
+    sentences: list[str],
+    granularity: ActivationGranularity,
+    aggregation_strategy: GranularityAggregationStrategy,
+):
+    """Test activation flattening"""
+    # flattened is the default behavior
+    acts_dict = splitted_encoder_ml.get_activations(
+        sentences, activation_granularity=granularity, aggregation_strategy=aggregation_strategy
+    )
+    concatenated_acts = splitted_encoder_ml.get_split_activations(acts_dict)
+
+    # sample-wise list
+    acts_dict = splitted_encoder_ml.get_activations(
+        sentences,
+        activation_granularity=granularity,
+        aggregation_strategy=aggregation_strategy,
+        flatten_activations=False,
+    )
+    sample_wise_acts = splitted_encoder_ml.get_split_activations(acts_dict)
+
+    new_concatenated_acts = torch.cat(sample_wise_acts, dim=0)
+
+    assert concatenated_acts is not None, "get_split_activations returned None with `flatten_activations=True`"
+    assert sample_wise_acts is not None, "get_split_activations returned None with `flatten_activations=False`"
+
+    assert isinstance(concatenated_acts, torch.Tensor), (
+        "get_split_activations returned a non-tensor with `flatten_activations=True`"
+    )
+    assert isinstance(sample_wise_acts, list), (
+        "get_split_activations returned a non-list with `flatten_activations=False`"
+    )
+
+    assert len(sample_wise_acts) == len(sentences), (
+        f"get_activations with `flatten_activations=False` returned {len(sample_wise_acts)} activations, "
+        f"expected {len(sentences)}"
+    )
+
+    assert torch.allclose(concatenated_acts, new_concatenated_acts, atol=1e-5), (
+        "Concatenated activations do not match flattened activations",
+        "The `flatten_activations` option is not working as expected",
+    )
 
 
 def test_activation_selection_and_reintegration_with_bert(bert_model, bert_tokenizer, sentences):
@@ -235,11 +294,15 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
         truncation=True,
         return_offsets_mapping=True,
     )
-    acts_dict = mwsp.get_activations(tokens, activation_granularity=ActivationGranularity.ALL)
+    acts_dict = mwsp.get_activations(
+        tokens, activation_granularity=ActivationGranularity.ALL_TOKENS, flatten_activations=False
+    )
     assert acts_dict is not None, "get_activations returned None"
     assert split_point in acts_dict, f"Split '{split_point}' not found in activations dict"
     activations = acts_dict[split_point]
     assert activations is not None, "Activations at split are None"
+
+    activations = torch.stack(activations)
 
     # -----------------------------------------------------------
     # Define expected shapes for the different granularity levels
@@ -248,8 +311,11 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
     total_token_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.TOKEN, tokenizer))
     total_word_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.WORD, tokenizer))
 
+    assert activations.shape == (batch, seq_len, hidden), (
+        f"Activations shape mismatch: got {activations.shape}, expected {(batch, seq_len, hidden)}"
+    )
+
     expected = {
-        ActivationGranularity.ALL: (batch, seq_len, hidden),
         ActivationGranularity.CLS_TOKEN: (batch, hidden),
         # ActivationGranularity.ALL_TOKENS: cannot be tested as the output shape depends on the batch size
         ActivationGranularity.TOKEN: (total_token_len, hidden),
@@ -267,7 +333,6 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
         )
     )
     granularities_without_aggregations = [
-        (ActivationGranularity.ALL, None),
         (ActivationGranularity.ALL_TOKENS, None),
         (ActivationGranularity.TOKEN, None),
     ]
@@ -285,25 +350,29 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
         # ------------------
         # Select activations
         selected_activations = mwsp._apply_selection_strategy(
-            activations=activations.clone(),
+            activations=activations.clone(),  # type: ignore
             granularity_indices=granularity_indices,
             activation_granularity=granularity,
             aggregation_strategy=aggregation,
         )
         assert selected_activations is not None, f"_apply_selection_strategy returned None for {granularity}"
+
+        # concatenate the selected activations into a single tensor
+        selected_activations = torch.cat(selected_activations)
+
         # ensure that the shape of the selected activations matches the expected shape
         if granularity != ActivationGranularity.ALL_TOKENS:
             # the ALL_TOKENS granularity shape depends on the batch size and cannot be tested
-            assert selected_activations.shape == expected[granularity], (
-                f"Selected shape mismatch for {granularity}: got {tuple(selected_activations.shape)}, "
+            assert selected_activations.shape == expected[granularity], (  # type: ignore
+                f"Selected shape mismatch for {granularity}: got {tuple(selected_activations.shape)}, "  # type: ignore
                 f"expected {expected[granularity]}"
             )
 
         # -----------------------
         # Reintegrate activations
         reconstructed_activations = mwsp._reintegrate_selected_activations(
-            activations.clone(),
-            selected_activations,
+            activations.clone(),  # type: ignore
+            selected_activations,  # type: ignore
             activation_granularity=granularity,
             aggregation_strategy=aggregation,
             granularity_indices=granularity_indices,
@@ -312,14 +381,14 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
             f"_reintegrate_selected_activations returned None, for {granularity}"
         )
         # ensure that the shape of the reintegrated activations matches the initial shape
-        assert reconstructed_activations.shape == activations.shape, (
+        assert reconstructed_activations.shape == activations.shape, (  # type: ignore
             f"Reintegrated shape mismatch: got {tuple(reconstructed_activations.shape)}, "
-            f"expected {tuple(activations.shape)} for {granularity}"
+            f"expected {tuple(activations.shape)} for {granularity}"  # type: ignore
         )
         # ensure that the reintegrated activations match the initial activations
         if aggregation is None:
             # if activations are aggregated, we cannot get back to the exact original activations
-            assert torch.allclose(reconstructed_activations, activations, atol=1e-5), (
+            assert torch.allclose(reconstructed_activations, activations, atol=1e-5), (  # type: ignore
                 "Reintegrated activations differ from original beyond tolerance for {granularity}"
             )
 
@@ -334,13 +403,17 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
         assert reselected_activations is not None, (
             "_apply_selection_strategy (reselect) returned None for {granularity}"
         )
+
+        # concatenate the reselected activations into a single tensor
+        reselected_activations = torch.cat(reselected_activations)
+
         # ensure that the shape of the reselected activations matches the selected activations
-        assert reselected_activations.shape == selected_activations.shape, (
-            f"Reselected shape mismatch: got {tuple(reselected_activations.shape)}, "
-            f"expected {tuple(selected_activations.shape)}, for {granularity}"
+        assert reselected_activations.shape == selected_activations.shape, (  # type: ignore
+            f"Reselected shape mismatch: got {tuple(reselected_activations.shape)}, "  # type: ignore
+            f"expected {tuple(selected_activations.shape)}, for {granularity}"  # type: ignore
         )
         # ensure that the reselected activations match the selected activations
-        assert torch.allclose(reselected_activations, selected_activations, atol=1e-5), (
+        assert torch.allclose(reselected_activations, selected_activations, atol=1e-5), (  # type: ignore
             "Reselected activations differ from initially selected beyond tolerance, for {granularity}"
         )
 
@@ -421,17 +494,19 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
         assert split_point in activations_dict, f"Split '{split_point}' missing in activations dict for {granularity}"
         activations = activations_dict[split_point]
         assert activations is not None, f"Activations at split are None for {granularity}"
-        assert activations.shape == expected_shape, (
-            f"Activations shape mismatch for {granularity}: got {tuple(activations.shape)}, expected {expected_shape} for {granularity}"
+        assert activations.shape == expected_shape, (  # type: ignore
+            f"Activations shape mismatch for {granularity}: got {tuple(activations.shape)}, "  # type: ignore
+            f"expected {expected_shape} for {granularity}"
         )
         if include_predicted_classes:
             predictions = activations_dict["predictions"]
             assert predictions is not None, f"Predictions entry is None for {granularity}"
-            assert predictions.shape[0] == expected_shape[0], (
-                f"Predictions batch mismatch: got {predictions.shape[0]}, expected {expected_shape[0]} for {granularity}"
+            assert predictions.shape[0] == expected_shape[0], (  # type: ignore
+                f"Predictions batch mismatch: got {predictions.shape[0]}, "  # type: ignore
+                f"expected {expected_shape[0]} for {granularity}"
             )
 
-        if granularity in [ActivationGranularity.ALL, ActivationGranularity.SAMPLE]:
+        if granularity is ActivationGranularity.SAMPLE:
             # ALL and SAMPLE granularities are not compatible with gradients
             continue
 
@@ -483,8 +558,8 @@ def test_activation_equivalence_batched_text_token_inputs(multi_split_model: MWS
         inputs_str, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
     )
 
-    activations_str = multi_split_model.get_activations(inputs_str, activation_granularity=AG.ALL)
-    activations_tensor = multi_split_model.get_activations(inputs_tensor, activation_granularity=AG.ALL)
+    activations_str = multi_split_model.get_activations(inputs_str, activation_granularity=AG.ALL_TOKENS)
+    activations_tensor = multi_split_model.get_activations(inputs_tensor, activation_granularity=AG.ALL_TOKENS)
     assert activations_str is not None and activations_tensor is not None, "get_activations returned None"
 
     for k in activations_str.keys():
@@ -497,7 +572,6 @@ def test_activation_equivalence_batched_text_token_inputs(multi_split_model: MWS
 @pytest.mark.parametrize(
     "strategy",
     [
-        # AG.ALL,
         AG.CLS_TOKEN,
         AG.ALL_TOKENS,
         AG.TOKEN,
@@ -573,7 +647,6 @@ CI_MODEL_LOADERS = [
 ]
 
 STRATEGIES = [
-    AG.ALL,
     AG.CLS_TOKEN,
     AG.ALL_TOKENS,
     AG.TOKEN,
@@ -630,10 +703,7 @@ def evaluate_activations_and_gradients(model_name, sentences: list[str]):
         acts = splitted_model.get_activations(sentences, activation_granularity=strategy)
         assert acts is not None, f"get_activations returned None for granularity {strategy} on {model_name}"
 
-        if strategy in [
-            AG.ALL,
-            AG.SAMPLE,
-        ]:
+        if strategy is AG.SAMPLE:
             # ALL and SAMPLE granularities are not compatible with gradients
             continue
 
