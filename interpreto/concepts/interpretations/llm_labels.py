@@ -125,6 +125,12 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
         k_context (int):
             The number of context tokens to use around the concept tokens.
+            In the prompt, in the examples, the k context tokens before and after the concept token are selected.
+            It is recommended to set it to between 5 and 10 for TOKEN and WORD granularities.
+            However, if the granularity is CLS_TOKEN or SAMPLE,
+            or `use_unique_words=True` or `use_vocab=True`,
+            it will be forced to 0.
+            Indeed, in these cases the context do not make sense.
 
         use_vocab (bool):
             If True, the interpretation will be computed from the vocabulary of the model.
@@ -171,6 +177,22 @@ class LLMLabels(BaseConceptInterpretationMethod):
             unique_words_kwargs=unique_words_kwargs,
             device=device,
         )
+
+        if k_context > 0 and (
+            use_vocab
+            or use_unique_words
+            or self.activation_granularity
+            in [
+                ActivationGranularity.SAMPLE,
+                ActivationGranularity.CLS_TOKEN,
+            ]
+        ):
+            k_context = 0
+            warnings.warn(
+                "k_context is set to 0 because use_vocab or use_unique_words or activation_granularity is SAMPLE or CLS_TOKEN."
+                "With these granularities, it is not possible to provide context around the granular inputs.",
+                stacklevel=2,
+            )
 
         self.llm_interface = llm_interface
         self.sampling_method = sampling_method
