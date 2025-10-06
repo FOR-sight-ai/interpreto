@@ -1294,7 +1294,7 @@ class ModelWithSplitPoints(LanguageModel):
                     )  # number of granularity elements
 
                     # apply selection strategy
-                    selected_activations: list[Float[torch.Tensor, g, d]]
+                    selected_activations: list[Float[torch.Tensor, "g {d}"]]
                     selected_activations = self._apply_selection_strategy(
                         activations=raw_activations,  # use the last batch of activations
                         granularity_indices=granularity_indices,
@@ -1302,7 +1302,7 @@ class ModelWithSplitPoints(LanguageModel):
                         aggregation_strategy=aggregation_strategy,
                     )
                     # concatenate the selected activations into a single tensor
-                    flattened_activations = torch.cat(selected_activations, dim=0)
+                    flattened_activations: Float[torch.Tensor, ng, d] = torch.cat(selected_activations, dim=0)
 
                     # encode activations into concepts
                     concept_activations: Float[torch.Tensor, "{ng} c"] = (
