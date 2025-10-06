@@ -86,7 +86,7 @@ class GranularityAggregationStrategy(Enum):
     LAST = "last"  # TODO: test
 
     @staticmethod
-    def aggregate(
+    def aggregate(  # noqa: PLR0911  # ignore too many return statements
         x: Float[torch.Tensor, "l d"],
         strategy: GranularityAggregationStrategy,
         dim: int,
