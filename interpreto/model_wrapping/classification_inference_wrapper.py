@@ -70,8 +70,11 @@ class ClassificationInferenceWrapper(InferenceWrapper):
                 f"target batch size {n} should be either 1 or logits batch size ({batch_dims[0]})"
             )
             view_index[0] = n
-        target = target.view(*view_index, -1)
-        return target.expand(*batch_dims, -1)
+        target = target.view(*view_index, -1).expand(*batch_dims, -1)
+
+        if target.dtype == torch.int64:
+            return target
+        return target.to(torch.float32)
 
     @singledispatchmethod
     def get_targets(self, model_inputs: Any) -> torch.Tensor | Generator[torch.Tensor, None, None]:

@@ -172,7 +172,7 @@ class GenerationInferenceWrapper(InferenceWrapper):
         # For a batch case, unsqueeze the targets so that they match the logits shape.
         selected_logits = target_logits.gather(dim=-1, index=extended_targets.unsqueeze(-1)).squeeze(-1)
 
-        return selected_logits
+        return selected_logits.to(torch.float32)
 
     @get_targeted_logits.register(Iterable)
     def _(
@@ -211,4 +211,4 @@ class GenerationInferenceWrapper(InferenceWrapper):
 
             extended_target = target.expand(logits.shape[0], -1)
             selected_logits = targeted_logits.gather(dim=-1, index=extended_target.unsqueeze(-1)).squeeze(-1)
-            yield selected_logits
+            yield selected_logits.to(torch.float32)

@@ -516,6 +516,7 @@ class Granularity(Enum):
                 for aggregation_index, token_indices in enumerate(indices_list[0]):
                     # extract token contribution for each word/sentence
                     tokens_contribution: Float[torch.Tensor, "t gi"] = contribution[:, token_indices]
+                    tokens_contribution = tokens_contribution.to(torch.float32)
 
                     if tokens_contribution.dim() == 1 or tokens_contribution.shape[1] == 1:
                         # if only one token, no aggregation needed
