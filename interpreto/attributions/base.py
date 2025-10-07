@@ -655,25 +655,25 @@ class GenerationAttributionExplainer(AttributionExplainer):
             targets (str, TensorMapping, torch.Tensor, or Iterable): The target texts or tokens.
 
         Returns:
-            List[torch.Tensor]: A list of tensors representing the target token IDs.
+            List[torch.Tensor]: A list of 1-D tensors representing the target token IDs.
 
         Raises:
             ValueError: If the target type is not supported.
         """
         if isinstance(targets, str):
-            return [self.tokenizer(targets, return_tensors="pt", truncation=True)["input_ids"]]  # type: ignore
+            targets = self.tokenizer(targets, return_tensors="pt", truncation=True)["input_ids"].squeeze(dim=0)
+            return [targets]  # type: ignore
         if isinstance(targets, MutableMapping):  # TensorMapping cannot be used in isinstance
             targets = targets["input_ids"]
             if targets.dim() == 1:
-                return list(
-                    targets.unsqueeze(0)
-                )  # If there's only one sentence in the mapping, we standardize by giving it a first batch dimension of 1
+                return list(targets)
             if targets.shape[0] > 1:
-                return list(
-                    targets.split(1, dim=0)
-                )  # If the batch dimension n is greater than 1, we cut the batch into a list of size n with mappings having a batch of 1.
-            return [targets]
+                targets = targets.split(1, dim=0)  # If the batch size > 1, we cut into a list of n mappings.
+                return [t.squeeze(dim=0) for t in targets]  # type: ignore
+            return [targets.squeeze(dim=0)]
         if isinstance(targets, torch.Tensor):
+            targets = targets.squeeze(dim=0)  # remove batch dimension if any
+            assert targets.dim() == 1, "Target tensor must be 1-D."
             return [targets]
         if isinstance(targets, Iterable):
             return list(itertools.chain(*[self.process_targets(item) for item in targets]))
@@ -710,14 +710,19 @@ class GenerationAttributionExplainer(AttributionExplainer):
             model_inputs_to_explain, sanitized_targets = self.inference_wrapper.get_inputs_to_explain_and_targets(
                 model_inputs, **model_kwargs
             )
+            # Remove batch dimension to align with targets in ClassificationExplainer (1-D tensor of shape (t,))
+            sanitized_targets = [t.squeeze(dim=0) if t.dim() >= 1 else t for t in sanitized_targets]
         else:
             sanitized_targets = self.process_targets(targets)
             model_inputs_to_explain = []
             for model_input, target in zip(model_inputs, sanitized_targets, strict=True):
+                target_2d = target.unsqueeze(dim=0)  # add batch dimension for concatenation with model_input
                 model_inputs_to_explain.append(
                     {
-                        "input_ids": torch.cat([model_input["input_ids"], target], dim=1),  # type: ignore
-                        "attention_mask": torch.cat([model_input["attention_mask"], torch.ones_like(target)], dim=1),  # type: ignore
+                        "input_ids": torch.cat([model_input["input_ids"], target_2d], dim=1),  # type: ignore
+                        "attention_mask": torch.cat(
+                            [model_input["attention_mask"], torch.ones_like(target_2d)], dim=1
+                        ),  # type: ignore
                     }
                 )
 
