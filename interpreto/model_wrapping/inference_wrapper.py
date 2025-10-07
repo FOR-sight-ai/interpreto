@@ -33,7 +33,7 @@ processing. The class is designed to be subclassed for specific model types and 
 from __future__ import annotations
 
 import warnings
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from enum import Enum
 from functools import singledispatchmethod
@@ -187,16 +187,16 @@ class InferenceWrapper(ABC):
         Args:
             device (torch.device): wanted device (e.g., "cpu" or "cuda").
         """
-        self.model.to(device)  # type: ignore
+        self.model.to(device)
 
-    def to(self, device: torch.device):
+    def to(self, device: torch.device, dtype: torch.dtype | None = None):
         """
         Move the model to the specified device.
 
         Args:
             device (torch.device): The device to which the model should be moved.
         """
-        self.device = device
+        self.model.to(device=device, dtype=dtype)
 
     def cpu(self):
         """
@@ -209,6 +209,14 @@ class InferenceWrapper(ABC):
         Move the model to the GPU.
         """
         self.device = torch.device("cuda")
+
+    @property
+    def dtype(self):
+        return self.model.dtype
+
+    @dtype.setter
+    def dtype(self, dtype: torch.dtype):
+        self.model.to(dtype=dtype)
 
     def embed(self, model_inputs: TensorMapping) -> TensorMapping:
         """
@@ -229,7 +237,7 @@ class InferenceWrapper(ABC):
         # If input ids are present, get the embeddings and add them to the model inputs
         if "input_ids" in model_inputs:
             base_shape = model_inputs["input_ids"].shape
-            input_ids = model_inputs["input_ids"].flatten(0, -2).to(self.device)
+            input_ids = model_inputs["input_ids"].flatten(0, -2).to(self.device, self.dtype)
             flatten_embeds = self.model.get_input_embeddings()(input_ids)
             model_inputs["inputs_embeds"] = flatten_embeds.view(*base_shape, flatten_embeds.shape[-1])
             return model_inputs
@@ -279,11 +287,11 @@ class InferenceWrapper(ABC):
 
         # send input to device
         if input_ids is not None:
-            input_ids = input_ids.to(self.device)
+            input_ids = input_ids.to(self.device, self.dtype)
         if inputs_embeds is not None:
-            inputs_embeds = inputs_embeds.to(self.device)
+            inputs_embeds = inputs_embeds.to(self.device, self.dtype)
         if attention_mask is not None:
-            attention_mask = attention_mask.to(self.device)
+            attention_mask = attention_mask.to(self.device, self.dtype)
 
         # Call wrapped model
         if inputs_embeds is not None:
