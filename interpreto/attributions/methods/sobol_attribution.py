@@ -40,7 +40,7 @@ from interpreto.attributions.perturbations.sobol_perturbation import (
     SequenceSamplers,
     SobolTokenPerturbator,
 )
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 
 
 class Sobol(MultitaskExplainerMixin, AttributionExplainer):
@@ -77,6 +77,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
+        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_token_perturbations: int = 32,
         sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.FIRST_ORDER,
@@ -94,6 +95,9 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
                 Defaults to Granularity.WORD.
                 To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+            granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
+                Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
+                Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             n_token_perturbations (int): the number of perturbations to generate
@@ -123,6 +127,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
             aggregator=aggregator,
             batch_size=batch_size,
             granularity=granularity,
+            granularity_aggregation_strategy=granularity_aggregation_strategy,
             inference_mode=inference_mode,
             device=device,
             use_gradient=False,
