@@ -164,7 +164,6 @@ class InferenceWrapper(ABC):
 
         if not (getattr(model, "is_loaded_in_8bit", False) or getattr(model, "is_loaded_in_4bit", False)):
             self.model.to(device)  # type: ignore
-
         self.batch_size = batch_size
 
         assert callable(mode), "mode should be a callable function from `InferenceModes`"
