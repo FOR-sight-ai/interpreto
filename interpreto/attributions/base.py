@@ -543,7 +543,7 @@ class ClassificationAttributionExplainer(AttributionExplainer):
 
             # iterable[int]
             if all(isinstance(t, int) for t in targets):  # actually verified by jaxtyping
-                return [torch.tensor(target) for target in targets]
+                return [torch.tensor([target]) for target in targets]
 
             # iterable[torch.Tensor]
             iterable_targets: Iterable[torch.Tensor] = targets  # type: ignore
