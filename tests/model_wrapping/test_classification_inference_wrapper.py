@@ -72,6 +72,7 @@ def test_classification_inference_wrapper_multiple_sentences(bert_model, bert_to
     assert torch.all(torch.isclose(targets, test_targets, atol=1e-5))
     assert torch.all(torch.isclose(target_logits, test_target_logits, atol=1e-5))
 
+
 if __name__ == "__main__":
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 

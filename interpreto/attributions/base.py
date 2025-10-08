@@ -79,7 +79,6 @@ def clone_tensor_mapping(tm: TensorMapping, detach: bool = False) -> TensorMappi
     return {k: v.detach().clone() if detach else v.clone() for k, v in tm.items()}
 
 
-
 @dataclass
 class AttributionOutput:
     """
@@ -102,6 +101,7 @@ class AttributionOutput:
             - For single-class classification: tensor of shape `(1)`
             - For multi-class classification: tensor of shape `(c)` where `c` is the number of classes
     """
+
     # TODO: Harmonize even more, all attributions could be of the shape (t, l),
     # with t being either a number of class or of generated tokens.
     # It should not be a problem if some values are None or zero for generation.
@@ -109,7 +109,8 @@ class AttributionOutput:
     attributions: SingleAttribution
     elements: list[str] | torch.Tensor
     model_task: ModelTask
-    classes: torch.Tensor|None = None
+    classes: torch.Tensor | None = None
+
 
 class AttributionExplainer:
     """
