@@ -144,10 +144,7 @@ def test_attribution_methods_with_text_long(model_name, attribution_explainer):
 @pytest.mark.parametrize(
     "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
 )
-@pytest.mark.parametrize(
-    "attribution_explainer",
-    [Occlusion, KernelShap, Lime, Sobol, GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
-)
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize(
     "granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE]
 )
@@ -165,10 +162,7 @@ def test_attribution_methods_granularity(model_name, attribution_explainer, gran
 @pytest.mark.parametrize(
     "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
 )
-@pytest.mark.parametrize(
-    "attribution_explainer",
-    [GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
-)
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize("granularity", [Granularity.WORD, Granularity.SENTENCE])
 @pytest.mark.parametrize(
     "aggregation_strategy",
@@ -341,6 +335,11 @@ if __name__ == "__main__":
     )
     test_attribution_methods_granularity(
         model_name="hf-internal-testing/tiny-random-bert",
+        attribution_explainer=Occlusion,
+        granularity=Granularity.WORD,
+    )
+    test_attribution_methods_granularity(
+        model_name="hf-internal-testing/tiny-random-gpt2",
         attribution_explainer=Occlusion,
         granularity=Granularity.WORD,
     )
