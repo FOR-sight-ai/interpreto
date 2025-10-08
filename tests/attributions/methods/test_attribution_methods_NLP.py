@@ -63,7 +63,7 @@ attribution_method_kwargs = {
         "noise_std": 0.001,
     },
     Saliency: {},
-    IntegratedGradients: {"n_perturbations": 3, "baseline": 0.0},
+    IntegratedGradients: {"n_perturbations": 3, "baseline": 1e-6},
     SmoothGrad: {
         "n_perturbations": 3,
         "noise_std": 0.1,

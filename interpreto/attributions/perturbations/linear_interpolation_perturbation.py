@@ -81,10 +81,14 @@ class LinearInterpolationPerturbator(EmbeddingsPerturbator):
         # Shape: (batch_size, *input_shape)
         input_shape = inputs.shape[1:]
 
+        # When all values are zero, the gradients are always NaN.
+        # To avoid this, we set the baseline to a small value.
         if baseline is None:
-            baseline = 0
+            baseline = 1e-6
+        if isinstance(baseline, int | float) and baseline in [0, 0.0]:
+            baseline = 1e-6
 
-        if isinstance(baseline, (int, float)):  # noqa: UP038
+        if isinstance(baseline, int | float):
             return torch.full(input_shape, baseline, dtype=inputs.dtype, device=inputs.device)
         if not isinstance(baseline, torch.Tensor):
             raise TypeError(f"Expected baseline to be a torch.Tensor, int, or float, but got {type(baseline)}.")
