@@ -73,6 +73,30 @@ def test_classification_inference_wrapper_multiple_sentences(bert_model, bert_to
     assert torch.all(torch.isclose(target_logits, test_target_logits, atol=1e-5))
 
 
+def test_classification_inference_wrapper_with_quantized_models(bert_model, bert_tokenizer, sentences, quantization):
+    # Model preparation
+    quantized_model = quantization(bert_model)
+    inference_wrapper = ClassificationInferenceWrapper(quantized_model, batch_size=5, device=DEVICE)
+    inference_wrapper.pad_token_id = bert_tokenizer.pad_token_id
+
+    # Reference values
+    tokens = bert_tokenizer(sentences, return_tensors="pt", padding=True, truncation=True)
+    tokens.to(DEVICE)
+    logits = bert_model(**tokens).logits
+    targets = logits.argmax(dim=-1)
+    predefined_targets = torch.randperm(logits.shape[-1]).to(DEVICE)
+    target_logits = torch.gather(logits, dim=-1, index=predefined_targets.unsqueeze(0).expand(logits.shape[0], -1))
+
+    # Tests
+    test_logits = torch.stack(list(inference_wrapper.get_logits(tokens.copy())))
+    test_targets = torch.stack(list(inference_wrapper.get_targets(tokens.copy())))
+    test_target_logits = torch.stack(list(inference_wrapper.get_targeted_logits(tokens.copy(), predefined_targets)))
+
+    assert torch.all(torch.isclose(logits, test_logits, atol=1e-5))
+    assert torch.all(torch.isclose(targets, test_targets, atol=1e-5))
+    assert torch.all(torch.isclose(target_logits, test_target_logits, atol=1e-5))
+
+
 if __name__ == "__main__":
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 

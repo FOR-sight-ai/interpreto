@@ -33,7 +33,7 @@ processing. The class is designed to be subclassed for specific model types and 
 from __future__ import annotations
 
 import warnings
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from enum import Enum
 from functools import singledispatchmethod
@@ -162,7 +162,9 @@ class InferenceWrapper(ABC):
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model.to(device)  # type: ignore
+        if not (getattr(model, "is_loaded_in_8bit", False) or getattr(model, "is_loaded_in_4bit", False)):
+            self.model.to(device)  # type: ignore
+
         self.batch_size = batch_size
 
         assert callable(mode), "mode should be a callable function from `InferenceModes`"
@@ -237,7 +239,7 @@ class InferenceWrapper(ABC):
         # If input ids are present, get the embeddings and add them to the model inputs
         if "input_ids" in model_inputs:
             base_shape = model_inputs["input_ids"].shape
-            input_ids = model_inputs["input_ids"].flatten(0, -2).to(self.device, self.dtype)
+            input_ids = model_inputs["input_ids"].flatten(0, -2).to(self.device)
             flatten_embeds = self.model.get_input_embeddings()(input_ids)
             model_inputs["inputs_embeds"] = flatten_embeds.view(*base_shape, flatten_embeds.shape[-1])
             return model_inputs
@@ -279,7 +281,11 @@ class InferenceWrapper(ABC):
                 f"Consider adjust the batch size or the wrapper of split your data.",
             )
         # Check sequence length
-        if input_ids is not None and getattr(self.model.config, "max_position_embeddings", False) and input_ids.shape[-1] > self.model.config.max_position_embeddings:
+        if (
+            input_ids is not None
+            and getattr(self.model.config, "max_position_embeddings", False)
+            and input_ids.shape[-1] > self.model.config.max_position_embeddings
+        ):
             raise ValueError(
                 f"Input sequence length ({input_ids.shape[1]}) exceeds model's maximum "
                 f"input length ({self.model.config.max_position_embeddings}). Please truncate your inputs by specifying 'truncation=True' or 'max_length={self.model.config.max_position_embeddings}' to the tokenizer call or change the model."
@@ -287,11 +293,11 @@ class InferenceWrapper(ABC):
 
         # send input to device
         if input_ids is not None:
-            input_ids = input_ids.to(self.device, self.dtype)
+            input_ids = input_ids.to(self.device)
         if inputs_embeds is not None:
             inputs_embeds = inputs_embeds.to(self.device, self.dtype)
         if attention_mask is not None:
-            attention_mask = attention_mask.to(self.device, self.dtype)
+            attention_mask = attention_mask.to(self.device)
 
         # Call wrapped model
         if inputs_embeds is not None:
@@ -299,7 +305,6 @@ class InferenceWrapper(ABC):
                 return self.model(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
             except NotImplementedError as e:
                 raise IncompatibilityError from e
-
         return self.model(input_ids=input_ids, attention_mask=attention_mask)
 
     @overload
