@@ -46,19 +46,6 @@ except ModuleNotFoundError:
     _HAS_SPACY = False
 
 
-class NoWordIdsError(AttributeError):
-    """
-    Exception raised when the word_ids method is not available on the tokenizer
-    """
-
-    def __init__(self):
-        super().__init__(
-            "Word-level granularity level requires tokenization with a fast tokenizer (i.e., tokenizer.is_fast=True), "
-            "because it relies on `.word_ids()` to associate tokens with words. "
-            "Please either use a fast tokenizer or switch to token-level granularity."
-        )
-
-
 class GranularityAggregationStrategy(Enum):
     """
     Enumeration of the available aggregation strategies for combining token-level
@@ -239,11 +226,14 @@ class Granularity(Enum):
                         + "Please provide a tokenizer or set granularity to ALL_TOKENS."
                     )
 
-                if not tokenizer.is_fast:
-                    raise NoWordIdsError()
-
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
-                return [Granularity.__word_get_indices(inputs.word_ids(i)) for i in range(n_inputs)]
+
+                if tokenizer.is_fast:
+                    return [Granularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
+                return [
+                    Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
+                    for i in range(n_inputs)
+                ]
             # spaCy-based levels (require offset_mapping & fast tokenizer)
             case Granularity.SENTENCE as level:
                 if tokenizer is None:
@@ -291,7 +281,7 @@ class Granularity(Enum):
         return [[i] for i, tok_id in enumerate(tokens_ids) if tok_id not in special_ids]
 
     @staticmethod
-    def __word_get_indices(word_ids: torch.Tensor) -> list[list[int]]:
+    def __word_get_indices_from_word_ids(word_ids: list[int | None]) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         mapping: dict[int, list[int]] = {}
         for idx, wid in enumerate(word_ids):
@@ -301,6 +291,46 @@ class Granularity(Enum):
 
         # Return groups ordered by word id (i.e. sentence order)
         return [mapping[k] for k in sorted(mapping)]
+
+    @staticmethod
+    def __starts_word(token: str) -> bool:
+        if token.startswith("##"):
+            return False
+        if token.startswith("@@"):
+            return False
+        if token.startswith("__"):
+            return True
+        if token.startswith("Ġ"):
+            return True
+        if token.startswith(" "):
+            return True
+        return False
+
+    @staticmethod
+    def __word_get_indices_from_input_ids(input_ids: list[int], tokenizer: PreTrainedTokenizer) -> list[list[int]]:
+        """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
+        special_ids = tokenizer.all_special_ids
+        tokens = tokenizer.convert_ids_to_tokens(input_ids, skip_special_tokens=False)
+
+        indices: list[list[int]] = []
+        current_word: list[int] = []
+        for i, (token_id, token) in enumerate(zip(input_ids, tokens, strict=True)):
+            # Skip special tokens
+            if token_id in special_ids:
+                continue
+
+            # If token starts a new word, we put current to indices and initialize a new one
+            if Granularity.__starts_word(token):
+                if current_word:
+                    indices.append(current_word)
+                current_word = [i]
+            else:
+                current_word.append(i)
+
+        # If there's a word left, we put it in indices
+        if current_word:
+            indices.append(current_word)
+        return indices
 
     @staticmethod
     @jaxtyped(typechecker=beartype)
