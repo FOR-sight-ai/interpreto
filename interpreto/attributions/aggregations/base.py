@@ -41,7 +41,7 @@ def cast_input_to_dtype(func):
     Ensure mask and results are on the device specified in the aggregator
     """
 
-    def wrapper(self, results: torch.Tensor, mask, *args, **kwargs) -> Callable:
+    def wrapper(self, results: torch.Tensor, mask, *args, **kwargs) -> torch.Tensor:
         # TODO : eventually add device alignment as well
         if mask is not None and mask.dtype != self.dtype:
             mask = mask.to(self.dtype)
