@@ -59,9 +59,12 @@ class InferenceModes(Enum):
         LOG_SOFTMAX: Return the log softmax of the logits.
     """
 
-    LOGITS = staticmethod(lambda logits: logits)
-    SOFTMAX = staticmethod(lambda logits: F.softmax(logits, dim=-1))
-    LOG_SOFTMAX = staticmethod(lambda logits: F.log_softmax(logits, dim=-1))
+    LOGITS = lambda logits: logits
+    SOFTMAX = lambda logits: F.softmax(logits, dim=-1)
+    LOG_SOFTMAX = lambda logits: F.log_softmax(logits, dim=-1)
+
+    def __call__(self, logits: torch.Tensor) -> torch.Tensor:
+        return self.value(logits)
 
 
 # TODO : move that somewhere else
