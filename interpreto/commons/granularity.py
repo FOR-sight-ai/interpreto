@@ -481,21 +481,40 @@ class Granularity(Enum):
         return groups
 
     @staticmethod
-    def aggregate_score_for_gradient_method(
+    def granularity_score_aggregation(  # noqa: PLR0912  # ignore too many branches
         contribution: torch.Tensor,
         granularity: Granularity | None,
         granularity_aggregation_strategy: GranularityAggregationStrategy | None = None,
         inputs: BatchEncoding | None = None,
         tokenizer: PreTrainedTokenizer | None = None,
+        aggregate_inputs: bool = False,
+        aggregate_targets: bool = False,
     ) -> Float[torch.Tensor, "t g"]:
         """
-        Aggregate contribution for gradient-based methods according to the specified granularity.
+        Aggregate contribution according to the specified granularity.
+
+        There are four possibilities:
+        |                    | Perturbation     | Gradient                     |
+        |--------------------|------------------|------------------------------|
+        | **Classification** | No aggregation   | Aggregate inputs             |
+        | **Generation**     | Aggregate targets| Aggregate inputs and targets |
+
+        The four possibilities are encoded by `aggregate_inputs` and `aggregate_targets`.
+
+        For classification, the targets are classes which are not subject to granularity.
+
+        For perturbations, the granularity is already encoded in the perturbation masks.
 
         Args:
-            contribution (torch.Tensor): The contribution to aggregate. Shape: (n, lp)
-            granularity (Granularity): The granularity level to use for aggregation.
+            contribution (torch.Tensor):
+                The contribution to aggregate. Shape: (t, l)
+
+            granularity (Granularity):
+                The granularity level to use for aggregation.
                 If None, defaults to Granularity.DEFAULT.
-            granularity_aggregation_strategy (GranularityAggregationStrategy): The aggregation method to use.
+
+            granularity_aggregation_strategy (GranularityAggregationStrategy):
+                The aggregation method to use.
                 It should be an attribute of `GranularityAggregationStrategy`. Choices are:
                     - `MEAN`: average of contribution
 
@@ -506,12 +525,21 @@ class Granularity(Enum):
                     - `SUM`: sum of contribution
 
                     - `SIGNED_MAX`: contribution with the largest absolute value, preserving its sign
-            inputs (BatchEncoding | None): Required if granularity is not `ALL_TOKENS`.
-            tokenizer (PreTrainedTokenizer | None): Required for TOKEN/WORD-level filtering.
+
+            inputs (BatchEncoding | None):
+                In the case of generation, this should include the generated tokens.
+                Required if granularity is not `ALL_TOKENS`.
+
+            tokenizer (PreTrainedTokenizer | None):
+                Required for TOKEN/WORD-level filtering.
 
         Returns:
             torch.Tensor: The aggregated contribution.
         """
+        # Classification + Perturbation
+        if not aggregate_targets and not aggregate_inputs:
+            return contribution
+
         granularity = granularity or Granularity.DEFAULT  # type: ignore
 
         if granularity == Granularity.ALL_TOKENS:
@@ -525,36 +553,111 @@ class Granularity(Enum):
 
         if len(indices_list) > 1:
             raise ValueError(
-                "`aggregate_score_for_gradient_method` do not support batched inputs. Please provide a single input."
+                "`granularity_score_aggregation` do not support batched inputs. Please provide a single input."
             )
+        sample_indices: list[list[int]] = indices_list[0]
 
-        match granularity:
-            case Granularity.TOKEN:
-                # convert contribution to tensor for faster indexing
-                indices = torch.tensor(indices_list[0]).squeeze(1)
-                return contribution[:, indices]
-            case Granularity.WORD | Granularity.SENTENCE:
-                # verify aggregation strategy is not None:
-                if granularity_aggregation_strategy is None:
-                    raise ValueError(
-                        "granularity_aggregation_strategy must be provided for WORD or SENTENCE granularity."
-                    )
-                # iterate over granularity elements
-                aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
-                    (contribution.shape[0], len(indices_list[0]))
-                )
-                for aggregation_index, token_indices in enumerate(indices_list[0]):
-                    # extract token contribution for each word/sentence
-                    tokens_contribution: Float[torch.Tensor, "t gi"] = contribution[:, token_indices]
-
-                    if tokens_contribution.dim() == 1 or tokens_contribution.shape[1] == 1:
-                        # if only one token, no aggregation needed
-                        aggregated_contribution[:, [aggregation_index]] = tokens_contribution
-                    else:
-                        # aggregate token contribution for each word/sentence
-                        aggregated_contribution[:, [aggregation_index]] = GranularityAggregationStrategy.aggregate(
-                            tokens_contribution, strategy=granularity_aggregation_strategy, dim=1
+        if aggregate_inputs:
+            # Gradient-based methods
+            match granularity:
+                case Granularity.TOKEN:
+                    # convert contribution to tensor for faster indexing
+                    indices = torch.tensor(sample_indices).squeeze(1)
+                    contribution = contribution[:, indices]
+                case Granularity.WORD | Granularity.SENTENCE:
+                    # verify aggregation strategy is not None:
+                    if granularity_aggregation_strategy is None:
+                        raise ValueError(
+                            "granularity_aggregation_strategy must be provided for WORD or SENTENCE granularity."
                         )
-                return aggregated_contribution
-            case _:
-                raise NotImplementedError(f"Invalid granularity for aggregation: {granularity}")
+                    # iterate over granularity elements
+                    aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
+                        (contribution.shape[0], len(sample_indices))
+                    )
+                    for aggregation_index, token_indices in enumerate(sample_indices):
+                        # extract token contribution for each word/sentence
+                        tokens_contribution: Float[torch.Tensor, "t gi"] = contribution[:, token_indices]
+
+                        if tokens_contribution.dim() == 1 or tokens_contribution.shape[1] == 1:
+                            # if only one token, no aggregation needed
+                            aggregated_contribution[:, [aggregation_index]] = tokens_contribution
+                        else:
+                            # aggregate token contribution for each word/sentence
+                            aggregated_contribution[:, [aggregation_index]] = GranularityAggregationStrategy.aggregate(
+                                tokens_contribution, strategy=granularity_aggregation_strategy, dim=1
+                            )
+                    contribution = aggregated_contribution
+                case _:
+                    raise NotImplementedError(f"Invalid granularity for aggregation: {granularity}")
+
+        if aggregate_targets:
+            # Generation-based methods
+
+            # extract the target indices from the inputs indices
+            t = contribution.shape[0]
+            l = inputs["input_ids"].shape[1]  # type: ignore
+
+            if t >= l:
+                raise ValueError(
+                    "Cannot aggregate targets if the number of targets is greater than the number of inputs."
+                    "The input_ids should include the generated tokens."
+                    f"Got {t} targets and {l} inputs."
+                )
+
+            first_target_index = l - t
+            first_target_granular_index = None
+            for i, token_indices in enumerate(sample_indices):
+                if first_target_index in token_indices:
+                    first_target_granular_index = i
+                    break
+
+            if first_target_granular_index is None:
+                raise ValueError(
+                    "Cannot find first target token in the granularity token indices. "
+                    "Try changing the granularity, or raise an issue on GitHub."
+                )
+
+            # keep only indices relate to the targets
+            target_indices = sample_indices[first_target_granular_index:]
+
+            # shift reference index to the first target
+            target_indices = [
+                [index - first_target_index for index in granular_indices if index >= first_target_index]
+                for granular_indices in target_indices
+            ]
+
+            # same match case and operations
+            # different indices and dimension on which to aggregate
+            match granularity:
+                case Granularity.TOKEN:
+                    if len(target_indices) != contribution.shape[0]:
+                        # convert contribution to tensor for faster indexing
+                        indices = torch.tensor(target_indices).squeeze(1)
+                        contribution = contribution[indices, :]
+                case Granularity.WORD | Granularity.SENTENCE:
+                    # verify aggregation strategy is not None:
+                    if granularity_aggregation_strategy is None:
+                        raise ValueError(
+                            "granularity_aggregation_strategy must be provided for WORD or SENTENCE granularity."
+                        )
+                    # iterate over granularity elements
+                    aggregated_contribution: Float[torch.Tensor, "g lg"] = torch.zeros(
+                        (len(target_indices), contribution.shape[1])
+                    )
+                    for aggregation_index, token_indices in enumerate(target_indices):
+                        # extract token contribution for each word/sentence
+                        tokens_contribution: Float[torch.Tensor, "gi lg"] = contribution[token_indices, :]
+
+                        if tokens_contribution.dim() == 1 or tokens_contribution.shape[0] == 1:
+                            # if only one token, no aggregation needed
+                            aggregated_contribution[[aggregation_index], :] = tokens_contribution
+                        else:
+                            # aggregate token contribution for each word/sentence
+                            aggregated_contribution[[aggregation_index], :] = GranularityAggregationStrategy.aggregate(
+                                tokens_contribution, strategy=granularity_aggregation_strategy, dim=0
+                            )
+                    contribution = aggregated_contribution
+                case _:
+                    raise NotImplementedError(f"Invalid granularity for aggregation: {granularity}")
+
+        return contribution
