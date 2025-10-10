@@ -34,10 +34,10 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import Granularity, TokenMaskBasedPerturbator
+from interpreto.attributions.perturbations.base import Granularity, IdsPerturbator
 
 
-class RandomMaskedTokenPerturbator(TokenMaskBasedPerturbator):
+class RandomMaskedTokenPerturbator(IdsPerturbator):
     """
     Perturbator adding random masking to the input tensor
     """
@@ -45,7 +45,6 @@ class RandomMaskedTokenPerturbator(TokenMaskBasedPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        inputs_embedder: torch.nn.Module | None = None,
         granularity: Granularity = Granularity.TOKEN,
         replace_token_id: int = 0,
         n_perturbations: int = 30,
@@ -63,7 +62,6 @@ class RandomMaskedTokenPerturbator(TokenMaskBasedPerturbator):
         """
         super().__init__(
             tokenizer=tokenizer,
-            inputs_embedder=inputs_embedder,
             n_perturbations=n_perturbations,
             replace_token_id=replace_token_id,
             granularity=granularity,

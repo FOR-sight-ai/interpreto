@@ -32,6 +32,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
+from functools import lru_cache
 from typing import Any, Literal
 
 import nltk
@@ -45,6 +46,22 @@ from interpreto import Granularity, ModelWithSplitPoints
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
+
+
+@lru_cache(maxsize=1)
+def _ensure_nltk_resources(lemmatize: bool) -> None:
+    """
+    Ensure NLTK resources are downloaded.
+
+    Only used in `extract_unique_words`.
+
+    The `lru_cache` ensures the download are only called once.
+    """
+    # Use NLTK's own installer check; will skip download if already present.
+    needed = ["punkt", "punkt_tab"] + (["wordnet"] if lemmatize else [])
+    for res in needed:
+        # quiet=True prevents logs; raise_on_error=True surfaces failures.
+        nltk.download(res, quiet=True, raise_on_error=True)
 
 
 @jaxtyped(typechecker=beartype)
@@ -80,18 +97,35 @@ def extract_unique_words(
         ["interpreto", "is", "the", "latin", "for", "to", "'", "interpret", ".", "magic"]
 
         More complex use:
+        >>> import nltk
         >>> from datasets import load_dataset
         >>> from nltk.corpus import stopwords
-        >>> from interpreto.concepts.interpretations.topk_inputs import extract_unique_words
+        >>>
+        >>> from interpreto.concepts.interpretations import extract_unique_words
+        >>>
+        >>> nltk.download("stopwords")
+        >>>
         >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
         >>> extract_unique_words(
         ...     inputs=dataset,
         ...     count_min_threshold=20,
         ...     return_counts=True,
         ...     lemmatize=True,
-        ...     words_to_ignore=stopwords.words("english"),
+        ...     words_to_ignore=stopwords.words("english") + [".", ",", "'s", "n't", "--", "``", "'"],
         ... )
-        Counter(TODO)
+        Counter({'film': 1402,
+                 'movie': 1243,
+                 'one': 594,
+                 'like': 574,
+                 'ha': 563,
+                 'make': 437,
+                 'story': 417,
+        ...
+                 'pop': 20,
+                 'college': 20,
+                 'bear': 20,
+                 'plain': 20,
+                 'generic': 20})
 
     Returns:
         list[str] | Counter[str]:
@@ -101,9 +135,9 @@ def extract_unique_words(
         ValueError:
             If the input is not a list of strings.
     """
-    nltk.download("wordnet", quiet=True)
-    nltk.download("punkt", quiet=True)
-    nltk.download("punkt_tab", quiet=True)
+    # ensure NLTK resources are downloaded
+    _ensure_nltk_resources(lemmatize=lemmatize)
+
     if lemmatize:
         lemmatizer = WordNetLemmatizer()
 
@@ -457,8 +491,6 @@ class BaseConceptInterpretationMethod(ABC):
         # verify
         if latent_activations is not None:
             latent_activations = self.concept_explainer._sanitize_activations(latent_activations)
-        else:
-            latent_activations = None
 
         # compute the concepts activations from the provided source, can also create inputs from the vocabulary
         if self.use_vocab:

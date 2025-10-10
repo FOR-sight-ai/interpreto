@@ -181,7 +181,7 @@ class LinearRegressionAggregator(Aggregator):
         X: Float[Tensor, p, l + 1] = torch.cat([torch.ones(results.shape[0], 1, device=mask.device), mask], dim=1)
 
         # formula from wikipedia: https://en.wikipedia.org/wiki/Weighted_least_squares
-        # \theta =(X^T W X)^{-1} (X^T W y)
+        # \theta =(X^T w X)^{-1} (X^T w y)
         XT_W: Float[Tensor, l + 1, p] = X.T * weights
         epsilon: Float[Tensor, l + 1, l + 1] = (
             torch.eye(XT_W.shape[0], device=XT_W.device) * 1e-6

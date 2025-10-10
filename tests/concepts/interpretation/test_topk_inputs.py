@@ -373,7 +373,7 @@ def test_topk_inputs_from_unique_words(
     letters = ["A", "B", "C", "D", "E", "F"]
     data = ["A B C D E F A B C D E F A B C D E F", "A B C D E F A B C D E F", "A B C D E F", "A B C"]
 
-    assert extract_unique_words(data).sort() == letters.sort()  # type: ignore
+    assert sorted(extract_unique_words(data)) == sorted(letters)  # type: ignore
 
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
