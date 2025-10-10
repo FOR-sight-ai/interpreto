@@ -588,13 +588,6 @@ class InferenceWrapper(ABC):
             f"get_targeted_logits not implemented for {self.__class__.__name__}. Implement this method is necessary to use gradient-based methods."
         )
 
-    @get_targeted_logits.register(MutableMapping)
-    @abstractmethod
-    def _get_targeted_logits_from_mapping(self, model_inputs: TensorMapping, targets: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError(
-            f"get_targeted_logits not implemented for {self.__class__.__name__}. Implement this method is necessary to use gradient-based methods."
-        )
-
     @overload
     def get_gradients(
         self, model_inputs: TensorMapping, targets: torch.Tensor, input_x_gradient: bool = False
@@ -642,53 +635,7 @@ class InferenceWrapper(ABC):
             f"type {type(model_inputs)} not supported for method get_gradients in class {self.__class__.__name__}"
         )
 
-    # @get_gradients.register(MutableMapping)  # type: ignore
-    # def _get_gradients_from_mapping(
-    #     self,
-    #     model_inputs: TensorMapping,
-    #     targets: torch.Tensor,  # (n, t)
-    #     input_x_gradient: bool = False,
-    # ) -> torch.Tensor:
-    #     model_inputs = self.embed(model_inputs)
-    #     inputs_embeds = model_inputs["inputs_embeds"].detach().requires_grad_(True)  # (n, l, d)
-    #     attention_mask = model_inputs["attention_mask"]  # (n, l)
-
-    #     # prepare targets we want a tensor of shape (n, t)
-    #     if targets.dim() == 1:
-    #         targets = targets.unsqueeze(0)
-
-    #     if targets.shape[0] == 1:
-    #         targets = targets.expand(inputs_embeds.shape[0], -1)
-
-    #     # define the function to map over
-    #     def sample_wise_jacobian(inputs_embeds_s, attention_mask_s, targets_s):
-    #         # define the forward function for this sample
-    #         # sample_wise_forward: (l, d) -> (t,)
-    #         def sample_wise_forward(x):
-    #             out = self.get_targeted_logits(  # _get_targeted_logits_from_mapping -> _get_logits_from_mapping -> batch over call_model -> self.model(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
-    #                 {"inputs_embeds": x.unsqueeze(0), "attention_mask": attention_mask_s.unsqueeze(0)},
-    #                 targets_s.unsqueeze(0),
-    #             )  # (1, t)
-    #             return out.squeeze(0)  # (t,)
-
-    #         # Jacobian: (t, l, d) for this sample
-    #         jacobian_matrix = jacrev(sample_wise_forward)(inputs_embeds_s)
-
-    #         if input_x_gradient:
-    #             jacobian_matrix = jacobian_matrix * inputs_embeds_s.unsqueeze(0)  # broadcast to (t, l, d)
-
-    #         # Reduce over embedding dim right away
-    #         return jacobian_matrix.abs().mean(dim=-1)  # (t, l)
-
-    #     # Map over samples
-    #     grad_matrix = vmap(sample_wise_jacobian, in_dims=(0, 0, 0))(
-    #         inputs_embeds, attention_mask, targets
-    #     )  # (n, t, l)
-
-    #     return grad_matrix
-
     # TODO: add jaxtyping
-    # TODO: put in a with torch.no_grad(): (removes grads on the weights)
     @get_gradients.register(MutableMapping)  # type: ignore
     def _get_gradients_from_mapping(
         self,
@@ -702,9 +649,9 @@ class InferenceWrapper(ABC):
 
         # Compute logits for ALL classes once if that’s cheaper in your model
         # and select later inside get_targeted_logits via gather.
-        logits = self._get_targeted_logits_from_mapping(
+        logits: torch.Tensor = self.get_targeted_logits(
             {"inputs_embeds": inputs_embeds, "attention_mask": attention_mask}, targets
-        )  # (n, t)
+        )  # (n, t)  # type: ignore
 
         t = targets.shape[-1]
         list_of_target_wise_grads = []
@@ -729,7 +676,7 @@ class InferenceWrapper(ABC):
 
             # Aggregate over the hidden dimension 'd'
             # TODO: see if we should force the aggregation to be mean of absolute values
-            aggregated_target_wise_grads = target_wise_grads.abs().mean(dim=-1)  # (n, l)
+            aggregated_target_wise_grads = target_wise_grads.abs().mean(dim=-1).cpu()  # (n, l)
 
             list_of_target_wise_grads.append(aggregated_target_wise_grads)  # t * (n, l)
 
@@ -744,7 +691,3 @@ class InferenceWrapper(ABC):
             # check that the model input and target have the same batch size
             result = self._get_gradients_from_mapping(model_input, target, input_x_gradient=input_x_gradient)
             yield result
-
-        # yield from (
-        #     self.get_gradients(model_input, target) for model_input, target in zip(model_inputs, targets, strict=True)
-        # )
