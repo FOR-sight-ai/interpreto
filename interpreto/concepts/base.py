@@ -208,7 +208,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         return self._sanitize_activations(activations)
 
     @check_fitted
-    def interpret(self, *args, **kwargs) -> Mapping[int, Any]:
+    def interpret(self, *args, **kwargs) -> Mapping[int, Any]:  # TODO: 0.5.0 remove
         """Deprecated API for concept interpretation.
 
         Interpretation methods should now be instantiated directly with the
