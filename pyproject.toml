@@ -28,7 +28,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interpreto"
-version = "0.4.5"
+version = "0.4.6"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -66,6 +66,7 @@ classifiers = [
 ]
 dependencies = [
   "transformers[sentencepiece,tokenizers]>=4.22.0",
+  "nltk",
   "torch>=2.0",
   "overcomplete>=0.2.3",
   "nnsight>=0.5.1",
