@@ -83,9 +83,7 @@ class LinearInterpolationPerturbator(EmbeddingsPerturbator):
 
         # When all values are zero, the gradients are always NaN.
         # To avoid this, we set the baseline to a small value.
-        if baseline is None:
-            baseline = 1e-6
-        if isinstance(baseline, int | float) and baseline in [0, 0.0]:
+        if baseline is None or (isinstance(baseline, int | float) and baseline in [0, 0.0]):
             baseline = 1e-6
 
         if isinstance(baseline, int | float):
