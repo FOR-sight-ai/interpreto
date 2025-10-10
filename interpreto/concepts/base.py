@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from functools import wraps
 from textwrap import dedent
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Generic, TypeVar
 
 import torch
 from jaxtyping import Float
@@ -40,7 +40,6 @@ from overcomplete.base import BaseDictionaryLearning
 from transformers.tokenization_utils_base import BatchEncoding
 
 from interpreto.attributions.base import AttributionExplainer
-from interpreto.concepts.interpretations.base import BaseConceptInterpretationMethod
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,
     GranularityAggregationStrategy,
@@ -209,60 +208,18 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         return self._sanitize_activations(activations)
 
     @check_fitted
-    def interpret(
-        self,
-        interpretation_method: type[BaseConceptInterpretationMethod],
-        concepts_indices: int | list[int] | Literal["all"],
-        inputs: list[str] | None = None,
-        latent_activations: dict[str, LatentActivations] | LatentActivations | None = None,
-        concepts_activations: ConceptsActivations | None = None,
-        **kwargs,
-    ) -> Mapping[int, Any]:
+    def interpret(self, *args, **kwargs) -> Mapping[int, Any]:  # TODO: 0.5.0 remove
+        """Deprecated API for concept interpretation.
+
+        Interpretation methods should now be instantiated directly with the
+        fitted concept explainer. For example:
+
+        ``TopKInputs(concept_explainer).interpret(inputs, latent_activations)``
+
+        This method is kept only for backwards compatibility and will always
+        raise a :class:`NotImplementedError`.
         """
-        Interpret the concepts dimensions in the latent space into a human-readable format.
-        The interpretation is a mapping between the concepts indices and an object allowing to interpret them.
-        It can be a label, a description, examples, etc.
-
-        Args:
-            interpretation_method: The interpretation method to use to interpret the concepts.
-            concepts_indices (int | list[int] | Literal["all"]): The indices of the concepts to interpret.
-                If "all", all concepts are interpreted.
-            inputs (list[str] | None): The inputs to use for the interpretation.
-                Necessary if the source is not `VOCABULARY`, as examples are extracted from the inputs.
-            latent_activations (LatentActivations | dict[str, LatentActivations] | None): The latent activations to use for the interpretation.
-                Necessary if the source is `LATENT_ACTIVATIONS`.
-                Otherwise, it is computed from the inputs or ignored if the source is `CONCEPT_ACTIVATIONS`.
-            concepts_activations (ConceptsActivations | None): The concepts activations to use for the interpretation.
-                Necessary if the source is not `CONCEPT_ACTIVATIONS`. Otherwise, it is computed from the latent activations.
-            **kwargs: Additional keyword arguments to pass to the interpretation method.
-
-        Returns:
-            Mapping[int, Any]: A mapping between the concepts indices and the interpretation of the concepts.
-        """
-        if concepts_indices == "all":
-            concepts_indices = list(range(self.concept_model.nb_concepts))
-
-        # verify
-        if latent_activations is not None:
-            split_latent_activations = self._sanitize_activations(latent_activations)
-        else:
-            split_latent_activations = None
-
-        # initialize the interpretation method
-        method = interpretation_method(
-            model_with_split_points=self.model_with_split_points,
-            split_point=self.split_point,
-            concept_model=self.concept_model,
-            **kwargs,
-        )
-
-        # compute the interpretation from inputs and activations
-        return method.interpret(
-            concepts_indices=concepts_indices,
-            inputs=inputs,
-            latent_activations=split_latent_activations,
-            concepts_activations=concepts_activations,
-        )
+        raise NotImplementedError("Use the new API: TopKInputs(concept_explainer).interpret(...).")
 
     @check_fitted
     def input_concept_attribution(
