@@ -125,7 +125,7 @@ def test_low_level_granularities_matrices_and_decomposition(simple_text, real_be
         assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
 
         # Decomposition (text)
-        decomp_text = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer, return_text=True)[0]
+        decomp_text: list[str] = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer, return_text=True)[0]  # type: ignore
         # Join all segments and strip spaces; must equal original (without specials)
         match gran:
             case Granularity.ALL_TOKENS:
@@ -140,7 +140,16 @@ def test_low_level_granularities_matrices_and_decomposition(simple_text, real_be
                 assert joined == simple_text
 
 
-def test_granularity_score_aggregation_alltokens_granularity_manual_ids(simple_text, real_bert_tokenizer):
+def test_starts_word():
+    assert not Granularity._starts_word("##foo"), "'##foo' cannot be the start of a word"
+    assert not Granularity._starts_word("@@bar"), "'@@bar' cannot be the start of a word"
+    assert Granularity._starts_word("__init__"), "'__init__' should be considered the start of a word"
+    assert Granularity._starts_word("ĠHello"), "'ĠHello' should be considered the start of a word"
+    assert Granularity._starts_word(" World"), "' World' should be considered the start of a word"
+    assert not Granularity._starts_word("token"), "'token' cannot be the start of a word"
+
+
+def test_granularity_score_aggregation_alltokens_manual_ids(simple_text, real_bert_tokenizer):
     """Test score aggregation for ALL_TOKENS"""
 
     tokenizer = real_bert_tokenizer
@@ -162,7 +171,7 @@ def test_granularity_score_aggregation_alltokens_granularity_manual_ids(simple_t
     assert torch.equal(agg_all_tokens, fake_scores)
 
 
-def test_granularity_score_aggregation_token_granularity_manual_ids(real_bert_tokenizer):
+def test_granularity_score_aggregation_token_manual_ids(real_bert_tokenizer):
     """
     Test TOKEN-level aggregation using manually constructed input_ids.
 
@@ -331,7 +340,7 @@ def test_spacy_granularities_matrices_and_decomposition(complex_text, real_bert_
     assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
 
     # Decomposition (text)
-    decomp_text = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer, return_text=True)[0]
+    decomp_text: list[str] = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer, return_text=True)[0]  # type: ignore
     # Silent print for manual inspection when running directly
     print(f"\n[{gran}] decomposition:\n", decomp_text)
 

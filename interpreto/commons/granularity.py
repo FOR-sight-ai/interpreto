@@ -293,18 +293,8 @@ class Granularity(Enum):
         return [mapping[k] for k in sorted(mapping)]
 
     @staticmethod
-    def __starts_word(token: str) -> bool:
-        if token.startswith("##"):
-            return False
-        if token.startswith("@@"):
-            return False
-        if token.startswith("__"):
-            return True
-        if token.startswith("Ġ"):
-            return True
-        if token.startswith(" "):
-            return True
-        return False
+    def _starts_word(token: str) -> bool:
+        return token.startswith((" ", "Ġ", "__"))
 
     @staticmethod
     def __word_get_indices_from_input_ids(input_ids: list[int], tokenizer: PreTrainedTokenizer) -> list[list[int]]:
@@ -320,7 +310,7 @@ class Granularity(Enum):
                 continue
 
             # If token starts a new word, we put current to indices and initialize a new one
-            if Granularity.__starts_word(token):
+            if Granularity._starts_word(token):
                 if current_word:
                     indices.append(current_word)
                 current_word = [i]
