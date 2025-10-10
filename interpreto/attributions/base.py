@@ -47,11 +47,7 @@ from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
 from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
-from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, TensorMapping
-
-SingleAttribution = (
-    Float[torch.Tensor, "l"] | Float[torch.Tensor, "l c"] | Float[torch.Tensor, "l l_g"] | Float[torch.Tensor, "l l_t"]
-)
+from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
 class ModelTask(Enum):
