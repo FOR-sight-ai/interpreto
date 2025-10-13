@@ -79,7 +79,7 @@ class GenerationInferenceWrapper(InferenceWrapper):
         """
         filtered_model_inputs = {key: model_inputs[key].to(self.device) for key in ("input_ids", "attention_mask")}
 
-        full_ids = self.model.generate(**filtered_model_inputs, **generation_kwargs)
+        full_ids = self.model.generate(**filtered_model_inputs, **generation_kwargs)  # type: ignore
         original_length = model_inputs["attention_mask"].shape[-1]
         targets_ids = full_ids[..., original_length:]
         full_attention_mask = torch.cat(
@@ -126,11 +126,11 @@ class GenerationInferenceWrapper(InferenceWrapper):
         )
 
     @get_targeted_logits.register(MutableMapping)
-    def _(
+    def _get_targeted_logits_from_mapping(
         self,
         model_inputs: TensorMapping,
         targets: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         """Retrieve logits for a single batch of inputs.
 
         Args:

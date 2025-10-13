@@ -635,31 +635,53 @@ class InferenceWrapper(ABC):
             f"type {type(model_inputs)} not supported for method get_gradients in class {self.__class__.__name__}"
         )
 
+    # TODO: add jaxtyping
     @get_gradients.register(MutableMapping)  # type: ignore
     def _get_gradients_from_mapping(
-        self, model_inputs: TensorMapping, targets: torch.Tensor, input_x_gradient: bool = False
-    ) -> torch.Tensor:  # TODO: add jaxtyping
+        self,
+        model_inputs: TensorMapping,
+        targets: torch.Tensor,  # (n, t) | (1, t) | (t,)
+        input_x_gradient: bool = False,
+    ) -> torch.Tensor:
         model_inputs = self.embed(model_inputs)
-        inputs_embeds = model_inputs["inputs_embeds"]
+        inputs_embeds = model_inputs["inputs_embeds"].detach().requires_grad_(True)  # (n,l,d)
+        attention_mask = model_inputs["attention_mask"]  # (n, l)
 
-        def get_score(inputs_embeds: torch.Tensor):
-            return self.get_targeted_logits(
-                {"inputs_embeds": inputs_embeds, "attention_mask": model_inputs["attention_mask"]}, targets
-            )
+        # Compute logits for ALL classes once if that’s cheaper in your model
+        # and select later inside get_targeted_logits via gather.
+        logits: torch.Tensor = self.get_targeted_logits(
+            {"inputs_embeds": inputs_embeds, "attention_mask": attention_mask}, targets
+        )  # (n, t)  # type: ignore
 
-        # Compute gradient of the selected logits:
-        grad_matrix = torch.autograd.functional.jacobian(get_score, inputs_embeds)  # (n, lt, n, l, d)
+        t = targets.shape[-1]
+        list_of_target_wise_grads = []
+        for k in range(t):
+            # specify from which target to compute the gradient
+            # the gradient is computed for the k-th targeted logit
+            grad_outputs = torch.zeros_like(logits)
+            grad_outputs[:, k] = 1.0
 
-        grad_matrix = grad_matrix[
-            torch.arange(grad_matrix.shape[0]), :, torch.arange(grad_matrix.shape[0])
-        ]  # (n, lt, l, d)
-        if input_x_gradient:
-            grad_matrix = grad_matrix * inputs_embeds.unsqueeze(1)
+            # compute the gradient for the k-th targeted logit
+            target_wise_grads = torch.autograd.grad(
+                outputs=logits,
+                inputs=inputs_embeds,
+                grad_outputs=grad_outputs,
+                retain_graph=(k != t - 1),
+                create_graph=False,
+            )[0]  # (n, l, d)
 
-        grad_matrix = grad_matrix.abs().mean(
-            dim=-1
-        )  # (n, lt, l)  # average over the embedding dimension  # TODO: discuss if th average should be forced or an argument
-        return grad_matrix
+            # apply the input_x_gradient trick if required
+            if input_x_gradient:
+                target_wise_grads = target_wise_grads * inputs_embeds
+
+            # Aggregate over the hidden dimension 'd'
+            # TODO: see if we should force the aggregation to be mean of absolute values
+            aggregated_target_wise_grads = target_wise_grads.abs().mean(dim=-1).cpu()  # (n, l)
+
+            list_of_target_wise_grads.append(aggregated_target_wise_grads)  # t * (n, l)
+
+        # stack the target-wise gradients to get the gradient matrix
+        return torch.stack(list_of_target_wise_grads, dim=1)  # (n, t, l)
 
     @get_gradients.register(Iterable)  # type: ignore
     def _get_gradients_from_iterable(
@@ -669,7 +691,3 @@ class InferenceWrapper(ABC):
             # check that the model input and target have the same batch size
             result = self._get_gradients_from_mapping(model_input, target, input_x_gradient=input_x_gradient)
             yield result
-
-        # yield from (
-        #     self.get_gradients(model_input, target) for model_input, target in zip(model_inputs, targets, strict=True)
-        # )
