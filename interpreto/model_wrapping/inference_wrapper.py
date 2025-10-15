@@ -645,30 +645,34 @@ class InferenceWrapper(ABC):
     ) -> torch.Tensor:
         model_inputs = self.embed(model_inputs)
         inputs_embeds = model_inputs["inputs_embeds"].detach().requires_grad_(True)  # (n,l,d)
-        attention_mask = model_inputs["attention_mask"]  # (n, l)
-
-        # Compute logits for ALL classes once if that’s cheaper in your model
-        # and select later inside get_targeted_logits via gather.
-        logits: torch.Tensor = self.get_targeted_logits(
-            {"inputs_embeds": inputs_embeds, "attention_mask": attention_mask}, targets
-        )  # (n, t)  # type: ignore
 
         t = targets.shape[-1]
         list_of_target_wise_grads = []
         for k in range(t):
-            # specify from which target to compute the gradient
-            # the gradient is computed for the k-th targeted logit
-            grad_outputs = torch.zeros_like(logits)
-            grad_outputs[:, k] = 1.0
+            batches_of_grads = []
+            for i, input_embeds in enumerate(inputs_embeds):
+                attention_mask = model_inputs["attention_mask"][i].unsqueeze(0)  # (1, l)
 
-            # compute the gradient for the k-th targeted logit
-            target_wise_grads = torch.autograd.grad(
-                outputs=logits,
-                inputs=inputs_embeds,
-                grad_outputs=grad_outputs,
-                retain_graph=(k != t - 1),
-                create_graph=False,
-            )[0]  # (n, l, d)
+                logits: torch.Tensor = self.get_targeted_logits(
+                    {"inputs_embeds": input_embeds.unsqueeze(0), "attention_mask": attention_mask}, targets
+                )  # (1, t)  # type: ignore
+
+                # specify from which target to compute the gradient
+                # the gradient is computed for the k-th targeted logit
+                grad_outputs = torch.zeros_like(logits)
+                grad_outputs[:, k] = 1.0
+
+                # compute the gradient for the k-th targeted logit
+                target_wise_grads_batch = torch.autograd.grad(
+                    outputs=logits,
+                    inputs=input_embeds,
+                    grad_outputs=grad_outputs,
+                    retain_graph=(k != t - 1),
+                    create_graph=False,
+                )[0]  # (1, d)
+                batches_of_grads.append(target_wise_grads_batch)
+
+            target_wise_grads = torch.stack(batches_of_grads)
 
             # apply the input_x_gradient trick if required
             if input_x_gradient:
