@@ -738,7 +738,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
         OpenAILLM,
     )
 
-    open_ai_llm = OpenAILLM(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4o-mini-2024-07-18")
+    open_ai_llm = OpenAILLM(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4.1-nano")
 
     # -------------------------------------------------
     # create a dummy dataset of prime-not-prime numbers

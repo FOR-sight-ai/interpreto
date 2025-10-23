@@ -241,7 +241,7 @@ class ConSim:
         The two steps of ConSim:
         >>> # ------------------------------------------------------------------
         >>> # Step 0: Define the User-LLM and instantiate the ConSim metric
-        >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt4o-mini")
+        >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt-4.1-nano")
         >>> consim = ConSim(
         ...     model_with_split_points,
         ...     user_llm,
