@@ -652,6 +652,7 @@ class ModelWithSplitPoints(LanguageModel):
 
             case AG.CLS_TOKEN:
                 # reintegrate the reconstructed CLS token activations into the initial activations
+                initial_activations = initial_activations.clone()
                 initial_activations[:, 0, :] = new_activations
                 return initial_activations
 
