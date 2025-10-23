@@ -117,6 +117,9 @@ class LLMLabels(BaseConceptInterpretationMethod):
         llm_interface (LLMInterface):
             The LLM interface to use for the interpretation.
 
+        concept_encoding_batch_size (int):
+            The batch size to use for the concept encoding.
+
         sampling_method (SAMPLING_METHOD):
             The method to use for sampling the inputs provided to the LLM.
 
@@ -153,6 +156,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
         llm_interface: LLMInterface,
+        concept_encoding_batch_size: int = 1024,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
         k_context: int = 0,
@@ -166,6 +170,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         super().__init__(
             concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
+            concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
