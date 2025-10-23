@@ -75,7 +75,7 @@ def test_process_targets(bert_model, bert_tokenizer):
     # Iterable of ints
     result = explainer.process_targets([1, 2, 3], expected_length=3)
     assert len(result) == 3  # type: ignore
-    assert all(torch.equal(r, torch.tensor(v)) for r, v in zip(result, [1, 2, 3], strict=True))
+    assert all(torch.equal(r, torch.tensor([v])) for r, v in zip(result, [1, 2, 3], strict=True))
 
     # Iterable of ints with mismatch
     with pytest.raises(ValueError, match="Mismatch.*length of the inputs is 2"):
