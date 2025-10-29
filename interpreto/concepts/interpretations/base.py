@@ -32,6 +32,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
+from functools import lru_cache
 from typing import Any, Literal
 
 import nltk
@@ -46,6 +47,22 @@ from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
+
+
+@lru_cache(maxsize=1)
+def _ensure_nltk_resources(lemmatize: bool) -> None:
+    """
+    Ensure NLTK resources are downloaded.
+
+    Only used in `extract_unique_words`.
+
+    The `lru_cache` ensures the download are only called once.
+    """
+    # Use NLTK's own installer check; will skip download if already present.
+    needed = ["punkt", "punkt_tab"] + (["wordnet"] if lemmatize else [])
+    for res in needed:
+        # quiet=True prevents logs; raise_on_error=True surfaces failures.
+        nltk.download(res, quiet=True, raise_on_error=True)
 
 
 @jaxtyped(typechecker=beartype)
@@ -102,9 +119,9 @@ def extract_unique_words(
         ValueError:
             If the input is not a list of strings.
     """
-    nltk.download("wordnet", quiet=True)
-    nltk.download("punkt", quiet=True)
-    nltk.download("punkt_tab", quiet=True)
+    # ensure NLTK resources are downloaded
+    _ensure_nltk_resources(lemmatize=lemmatize)
+
     if lemmatize:
         lemmatizer = WordNetLemmatizer()
 
@@ -528,8 +545,6 @@ class BaseConceptInterpretationMethod(ABC):
             latent_activations = self.concept_explainer._sanitize_activations(
                 latent_activations
             )
-        else:
-            latent_activations = None
 
         # compute the concepts activations from the provided source, can also create inputs from the vocabulary
         if self.use_vocab:

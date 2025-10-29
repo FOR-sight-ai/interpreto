@@ -587,7 +587,9 @@ def test_consim_predictions_accuracy():
     # empty predictions or different lengths should return None
     assert ConSim._predictions_accuracy([], ["a", "b"]) is None, "empty predictions should return None"
     assert ConSim._predictions_accuracy(["a", "b"], []) is None, "empty predictions should return None"
-    assert ConSim._predictions_accuracy(["a"], ["a", "b"]) is None, "different prediction and llm responses should return None"
+    assert ConSim._predictions_accuracy(["a"], ["a", "b"]) is None, (
+        "different prediction and llm responses should return None"
+    )
 
 
 def test_consim_compute_score(splitted_encoder_ml: ModelWithSplitPoints):
