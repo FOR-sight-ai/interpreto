@@ -87,6 +87,8 @@ class ReconstructionError:
             concepts_activations
         )
 
+        split_latent_activations = split_latent_activations.to(reconstructed_latent_activations.device)
+
         if self.reconstruction_space is ReconstructionSpaces.LATENT_ACTIVATIONS:
             return self.distance_function(split_latent_activations, reconstructed_latent_activations).item()
 
