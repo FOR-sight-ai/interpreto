@@ -431,7 +431,11 @@ class BaseConceptInterpretationMethod(ABC):
 
         # Get granular texts from the inputs
         tokens = self.concept_explainer.model_with_split_points.tokenizer(
-            inputs, return_tensors="pt", padding=True, return_offsets_mapping=True
+            inputs,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            return_offsets_mapping=True,
         )
         granular_texts: list[list[str]] = Granularity.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
             tokens,
