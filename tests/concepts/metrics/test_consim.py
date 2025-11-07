@@ -296,15 +296,15 @@ def test_consim_filter_and_quantize_concepts_importances():
     """
     # 4 concepts, 2 classes, and 2 samples
     concepts_interpretation = {
-        "concept_0": "w0",
-        "concept_1": "w1",
-        "concept_2": "w2",
-        "concept_3": "w3",
+        0: "w0",
+        1: "w1",
+        2: "w2",
+        3: "w3",
     }
     # concept_2 is always under the 0.05 threshold in global importance
     global_importances = {
-        "A": {"concept_0": 0.5, "concept_1": 0.25, "concept_2": 0.01, "concept_3": -0.24},  # abs sum should be 1
-        "B": {"concept_0": 0.1, "concept_1": 0.49, "concept_2": 0.01, "concept_3": -0.4},  # abs sum should be 1
+        "A": {0: 0.5, 1: 0.25, 2: 0.01, 3: -0.24},  # abs sum should be 1
+        "B": {0: 0.1, 1: 0.49, 2: 0.01, 3: -0.4},  # abs sum should be 1
     }
     # concept_1 and concept_3 are locally under the 0.05 threshold in local importance
     local_importances = torch.tensor(
@@ -324,41 +324,39 @@ def test_consim_filter_and_quantize_concepts_importances():
     )
 
     # global concepts under the threshold should be removed globally, in this case concept_2
-    assert "concept_2" not in interp, "concepts with low global importance should be removed from the interpretation"
-    assert all("concept_2" not in gi for gi in glob_imp.values()), (
+    assert 2 not in interp, "concepts with low global importance should be removed from the interpretation"
+    assert all(2 not in gi for gi in glob_imp.values()), (
         "concepts with low global importance should be removed from the global importances"
     )
-    assert all("concept_2" not in li for li in loc_imp), (
+    assert all(2 not in li for li in loc_imp), (
         "concepts with low global importance should be removed from the local importances"
     )
 
+    print(interp)
+
     # ensure other concepts are not removed
-    for c in ["concept_0", "concept_1", "concept_3"]:
+    for c in [0, 1, 3]:
         assert c in interp, "concepts with high global importance should be kept in the interpretation"
         assert c in glob_imp["A"], "concepts with high global importance should be kept in the global importances"
         assert c in glob_imp["B"], "concepts with high global importance should be kept in the global importances"
 
     # local concepts under the threshold should be removed locally, in this case concept_1 and concept_3 in the first sample
-    assert "concept_1" not in loc_imp[0], (
-        "concepts with low local importance should be removed from the local importances"
-    )
-    assert "concept_3" not in loc_imp[0], (
-        "concepts with low local importance should be removed from the local importances"
-    )
+    assert 1 not in loc_imp[0], "concepts with low local importance should be removed from the local importances"
+    assert 3 not in loc_imp[0], "concepts with low local importance should be removed from the local importances"
 
     # ensure that values have been quantized and have the correct literal
-    assert glob_imp["A"]["concept_0"] == "++", "wrong global importance quantization"  # 0.5
-    assert glob_imp["A"]["concept_1"] == "+", "wrong global importance quantization"  # 0.25
-    assert glob_imp["A"]["concept_3"] == "-", "wrong global importance quantization"  # -0.24
-    assert glob_imp["B"]["concept_0"] == "+", "wrong global importance quantization"  # 0.1
-    assert glob_imp["B"]["concept_1"] == "++", "wrong global importance quantization"  # 0.49
-    assert glob_imp["B"]["concept_3"] == "--", "wrong global importance quantization"  # -0.4
+    assert glob_imp["A"][0] == "++", "wrong global importance quantization"  # 0.5
+    assert glob_imp["A"][1] == "+", "wrong global importance quantization"  # 0.25
+    assert glob_imp["A"][3] == "-", "wrong global importance quantization"  # -0.24
+    assert glob_imp["B"][0] == "+", "wrong global importance quantization"  # 0.1
+    assert glob_imp["B"][1] == "++", "wrong global importance quantization"  # 0.49
+    assert glob_imp["B"][3] == "--", "wrong global importance quantization"  # -0.4
 
     # ensure that values have been quantized and have the correct literal
-    assert loc_imp[0]["concept_0"] == "--", "wrong local importance quantization"  # -0.55
-    assert loc_imp[1]["concept_0"] == "++", "wrong local importance quantization"  # 0.3
-    assert loc_imp[1]["concept_1"] == "-", "wrong local importance quantization"  # -0.2
-    assert loc_imp[1]["concept_3"] == "+", "wrong local importance quantization"  # 0.11
+    assert loc_imp[0][0] == "--", "wrong local importance quantization"  # -0.55
+    assert loc_imp[1][0] == "++", "wrong local importance quantization"  # 0.3
+    assert loc_imp[1][1] == "-", "wrong local importance quantization"  # -0.2
+    assert loc_imp[1][3] == "+", "wrong local importance quantization"  # 0.11
 
 
 @pytest.mark.parametrize(
@@ -381,9 +379,9 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     sentences = ["s0", "s1", "s2", "s3"]
     preds = torch.tensor([0, 1, 0, 1])
     classes = ["A", "B"]
-    interp = {"concept_0": "word"}
-    glob = {"A": {"concept_0": "++"}, "B": {"concept_0": "-"}}
-    loc = [{"concept_0": "+"}, {"concept_0": "-"}, {"concept_0": "+"}, {"concept_0": "-"}]
+    interp = {0: "word"}
+    glob = {"A": {0: "++"}, "B": {0: "-"}}
+    loc = [{0: "+"}, {0: "-"}, {0: "+"}, {0: "-"}]
 
     # convert the prompt type to settings
     prompt_settings = prompt_type.value
@@ -449,17 +447,15 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # global concepts explanation
     #     concepts interpretation
     if prompt_settings.concepts_interpretation:
-        assert "concept_0: word" in system, "system prompt should contain the concepts interpretation"
+        assert "0: word" in system, "system prompt should contain the concepts interpretation"
     #     global concepts importance
     if prompt_settings.concepts_global_importances:
         if anonymize_classes:
-            assert "Class_0: {'concept_0': '++'}" in system, (
+            assert "Class_0: {0: '++'}" in system, (
                 "system prompt should contain the anonymized global concepts importance"
             )
         else:
-            assert "B: {'concept_0': '-'}" in system, (
-                "system prompt should contain the anonymized global concepts importance"
-            )
+            assert "B: {0: '-'}" in system, "system prompt should contain the anonymized global concepts importance"
 
     # --------------
     # Learning Phase
@@ -478,8 +474,8 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
 
     # local concepts explanation
     if prompt_settings.lp_concepts_local_contributions:
-        assert "Sample_0: {'concept_0': '+'}" in system, "system prompt should contain the lp concepts contributions"
-        assert "Sample_1: {'concept_0': '-'}" in system, "system prompt should contain the lp concepts contributions"
+        assert "Sample_0: {0: '+'}" in system, "system prompt should contain the lp concepts contributions"
+        assert "Sample_1: {0: '-'}" in system, "system prompt should contain the lp concepts contributions"
 
     # ----------------
     # Evaluation Phase
@@ -488,8 +484,8 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     assert "Sample_0" not in user and "Sample_1" not in user, "user prompt should not contain the lp samples"
     # concepts contributions
     if prompt_settings.ep_concepts_local_contributions:
-        assert "Sample_2: {'concept_0': '+'}" in user, "user prompt should contain the ep concepts contributions"
-        assert "Sample_3: {'concept_0': '-'}" in user, "user prompt should contain the ep concepts contributions"
+        assert "Sample_2: {0: '+'}" in user, "user prompt should contain the ep concepts contributions"
+        assert "Sample_3: {0: '-'}" in user, "user prompt should contain the ep concepts contributions"
 
 
 def test_consim_generate_prompt():
@@ -499,8 +495,8 @@ def test_consim_generate_prompt():
     sentences = ["s0", "s1", "s2", "s3"]
     preds = torch.tensor([0, 1, 0, 1])
     classes = ["A", "B"]
-    interp = {"concept_0": "word"}
-    glob = {"A": {"concept_0": 0.6, "concept_1": 0.01}, "B": {"concept_0": -0.6, "concept_1": -0.02}}
+    interp = {0: "word"}
+    glob = {"A": {0: 0.6, 1: 0.01}, "B": {0: -0.6, 1: -0.02}}
     loc = torch.tensor([[0.4], [-0.4], [0.5], [-0.5]])
 
     prompts, literal = ConSim._generate_prompt(
@@ -528,25 +524,25 @@ def test_consim_generate_prompt():
     assert literal == ["A", "B"], "literal predictions should match the expected"
 
     # global importance should have been converted to:
-    # glob = {"A": {"concept_0": 0.6}, "B": {"concept_0": -0.6}}
+    # glob = {"A": {0: 0.6}, "B": {0: -0.6}}
     # with the concept_1 being removed
-    assert "concept_1" not in system, "concepts with low global importance should be removed from the system prompt"
-    assert "concept_0: word" in system, (
+    # assert 1 not in system, "concepts with low global importance should be removed from the system prompt"
+    assert "0: word" in system, (
         "high global importance concepts should be in the system prompt"
     )  # E3 includes the concepts interpretation
-    assert "A: {'concept_0': '++'}" in system, (
+    assert "A: {0: '++'}" in system, (
         "high global importance concepts should be in the system prompt"
     )  # E3 includes the global concepts importance
-    assert "B: {'concept_0': '--'}" in system, (
+    assert "B: {0: '--'}" in system, (
         "high global importance concepts should be in the system prompt"
     )  # E3 includes the global concepts importance
     assert "Sample_0: s0\nSample_1: s1" in system, "system prompt should contain the lp samples"
     assert "Sample_2" not in system and "Sample_3" not in system, "system prompt should not contain the ep samples"
     assert "Sample_0: A\nSample_1: B" in system, "system prompt should contain the predictions"
-    assert "Sample_0: {'concept_0': '++'}" in system, (
+    assert "Sample_0: {0: '++'}" in system, (
         "system prompt should contain the local concept importance"
     )  # E3 includes the local concepts contribution
-    assert "Sample_1: {'concept_0': '--'}" in system, (
+    assert "Sample_1: {0: '--'}" in system, (
         "system prompt should contain the local concept importance"
     )  # E3 includes the local concepts contribution
     assert "Sample_2: s2\nSample_3: s3" in user, "user prompt should contain the ep samples"
@@ -677,8 +673,8 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         interesting_samples=samples,
         predictions=preds,
         concept_explainer=explainer,
-        concepts_interpretation={"concept_0": "word"},
-        global_importances={"A": {"concept_0": 1.0}},
+        concepts_interpretation={0: "word"},
+        global_importances={"A": {0: 1.0}},
         prompt_type=prompt_type,
     )
 
@@ -696,8 +692,8 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         interesting_samples=samples,
         predictions=preds,
         concept_explainer=explainer,
-        concepts_interpretation={"concept_0": "word"},
-        global_importances={"A": {"concept_0": 1.0}},
+        concepts_interpretation={0: "word"},
+        global_importances={"A": {0: 1.0}},
         prompt_type=prompt_type,
     )
     assert score is None, "consim should return None on empty llm response"
@@ -708,8 +704,8 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         interesting_samples=samples,
         predictions=preds,
         concept_explainer=explainer,
-        concepts_interpretation={"concept_0": "word"},
-        global_importances={"A": {"concept_0": 1.0}},
+        concepts_interpretation={0: "word"},
+        global_importances={"A": {0: 1.0}},
         prompt_type=prompt_type,
     )
     assert score is None, "consim should return None on wrong format llm response"
@@ -720,8 +716,8 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         interesting_samples=samples,
         predictions=preds,
         concept_explainer=explainer,
-        concepts_interpretation={"concept_0": "word"},
-        global_importances={"A": {"concept_0": 1.0}},
+        concepts_interpretation={0: "word"},
+        global_importances={"A": {0: 1.0}},
         prompt_type=prompt_type,
     )
     assert score is None, "consim should return None on wrong number of answers in llm response"
@@ -792,15 +788,15 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     # ---------------------------------------------------------------------------------
     # make up concepts that could make sense with the prime-not-prime synthetic dataset
     concepts_interpretation = {
-        "concept_0": "is odd",  # %2 == 1
-        "concept_1": "lucky number",
-        "concept_2": "%5 == 0",
-        "concept_3": "%3 == 0",
+        0: "is odd",  # %2 == 1
+        1: "lucky number",
+        2: "%5 == 0",
+        3: "%3 == 0",
     }
 
     global_importances = {
-        "not prime": {"concept_0": -0.5, "concept_1": 0.0, "concept_2": 0.2, "concept_3": 0.3},
-        "prime": {"concept_0": 0.8, "concept_1": 0.0, "concept_2": -0.2, "concept_3": -0.3},
+        "not prime": {0: -0.5, 1: 0.0, 2: 0.2, 3: 0.3},
+        "prime": {0: 0.8, 1: 0.0, 2: -0.2, 3: -0.3},
     }
 
     # evaluate the ConSim metric
@@ -825,7 +821,7 @@ if __name__ == "__main__":
     mwsp = ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
         split_points=["bert.encoder.layer.1.output"],
-        model_autoclass=AutoModelForSequenceClassification,  # type: ignore
+        automodel=AutoModelForSequenceClassification,  # type: ignore
         batch_size=4,
         device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
@@ -836,7 +832,7 @@ if __name__ == "__main__":
             "bert.encoder.layer.1.output",
             "bert.encoder.layer.3.attention.self.query",
         ],
-        model_autoclass=AutoModelForMaskedLM,  # type: ignore
+        automodel=AutoModelForMaskedLM,  # type: ignore
         batch_size=4,
         device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )

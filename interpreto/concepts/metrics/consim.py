@@ -634,15 +634,13 @@ class ConSim:
             if len(concepts_to_keep) == 0:
                 importance_threshold /= 2
 
-        concepts_to_show = torch.unique(torch.stack(concepts_to_keep))
+        concepts_to_show = torch.unique(torch.stack(concepts_to_keep)).tolist()
         interpretation_concepts_ids = list(concepts_interpretation.keys())
-        concepts_to_show = torch.Tensor([cpt for cpt in concepts_to_show if cpt in interpretation_concepts_ids]).to(
-            dtype=torch.int64
-        )
+        concepts_to_show = [cpt for cpt in concepts_to_show if cpt in interpretation_concepts_ids]
 
         # ------------------------------------------------------------------------------------------
         # filter the concepts activating words
-        concepts_interpretation = {c: concepts_interpretation[c.item()] for c in concepts_to_show}  # type: ignore
+        concepts_interpretation = {c: concepts_interpretation[c] for c in concepts_to_show}  # type: ignore
 
         # ------------------------------------------------------------------------------------------
         # filter the concepts importance
@@ -655,7 +653,7 @@ class ConSim:
                 # quantize the importance and pass it to string
                 quantized_importance: str | None = ConSim._quantize_importances(importance, importance_threshold)
                 # keep only the concepts that should be shown and are important enough
-                if c in concepts_to_show and quantized_importance is not None:
+                if c in list(concepts_to_show) and quantized_importance is not None:
                     quantized_global_importances[class_name][c] = quantized_importance
 
         if local_importances is None:
