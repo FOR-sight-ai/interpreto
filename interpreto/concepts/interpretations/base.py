@@ -337,15 +337,19 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if latent_activations is not None:
+            if hasattr(self.concept_explainer.concept_model, "to"):
+                self.concept_explainer.concept_model.to(self.device)  # type: ignore
+
             # batch over latent activations for concept encoding
             concepts_activations_list = []
             for batch_idx in range(0, latent_activations.shape[0], self.concept_encoding_batch_size):
                 # extract and encode a batch of latent activations
                 batch_latent_activations = latent_activations[batch_idx : batch_idx + self.concept_encoding_batch_size]
 
-                if hasattr(batch_latent_activations, "to"):
-                    batch_latent_activations = batch_latent_activations.to(self.device)
+                # concept model forward pass
+                batch_latent_activations = batch_latent_activations.to(self.device)
                 batch_concepts_activations = self.concept_explainer.encode_activations(batch_latent_activations)
+                batch_latent_activations.cpu()
 
                 concepts_activations_list.append(batch_concepts_activations.cpu())
             concepts_activations = torch.cat(concepts_activations_list, dim=0)
