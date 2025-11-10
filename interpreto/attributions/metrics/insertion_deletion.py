@@ -43,7 +43,7 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 from interpreto.attributions.base import (
     AttributionExplainer,
     AttributionOutput,
-    GenerationAttributionExplainer,
+    # GenerationAttributionExplainer,
     MultitaskExplainerMixin,
 )
 from interpreto.attributions.perturbations import DeletionPerturbator, InsertionPerturbator
@@ -86,8 +86,8 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
                 perturbed (i.e. only the 50% most important). This is useful to avoid perturbing too many elements with
                 low scores in long sequences.
         """
-        if isinstance(self, GenerationAttributionExplainer):
-            raise NotImplementedError("Insertion and Deletion metrics are not implemented yet for generation tasks.")
+        # if isinstance(self, GenerationAttributionExplainer):
+        #    raise NotImplementedError("Insertion and Deletion metrics are not implemented yet for generation tasks.")
 
         model, replace_token_id = self._set_tokenizer(model, tokenizer)
 
