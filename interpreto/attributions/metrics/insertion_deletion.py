@@ -149,9 +149,16 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
         # Perturb inputs
         def perturbation_generator(attributions_outputs):
             for i, a in enumerate(attributions_outputs):
-                for target, attrib in zip(a.targets, a.attributions, strict=True):
-                    pert, mask = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
-                    yield i, pert, target.to(self.device)
+                is_generation = hasattr(a, "model_task") and "GENERATION" in str(a.model_task)
+                if is_generation:
+                    for k, attrib in enumerate(a.attributions):
+                        attrib_causal = torch.nan_to_num(attrib, nan=-float("inf"))
+                        pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib_causal)
+                        yield i, pert, a.targets[: k + 1].to(self.device)
+                else:
+                    for target, attrib in zip(a.targets, a.attributions, strict=True):
+                        pert, mask = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
+                        yield i, pert, target.to(self.device)
 
         attrib_idx_gen: Iterable[int]
         pert_generator: Iterable[TensorMapping]
@@ -164,7 +171,9 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
         # Group scores by attribution (i.e. all targets of the same sentence are grouped together)
         grouped_scores: list[torch.Tensor] = []
         for _, score in itertools.groupby(zip(attrib_idx_gen, scores, strict=True), key=lambda x: x[0]):
-            grouped_scores.append(torch.stack(tuple(s for _, s in score), dim=0).squeeze(dim=-1))
+            # grouped_scores.append(torch.stack(tuple(s for _, s in score), dim=0).squeeze(dim=-1))
+            curves = [s[..., -1] if s.dim() > 1 else s for _, s in score]
+            grouped_scores.append(torch.stack(curves, dim=0))
 
         # Compute AUC using trapezoidal rule
         aucs = [((s.sum(dim=1) - 0.5 * (s[:, 0] + s[:, -1])) / (len(s.T) - 1)).mean() for s in grouped_scores]

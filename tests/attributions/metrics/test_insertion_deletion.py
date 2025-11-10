@@ -75,17 +75,17 @@ test_cases = [
             "scores_shape": [(1, 6), (1, 4), (1, 3)],
         },
     },
-    # {  # Test case 5: Generation task, Deletion metric with Token granularity and 50 perturbations
-    #     "task": "generation",
-    #     "metric_class": Deletion,
-    #     "granularity": Granularity.TOKEN,
-    #     "n_perturbations": 50,
-    #     "expected_results": {
-    #         "perturbator_type": DeletionPerturbator,
-    #         "expected_auc": 0.0011420948,
-    #         "scores_shape": [(51, 20), (32, 20), (29, 20)],
-    #     },
-    # },
+    {  # Test case 5: Generation task, Deletion metric with Token granularity and 50 perturbations
+        "task": "generation",
+        "metric_class": Deletion,
+        "granularity": Granularity.TOKEN,
+        "n_perturbations": 50,
+        "expected_results": {
+            "perturbator_type": DeletionPerturbator,
+            "expected_auc": 0.0013482030481100082,  # computed with previous implementation, not meaningful
+            "scores_shape": [(20, 51), (20, 32), (20, 29)],  # (l_g, n_perturbations + 1)
+        },
+    },
 ]
 
 
