@@ -471,7 +471,7 @@ class AttributionExplainer:
                 model_inputs_to_explain=model_input,
                 model_task=model_task,
                 classes=classes,
-                targets=target,
+                targets=target.cpu(),  # TODO: manage target device in the inference wrapper
                 granularity=self.granularity,
                 inference_mode=self.inference_wrapper.mode,
             )
