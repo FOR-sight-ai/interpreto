@@ -86,6 +86,17 @@ test_cases = [
             "scores_shape": [(20, 51), (20, 32), (20, 29)],  # (l_g, n_perturbations + 1)
         },
     },
+    {  # Test case 6: Generation task, Insertion metric with token granularity and 20 perturbations
+        "task": "generation",
+        "metric_class": Insertion,
+        "granularity": Granularity.TOKEN,
+        "n_perturbations": 5,
+        "expected_results": {
+            "perturbator_type": InsertionPerturbator,
+            "expected_auc": 0.0011412518797442317,  # computed with previous implementation, not meaningful
+            "scores_shape": [(20, 6), (20, 6), (20, 6)],  # (l_g, n_perturbations + 1)
+        },
+    },
 ]
 
 
@@ -165,4 +176,5 @@ def test_insertion_deletion_metric(sentences, metric_test_case):
         "The computed AUC does not match the expected value. This test is a regression test, the expected value is "
         "computed from a previous implementation of the metric and ensures no changes in the result."
     )
+    print("metric_scores shapes:", [s.shape for s in metric_scores])
     assert [s.shape for s in metric_scores] == expected_results["scores_shape"]
