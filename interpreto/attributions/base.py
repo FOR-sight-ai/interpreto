@@ -465,6 +465,12 @@ class AttributionExplainer:
                 raise NotImplementedError(
                     f"Model type {self.inference_wrapper.model.__class__.__name__} not supported for AttributionExplainer."
                 )
+
+            # sanitize model_input
+            _ = model_input.pop("inputs_embeds", None)
+            model_input["attention_mask"] = model_input["attention_mask"][0].unsqueeze(dim=0)
+
+            # construct attribution output
             attribution_output = AttributionOutput(
                 attributions=contribution,
                 elements=elements,
