@@ -1,6 +1,8 @@
-<div align="center">
-  <img src="docs/assets/img/interpreto_banner.png" alt="Interpreto: Interpretability Toolkit for LLMs">
-<br/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/img/interpreto_banner_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/img/interpreto_banner.png">
+  <img src="docs/assets/img/interpreto_banner_dark.png" alt="Interpreto: Interpretability Toolkit for LLMs" />
+</picture>
 
 [![Build status](https://img.shields.io/github/actions/workflow/status/FOR-sight-ai/interpreto/build.yml?branch=main)](https://github.com/FOR-sight-ai/interpreto/actions?query=workflow%3Abuild)
 [![Version](https://img.shields.io/pypi/v/interpreto?color=blue)](https://pypi.org/project/interpreto/)

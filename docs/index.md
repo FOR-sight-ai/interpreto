@@ -1,7 +1,8 @@
 template: home.html
 ---
 
-<img src="assets/img/interpreto_banner.png" alt="Interpreto: Interpretability Toolkit for LLMs" style="max-width:100%; height:auto;" />
+![Interpreto banner](assets/img/interpreto_banner.png#only-light)
+![Interpreto banner](assets/img/interpreto_banner_dark.png#only-dark)
 
 [![Build status](https://img.shields.io/github/actions/workflow/status/FOR-sight-ai/interpreto/build.yml?branch=main)](https://github.com/FOR-sight-ai/interpreto/actions?query=workflow%3Abuild)
 [![Docs status](https://img.shields.io/readthedocs/interpreto)](https://interpreto.readthedocs.io/)
