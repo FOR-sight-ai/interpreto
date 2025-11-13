@@ -26,7 +26,7 @@
 import pytest
 import torch
 
-from interpreto import Granularity, Occlusion
+from interpreto import Granularity, IntegratedGradients, Occlusion
 from interpreto.attributions.metrics import Deletion, Insertion
 from interpreto.attributions.perturbations import DeletionPerturbator, InsertionPerturbator
 
@@ -114,7 +114,7 @@ def metric_test_case(request):
     return request.param
 
 
-def test_insertion_deletion_metric(sentences, metric_test_case):
+def test_non_regression_insertion_deletion(sentences, metric_test_case):
     """Test the insertion and deletion metrics with various configurations.
 
     Multiple aspects are assessed:
@@ -166,3 +166,46 @@ def test_insertion_deletion_metric(sentences, metric_test_case):
         "computed from a previous implementation of the metric and ensures no changes in the result."
     )
     assert [s.shape for s in metric_scores] == expected_results["scores_shape"]
+
+
+def metric_on_method_model_pair(model, tokenizer, method_class, metric_class, sentences):
+    """Run metrics on a model and a method.
+
+    This function is called by another
+
+    Warnings are considered as errors.
+    """
+    explainer = method_class(model, tokenizer, granularity=Granularity.WORD)
+    attributions = explainer.explain(sentences)
+    metric = metric_class(model, tokenizer)
+    auc, metric_scores = metric.evaluate(attributions)
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("method_class", [Occlusion, IntegratedGradients])
+@pytest.mark.parametrize("metric_class", [Insertion, Deletion])
+def test_insertion_deletion_classification(bert_model, bert_tokenizer, method_class, metric_class, sentences):
+    # Classification
+    metric_on_method_model_pair(bert_model, bert_tokenizer, method_class, metric_class, sentences)
+
+
+# TODO: add test when implemented
+# @pytest.mark.parametrize("method_class", [KernelShap, SmoothGrad])
+# @pytest.mark.parametrize("metric_class", [Insertion, Deletion])
+# def test_insertion_deletion_generation(gpt2_model, gpt2_tokenizer, method_class, metric_class, sentences):
+#     # Generation
+#     metric_on_method_model_pair(gpt2_model, gpt2_tokenizer, method_class, metric_class, sentences)
+
+
+if __name__ == "__main__":
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    sentences = [
+        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
+        "Interpreto is magical",
+        "Testing interpreto",
+    ]
+
+    metric_on_method_model_pair(bert_model, bert_tokenizer, IntegratedGradients, Insertion, sentences)
