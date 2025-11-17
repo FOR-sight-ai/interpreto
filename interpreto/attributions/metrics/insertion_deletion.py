@@ -124,6 +124,47 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
             "Use the `evaluate` method to evaluate the deletion metric."
         )
 
+    def _normalize_curve(self, s: torch.Tensor) -> torch.Tensor:
+        """
+        Normalize a score curve using its endpoints, depending on the metric type.
+
+        For Deletion:
+            - s_norm[0] ≈ 1 and s_norm[-1] ≈ 0 when the score decreases as expected.
+        For Insertion:
+            - s_norm[0] ≈ 0 and s_norm[-1] ≈ 1 when the score increases as expected.
+
+        This keeps the relative shape of the curve and only rescales it
+        to the [0, 1] range based on its endpoints.
+        """
+        if s.numel() == 0:
+            return s
+
+        s0 = s[0]
+        sP = s[-1]
+        eps = 1e-12
+        name = type(self).__name__
+
+        # Deletion: map start to 1, end to 0 using the endpoints
+        if "Deletion" in name:
+            denom = s0 - sP
+            if denom.abs() < eps:
+                # Almost flat curve: neutral constant
+                return torch.full_like(s, 0.5)
+            s_norm = (s - sP) / (denom + eps)
+
+        # Insertion: map start to 0, end to 1 using the endpoints
+        elif "Insertion" in name:
+            denom = sP - s0
+            if denom.abs() < eps:
+                # Almost flat curve: neutral constant
+                return torch.full_like(s, 0.5)
+            s_norm = (s - s0) / (denom + eps)
+
+        else:  # Should not happen
+            raise ValueError(f"Unknown metric type: {name}")
+
+        return s_norm.clamp(0.0, 1.0)
+
     def evaluate(
         self, attributions_outputs: Iterable[AttributionOutput]
     ) -> tuple[float, list[Float[torch.Tensor, "t p"]]]:
@@ -138,6 +179,7 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
                 - the average AUC score across all attributions
                 - a list of scores for each sequence, where each element is a torch tensor of scores.
         """
+        attributions_outputs = list(attributions_outputs)
 
         # Assert that the granularity of all attributions is the same as the granularity of the deletion.
         grans = [a.granularity for a in attributions_outputs]
@@ -170,9 +212,24 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
 
         # Group scores by attribution (i.e. all targets of the same sentence are grouped together)
         grouped_scores: list[torch.Tensor] = []
-        for _, score in itertools.groupby(zip(attrib_idx_gen, scores, strict=True), key=lambda x: x[0]):
+        for idx, score in itertools.groupby(zip(attrib_idx_gen, scores, strict=True), key=lambda x: x[0]):
+            # Determine if this group corresponds to a generation model
+            is_generation = hasattr(attributions_outputs[idx], "model_task") and "GENERATION" in str(
+                attributions_outputs[idx].model_task
+            )
             # grouped_scores.append(torch.stack(tuple(s for _, s in score), dim=0).squeeze(dim=-1))
-            curves = [s[..., -1] if s.dim() > 1 else s for _, s in score]
+            # curves = [s[..., -1] if s.dim() > 1 else s for _, s in score]
+            curves = []
+            for _, s in score:
+                # For generation and classification, scores may be (p,) or (p, t)
+                curve = s[..., -1] if s.dim() > 1 else s
+
+                # Apply normalization only for generative models
+                if is_generation:
+                    curve = self._normalize_curve(curve)
+
+                curves.append(curve)
+
             grouped_scores.append(torch.stack(curves, dim=0))
 
         # Compute AUC using trapezoidal rule

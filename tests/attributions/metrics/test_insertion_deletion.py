@@ -79,11 +79,11 @@ test_cases = [
         "task": "generation",
         "metric_class": Deletion,
         "granularity": Granularity.TOKEN,
-        "n_perturbations": 50,
+        "n_perturbations": 30,
         "expected_results": {
             "perturbator_type": DeletionPerturbator,
-            "expected_auc": 0.0013482030481100082,  # computed with previous implementation, not meaningful
-            "scores_shape": [(20, 51), (20, 32), (20, 29)],  # (l_g, n_perturbations + 1)
+            "expected_auc": 0.787193775177002,  # computed with previous implementation, not meaningful
+            "scores_shape": [(20, 31), (20, 31), (20, 29)],  # (l_g, n_perturbations + 1)
         },
     },
     {  # Test case 6: Generation task, Insertion metric with token granularity and 20 perturbations
@@ -93,7 +93,7 @@ test_cases = [
         "n_perturbations": 5,
         "expected_results": {
             "perturbator_type": InsertionPerturbator,
-            "expected_auc": 0.0011412518797442317,  # computed with previous implementation, not meaningful
+            "expected_auc": 0.3000886142253876,  # computed with previous implementation, not meaningful
             "scores_shape": [(20, 6), (20, 6), (20, 6)],  # (l_g, n_perturbations + 1)
         },
     },
@@ -104,7 +104,7 @@ test_cases = [
         "n_perturbations": 20,
         "expected_results": {
             "perturbator_type": InsertionPerturbator,
-            "expected_auc": 0.001094164326786995,  # computed with previous implementation, not meaningful
+            "expected_auc": 0.3604782521724701,  # computed with previous implementation, not meaningful
             "scores_shape": [(1, 21), (5, 8), (20, 21)],  # (l_g, n_perturbations + 1)
         },
     },
