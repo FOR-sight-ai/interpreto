@@ -135,6 +135,8 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
 
         This keeps the relative shape of the curve and only rescales it
         to the [0, 1] range based on its endpoints.
+        The normalization is used only for generative models, because the score is too
+        low due to the large vocabulary size when using softmax probabilities.
         """
         if s.numel() == 0:
             return s
@@ -217,8 +219,6 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
             is_generation = hasattr(attributions_outputs[idx], "model_task") and "GENERATION" in str(
                 attributions_outputs[idx].model_task
             )
-            # grouped_scores.append(torch.stack(tuple(s for _, s in score), dim=0).squeeze(dim=-1))
-            # curves = [s[..., -1] if s.dim() > 1 else s for _, s in score]
             curves = []
             for _, s in score:
                 # For generation and classification, scores may be (p,) or (p, t)
