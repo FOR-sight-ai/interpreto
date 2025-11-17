@@ -97,6 +97,17 @@ test_cases = [
             "scores_shape": [(20, 6), (20, 6), (20, 6)],  # (l_g, n_perturbations + 1)
         },
     },
+    {  # Test case 7: Generation task, Insertion metric with word granularity and 20 perturbations
+        "task": "generation",
+        "metric_class": Insertion,
+        "granularity": Granularity.WORD,
+        "n_perturbations": 20,
+        "expected_results": {
+            "perturbator_type": InsertionPerturbator,
+            "expected_auc": 0.001094164326786995,  # computed with previous implementation, not meaningful
+            "scores_shape": [(1, 21), (5, 8), (20, 21)],  # (l_g, n_perturbations + 1)
+        },
+    },
 ]
 
 
