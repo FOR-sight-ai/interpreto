@@ -43,7 +43,7 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 from interpreto.attributions.base import (
     AttributionExplainer,
     AttributionOutput,
-    # GenerationAttributionExplainer,
+    GenerationAttributionExplainer,
     MultitaskExplainerMixin,
 )
 from interpreto.attributions.perturbations import DeletionPerturbator, InsertionPerturbator
@@ -86,9 +86,6 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
                 perturbed (i.e. only the 50% most important). This is useful to avoid perturbing too many elements with
                 low scores in long sequences.
         """
-        # if isinstance(self, GenerationAttributionExplainer):
-        #    raise NotImplementedError("Insertion and Deletion metrics are not implemented yet for generation tasks.")
-
         model, replace_token_id = self._set_tokenizer(model, tokenizer)
 
         super().__init__(
@@ -105,6 +102,7 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
             inference_mode=InferenceModes.SOFTMAX,  # We use probabilities to compute the AUC of the metric curve
             use_gradient=False,
         )
+        self.is_generation = isinstance(self, GenerationAttributionExplainer)
 
     @property
     @abstractmethod
@@ -124,48 +122,15 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
             "Use the `evaluate` method to evaluate the deletion metric."
         )
 
-    def _normalize_curve(self, s: torch.Tensor) -> torch.Tensor:
+    def _normalize_curve(self, s: torch.Tensor):
         """
         Normalize a score curve using its endpoints, depending on the metric type.
-
-        For Deletion:
-            - s_norm[0] ≈ 1 and s_norm[-1] ≈ 0 when the score decreases as expected.
-        For Insertion:
-            - s_norm[0] ≈ 0 and s_norm[-1] ≈ 1 when the score increases as expected.
-
         This keeps the relative shape of the curve and only rescales it
         to the [0, 1] range based on its endpoints.
         The normalization is used only for generative models, because the score is too
         low due to the large vocabulary size when using softmax probabilities.
         """
-        if s.numel() == 0:
-            return s
-
-        s0 = s[0]
-        sP = s[-1]
-        eps = 1e-12
-        name = type(self).__name__
-
-        # Deletion: map start to 1, end to 0 using the endpoints
-        if "Deletion" in name:
-            denom = s0 - sP
-            if denom.abs() < eps:
-                # Almost flat curve: neutral constant
-                return torch.full_like(s, 0.5)
-            s_norm = (s - sP) / (denom + eps)
-
-        # Insertion: map start to 0, end to 1 using the endpoints
-        elif "Insertion" in name:
-            denom = sP - s0
-            if denom.abs() < eps:
-                # Almost flat curve: neutral constant
-                return torch.full_like(s, 0.5)
-            s_norm = (s - s0) / (denom + eps)
-
-        else:  # Should not happen
-            raise ValueError(f"Unknown metric type: {name}")
-
-        return s_norm.clamp(0.0, 1.0)
+        raise NotImplementedError()
 
     def evaluate(
         self, attributions_outputs: Iterable[AttributionOutput]
@@ -181,8 +146,6 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
                 - the average AUC score across all attributions
                 - a list of scores for each sequence, where each element is a torch tensor of scores.
         """
-        attributions_outputs = list(attributions_outputs)
-
         # Assert that the granularity of all attributions is the same as the granularity of the deletion.
         grans = [a.granularity for a in attributions_outputs]
         if not all(g == grans[0] for g in grans):
@@ -193,8 +156,7 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
         # Perturb inputs
         def perturbation_generator(attributions_outputs):
             for i, a in enumerate(attributions_outputs):
-                is_generation = hasattr(a, "model_task") and "GENERATION" in str(a.model_task)
-                if is_generation:
+                if self.is_generation:
                     for k, attrib in enumerate(a.attributions):
                         attrib_causal = torch.nan_to_num(attrib, nan=-float("inf"))
                         pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib_causal)
@@ -214,18 +176,15 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
 
         # Group scores by attribution (i.e. all targets of the same sentence are grouped together)
         grouped_scores: list[torch.Tensor] = []
-        for idx, score in itertools.groupby(zip(attrib_idx_gen, scores, strict=True), key=lambda x: x[0]):
+        for _, score in itertools.groupby(zip(attrib_idx_gen, scores, strict=True), key=lambda x: x[0]):
             # Determine if this group corresponds to a generation model
-            is_generation = hasattr(attributions_outputs[idx], "model_task") and "GENERATION" in str(
-                attributions_outputs[idx].model_task
-            )
             curves = []
             for _, s in score:
                 # For generation and classification, scores may be (p,) or (p, t)
                 curve = s[..., -1] if s.dim() > 1 else s
 
                 # Apply normalization only for generative models
-                if is_generation:
+                if self.is_generation:
                     curve = self._normalize_curve(curve)
 
                 curves.append(curve)
@@ -291,6 +250,26 @@ class Insertion(InsertionDeletionBase):
         """Return the perturbator class used for insertion."""
         return InsertionPerturbator
 
+    def _normalize_curve(self, s: torch.Tensor):
+        """
+        Normalize a score curve using its endpoints, depending on the metric type.
+        s_norm[0] ≈ 0 and s_norm[-1] ≈ 1 when the score increases as expected.
+        """
+        if s.numel() == 0:
+            return s
+
+        s0 = s[0]
+        sP = s[-1]
+        eps = 1e-12
+
+        denom = sP - s0
+        if denom.abs() < eps:
+            # Almost flat curve: neutral constant
+            return torch.full_like(s, 0.5)
+        s_norm = (s - s0) / (denom + eps)
+
+        return s_norm.clamp(0.0, 1.0)
+
 
 class Deletion(InsertionDeletionBase):
     """
@@ -343,3 +322,23 @@ class Deletion(InsertionDeletionBase):
     def _perturbator_class(self) -> Callable:
         """Return the perturbator class used for deletion."""
         return DeletionPerturbator
+
+    def _normalize_curve(self, s: torch.Tensor):
+        """
+        Normalize a score curve using its endpoints, depending on the metric type.
+        s_norm[0] ≈ 1 and s_norm[-1] ≈ 0 when the score decreases as expected.
+        """
+        if s.numel() == 0:
+            return s
+
+        s0 = s[0]
+        sP = s[-1]
+        eps = 1e-12
+
+        denom = s0 - sP
+        if denom.abs() < eps:
+            # Almost flat curve: neutral constant
+            return torch.full_like(s, 0.5)
+        s_norm = (s - sP) / (denom + eps)
+
+        return s_norm.clamp(0.0, 1.0)

@@ -187,5 +187,4 @@ def test_insertion_deletion_metric(sentences, metric_test_case):
         "The computed AUC does not match the expected value. This test is a regression test, the expected value is "
         "computed from a previous implementation of the metric and ensures no changes in the result."
     )
-    print("metric_scores shapes:", [s.shape for s in metric_scores])
     assert [s.shape for s in metric_scores] == expected_results["scores_shape"]
