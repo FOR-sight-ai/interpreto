@@ -345,7 +345,7 @@ class AttributionExplainer:
         | Iterable[torch.Tensor]
         | None = None,  # TODO: create specific target type for classification and generation
         **model_kwargs: Any,
-    ) -> Iterable[AttributionOutput]:
+    ) -> list[AttributionOutput]:
         """
         Computes attributions for NLP models.
 
@@ -447,7 +447,7 @@ class AttributionExplainer:
             results.append(attribution_output)
         return results
 
-    def __call__(self, model_inputs: ModelInputs, targets=None, **kwargs) -> Iterable[AttributionOutput]:
+    def __call__(self, model_inputs: ModelInputs, targets=None, **kwargs) -> list[AttributionOutput]:
         """
         Enables the explainer instance to be called as a function.
 
