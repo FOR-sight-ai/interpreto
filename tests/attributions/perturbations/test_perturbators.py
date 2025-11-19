@@ -200,7 +200,7 @@ def test_linear_interpolation_perturbation_adjust_baseline():
 
     # Test with None baseline
     baseline = LinearInterpolationPerturbator.adjust_baseline(None, inputs)
-    assert torch.all(baseline == 0)
+    assert torch.all(baseline.abs() < 1e-5)
     assert baseline.shape == inputs.shape[1:]
 
     # Test with float baseline

@@ -61,4 +61,20 @@ def get_version() -> str:
         return "unknown"
 
 
-__all__ = []
+__all__ = [
+    "AttributionVisualization",
+    "ConceptHighlightVisualization",
+    "GradientShap",
+    "Granularity",
+    "IntegratedGradients",
+    "KernelShap",
+    "Lime",
+    "ModelWithSplitPoints",
+    "Occlusion",
+    "SquareGrad",
+    "Saliency",
+    "SmoothGrad",
+    "Sobol",
+    "VarGrad",
+    "get_version",
+]

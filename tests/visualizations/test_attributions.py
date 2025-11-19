@@ -15,7 +15,12 @@ def test_attribution_monoclass():
     sentence = ["A", "B", "C", "one", "two", "three"]
     attributions = torch.linspace(-10, 10, steps=len(sentence))
     single_class_classification_output = AttributionOutput(
-        elements=sentence, attributions=attributions, model_task=ModelTask.SINGLE_CLASS_CLASSIFICATION, classes=[0]
+        elements=sentence,
+        attributions=attributions,
+        model_task=ModelTask.SINGLE_CLASS_CLASSIFICATION,
+        classes=[0],
+        model_inputs_to_explain={},  # dummy, not used in visualization
+        targets=torch.Tensor(),  # dummy, not used in visualization
     )
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -43,7 +48,12 @@ def test_attribution_multiclass():
 
     attributions = torch.rand(nb_classes, len(sentence))  # (c, l)
     multi_class_classification_output = AttributionOutput(
-        elements=sentence, attributions=attributions, model_task=ModelTask.MULTI_CLASS_CLASSIFICATION, classes=[0, 1]
+        elements=sentence,
+        attributions=attributions,
+        model_task=ModelTask.MULTI_CLASS_CLASSIFICATION,
+        classes=[0, 1],
+        model_inputs_to_explain={},  # dummy, not used in visualization
+        targets=torch.Tensor(),  # dummy, not used in visualization
     )
 
     viz = AttributionVisualization(
@@ -73,7 +83,13 @@ def test_attribution_generation():
 
     def make_attributions_outputs(inputs, outputs):
         attributions = torch.rand(len(outputs), len(inputs) + len(outputs))  # (l_g, l)
-        return AttributionOutput(elements=inputs + outputs, attributions=attributions, model_task=ModelTask.GENERATION)
+        return AttributionOutput(
+            elements=inputs + outputs,
+            attributions=attributions,
+            model_task=ModelTask.GENERATION,
+            model_inputs_to_explain={},  # dummy, not used in visualization
+            targets=torch.Tensor(),  # dummy, not used in visualization
+        )
 
     generation_output = make_attributions_outputs(inputs_sentence, outputs_sentence)
 
@@ -104,7 +120,13 @@ def test_concepts():
 
     def make_attributions_outputs(inputs, outputs):
         attributions = torch.rand(len(inputs) + len(outputs), len(outputs), nb_concepts)  # (l, l_g, c)
-        return AttributionOutput(elements=inputs + outputs, attributions=attributions, model_task=ModelTask.GENERATION)
+        return AttributionOutput(
+            elements=inputs + outputs,
+            attributions=attributions,
+            model_task=ModelTask.GENERATION,
+            model_inputs_to_explain={},  # dummy, not used in visualization
+            targets=torch.Tensor(),  # dummy, not used in visualization
+        )
 
     generation_output = make_attributions_outputs(inputs_sentence, outputs_sentence)
     colors_set1 = plt.get_cmap("Set1").colors
