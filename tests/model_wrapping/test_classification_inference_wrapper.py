@@ -22,20 +22,32 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pytest
 import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers.utils.quantization_config import BitsAndBytesConfig
 
 from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+SENTENCES = ["Hello, my dog is cute", "Hello, my cat is cute"]
 
 
-def test_classification_inference_wrapper_single_sentence(bert_model, bert_tokenizer, sentences):
+classification_models = ["hf-internal-testing/tiny-random-bert"]
+bab_configs = [BitsAndBytesConfig(load_in_8bit=True), BitsAndBytesConfig(load_in_4bit=True), None]
+
+
+@pytest.mark.parametrize("model_name", classification_models)
+def test_classification_inference_wrapper_single_sentence(model_name):
+    bert_model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    bert_tokenizer = AutoTokenizer.from_pretrained(model_name)
+
     # Model preparation
     inference_wrapper = ClassificationInferenceWrapper(bert_model, batch_size=5, device=DEVICE)
     inference_wrapper.pad_token_id = bert_tokenizer.pad_token_id
 
     # Reference values
-    tokens = bert_tokenizer(sentences[0], return_tensors="pt", padding=True, truncation=True)
+    tokens = bert_tokenizer(SENTENCES[0], return_tensors="pt", padding=True, truncation=True)
     tokens.to(DEVICE)
     logits = bert_model(**tokens).logits
     target = logits.argmax(dim=-1)
@@ -51,14 +63,18 @@ def test_classification_inference_wrapper_single_sentence(bert_model, bert_token
     assert torch.equal(scores, next(inference_wrapper.get_targeted_logits([tokens.copy()], [predefined_targets])))  # type: ignore
 
 
-def test_classification_inference_wrapper_multiple_sentences(bert_model, bert_tokenizer, sentences):
+@pytest.mark.parametrize("bab_config", bab_configs)
+@pytest.mark.parametrize("model_name", classification_models)
+def test_classification_inference_wrapper_multiple_sentences(model_name, bab_config):
     # Model preparation
-    inference_wrapper = ClassificationInferenceWrapper(bert_model, batch_size=5, device=DEVICE)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, quantization_config=bab_config)
+    inference_wrapper = ClassificationInferenceWrapper(model, batch_size=5, device=DEVICE)
 
     ### Reference values
-    tokens = bert_tokenizer(sentences, return_tensors="pt", padding=True, truncation=True)
+    tokens = tokenizer(SENTENCES, return_tensors="pt", padding=True, truncation=True)
     tokens.to(DEVICE)
-    logits = bert_model(**tokens).logits
+    logits = model(**tokens).logits
     targets = logits.argmax(dim=-1)
     predefined_targets = torch.randperm(logits.shape[-1]).to(DEVICE)
     target_logits = torch.gather(logits, dim=-1, index=predefined_targets.unsqueeze(0).expand(logits.shape[0], -1))
@@ -71,12 +87,3 @@ def test_classification_inference_wrapper_multiple_sentences(bert_model, bert_to
     assert torch.all(torch.isclose(logits, test_logits, atol=1e-5))
     assert torch.all(torch.isclose(targets, test_targets, atol=1e-5))
     assert torch.all(torch.isclose(target_logits, test_target_logits, atol=1e-5))
-
-if __name__ == "__main__":
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
-    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
-    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
-    sentences = ["Hello, my dog is cute", "Hello, my cat is cute"]
-    test_classification_inference_wrapper_single_sentence(bert_model, bert_tokenizer, sentences)
-    test_classification_inference_wrapper_multiple_sentences(bert_model, bert_tokenizer, sentences)

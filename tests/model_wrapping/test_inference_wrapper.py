@@ -36,11 +36,19 @@ def test_inference_wrapper_with_quantized_models(model_name, bab_config):
 
     # Prepare dummy input
     input_ids = torch.tensor([[1, 2, 3, 4]])
+    input_embeddings = quantized_model.get_input_embeddings()(input_ids.to(device=quantized_model.device)).to(
+        dtype=torch.float32
+    )
 
     # Perform inference
-    outputs = wrapped_model.get_logits({"input_ids": input_ids, "attention_mask": torch.ones_like(input_ids)})
+    outputs_from_ids = wrapped_model.get_logits({"input_ids": input_ids, "attention_mask": torch.ones_like(input_ids)})
+    outputs_from_embeds = wrapped_model.get_logits(
+        {"inputs_embeds": input_embeddings, "attention_mask": torch.ones_like(input_ids)}
+    )
 
     # Assertions
-    assert outputs is not None
-    assert isinstance(outputs, torch.Tensor)
-    assert outputs.shape[0] == input_ids.shape[0]  # Ensure batch size matches
+    assert outputs_from_ids is not None
+    assert outputs_from_embeds is not None
+    assert isinstance(outputs_from_ids, torch.Tensor)
+    assert isinstance(outputs_from_embeds, torch.Tensor)
+    assert outputs_from_ids.shape[0] == input_ids.shape[0] == outputs_from_embeds.shape[0]  # Ensure batch size matches
