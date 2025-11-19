@@ -111,7 +111,7 @@ def test_generation_inference_wrapper_single_sentence(model_name, sentences):
 
 @pytest.mark.parametrize("bab_config", bab_configs)
 @pytest.mark.parametrize("model_name", generation_models)
-def test_generation_inference_wrapper_multiple_sentences(model_name, sentences, bab_config=None):
+def test_generation_inference_wrapper_multiple_sentences(model_name, sentences, bab_config):
     """
     Tests all function of the generation inference wrapper with multiple sentences input.
 
