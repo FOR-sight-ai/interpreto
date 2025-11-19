@@ -35,7 +35,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator, Iterable, MutableMapping
-from enum import Enum
+from enum import Enum, auto
 from functools import singledispatchmethod
 from typing import Any, overload
 
@@ -59,12 +59,17 @@ class InferenceModes(Enum):
         LOG_SOFTMAX: Return the log softmax of the logits.
     """
 
-    LOGITS = lambda logits: logits
-    SOFTMAX = lambda logits: F.softmax(logits, dim=-1)
-    LOG_SOFTMAX = lambda logits: F.log_softmax(logits, dim=-1)
+    LOGITS = auto()
+    SOFTMAX = auto()
+    LOG_SOFTMAX = auto()
 
     def __call__(self, logits: torch.Tensor) -> torch.Tensor:
-        return self.value(logits)
+        if self == InferenceModes.LOGITS:
+            return logits
+        return {
+            InferenceModes.SOFTMAX: F.softmax,
+            InferenceModes.LOG_SOFTMAX: F.log_softmax,
+        }[self](logits, dim=-1)
 
 
 # TODO : move that somewhere else
