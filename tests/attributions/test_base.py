@@ -37,11 +37,13 @@ class DummyInferenceWrapper:
         # For each input, return a dummy tensor with logits
         return [torch.tensor([1]), torch.tensor([0])]
 
+
 def test_inference_mode():
     # check that inference mode is picklable
     pickled = pickle.dumps(InferenceModes.LOG_SOFTMAX)
     unpickled = pickle.loads(pickled)
     assert unpickled == InferenceModes.LOG_SOFTMAX
+
 
 def test_process_targets(bert_model, bert_tokenizer):
     """

@@ -245,7 +245,7 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
     # Define expected shapes for the different granularity levels
     batch, seq_len = tokens["input_ids"].shape
     hidden = mwsp._model.config.hidden_size
-    total_token_len = sum(len(idx) for idx in  Granularity.TOKEN.get_indices(tokens, tokenizer))
+    total_token_len = sum(len(idx) for idx in Granularity.TOKEN.get_indices(tokens, tokenizer))
     total_word_len = sum(len(idx) for idx in Granularity.WORD.get_indices(tokens, tokenizer))
 
     expected = {
@@ -386,7 +386,7 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
     # Define expected shapes for the different granularity levels
     batch, seq_len = tokens["input_ids"].shape
     hidden = mwsp._model.config.hidden_size
-    total_token_len = sum(len(idx) for idx in , Granularity.TOKEN.get_indices(tokens, tokenizer))
+    total_token_len = sum(len(idx) for idx in Granularity.TOKEN.get_indices(tokens, tokenizer))
     total_word_len = sum(len(idx) for idx in Granularity.WORD.get_indices(tokens, tokenizer))
 
     granularities_expected_shapes = {
