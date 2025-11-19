@@ -123,7 +123,8 @@ class InsertionDeletionPerturbator(IdsPerturbator):
             )
 
         # Get indices of most important tokens
-        most_important_idx = torch.argsort(attributions, descending=True)
+        attrib_causal = torch.nan_to_num(attributions, nan=-float("inf"))
+        most_important_idx = torch.argsort(attrib_causal, descending=True)
 
         # Compute the real number of perturbations "p": take the minimum between n_perturbations and the number of
         # elements to perturb (+1 for the baseline)

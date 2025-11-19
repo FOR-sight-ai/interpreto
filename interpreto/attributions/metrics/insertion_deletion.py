@@ -158,12 +158,11 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
             for i, a in enumerate(attributions_outputs):
                 if self.is_generation:
                     for k, attrib in enumerate(a.attributions):
-                        attrib_causal = torch.nan_to_num(attrib, nan=-float("inf"))
-                        pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib_causal)
+                        pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
                         yield i, pert, a.targets[: k + 1].to(self.device)
                 else:
                     for target, attrib in zip(a.targets, a.attributions, strict=True):
-                        pert, mask = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
+                        pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
                         yield i, pert, target.to(self.device)
 
         attrib_idx_gen: Iterable[int]
@@ -177,18 +176,7 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
         # Group scores by attribution (i.e. all targets of the same sentence are grouped together)
         grouped_scores: list[torch.Tensor] = []
         for _, score in itertools.groupby(zip(attrib_idx_gen, scores, strict=True), key=lambda x: x[0]):
-            # Determine if this group corresponds to a generation model
-            curves = []
-            for _, s in score:
-                # For generation and classification, scores may be (p,) or (p, t)
-                curve = s[..., -1] if s.dim() > 1 else s
-
-                # Apply normalization only for generative models
-                if self.is_generation:
-                    curve = self._normalize_curve(curve)
-
-                curves.append(curve)
-
+            curves = [s[..., -1] if s.dim() > 1 else s for _, s in score]
             grouped_scores.append(torch.stack(curves, dim=0))
 
         # Compute AUC using trapezoidal rule
@@ -250,26 +238,6 @@ class Insertion(InsertionDeletionBase):
         """Return the perturbator class used for insertion."""
         return InsertionPerturbator
 
-    def _normalize_curve(self, s: torch.Tensor):
-        """
-        Normalize a score curve using its endpoints, depending on the metric type.
-        s_norm[0] ≈ 0 and s_norm[-1] ≈ 1 when the score increases as expected.
-        """
-        if s.numel() == 0:
-            return s
-
-        s0 = s[0]
-        sP = s[-1]
-        eps = 1e-12
-
-        denom = sP - s0
-        if denom.abs() < eps:
-            # Almost flat curve: neutral constant
-            return torch.full_like(s, 0.5)
-        s_norm = (s - s0) / (denom + eps)
-
-        return s_norm.clamp(0.0, 1.0)
-
 
 class Deletion(InsertionDeletionBase):
     """
@@ -322,23 +290,3 @@ class Deletion(InsertionDeletionBase):
     def _perturbator_class(self) -> Callable:
         """Return the perturbator class used for deletion."""
         return DeletionPerturbator
-
-    def _normalize_curve(self, s: torch.Tensor):
-        """
-        Normalize a score curve using its endpoints, depending on the metric type.
-        s_norm[0] ≈ 1 and s_norm[-1] ≈ 0 when the score decreases as expected.
-        """
-        if s.numel() == 0:
-            return s
-
-        s0 = s[0]
-        sP = s[-1]
-        eps = 1e-12
-
-        denom = s0 - sP
-        if denom.abs() < eps:
-            # Almost flat curve: neutral constant
-            return torch.full_like(s, 0.5)
-        s_norm = (s - sP) / (denom + eps)
-
-        return s_norm.clamp(0.0, 1.0)
