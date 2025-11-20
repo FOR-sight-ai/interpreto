@@ -461,9 +461,8 @@ class ModelWithSplitPoints(LanguageModel):
                     activation_granularity = AG.TOKEN
 
                 # extract indices of activations to keep from inputs
-                return Granularity.get_indices(
+                return activation_granularity.value.get_indices(
                     inputs=inputs,
-                    granularity=activation_granularity.value,  # type: ignore
                     tokenizer=self.tokenizer,
                 )
 
@@ -490,7 +489,7 @@ class ModelWithSplitPoints(LanguageModel):
         ...     "A BC DEF",
         ...     "abc de f"
         ... ]
-        >>> indices = Granularity.get_indices(example, Granularity.WORD, tokenizer)
+        >>> indices = Granularity.WORD.get_indices(example, tokenizer)
         >>> indices
         [
              [ [0], [1, 2], [3, 4, 5] ],
@@ -558,9 +557,8 @@ class ModelWithSplitPoints(LanguageModel):
 
                     # aggregate activations for SAMPLE strategy
                     if activation_granularity == AG.SAMPLE:
-                        selected_activations = GranularityAggregationStrategy.aggregate(
+                        selected_activations = aggregation_strategy.aggregate(
                             selected_activations,
-                            strategy=aggregation_strategy,  # type: ignore
                             dim=-2,
                         )
 
@@ -588,9 +586,7 @@ class ModelWithSplitPoints(LanguageModel):
                         granular_activations = activations[i, index]
 
                         # aggregate token activations over the granularity element
-                        aggregated_activations = GranularityAggregationStrategy.aggregate(
-                            granular_activations, strategy=aggregation_strategy, dim=-2
-                        )
+                        aggregated_activations = aggregation_strategy.aggregate(granular_activations, dim=-2)
 
                         activation_list.append(aggregated_activations)
 
@@ -685,9 +681,7 @@ class ModelWithSplitPoints(LanguageModel):
                         aggregated_activations = new_activations[current_index : current_index + 1]
 
                         # repeat the activations to match the length of the word/sentence
-                        unfolded_activations = GranularityAggregationStrategy.unfold(
-                            aggregated_activations, aggregation_strategy, len(index)
-                        )
+                        unfolded_activations = aggregation_strategy.unfold(aggregated_activations, len(index))
                         torch_index = torch.tensor(index).to(initial_activations.device)
 
                         # reintegrate the repeated granular activations into the initial activations

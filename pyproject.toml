@@ -85,6 +85,7 @@ dependencies = [
   "nvidia-cusparse-cu11>=11.7.4.91; sys_platform=='Linux'",
   "nvidia-nccl-cu11>=2.14.3; sys_platform=='Linux'",
   "nvidia-nvtx-cu11>=11.7.91; sys_platform=='Linux'",
+   "bitsandbytes>=0.48.1",
 ]
 
 [project.optional-dependencies]
