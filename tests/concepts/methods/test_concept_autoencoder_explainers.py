@@ -233,7 +233,7 @@ def test_concept_output_gradient(
             truncation=True,
             return_offsets_mapping=True,
         )
-        indices_list = Granularity.get_indices(tokens, granularity.value, tokenizer)  # type: ignore
+        indices_list = granularity.value.get_indices(tokens, tokenizer)  # type: ignore
         nb_granularity_elements = len(indices_list[0])
         assert grad.shape == (1, nb_granularity_elements, concepts_dim), (
             "Gradient shape mismatch: got "

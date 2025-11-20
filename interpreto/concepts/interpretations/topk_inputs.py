@@ -30,24 +30,22 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal
 
 import torch
 
-from interpreto import ModelWithSplitPoints
+from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
-    verify_concepts_indices,
-    verify_granular_inputs,
 )
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
-from interpreto.typing import ConceptModelProtocol, ConceptsActivations, LatentActivations
+from interpreto.typing import ConceptsActivations, LatentActivations
 
 
 class TopKInputs(BaseConceptInterpretationMethod):
     """Code [:octicons-mark-github-24: `concepts/interpretations/topk_inputs.py`](https://github.com/FOR-sight-ai/interpreto/blob/main/interpreto/concepts/interpretations/topk_inputs.py)
 
-    Implementation of the Top-K Inputs concept interpretation method also called MaxAct.
+    Implementation of the Top-K Inputs concept interpretation method also called MaxAct, or CMAW.
     It associate to each concept the inputs that activates it the most.
     It is the most natural way to interpret a concept, as it is the most natural way to explain a concept.
     Hence several papers used it without describing it.
@@ -58,41 +56,159 @@ class TopKInputs(BaseConceptInterpretationMethod):
         [Towards Monosemanticity: Decomposing Language Models With Dictionary Learning](https://transformer-circuits.pub/2023/monosemantic-features)
         Transformer Circuits, 2023.
 
-    Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model with split points to use for the interpretation.
-        split_point (str): The split point to use for the interpretation.
-        concept_model (ConceptModelProtocol): The concept model to use for the interpretation.
-        activation_granularity (ActivationGranularity): The granularity at which the interpretation is computed.
-            Allowed values are `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
-            Ignored when use_vocab=True.
-        k (int): The number of inputs to use for the interpretation.
-        use_vocab (bool): If True, the interpretation will be computed from the vocabulary of the model.
+    Arguments:
+        concept_explainer (ConceptEncoderExplainer):
+            The concept explainer built on top of a `ModelWithSplitPoints`.
 
-    Examples:  # TODO: adapt example to added arguments
-        >>> from datasets import load_dataset
+        activation_granularity (ActivationGranularity):
+            The granularity at which the interpretation is computed.
+            Allowed values are `CLS_TOKEN`, `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
+            Ignored when `use_vocab=True`.
+
+        concept_encoding_batch_size (int):
+            The batch size to use for the concept encoding.
+
+        k (int):
+            The number of inputs to use for the interpretation.
+
+        use_vocab (bool):
+            If True, the interpretation will be computed from the vocabulary of the model.
+
+        use_unique_words (bool):
+            If True, the interpretation will be computed from the unique words of the inputs.
+            Incompatible with `use_vocab=True`.
+            Default unique words selects all different word from the input.
+            It can be tuned through the `unique_words_kwargs` argument.
+
+        unique_words_kwargs (dict):
+            The kwargs to pass to the `extract_unique_words` function.
+            See [`extract_unique_words`][interpreto.concepts.interpretations.extract_unique_words] for more details.
+            Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
+
+        device (torch.device | str | None):
+            The device to use for forward passes.
+            If None, use the one from `model_with_split_points`.
+
+    Examples:
+        **Minimal example**, finding the topk tokens activating a neuron:
+        >>> from transformers import AutoModelForCausalLM
+        >>>
         >>> from interpreto import ModelWithSplitPoints
-        >>> from interpreto.concepts import NeuronsAsConcepts
-        >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> # load and split the model
-        >>> split = "bert.encoder.layer.1.output"
-        >>> model_with_split_points = ModelWithSplitPoints(
-        ...     "hf-internal-testing/tiny-random-bert",
-        ...     split_points=[split],
-        ...     automodel=AutoModelForMaskedLM,
-        ...     batch_size=4,
+        >>> from interpreto.concepts import NeuronsAsConcepts, TopKInputs
+        >>>
+        >>> # load and split the the GPT2 model
+        >>> mwsp = ModelWithSplitPoints(
+        ...     "gpt2",
+        ...     split_points=[11],           # split at the 12th layer
+        ...     automodel=AutoModelForCausalLM,
+        ...     device_map="auto",
+        ...     batch_size=2048,
         ... )
-        >>> # NeuronsAsConcepts do not need to be fitted
-        >>> concept_model = NeuronsAsConcepts(model_with_split_points=model_with_split_points, split_point=split)
-        >>> # extracting concept interpretations
-        >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> all_top_k_words = concept_model.interpret(
-        ...     interpretation_method=TopKInputs,
-        ...     activation_granularity=TopKInputs.activation_granularities.WORD,
-        ...     k=2,
-        ...     concepts_indices="all",
-        ...     inputs=dataset,
-        ...     latent_activations=activations,
+        >>>
+        >>> # Use `NeuronsAsConcepts` to use the concept-based pipeline with neurons
+        >>> concept_explainer = NeuronsAsConcepts(mwsp)
+        >>>
+        >>> method = TopKInputs(
+        ...     concept_explainer=concept_explainer,
+        ...     use_vocab=True,             # use the vocabulary of the model and test all tokens (50257 with GPT2)
+        ...     k=10,                       # get the top 10 tokens for each neuron
         ... )
+        >>>
+        >>> topk_tokens = method.interpret(
+        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
+        ... )
+        >>>
+        >>> print(list(topk_tokens[1].keys()))
+        ['hostages', 'choke', 'infring', 'herpes', 'nuns', 'phylogen', 'watched', 'alitarian', 'tattoos', 'fisher']
+        >>> # Results are not interpretable, due to superposition and such.
+        >>> # This is why we use dictionary to find concept direction!
+
+        **Classification example**, we should fit concepts on the [CLS] token activations,
+        then use `TopKInputs` with `use_unique_words=True` and `activation_granularity=CSL_TOKEN`:
+        >>> from datasets import load_dataset
+        >>> from transformers import AutoModelForSequenceClassification
+        >>>
+        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto.concepts import ICAConcepts, TopKInputs
+        >>>
+        >>> CLS_TOKEN = ModelWithSplitPoints.activation_granularities.CLS_TOKEN
+        >>>
+        >>> # load and split an IMDB classification model
+        >>> mwsp = ModelWithSplitPoints(
+        ...     "textattack/bert-base-uncased-imdb",
+        ...     split_points=[11],              # split at the last layer
+        ...     automodel=AutoModelForSequenceClassification,
+        ...     device_map="cuda",
+        ...     batch_size=64,
+        ... )
+        >>>
+        >>> # load the IMDB dataset and compute a dataset of [CLS] token activations
+        >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
+        >>> activations = mwsp.get_activations(imdb, activation_granularity=CLS_TOKEN)
+        >>>
+        >>> # Load an fit a concept-based explainer
+        >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=20)
+        >>> concept_explainer.fit(activations)
+        >>>
+        >>> method = TopKInputs(
+        ...     concept_explainer=concept_explainer,
+        ...     activation_granularity=CLS_TOKEN,
+        ...     k=5,                            # get the top 10 tokens for each concept
+        ...     use_unique_words=True,          # necessary to get topk words on the [CLS] token
+        ...     unique_words_kwargs={
+        ...         "count_min_threshold": 5,   # only consider words that appear at least 5 times in the dataset
+        ...         "lemmatize": True,          # group words by their lemma (e.g., "bad" and "badly" are grouped together)
+        ...     }
+        ... )
+        >>>
+        >>> topk_words = method.interpret(
+        ...     inputs=imdb,
+        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
+        ... )
+        >>>
+        >>> print(list(topk_words[1].keys()))
+        ['bad', 'bad.', 'hackneyed', 'clichéd', 'cannibal']
+
+        **Generation example**, use either `TOKEN` or `WORD` granularity for activations.
+        `WORD` allows to select the topk words for each concept without recomputing the activations.
+        >>> from datasets import load_dataset
+        >>> from transformers import AutoModelForCausalLM
+        >>>
+        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto.concepts import ICAConcepts, TopKInputs
+        >>>
+        >>> WORD = ModelWithSplitPoints.activation_granularities.WORD
+        >>>
+        >>> # load and split the the GPT2 model
+        >>> mwsp = ModelWithSplitPoints(
+        ...     "Qwen/Qwen3-0.6B",
+        ...     split_points=[9],              # split at the 10th layer
+        ...     automodel=AutoModelForCausalLM,
+        ...     device_map="auto",
+        ...     batch_size=16,
+        ... )
+        >>>
+        >>> # load the IMDB dataset and compute a dataset of words activations
+        >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
+        >>> activations = mwsp.get_activations(imdb, activation_granularity=WORD)
+        >>>
+        >>> # Load an fit a concept-based explainer
+        >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=10)
+        >>> concept_explainer.fit(activations)
+        >>>
+        >>> method = TopKInputs(
+        ...     concept_explainer=concept_explainer,
+        ...     activation_granularity=WORD,    # we want the topk words for each concept
+        ...     k=10,                           # get the top 10 words for each concept
+        ...     device="cuda",
+        ... )
+        >>>
+        >>> topk_tokens = method.interpret(
+        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
+        ...     inputs=imdb,
+        ...     latent_activations=activations, # use previously computed activations (same granularity)
+        ... )
+
     """
 
     activation_granularities = ActivationGranularity
@@ -100,42 +216,32 @@ class TopKInputs(BaseConceptInterpretationMethod):
     def __init__(
         self,
         *,
-        model_with_split_points: ModelWithSplitPoints,
-        concept_model: ConceptModelProtocol,
+        concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.WORD,
-        split_point: str | None = None,
         concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
+        use_unique_words: bool = False,
+        unique_words_kwargs: dict = {},
         device: torch.device | str | None = "cpu",
     ):
         super().__init__(
-            model_with_split_points=model_with_split_points,
-            concept_model=concept_model,
-            split_point=split_point,
+            concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
             concept_encoding_batch_size=concept_encoding_batch_size,
+            use_vocab=use_vocab,
+            use_unique_words=use_unique_words,
+            unique_words_kwargs=unique_words_kwargs,
             device=device,
         )
 
-        if activation_granularity not in (
-            ActivationGranularity.TOKEN,
-            ActivationGranularity.WORD,
-            ActivationGranularity.SENTENCE,
-            ActivationGranularity.SAMPLE,
-        ):
-            raise ValueError(
-                f"The granularity {activation_granularity} is not supported. Supported `activation_granularities`: TOKEN, WORD, SENTENCE, and SAMPLE"
-            )
-
         self.k = k
-        self.use_vocab = use_vocab
 
     def interpret(
         self,
-        concepts_indices: int | list[int],
+        concepts_indices: int | list[int] | Literal["all"],
         inputs: list[str] | None = None,
-        latent_activations: LatentActivations | None = None,
+        latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, Any]:
         """
@@ -148,45 +254,41 @@ class TopKInputs(BaseConceptInterpretationMethod):
         If all activations are zero, the corresponding concept interpretation is set to `None`.
 
         Args:
-            concepts_indices (int | list[int]): The indices of the concepts to interpret.
-            inputs (list[str] | None): The inputs to use for the interpretation.
-                Necessary if not `use_vocab`, as examples are extracted from the inputs.
-            latent_activations (Float[torch.Tensor, "nl d"] | None): The latent activations matching the inputs. If not provided, it is computed from the inputs.
-            concepts_activations (Float[torch.Tensor, "nl cpt"] | None): The concepts activations matching the inputs. If not provided, it is computed from the inputs or latent activations.
+            concepts_indices (int | list[int] | Literal["all"]):
+                The indices of the concepts to interpret. If "all", all concepts are interpreted.
+
+            inputs (list[str] | None):
+                The inputs to use for the interpretation.
+                Necessary if not `use_vocab`,as examples are extracted from the inputs.
+
+            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+                The latent activations matching the inputs. If not provided,
+                it is computed from the inputs.
+
+            concepts_activations (Float[torch.Tensor, "nl cpt"] | None):
+                The concepts activations matching the inputs. If not provided,
+                it is computed from the inputs or latent activations.
 
         Returns:
             Mapping[int, Any]: The interpretation of the concepts indices.
 
         """
-        # compute the concepts activations from the provided source, can also create inputs from the vocabulary
-        if self.use_vocab:
-            sure_inputs, sure_concepts_activations = self.concepts_activations_from_vocab()
-            granular_inputs = sure_inputs
-        else:
-            if inputs is None:
-                raise ValueError("Inputs must be provided when `use_vocab` is False.")
-            sure_inputs = inputs
-            sure_concepts_activations = self.concepts_activations_from_source(
+        sure_concepts_indices, granular_inputs, sure_concepts_activations, _ = (
+            self.get_granular_inputs_and_concept_activations(
+                concepts_indices=concepts_indices,
                 inputs=inputs,
                 latent_activations=latent_activations,
                 concepts_activations=concepts_activations,
             )
-            granular_inputs, _ = self.get_granular_inputs(sure_inputs)
-
-        concepts_indices = verify_concepts_indices(
-            concepts_activations=sure_concepts_activations, concepts_indices=concepts_indices
         )
-        verify_granular_inputs(
-            granular_inputs=granular_inputs,
-            sure_concepts_activations=sure_concepts_activations,
-            latent_activations=latent_activations,
-            concepts_activations=concepts_activations,
-        )
+        sure_concepts_indices: list[int]
+        granular_inputs: list[str]
+        sure_concepts_activations: torch.Tensor
 
         return self._topk_inputs_from_concepts_activations(
             inputs=granular_inputs,
             concepts_activations=sure_concepts_activations,
-            concepts_indices=concepts_indices,
+            concepts_indices=sure_concepts_indices,
         )
 
     def _topk_inputs_from_concepts_activations(

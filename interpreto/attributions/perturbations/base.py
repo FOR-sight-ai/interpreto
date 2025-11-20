@@ -68,7 +68,7 @@ class Perturbator:
         """
         self._device = device
 
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+    def perturb(self, model_inputs: TensorMapping, **kwargs) -> tuple[TensorMapping, torch.Tensor | None]:
         """
         Method called when we ask the perturbator to perturb a mapping of tensors, generally the output of a tokenizer
         The mapping should be similar to mappings returned by the tokenizer.
@@ -78,6 +78,8 @@ class Perturbator:
 
         Args:
             model_inputs (TensorMapping): output of the tokenizers
+            kwargs: additional arguments, used in the get_mask() method for token perturbation. Not supported for
+                embedding perturbators.
         """
         # add perturbation dimension
         if model_inputs["input_ids"].ndim <= 1:
@@ -135,7 +137,9 @@ class EmbeddingsPerturbator(Perturbator):
         """
         self.device = device
 
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+    def perturb(self, model_inputs: TensorMapping, **kwargs) -> tuple[TensorMapping, torch.Tensor | None]:
+        if kwargs != {}:
+            raise ValueError("Embedding perturbators do not support additional arguments in the perturb method")
         embeddings = self._embed(model_inputs)
         return self.perturb_embeds(embeddings)
 
@@ -239,7 +243,7 @@ class IdsPerturbator(Perturbator):
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod
-    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "{self.n_perturbations} {mask_dim}"]:
+    def get_mask(self, mask_dim: int, **kwargs) -> Float[torch.Tensor, "{self.n_perturbations} {mask_dim}"]:
         """
         Method returning a perturbation mask for a given set of inputs
         This method should be implemented in subclasses
@@ -249,18 +253,20 @@ class IdsPerturbator(Perturbator):
 
         Args:
             mask_dim (int): length of the sequence according to the granularity level
+            kwargs: additional arguments if needed by the specific implementation of the mask
 
         Returns:
             torch.Tensor: mask to apply on the inputs, of shape (n_perturbations, mask_dim)
         """
         raise NotImplementedError()
 
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+    def perturb(self, model_inputs: TensorMapping, **kwargs) -> tuple[TensorMapping, torch.Tensor | None]:
         """
         Method called to perturb the inputs of the model
 
         Args:
             model_inputs (MutableMapping): mapping given by the tokenizer
+            kwargs: additional arguments, used in the get_mask() method for token perturbation.
 
         Returns:
             tuple: model_inputs with perturbations and the specific granularity mask
@@ -276,13 +282,11 @@ class IdsPerturbator(Perturbator):
 
         # compute association matrix between the granularity level and ALL_TOKENS
         association_matrix: Int[torch.Tensor, "g l"] = (
-            Granularity.get_association_matrix(model_inputs, self.granularity, self.tokenizer)[0]
-            .float()
-            .to(self.device)
+            self.granularity.get_association_matrix(model_inputs, self.tokenizer)[0].float().to(self.device)
         )
 
         # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)
-        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0]).to(self.device)
+        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0], **kwargs).to(self.device)
 
         # compute real perturbation mask
         real_mask: Float[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, association_matrix)
