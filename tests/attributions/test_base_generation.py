@@ -83,10 +83,7 @@ def test_process_targets(gpt2_model, gpt2_tokenizer):
         assert all(isinstance(result, torch.Tensor) for result in results), (
             "The elements of the list must be of type torch.Tensor."
         )
-        assert all(result.dim() == 2 for result in results), "The elements of the list must have 2 dimensions."
-        assert all(result.shape[0] == 1 for result in results), (
-            "The first dimension of the elements of the list must be 1."
-        )
+        assert all(result.dim() == 1 for result in results), "The elements of the list must have 1 dimension."
 
 
 def test_process_inputs_to_explain_and_targets(gpt2_model, gpt2_tokenizer):
@@ -125,9 +122,6 @@ def test_process_inputs_to_explain_and_targets(gpt2_model, gpt2_tokenizer):
         assert all(isinstance(processed_target, torch.Tensor) for processed_target in processed_targets), (
             "The elements of the processed_targets list must be of type torch.Tensor."
         )
-        assert all(processed_target.dim() == 2 for processed_target in processed_targets), (
-            "The elements of the processed_targets list must have 2 dimensions."
-        )
-        assert all(processed_target.shape[0] == 1 for processed_target in processed_targets), (
-            "The first dimension of the elements of the processed_targets list must be 1."
+        assert all(processed_target.dim() == 1 for processed_target in processed_targets), (
+            "The elements of the processed_targets list must have 1 dimension."
         )

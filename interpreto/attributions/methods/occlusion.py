@@ -40,7 +40,7 @@ from interpreto.attributions.base import (
     MultitaskExplainerMixin,
 )
 from interpreto.attributions.perturbations import OcclusionPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -71,6 +71,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
+        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
     ):
@@ -85,6 +86,9 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
                 Defaults to Granularity.WORD.
                 To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+            granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
+                Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
+                Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             device (torch.device): device on which the attribution method will be run
@@ -105,6 +109,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
             perturbator=perturbator,
             aggregator=OcclusionAggregator(),
             granularity=granularity,
+            granularity_aggregation_strategy=granularity_aggregation_strategy,
             inference_mode=inference_mode,
             use_gradient=False,
         )
