@@ -61,7 +61,7 @@ class LLMInterface(ABC):
 
 
 class OpenAILLM(LLMInterface):
-    def __init__(self, api_key: str, model: str = "o4-mini", num_try: int = 5):
+    def __init__(self, api_key: str, model: str = "gpt-4.1-nano", num_try: int = 5):
         try:
             import openai  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
         except ImportError as e:
