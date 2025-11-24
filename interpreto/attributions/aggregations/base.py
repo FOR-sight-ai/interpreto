@@ -36,10 +36,26 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 
 
+def cast_input_to_dtype(func):
+    """
+    Ensure mask and results are on the device specified in the aggregator
+    """
+
+    def wrapper(self, results: torch.Tensor, mask, *args, **kwargs) -> torch.Tensor:
+        # TODO : eventually add device alignment as well
+        if mask is not None and mask.dtype != self.dtype:
+            mask = mask.to(self.dtype)
+        return func(self, results.to(self.dtype), mask, *args, **kwargs)
+
+    return wrapper
+
+
 class Aggregator:
     """
     Abstract class for aggregation made at the end of attribution methods
     """
+
+    dtype: torch.dtype = torch.float32
 
     def aggregate(self, results: torch.Tensor, mask) -> torch.Tensor:
         """
@@ -110,6 +126,7 @@ class MaskwiseMeanAggregator(Aggregator):
     element.
     """
 
+    @cast_input_to_dtype
     @jaxtyped(typechecker=beartype)
     def aggregate(
         self,
@@ -128,6 +145,7 @@ class OcclusionAggregator(Aggregator):
     perturbation weighted by the corresponding mask.
     """
 
+    @cast_input_to_dtype
     @jaxtyped(typechecker=beartype)
     def aggregate(
         self,

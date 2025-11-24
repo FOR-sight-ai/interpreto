@@ -441,9 +441,8 @@ class BaseConceptInterpretationMethod(ABC):
             truncation=True,
             return_offsets_mapping=True,
         )
-        granular_texts: list[list[str]] = Granularity.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
+        granular_texts: list[list[str]] = self.activation_granularity.value.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
             tokens,
-            granularity=self.activation_granularity.value,  # type: ignore
             tokenizer=self.concept_explainer.model_with_split_points.tokenizer,
             return_text=True,
         )
