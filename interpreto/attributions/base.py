@@ -287,7 +287,7 @@ class AttributionExplainer:
             ValueError: If the type of model_inputs is not supported.
         """
         if isinstance(model_inputs, str):
-            return [self.tokenizer(model_inputs, return_tensors="pt", return_offsets_mapping=True)]
+            return [self.tokenizer(model_inputs, return_tensors="pt", return_offsets_mapping=True, truncation=True)]
         if isinstance(
             model_inputs, BatchEncoding
         ):  # we cant use TensorMapping in the isinstance so we use MutableMapping.
@@ -427,6 +427,9 @@ class AttributionExplainer:
         ):
             if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
                 model_task = ModelTask.GENERATION
+                t, l = contribution.shape
+                mask = torch.triu(torch.ones((t, l), dtype=torch.bool), diagonal=l - t)
+                contribution[mask] = float("nan")
                 classes = None
             elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
                 classes = target
@@ -627,7 +630,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
             ValueError: If the target type is not supported.
         """
         if isinstance(targets, str):
-            return [self.tokenizer(targets, return_tensors="pt")["input_ids"]]  # type: ignore
+            return [self.tokenizer(targets, return_tensors="pt", truncation=True)["input_ids"]]  # type: ignore
         if isinstance(targets, MutableMapping):  # TensorMapping cannot be used in isinstance
             targets = targets["input_ids"]
             if targets.dim() == 1:
@@ -697,6 +700,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
                 [model_inputs_to_explain_text],
                 return_tensors="pt",
                 return_offsets_mapping=True,
+                truncation=True,
             )
             for model_inputs_to_explain_text in model_inputs_to_explain_text
         ]

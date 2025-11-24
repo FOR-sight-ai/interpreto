@@ -21,6 +21,7 @@ help:
 	@echo "docs            : shortcut to build and serve generated documentation locally."
 	@echo "codecov         : check coverage of all the code."
 	@echo "clean           : cleans all unecessary files."
+	@echo "bump-version    : bump the project version. Usage: make bump-version PART={major,minor,patch}"
 
 #* UV
 uv-download:
@@ -45,11 +46,11 @@ uv-activate:
 
 .PHONY: install
 install:
-	make uv-activate && uv pip install -r requirements.txt && uv pip install -e .
+	make uv-activate && uv pip install -e .
 
 .PHONY: install-dev
 install-dev:
-	make uv-activate && uv pip install -r requirements-dev.txt && pre-commit install && pre-commit autoupdate
+	make uv-activate && make update-deps && uv pip install -r requirements-dev.txt && pre-commit install && pre-commit autoupdate
 
 .PHONY: update-deps
 update-deps:
@@ -123,6 +124,14 @@ build-remove:
 
 .PHONY: clean
 clean: pycache-remove build-remove # docker-remove
+
+.PHONY: bump-version
+bump-version:
+	@if [[ -z "$(PART)" ]]; then \
+		echo "PART is required. Usage: make bump-version PART={major,minor,patch}"; \
+		exit 1; \
+	fi
+	@.github/bump_version.sh $(PART)
 
 # If you are a coding agent reading this file, like codex or cursor
 # To run tests, you first need to install the dependencies

@@ -33,6 +33,7 @@ from typing import Literal, NamedTuple
 import torch
 from jaxtyping import Float
 
+from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
@@ -110,9 +111,12 @@ class LLMLabels(BaseConceptInterpretationMethod):
             The fitted concept explainer used for encoding activations.
 
         activation_granularity (ActivationGranularity):
-            The granularity at which the interpretation is computed.
-            Allowed values are `CLS_TOKEN`, `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
-            Ignored when use_vocab=True.
+            The granularity of the activations to use for the interpretation.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+
+        aggregation_strategy (GranularityAggregationStrategy):
+            The aggregation strategy to use for the activations.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         llm_interface (LLMInterface):
             The LLM interface to use for the interpretation.
@@ -125,6 +129,12 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
         k_context (int):
             The number of context tokens to use around the concept tokens.
+            In the prompt, in the examples, the k context tokens before and after the concept token are selected.
+            It is recommended to set it to between 5 and 10 for TOKEN and WORD granularities.
+            However, if the granularity is CLS_TOKEN or SAMPLE,
+            or `use_unique_words=True` or `use_vocab=True`,
+            it will be forced to 0.
+            Indeed, in these cases the context do not make sense.
 
         use_vocab (bool):
             If True, the interpretation will be computed from the vocabulary of the model.
@@ -152,6 +162,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         *,
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         llm_interface: LLMInterface,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
@@ -166,11 +177,28 @@ class LLMLabels(BaseConceptInterpretationMethod):
         super().__init__(
             concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
+            aggregation_strategy=aggregation_strategy,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
             device=device,
         )
+
+        if k_context > 0 and (
+            use_vocab
+            or use_unique_words
+            or self.activation_granularity
+            in [
+                ActivationGranularity.SAMPLE,
+                ActivationGranularity.CLS_TOKEN,
+            ]
+        ):
+            k_context = 0
+            warnings.warn(
+                "k_context is set to 0 because use_vocab or use_unique_words or activation_granularity is SAMPLE or CLS_TOKEN."
+                "With these granularities, it is not possible to provide context around the granular inputs.",
+                stacklevel=2,
+            )
 
         self.llm_interface = llm_interface
         self.sampling_method = sampling_method
@@ -380,19 +408,19 @@ def _format_examples(
     k_context: int,
 ) -> list[Example]:
     """Format examples for the LLM input. If k_context > 0, it will add context around
-    the selected text (for instance tokens befor and after the selected token). Concept
+    the selected text (for instance tokens before and after the selected token). Concept
     activations are normalized to a scale of 0 to 10, 10 being the maximum activation
     for the concept in the set of inputs.
 
     Args:
         example_ids (list[int]): selected example ids to provide to the LLM.
-        inputs (list[str]): the list of all granular texts from the inputs, flatened.
+        inputs (list[str]): the list of all granular texts from the inputs, flattened.
         concept_activations (Float[torch.Tensor, &quot;ng&quot;]): the concept activations for each granular text.
         sample_ids (list[int]): the id of which sample each granular text belongs to.
 
     Raises:
         ValueError: if concept_activations is not a 1D tensor
-        ValueError: if the lenght of inputs, sample_ids, and concept_activations do not match.
+        ValueError: if the length of inputs, sample_ids, and concept_activations do not match.
 
     Returns:
         list[Example]: list of Example objects, each containing the texts and normalized concept

@@ -42,6 +42,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
 from interpreto import Granularity, ModelWithSplitPoints
+from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
@@ -80,35 +81,18 @@ def extract_unique_words(
         ["interpreto", "is", "the", "latin", "for", "to", "'", "interpret", ".", "magic"]
 
         More complex use:
-        >>> import nltk
         >>> from datasets import load_dataset
         >>> from nltk.corpus import stopwords
-        >>>
-        >>> from interpreto.concepts.interpretations import extract_unique_words
-        >>>
-        >>> nltk.download("stopwords")
-        >>>
+        >>> from interpreto.concepts.interpretations.topk_inputs import extract_unique_words
         >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
         >>> extract_unique_words(
         ...     inputs=dataset,
         ...     count_min_threshold=20,
         ...     return_counts=True,
         ...     lemmatize=True,
-        ...     words_to_ignore=stopwords.words("english") + [".", ",", "'s", "n't", "--", "``", "'"],
+        ...     words_to_ignore=stopwords.words("english"),
         ... )
-        Counter({'film': 1402,
-                 'movie': 1243,
-                 'one': 594,
-                 'like': 574,
-                 'ha': 563,
-                 'make': 437,
-                 'story': 417,
-        ...
-                 'pop': 20,
-                 'college': 20,
-                 'bear': 20,
-                 'plain': 20,
-                 'generic': 20})
+        Counter(TODO)
 
     Returns:
         list[str] | Counter[str]:
@@ -142,13 +126,8 @@ def extract_unique_words(
 
     # filter too rare words
     if count_min_threshold > 1:
-        words_count = Counter(
-            {
-                key: count
-                for key, count in words_count.items()
-                if count >= count_min_threshold
-            }
-        )
+        words_count = Counter({key: count for key, count in words_count.items() if count >= count_min_threshold})
+        words_count = Counter({key: count for key, count in words_count.items() if count >= count_min_threshold})
 
     if return_counts:
         return words_count
@@ -164,17 +143,10 @@ def verify_concepts_indices(
     if isinstance(concepts_indices, int):
         concepts_indices = [concepts_indices]
 
-    if not isinstance(concepts_indices, list) or not all(
-        isinstance(c, int) for c in concepts_indices
-    ):
-        raise ValueError(
-            f"`concepts_indices` should be 'all', an int, or a list of int. Received {concepts_indices}."
-        )
+    if not isinstance(concepts_indices, list) or not all(isinstance(c, int) for c in concepts_indices):
+        raise ValueError(f"`concepts_indices` should be 'all', an int, or a list of int. Received {concepts_indices}.")
 
-    if (
-        max(concepts_indices) >= concepts_activations.shape[1]
-        or min(concepts_indices) < 0
-    ):
+    if max(concepts_indices) >= concepts_activations.shape[1] or min(concepts_indices) < 0:
         raise ValueError(
             f"At least one concept index out of bounds. `max(concepts_indices)`: {max(concepts_indices)} >= {concepts_activations.shape[1]}."
         )
@@ -189,17 +161,13 @@ def verify_granular_inputs(
     concepts_activations: ConceptsActivations | None = None,
 ):
     if len(granular_inputs) != len(sure_concepts_activations):
-        if latent_activations is not None and len(granular_inputs) != len(
-            latent_activations
-        ):
+        if latent_activations is not None and len(granular_inputs) != len(latent_activations):
             raise ValueError(
                 f"The lengths of the granulated inputs do not match the number of provided latent activations {len(granular_inputs)} != {len(latent_activations)}"
                 "If you provide latent activations, make sure they have the same granularity as the inputs."
                 "This might happen if you use `use_vocab=True` and `use_unique_words=True` and provide `latent_activations`."
             )
-        if concepts_activations is not None and len(granular_inputs) != len(
-            concepts_activations
-        ):
+        if concepts_activations is not None and len(granular_inputs) != len(concepts_activations):
             raise ValueError(
                 f"The lengths of the granulated inputs do not match the number of provided concepts activations {len(granular_inputs)} != {len(concepts_activations)}"
                 "If you provide concepts activations, make sure they have the same granularity as the inputs."
@@ -222,6 +190,11 @@ class BaseConceptInterpretationMethod(ABC):
 
         activation_granularity (ActivationGranularity):
             The granularity of the activations to use for the interpretation.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+
+        aggregation_strategy (GranularityAggregationStrategy):
+            The aggregation strategy to use for the activations.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -250,6 +223,7 @@ class BaseConceptInterpretationMethod(ABC):
         self,
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
         use_unique_words: bool = False,
@@ -269,12 +243,11 @@ class BaseConceptInterpretationMethod(ABC):
             )
 
         if use_unique_words and use_vocab:
-            raise ValueError(
-                "Cannot use both `use_unique_words` and `use_vocab`. Please use only one of them."
-            )
+            raise ValueError("Cannot use both `use_unique_words` and `use_vocab`. Please use only one of them.")
 
         self.concept_explainer: ConceptEncoderExplainer = concept_explainer
         self.activation_granularity: ActivationGranularity = activation_granularity
+        self.aggregation_strategy: GranularityAggregationStrategy = aggregation_strategy
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
         self.use_unique_words: bool = use_unique_words
@@ -286,9 +259,7 @@ class BaseConceptInterpretationMethod(ABC):
         self,
         concepts_indices: int | list[int],
         inputs: list[str] | None = None,
-        latent_activations: dict[str, LatentActivations]
-        | LatentActivations
-        | None = None,
+        latent_activations: dict[str, LatentActivations] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, Any]:
         """
@@ -345,19 +316,13 @@ class BaseConceptInterpretationMethod(ABC):
         if latent_activations is not None:
             # batch over latent activations for concept encoding
             concepts_activations_list = []
-            for batch_idx in range(
-                0, latent_activations.shape[0], self.concept_encoding_batch_size
-            ):
+            for batch_idx in range(0, latent_activations.shape[0], self.concept_encoding_batch_size):
                 # extract and encode a batch of latent activations
-                batch_latent_activations = latent_activations[
-                    batch_idx : batch_idx + self.concept_encoding_batch_size
-                ]
+                batch_latent_activations = latent_activations[batch_idx : batch_idx + self.concept_encoding_batch_size]
 
                 if hasattr(batch_latent_activations, "to"):
                     batch_latent_activations = batch_latent_activations.to(self.device)
-                batch_concepts_activations = self.concept_explainer.encode_activations(
-                    batch_latent_activations
-                )
+                batch_concepts_activations = self.concept_explainer.encode_activations(batch_latent_activations)
 
                 concepts_activations_list.append(batch_concepts_activations.cpu())
             concepts_activations = torch.cat(concepts_activations_list, dim=0)
@@ -368,16 +333,13 @@ class BaseConceptInterpretationMethod(ABC):
                 self.concept_explainer.model_with_split_points.get_activations(
                     inputs,
                     activation_granularity=self.activation_granularity,
+                    aggregation_strategy=self.aggregation_strategy,
                 )
-            )
-            latent_activations = (
-                self.concept_explainer.model_with_split_points.get_split_activations(
-                    activations_dict, split_point=self.concept_explainer.split_point
-                )
-            )
-            return self.concepts_activations_from_source(
-                latent_activations=latent_activations, inputs=inputs
-            )
+            )  # type: ignore
+            latent_activations = self.concept_explainer.model_with_split_points.get_split_activations(
+                activations_dict, split_point=self.concept_explainer.split_point
+            )  # type: ignore
+            return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
         raise ValueError(
             "No source provided. Please provide either `inputs`, `latent_activations`, or `concepts_activations`."
@@ -401,38 +363,30 @@ class BaseConceptInterpretationMethod(ABC):
                 - The concept activations for each token
         """
         # extract and sort the vocabulary
-        vocab_dict: dict[str, int] = (
-            self.concept_explainer.model_with_split_points.tokenizer.get_vocab()
-        )
+        vocab_dict: dict[str, int] = self.concept_explainer.model_with_split_points.tokenizer.get_vocab()
         inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
         inputs: list[str] = list(inputs)
 
-        # compute the vocabulary's latent activations
-        if self.activation_granularity == ActivationGranularity.CLS_TOKEN:
-            activations_dict: dict[str, LatentActivations] = (
-                self.concept_explainer.model_with_split_points.get_activations(
-                    inputs,
-                    activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS,
-                )
-            )
+        inputs_or_ids: list[str] | Float[torch.Tensor, "v 1"]
+        if self.aggregation_strategy == ActivationGranularity.CLS_TOKEN:
+            inputs_or_ids = torch.tensor(input_ids).unsqueeze(1)
         else:
-            input_tensor: Float[torch.Tensor, "v 1"] = torch.tensor(
-                input_ids
-            ).unsqueeze(1)
-            activations_dict: dict[str, LatentActivations] = (
-                self.concept_explainer.model_with_split_points.get_activations(
-                    input_tensor,
-                    activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS,
-                )
+            inputs_or_ids = inputs
+
+        # compute the vocabulary's latent activations
+        activations_dict: dict[str, LatentActivations] = (
+            self.concept_explainer.model_with_split_points.get_activations(
+                inputs_or_ids,
+                activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS,
+                aggregation_strategy=self.aggregation_strategy,
             )
-        latent_activations = (
-            self.concept_explainer.model_with_split_points.get_split_activations(
-                activations_dict, split_point=self.concept_explainer.split_point
-            )
-        )
-        concepts_activations = self.concept_explainer.encode_activations(
-            latent_activations
-        )
+        )  # type: ignore
+
+        # compute the vocabulary's concepts activations
+        latent_activations: LatentActivations = self.concept_explainer.model_with_split_points.get_split_activations(
+            activations_dict, split_point=self.concept_explainer.split_point
+        )  # type: ignore
+        concepts_activations = self.concept_explainer.encode_activations(latent_activations)
         return inputs, concepts_activations
 
     @jaxtyped(typechecker=beartype)
@@ -447,9 +401,15 @@ class BaseConceptInterpretationMethod(ABC):
             inputs (list[str]): n text samples
 
         Returns:
-            tuple[list[str], list[int]]:
-                - list[str]: The granular texts from the inputs, flattened
-                - list[int]: The sample id for each granular text, to keep track of which sample the text belongs to.
+            granular_flattened_texts (list[str]):
+                The granular texts elements from the inputs, flattened.
+                [Example1_Tok1, Example1_Tok2, ... Example2_Tok1, Example2_Tok2, ...]
+
+            granular_flattened_sample_id (list[int]):
+                The sample id for each granular text, to keep track of which sample the text belongs to.
+                It should have the same length as `granular_flattened_texts`.
+                It elements indicates the sample if for the corresponding granular text in `granular_flattened_texts`.
+                [0, 0, ... 1, 1, ...]
         """
         if self.activation_granularity in (
             ActivationGranularity.SAMPLE,
@@ -469,21 +429,15 @@ class BaseConceptInterpretationMethod(ABC):
             return_text=True,
         )
 
-        granular_flattened_texts = [
-            text for sample_texts in granular_texts for text in sample_texts
-        ]
-        granular_flattened_sample_id = [
-            i for i, sample_texts in enumerate(granular_texts) for _ in sample_texts
-        ]
+        granular_flattened_texts = [text for sample_texts in granular_texts for text in sample_texts]
+        granular_flattened_sample_id = [i for i, sample_texts in enumerate(granular_texts) for _ in sample_texts]
         return granular_flattened_texts, granular_flattened_sample_id
 
     def get_granular_inputs_and_concept_activations(
         self,
         concepts_indices: int | list[int] | Literal["all"],
         inputs: list[str] | None = None,
-        latent_activations: dict[str, LatentActivations]
-        | LatentActivations
-        | None = None,
+        latent_activations: dict[str, LatentActivations] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> tuple[list[int], list[str], Float[torch.Tensor, "nl cpt"], list[int]]:
         """
@@ -518,18 +472,16 @@ class BaseConceptInterpretationMethod(ABC):
 
             granular_sample_ids (list[int]):
                 The granular sample ids for the specified concepts.
+                Each element of the list is the index of the input sample from which the corresponding granular input was extracted.
+                It has the same length as `granular_inputs`.
 
         """
         if concepts_indices == "all":
-            concepts_indices = list(
-                range(self.concept_explainer.concept_model.nb_concepts)
-            )
+            concepts_indices = list(range(self.concept_explainer.concept_model.nb_concepts))
 
         # verify
         if latent_activations is not None:
-            latent_activations = self.concept_explainer._sanitize_activations(
-                latent_activations
-            )
+            latent_activations = self.concept_explainer._sanitize_activations(latent_activations)
         else:
             latent_activations = None
 
@@ -539,9 +491,7 @@ class BaseConceptInterpretationMethod(ABC):
             # Case 1: use_vocab=True
             granular_inputs: list[str]
             sure_concepts_activations: Float[torch.Tensor, "nl cpt"]
-            granular_inputs, sure_concepts_activations = (
-                self.concepts_activations_from_vocab()
-            )
+            granular_inputs, sure_concepts_activations = self.concepts_activations_from_vocab()
 
             granular_sample_ids: list[int] = list(range(len(granular_inputs)))
         else:
