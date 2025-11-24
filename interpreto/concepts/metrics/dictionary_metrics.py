@@ -192,7 +192,7 @@ class Stability:
         comparisons = []
         for dict_1, dict_2 in combinations(self.dictionaries, 2):
             # compute pairwise comparison
-            comparison = 1 - self.distance_function(dict_1, dict_2)
+            comparison = 1 - self.distance_function(dict_1.cpu().detach(), dict_2.cpu().detach())
             comparisons.append(comparison)
 
         return torch.stack(comparisons).mean().item()

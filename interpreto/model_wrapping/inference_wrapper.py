@@ -35,7 +35,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator, Iterable, MutableMapping
-from enum import Enum
+from enum import Enum, auto
 from functools import singledispatchmethod
 from typing import Any, overload
 
@@ -59,9 +59,17 @@ class InferenceModes(Enum):
         LOG_SOFTMAX: Return the log softmax of the logits.
     """
 
-    LOGITS = staticmethod(lambda logits: logits)
-    SOFTMAX = staticmethod(lambda logits: F.softmax(logits, dim=-1))
-    LOG_SOFTMAX = staticmethod(lambda logits: F.log_softmax(logits, dim=-1))
+    LOGITS = auto()
+    SOFTMAX = auto()
+    LOG_SOFTMAX = auto()
+
+    def __call__(self, logits: torch.Tensor) -> torch.Tensor:
+        if self == InferenceModes.LOGITS:
+            return logits
+        return {
+            InferenceModes.SOFTMAX: F.softmax,
+            InferenceModes.LOG_SOFTMAX: F.log_softmax,
+        }[self](logits, dim=-1)
 
 
 # TODO : move that somewhere else
@@ -162,7 +170,8 @@ class InferenceWrapper(ABC):
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model.to(device)  # type: ignore
+        if not (getattr(model, "is_loaded_in_8bit", False) or getattr(model, "is_loaded_in_4bit", False)):
+            self.model.to(device)  # type: ignore
         self.batch_size = batch_size
 
         assert callable(mode), "mode should be a callable function from `InferenceModes`"
@@ -187,16 +196,16 @@ class InferenceWrapper(ABC):
         Args:
             device (torch.device): wanted device (e.g., "cpu" or "cuda").
         """
-        self.model.to(device)  # type: ignore
+        self.model.to(device)
 
-    def to(self, device: torch.device):
+    def to(self, device: torch.device, dtype: torch.dtype | None = None):
         """
         Move the model to the specified device.
 
         Args:
             device (torch.device): The device to which the model should be moved.
         """
-        self.device = device
+        self.model.to(device=device, dtype=dtype)
 
     def cpu(self):
         """
@@ -209,6 +218,14 @@ class InferenceWrapper(ABC):
         Move the model to the GPU.
         """
         self.device = torch.device("cuda")
+
+    @property
+    def dtype(self):
+        return self.model.dtype
+
+    @dtype.setter
+    def dtype(self, dtype: torch.dtype):
+        self.model.to(dtype=dtype)
 
     def embed(self, model_inputs: TensorMapping) -> TensorMapping:
         """
@@ -285,7 +302,7 @@ class InferenceWrapper(ABC):
         if input_ids is not None:
             input_ids = input_ids.to(self.device)
         if inputs_embeds is not None:
-            inputs_embeds = inputs_embeds.to(self.device)
+            inputs_embeds = inputs_embeds.to(self.device, self.dtype)
         if attention_mask is not None:
             attention_mask = attention_mask.to(self.device)
 
@@ -295,7 +312,6 @@ class InferenceWrapper(ABC):
                 return self.model(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
             except NotImplementedError as e:
                 raise IncompatibilityError from e
-
         return self.model(input_ids=input_ids, attention_mask=attention_mask)
 
     @overload
@@ -635,31 +651,53 @@ class InferenceWrapper(ABC):
             f"type {type(model_inputs)} not supported for method get_gradients in class {self.__class__.__name__}"
         )
 
+    # TODO: add jaxtyping
     @get_gradients.register(MutableMapping)  # type: ignore
     def _get_gradients_from_mapping(
-        self, model_inputs: TensorMapping, targets: torch.Tensor, input_x_gradient: bool = False
-    ) -> torch.Tensor:  # TODO: add jaxtyping
+        self,
+        model_inputs: TensorMapping,
+        targets: torch.Tensor,  # (n, t) | (1, t) | (t,)
+        input_x_gradient: bool = False,
+    ) -> torch.Tensor:
         model_inputs = self.embed(model_inputs)
-        inputs_embeds = model_inputs["inputs_embeds"]
+        inputs_embeds = model_inputs["inputs_embeds"].detach().requires_grad_(True)  # (n,l,d)
+        attention_mask = model_inputs["attention_mask"]  # (n, l)
 
-        def get_score(inputs_embeds: torch.Tensor):
-            return self.get_targeted_logits(
-                {"inputs_embeds": inputs_embeds, "attention_mask": model_inputs["attention_mask"]}, targets
-            )
+        # Compute logits for ALL classes once if that’s cheaper in your model
+        # and select later inside get_targeted_logits via gather.
+        logits: torch.Tensor = self.get_targeted_logits(
+            {"inputs_embeds": inputs_embeds, "attention_mask": attention_mask}, targets
+        )  # (n, t)  # type: ignore
 
-        # Compute gradient of the selected logits:
-        grad_matrix = torch.autograd.functional.jacobian(get_score, inputs_embeds)  # (n, lt, n, l, d)
+        t = targets.shape[-1]
+        list_of_target_wise_grads = []
+        for k in range(t):
+            # specify from which target to compute the gradient
+            # the gradient is computed for the k-th targeted logit
+            grad_outputs = torch.zeros_like(logits)
+            grad_outputs[:, k] = 1.0
 
-        grad_matrix = grad_matrix[
-            torch.arange(grad_matrix.shape[0]), :, torch.arange(grad_matrix.shape[0])
-        ]  # (n, lt, l, d)
-        if input_x_gradient:
-            grad_matrix = grad_matrix * inputs_embeds.unsqueeze(1)
+            # compute the gradient for the k-th targeted logit
+            target_wise_grads = torch.autograd.grad(
+                outputs=logits,
+                inputs=inputs_embeds,
+                grad_outputs=grad_outputs,
+                retain_graph=(k != t - 1),
+                create_graph=False,
+            )[0]  # (n, l, d)
 
-        grad_matrix = grad_matrix.abs().mean(
-            dim=-1
-        )  # (n, lt, l)  # average over the embedding dimension  # TODO: discuss if th average should be forced or an argument
-        return grad_matrix
+            # apply the input_x_gradient trick if required
+            if input_x_gradient:
+                target_wise_grads = target_wise_grads * inputs_embeds
+
+            # Aggregate over the hidden dimension 'd'
+            # TODO: see if we should force the aggregation to be mean of absolute values
+            aggregated_target_wise_grads = target_wise_grads.abs().mean(dim=-1).cpu()  # (n, l)
+
+            list_of_target_wise_grads.append(aggregated_target_wise_grads)  # t * (n, l)
+
+        # stack the target-wise gradients to get the gradient matrix
+        return torch.stack(list_of_target_wise_grads, dim=1)  # (n, t, l)
 
     @get_gradients.register(Iterable)  # type: ignore
     def _get_gradients_from_iterable(
@@ -669,7 +707,3 @@ class InferenceWrapper(ABC):
             # check that the model input and target have the same batch size
             result = self._get_gradients_from_mapping(model_input, target, input_x_gradient=input_x_gradient)
             yield result
-
-        # yield from (
-        #     self.get_gradients(model_input, target) for model_input, target in zip(model_inputs, targets, strict=True)
-        # )

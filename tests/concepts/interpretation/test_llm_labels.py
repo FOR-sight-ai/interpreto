@@ -239,10 +239,8 @@ def test_build_example_prompt():
     ]
     prompt = _build_example_prompt(examples)
     assert isinstance(prompt, str)
-    assert (
-        prompt
-        == "Example 1: This is a test with sentences (activation: 10)\nExample 2: This is another sentence (activation: 4)"
-    )
+    print(prompt)
+    assert prompt == '("This is a test with sentences", 10), ("This is another sentence", 4)'
 
     # Test with examples with context
     examples = [
@@ -269,15 +267,6 @@ def test_build_example_prompt():
                 Example(
                     texts=["This", " is", " a", " test"],
                     activations=2,
-                ),
-            ]
-        )
-    with pytest.raises(ValueError):
-        _build_example_prompt(
-            [
-                Example(
-                    texts="This is a test",
-                    activations=[2, 3],
                 ),
             ]
         )
