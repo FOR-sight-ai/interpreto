@@ -122,16 +122,6 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
             "Use the `evaluate` method to evaluate the deletion metric."
         )
 
-    def _normalize_curve(self, s: torch.Tensor):
-        """
-        Normalize a score curve using its endpoints, depending on the metric type.
-        This keeps the relative shape of the curve and only rescales it
-        to the [0, 1] range based on its endpoints.
-        The normalization is used only for generative models, because the score is too
-        low due to the large vocabulary size when using softmax probabilities.
-        """
-        raise NotImplementedError()
-
     def evaluate(
         self, attributions_outputs: Iterable[AttributionOutput]
     ) -> tuple[float, list[Float[torch.Tensor, "t p"]]]:
