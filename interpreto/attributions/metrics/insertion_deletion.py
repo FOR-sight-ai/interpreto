@@ -153,17 +153,20 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
         self.granularity = grans[0]
         self.perturbator.granularity = grans[0]  # type: ignore[attr-defined]
 
+        # TODO : Make granularity work for generative models to remove this error:
+        if self.is_generation:
+            if self.granularity in {"word", "sentence"}:
+                raise ValueError("For generation tasks, only token-level granularity is supported.")
+
         # Perturb inputs
         def perturbation_generator(attributions_outputs):
             for i, a in enumerate(attributions_outputs):
-                if self.is_generation:
-                    for k, attrib in enumerate(a.attributions):
-                        pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
-                        yield i, pert, a.targets[: k + 1].to(self.device)
-                else:
-                    for target, attrib in zip(a.targets, a.attributions, strict=True):
-                        pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
-                        yield i, pert, target.to(self.device)
+                for target, attrib in zip(
+                    a.targets, a.attributions, strict=True
+                ):  # a.targets only token granularity !
+                    # a.attributions with the good granularity
+                    pert, _ = self.perturbator.perturb(a.model_inputs_to_explain, attributions=attrib)
+                    yield i, pert, target.to(self.device).view(-1)
 
         attrib_idx_gen: Iterable[int]
         pert_generator: Iterable[TensorMapping]
@@ -178,6 +181,11 @@ class InsertionDeletionBase(MultitaskExplainerMixin, AttributionExplainer):
         for _, score in itertools.groupby(zip(attrib_idx_gen, scores, strict=True), key=lambda x: x[0]):
             curves = [s[..., -1] if s.dim() > 1 else s for _, s in score]
             grouped_scores.append(torch.stack(curves, dim=0))
+
+        if self.is_generation:
+            for i, a in enumerate(attributions_outputs):
+                n_explained = len(a.attributions)
+                grouped_scores[i] = grouped_scores[i][:n_explained]
 
         # Compute AUC using trapezoidal rule
         aucs = [((s.sum(dim=1) - 0.5 * (s[:, 0] + s[:, -1])) / (len(s.T) - 1)).mean() for s in grouped_scores]
