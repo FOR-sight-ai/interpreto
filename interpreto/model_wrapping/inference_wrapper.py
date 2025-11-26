@@ -35,7 +35,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Generator, Iterable, MutableMapping
-from enum import Enum
+from enum import Enum, auto
 from functools import singledispatchmethod
 from typing import Any, overload
 
@@ -59,9 +59,17 @@ class InferenceModes(Enum):
         LOG_SOFTMAX: Return the log softmax of the logits.
     """
 
-    LOGITS = staticmethod(lambda logits: logits)
-    SOFTMAX = staticmethod(lambda logits: F.softmax(logits, dim=-1))
-    LOG_SOFTMAX = staticmethod(lambda logits: F.log_softmax(logits, dim=-1))
+    LOGITS = auto()
+    SOFTMAX = auto()
+    LOG_SOFTMAX = auto()
+
+    def __call__(self, logits: torch.Tensor) -> torch.Tensor:
+        if self == InferenceModes.LOGITS:
+            return logits
+        return {
+            InferenceModes.SOFTMAX: F.softmax,
+            InferenceModes.LOG_SOFTMAX: F.log_softmax,
+        }[self](logits, dim=-1)
 
 
 # TODO : move that somewhere else
@@ -162,7 +170,8 @@ class InferenceWrapper(ABC):
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model.to(device)  # type: ignore
+        if not (getattr(model, "is_loaded_in_8bit", False) or getattr(model, "is_loaded_in_4bit", False)):
+            self.model.to(device)  # type: ignore
         self.batch_size = batch_size
 
         assert callable(mode), "mode should be a callable function from `InferenceModes`"
@@ -187,16 +196,16 @@ class InferenceWrapper(ABC):
         Args:
             device (torch.device): wanted device (e.g., "cpu" or "cuda").
         """
-        self.model.to(device)  # type: ignore
+        self.model.to(device)
 
-    def to(self, device: torch.device):
+    def to(self, device: torch.device, dtype: torch.dtype | None = None):
         """
         Move the model to the specified device.
 
         Args:
             device (torch.device): The device to which the model should be moved.
         """
-        self.device = device
+        self.model.to(device=device, dtype=dtype)
 
     def cpu(self):
         """
@@ -209,6 +218,14 @@ class InferenceWrapper(ABC):
         Move the model to the GPU.
         """
         self.device = torch.device("cuda")
+
+    @property
+    def dtype(self):
+        return self.model.dtype
+
+    @dtype.setter
+    def dtype(self, dtype: torch.dtype):
+        self.model.to(dtype=dtype)
 
     def embed(self, model_inputs: TensorMapping) -> TensorMapping:
         """
@@ -285,7 +302,7 @@ class InferenceWrapper(ABC):
         if input_ids is not None:
             input_ids = input_ids.to(self.device)
         if inputs_embeds is not None:
-            inputs_embeds = inputs_embeds.to(self.device)
+            inputs_embeds = inputs_embeds.to(self.device, self.dtype)
         if attention_mask is not None:
             attention_mask = attention_mask.to(self.device)
 
@@ -295,7 +312,6 @@ class InferenceWrapper(ABC):
                 return self.model(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
             except NotImplementedError as e:
                 raise IncompatibilityError from e
-
         return self.model(input_ids=input_ids, attention_mask=attention_mask)
 
     @overload

@@ -121,6 +121,9 @@ class LLMLabels(BaseConceptInterpretationMethod):
         llm_interface (LLMInterface):
             The LLM interface to use for the interpretation.
 
+        concept_encoding_batch_size (int):
+            The batch size to use for the concept encoding.
+
         sampling_method (SAMPLING_METHOD):
             The method to use for sampling the inputs provided to the LLM.
 
@@ -164,6 +167,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         llm_interface: LLMInterface,
+        concept_encoding_batch_size: int = 1024,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
         k_context: int = 0,
@@ -178,6 +182,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
             concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
             aggregation_strategy=aggregation_strategy,
+            concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
@@ -310,9 +315,7 @@ def _sample_top(
         )
     non_zero_samples = torch.argwhere(concept_activations != 0).squeeze(-1)
     k_examples = min(k_examples, non_zero_samples.size(0))
-    inputs_indices = non_zero_samples[
-        torch.topk(concept_activations[non_zero_samples], k=k_examples).indices
-    ]
+    inputs_indices = non_zero_samples[torch.topk(concept_activations[non_zero_samples], k=k_examples).indices]
 
     return inputs_indices.tolist()  # type: ignore
 
@@ -338,9 +341,7 @@ def _sample_random(
             f"concept_activations should be a 1D tensor, got tensor of shape {concept_activations.size()}"
         )
     non_zero_samples = torch.argwhere(concept_activations != 0).squeeze(-1)
-    inputs_indices = non_zero_samples[torch.randperm(len(non_zero_samples))][
-        :k_examples
-    ]
+    inputs_indices = non_zero_samples[torch.randperm(len(non_zero_samples))][:k_examples]
     return inputs_indices.tolist()  # type: ignore
 
 
@@ -362,9 +363,7 @@ def _sample_quantile(
         list[int]: the indexes of the examples to provide to the LLM for labeling the concept.
     """
     if k_examples < k_quantile:
-        raise ValueError(
-            f"k_examples ({k_examples}) should be greater than k_quantile ({k_quantile})."
-        )
+        raise ValueError(f"k_examples ({k_examples}) should be greater than k_quantile ({k_quantile}).")
     if len(concept_activations.size()) > 1:
         raise ValueError(
             f"concept_activations should be a 1D tensor, got tensor of shape {concept_activations.size()}"
@@ -381,21 +380,15 @@ def _sample_quantile(
     quantile_size = non_zero_samples.size(0) // k_quantile
     samples_per_quantile = k_examples // k_quantile
 
-    sorted_indexes = torch.argsort(concept_activations, descending=True)[
-        : non_zero_samples.size(0)
-    ]
+    sorted_indexes = torch.argsort(concept_activations, descending=True)[: non_zero_samples.size(0)]
     sample_indices: list[int] = []
     for i in range(k_quantile):
         if i == k_quantile - 1:
             # Last quantile (minimally activating samples) may have more samples
             quantile_samples = sorted_indexes[i * quantile_size :]
         else:
-            quantile_samples = sorted_indexes[
-                i * quantile_size : (i + 1) * quantile_size
-            ]
-        selected_samples = quantile_samples[
-            torch.randperm(len(quantile_samples))[:samples_per_quantile]
-        ]
+            quantile_samples = sorted_indexes[i * quantile_size : (i + 1) * quantile_size]
+        selected_samples = quantile_samples[torch.randperm(len(quantile_samples))[:samples_per_quantile]]
         sample_indices.extend(selected_samples.tolist())  # type: ignore
     return sample_indices
 
@@ -466,9 +459,7 @@ def _format_examples(
         else:
             example = Example(
                 texts=inputs[example_id],
-                activations=round(
-                    concept_activations[example_id].item() / max_act * 10
-                ),
+                activations=round(concept_activations[example_id].item() / max_act * 10),
             )
         examples.append(example)
     return examples
@@ -499,12 +490,15 @@ def _build_example_prompt(examples: list[Example]) -> str:
         str: prompt containing the formatted examples for the LLM.
     """
     example_prompts: list[str] = []
+
+    # Text without context and only unique words or tokens
+    if all(isinstance(e.texts, str) for e in examples):
+        return ", ".join([f'("{e.texts}", {e.activations})' for e in examples])
+
     for i, example in enumerate(examples):
         if isinstance(example.texts, str) and isinstance(example.activations, int):
             # Text without context
-            example_prompts.append(
-                f"Example {i + 1}: {example.texts} (activation: {example.activations})"
-            )
+            example_prompts.append(f"Example {i + 1}: {example.texts} (activation: {example.activations})")
         elif isinstance(example.texts, list) and isinstance(example.activations, list):
             # Text with context
             max_text_pos = example.activations.index(max(example.activations))
@@ -519,9 +513,7 @@ def _build_example_prompt(examples: list[Example]) -> str:
                 + ", ".join(
                     [
                         f'("{text}", {activation})'
-                        for text, activation in zip(
-                            example.texts, example.activations, strict=False
-                        )
+                        for text, activation in zip(example.texts, example.activations, strict=False)
                     ]
                 )
             )
@@ -533,18 +525,23 @@ def _build_example_prompt(examples: list[Example]) -> str:
 
 
 # From https://github.com/EleutherAI/delphi/blob/article_version/sae_auto_interp/explainers/default/prompts.py
-SYSTEM_PROMPT_WITH_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
-Your task is to analyze text and provide an explanation that thoroughly encapsulates possible patterns found in it.
-Guidelines:
+SYSTEM_PROMPT_WITH_CONTEXT = """Your role is to label the concepts/patterns present in the different examples.
 
 You will be given a list of text examples on which special tokens are selected and between delimiters like <<this>>.
 How important each token is for the behavior is listed after each example in parentheses, with importance from 0 to 10.
 
-- Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
-- If the examples are uninformative, you don't need to mention them. Don't focus on giving examples of important tokens, but try to summarize the patterns found in the examples.
-- Do not mention the marker tokens (<< >>) in your explanation.
-- Do not make lists of possible explanations.
-- Keep your explanations short and concise, with no more that 15 words, for example "reference to blue objects" or "word before a comma"
+Hard rules:
+- The label should summarize the concept linking the examples together. Give a single label describing all examples highlighted tokens.
+- The label should be between 1 and 5 words long.
+- The shorter the label the better. The best is a word.
+- Do not make a sentence.
+- The label should be the most precise possible. The goal is to be able to differentiate between concepts.
+- The label should encompass most examples. But you can ignore the non-informative ones.
+- Do not mention the marker tokens (<< >>) in your explanation. Nor refer to the importance.
+- Only focus on the content and the label.
+- Never ever give labels with more than 5 words, they would be cut out.
+
+Some examples: 'blue', 'positive sentiment and enthusiasm', 'legal entities', 'medical places', 'hate', 'noun phrase', 'ion or iou sounds', 'questions' final words'...
 """
 
 SYSTEM_PROMPT_WITHOUT_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
@@ -556,6 +553,7 @@ How important each text is for the behavior is listed after each example in pare
 
 - Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
 - If the examples are uninformative, you don't need to mention them. Don't focus on giving examples, but try to summarize the patterns found in the examples.
-- Do not make lists of possible explanations.
-- Keep your explanations short and concise, with no more that 15 words, for example "reference to blue objects" or "word before a comma"
+- Do not make lists of possible explanations. Find a single concept that best describes the examples.
+- Strike the balance between being concise and informative. From 1 to 5 words. 5 is an absolute maximum.
+- Refrain from including uninformative elements like "patterns found include ...", "the examples show ...", or "text contains ...".
 """

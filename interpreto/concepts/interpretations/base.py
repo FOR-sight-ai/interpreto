@@ -42,7 +42,7 @@ from jaxtyping import Float, jaxtyped
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-from interpreto import Granularity, ModelWithSplitPoints
+from interpreto import ModelWithSplitPoints
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
@@ -351,6 +351,9 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if latent_activations is not None:
+            if hasattr(self.concept_explainer.concept_model, "to"):
+                self.concept_explainer.concept_model.to(self.device)  # type: ignore
+
             # batch over latent activations for concept encoding
             concepts_activations_list = []
             for batch_idx in range(
@@ -361,11 +364,12 @@ class BaseConceptInterpretationMethod(ABC):
                     batch_idx : batch_idx + self.concept_encoding_batch_size
                 ]
 
-                if hasattr(batch_latent_activations, "to"):
-                    batch_latent_activations = batch_latent_activations.to(self.device)
+                # concept model forward pass
+                batch_latent_activations = batch_latent_activations.to(self.device)
                 batch_concepts_activations = self.concept_explainer.encode_activations(
                     batch_latent_activations
                 )
+                batch_latent_activations.cpu()
 
                 concepts_activations_list.append(batch_concepts_activations.cpu())
             concepts_activations = torch.cat(concepts_activations_list, dim=0)
@@ -473,13 +477,18 @@ class BaseConceptInterpretationMethod(ABC):
 
         # Get granular texts from the inputs
         tokens = self.concept_explainer.model_with_split_points.tokenizer(
-            inputs, return_tensors="pt", padding=True, return_offsets_mapping=True
+            inputs,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            return_offsets_mapping=True,
         )
-        granular_texts: list[list[str]] = Granularity.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
-            tokens,
-            granularity=self.activation_granularity.value,  # type: ignore
-            tokenizer=self.concept_explainer.model_with_split_points.tokenizer,
-            return_text=True,
+        granular_texts: list[list[str]] = (
+            self.activation_granularity.value.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
+                tokens,
+                tokenizer=self.concept_explainer.model_with_split_points.tokenizer,
+                return_text=True,
+            )
         )
 
         granular_flattened_texts = [

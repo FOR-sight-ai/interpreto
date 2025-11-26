@@ -10,7 +10,8 @@ nav:
   - Home: index.md
   - Tutorials:
     - Use Attribution Methods: notebooks/attribution_walkthrough.ipynb
-    - Training a Concept Explainer: notebooks/concept_examples.ipynb
+    - Concept-based Explanations for Classification: notebooks/classification_concept_tutorial.ipynb
+    - Concept-based Explanations for Generation: notebooks/generation_concept_tutorial.ipynb
   - API Reference:
     - Attribution Explainers:
       - Overview: api/attributions/overview.md

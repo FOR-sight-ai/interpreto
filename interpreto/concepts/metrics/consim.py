@@ -241,7 +241,7 @@ class ConSim:
         The two steps of ConSim:
         >>> # ------------------------------------------------------------------
         >>> # Step 0: Define the User-LLM and instantiate the ConSim metric
-        >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt4o-mini")
+        >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt-4.1-nano")
         >>> consim = ConSim(
         ...     model_with_split_points,
         ...     user_llm,
@@ -472,7 +472,7 @@ class ConSim:
         nb_ep_samples: int = 20,
         seed: int = 0,
         batch_size: int = 64,
-        device: torch.device | str = "cpu",
+        device: torch.device | str | None = None,
     ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
         """
         Select examples for the ConSim metric. It first computes the models' predictions on the inputs.
@@ -499,7 +499,7 @@ class ConSim:
                 The seed to use for the random selection.
             batch_size: int
                 The batch size to use for the predictions.
-            device: torch.device | str
+            device: torch.device | str | None
                 The device to use for the predictions.
 
         Returns:
@@ -557,11 +557,11 @@ class ConSim:
 
     @staticmethod
     def _filter_and_quantize_concepts_importances(
-        concepts_interpretation: dict[str, str],
-        global_importances: dict[str, dict[str, float]],
+        concepts_interpretation: dict[int, str],
+        global_importances: dict[str, dict[int, float]],
         local_importances: torch.Tensor | None,
         importance_threshold: float = 0.05,
-    ) -> tuple[dict[str, str], dict[str, dict[str, str]], list[dict[str, str]] | None]:
+    ) -> tuple[dict[int, str], dict[str, dict[int, str]], list[dict[int, str]] | None]:
         """
         Filter the concepts importance and quantize the values.
 
@@ -585,7 +585,7 @@ class ConSim:
         The normalization is done by dividing the importances by the sum of the absolute values of the importances.
 
         Arguments:
-            concepts_interpretation: dict[str, str]
+            concepts_interpretation: dict[int, str]
                 The words that activate the concepts the most and the least.
                 A dictionary with the concepts as keys and another dictionary as values.
                 The inner dictionary has the words as keys and the activations as values.
@@ -600,17 +600,17 @@ class ConSim:
                 The threshold correspond to the cumulative importance of the concepts to keep.
 
         Returns:
-            concepts_interpretation: dict[str, str]
+            concepts_interpretation: dict[int, str]
                 The words that activate the concepts the most and the least.
                 A dictionary with the concepts as keys and another dictionary as values.
                 The inner dictionary has the words as keys and the activations as values.
                 Filtered to keep only the important concepts.
-            filtered_global_importances: dict[str, dict[str, float]]
+            filtered_global_importances: dict[str, dict[int, float]]
                 The importance of the concepts for each class.
                 A dictionary with the classes as keys and another dictionary as values.
                 The inner dictionary has the concepts as keys and the importance as values.
                 Filtered to keep only the important concepts.
-            filtered_local_importances: list[dict[str, str]] | None
+            filtered_local_importances: list[dict[int, str]] | None
                 The importance of concepts for each sentence.
                 A list with each element corresponding to one sentence.
                 Each element of the list if a dictionary with an importance associated to a concept id.
@@ -634,19 +634,17 @@ class ConSim:
             if len(concepts_to_keep) == 0:
                 importance_threshold /= 2
 
-        concepts_to_show = torch.unique(torch.stack(concepts_to_keep))
-        interpretation_concepts_ids = [int(cpt.split("_")[-1]) for cpt in concepts_interpretation.keys()]
-        concepts_to_show = torch.Tensor([cpt for cpt in concepts_to_show if cpt in interpretation_concepts_ids]).to(
-            dtype=torch.int64
-        )
+        concepts_to_show = torch.unique(torch.stack(concepts_to_keep)).tolist()
+        interpretation_concepts_ids = list(concepts_interpretation.keys())
+        concepts_to_show = [cpt for cpt in concepts_to_show if cpt in interpretation_concepts_ids]
 
         # ------------------------------------------------------------------------------------------
         # filter the concepts activating words
-        concepts_interpretation = {f"concept_{c}": concepts_interpretation[f"concept_{c}"] for c in concepts_to_show}
+        concepts_interpretation = {c: concepts_interpretation[c] for c in concepts_to_show}  # type: ignore
 
         # ------------------------------------------------------------------------------------------
         # filter the concepts importance
-        quantized_global_importances: dict[str, dict[str, str]] = {}
+        quantized_global_importances: dict[str, dict[int, str]] = {}
         # iterate over classes
         for class_name, concepts_importance in global_importances.items():
             quantized_global_importances[class_name] = {}
@@ -655,7 +653,7 @@ class ConSim:
                 # quantize the importance and pass it to string
                 quantized_importance: str | None = ConSim._quantize_importances(importance, importance_threshold)
                 # keep only the concepts that should be shown and are important enough
-                if int(c.split("_")[-1]) in concepts_to_show and quantized_importance is not None:
+                if c in list(concepts_to_show) and quantized_importance is not None:
                     quantized_global_importances[class_name][c] = quantized_importance
 
         if local_importances is None:
@@ -666,10 +664,10 @@ class ConSim:
 
         # ------------------------------------------------------------------------------------------
         # clean elements to leave only the important concepts and quantize values to literals
-        filtered_local_importances: list[dict[str, str]] = []
+        filtered_local_importances: list[dict[int, str]] = []
         # iterate over sentences
         for sentence_concepts_importances in local_importances:
-            filtered_sentence_importances: dict[str, str] = {}
+            filtered_sentence_importances: dict[int, str] = {}
             # iterate over concepts
             for cpt, importance in enumerate(sentence_concepts_importances):
                 # quantize the importance and pass it to string
@@ -678,7 +676,7 @@ class ConSim:
                 )
                 # keep only the concepts that should be shown and are important enough
                 if cpt in concepts_to_show and quantized_importance is not None:
-                    filtered_sentence_importances[f"concept_{cpt}"] = quantized_importance
+                    filtered_sentence_importances[cpt] = quantized_importance
             filtered_local_importances.append(filtered_sentence_importances)
 
         return concepts_interpretation, quantized_global_importances, filtered_local_importances
@@ -690,9 +688,9 @@ class ConSim:
         sentences: list[str],
         predictions: torch.Tensor,
         classes: list[str],
-        concepts_interpretation: dict[str, str] | None,
-        global_importances: dict[str, dict[str, str]] | None,
-        local_importances: list[dict[str, str]] | None,
+        concepts_interpretation: dict[int, str] | None,
+        global_importances: dict[str, dict[int, str]] | None,
+        local_importances: list[dict[int, str]] | None,
     ) -> tuple[str, str, list[str]]:
         """
         Create a prompt for the LLM model by integrating the different elements.
@@ -902,8 +900,8 @@ class ConSim:
         sentences: list[str],
         predictions: torch.Tensor,
         classes: list[str] | None,
-        concepts_interpretation: dict[str, str] | None,
-        global_importances: dict[str, dict[str, float]] | None,
+        concepts_interpretation: dict[int, str] | None,
+        global_importances: dict[str, dict[int, float]] | None,
         local_importances: torch.Tensor | None,
         prompt_type: PromptTypes = PromptTypes.E3_global_and_local_concepts_with_lp,
         anonymize_classes: bool = False,
@@ -1175,9 +1173,9 @@ class ConSim:
         self,
         interesting_samples: list[str],
         predictions: torch.Tensor,
-        concept_explainer: ConceptAutoEncoderExplainer,
-        concepts_interpretation: dict[str, str],
-        global_importances: dict[str, dict[str, float]],
+        concept_explainer: ConceptAutoEncoderExplainer | None = None,
+        concepts_interpretation: dict[int, str] | None = None,
+        global_importances: dict[str, dict[int, float]] | None = None,
         prompt_type: PromptTypes = PromptTypes.E3_global_and_local_concepts_with_lp,
         anonymize_classes: bool = False,
         importance_threshold: float = 0.05,
@@ -1212,18 +1210,20 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the interesting samples.
 
-            concept_explainer: ConceptAutoEncoderExplainer
-                The concept explainer.
+            concept_explainer: ConceptAutoEncoderExplainer | None
+                The concept explainer. Can be None for the baseline.
 
-            concepts_interpretation: dict[str, str]
+            concepts_interpretation: dict[int, str] | None
                 The words that activate the concepts the most and the least.
                 A dictionary with the concepts as keys and another dictionary as values.
                 The inner dictionary has the words as keys and the activations as values.
+                Can be None for the baseline.
 
-            global_importances: dict[str, dict[str, float]]
+            global_importances: dict[str, dict[int, float]] | None
                 The importance of the concepts for each class.
                 A dictionary with the classes as keys and another dictionary as values.
                 The inner dictionary has the concepts as keys and the importance as values.
+                Can be None for the baseline.
 
             prompt_type: PromptTypes
                 The type of prompt to use. Possible values are:
@@ -1270,44 +1270,44 @@ class ConSim:
             Warnings
                 If the user-llm response is empty or the format is not respected.
         """
-        # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
-        if concept_explainer.split_point not in self.model_with_split_points.split_points:
-            raise ValueError(
-                "The split point used in the provided `concept_explainer` should be one of the `model_with_split_points` ones."
-                f"Got split point: '{concept_explainer.split_point}' with model split points: "
-                f"{', '.join(self.model_with_split_points.split_points)}."
-            )
-        if (
-            concept_explainer.model_with_split_points._model.config.name_or_path
-            != self.model_with_split_points._model.config.name_or_path
-        ):
-            raise ValueError(
-                "The model used in the provided `concept_explainer` should be the same as the one used in the `model_with_split_points`."
-                f"Got (concept_explainer) model name or path: '{concept_explainer.model_with_split_points._model.config.name_or_path}'"
-                f"and (model_with_split_points) model name or path: '{self.model_with_split_points._model.config.name_or_path}'."
-            )
+        local_importances: torch.Tensor | None = None
+        if concept_explainer is not None:
+            # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
+            if concept_explainer.split_point not in self.model_with_split_points.split_points:
+                raise ValueError(
+                    "The split point used in the provided `concept_explainer` should be one of the `model_with_split_points` ones."
+                    f"Got split point: '{concept_explainer.split_point}' with model split points: "
+                    f"{', '.join(self.model_with_split_points.split_points)}."
+                )
+            if (
+                concept_explainer.model_with_split_points._model.config.name_or_path
+                != self.model_with_split_points._model.config.name_or_path
+            ):
+                raise ValueError(
+                    "The model used in the provided `concept_explainer` should be the same as the one used in the `model_with_split_points`."
+                    f"Got (concept_explainer) model name or path: '{concept_explainer.model_with_split_points._model.config.name_or_path}'"
+                    f"and (model_with_split_points) model name or path: '{self.model_with_split_points._model.config.name_or_path}'."
+                )
 
-        # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
-        # For now we force gradient-input
-        # TODO: precise shapes with jaxtyping
-        if prompt_type in [
-            PromptTypes.E3_global_and_local_concepts_with_lp,
-            PromptTypes.U1_upper_bound_concepts_at_ep,
-        ]:
-            if prompt_type is PromptTypes.E3_global_and_local_concepts_with_lp:
-                samples_to_explain = interesting_samples[: len(interesting_samples) // 2]
-            else:
-                samples_to_explain = interesting_samples
-            local_importances_list = concept_explainer.concept_output_gradient(
-                inputs=samples_to_explain,
-                split_point=self.split_point,
-                activation_granularity=self.activation_granularity,
-                concepts_x_gradients=True,
-                tqdm_bar=False,
-            )
-            local_importances: torch.Tensor | None = torch.stack(local_importances_list)
-        else:
-            local_importances = None
+            # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
+            # For now we force gradient-input
+            # TODO: precise shapes with jaxtyping
+            if prompt_type in [
+                PromptTypes.E3_global_and_local_concepts_with_lp,
+                PromptTypes.U1_upper_bound_concepts_at_ep,
+            ]:
+                if prompt_type is PromptTypes.E3_global_and_local_concepts_with_lp:
+                    samples_to_explain = interesting_samples[: len(interesting_samples) // 2]
+                else:
+                    samples_to_explain = interesting_samples
+                local_importances_list = concept_explainer.concept_output_gradient(
+                    inputs=samples_to_explain,
+                    split_point=self.split_point,
+                    activation_granularity=self.activation_granularity,
+                    concepts_x_gradients=True,
+                    tqdm_bar=False,
+                )
+                local_importances = torch.stack(local_importances_list)
 
         # generate the prompt
         prompts, literal_model_predictions = ConSim._generate_prompt(

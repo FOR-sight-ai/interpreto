@@ -5,10 +5,11 @@ from typing import Any
 import numpy as np
 import torch
 from sklearn.svm import SVC
+from torch import nn
 
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
-from interpreto.typing import LatentActivations, ConceptsActivations
+from interpreto.typing import ConceptsActivations, LatentActivations
 
 
 class SklearnProbe:
@@ -22,12 +23,207 @@ class SklearnProbe:
 
     def fit(self, x, y):
         """Fit the concept model."""
+        x, y = np.array(x), np.array(y)
         self.model.fit(x, y)
         self.fitted = True
 
     def encode(self, x):
         """Encode the given activations using the concept model."""
         return self.model.decision_function(x)
+
+
+class LinearRegressionProbe(nn.Module):
+    """
+    Linear regression probe (closed-form solution) with intercept.
+
+    Methods
+    -------
+    fit(X, y)  : estimate parameters using closed-form least squares
+    encode(X)  : return linear scores X w + b
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.weight = None  # nn.Parameter, shape (n_features,)
+        self.bias = None  # nn.Parameter, scalar
+        self.fitted = False
+
+    def fit(self, X, y):
+        """
+        X : (n_samples, n_features)
+        y : (n_samples,) or (n_samples, 1)
+        """
+        y = y.view(-1, 1)  # (n_samples, 1)
+
+        # Design matrix with bias
+        ones = torch.ones(X.size(0), 1, dtype=X.dtype, device=X.device)
+        X_design = torch.cat([ones, X], dim=1)  # (n_samples, 1 + n_features)
+
+        # Closed-form OLS: beta = (X^T X)^(-1) X^T y
+        XT = X_design.T
+        beta = torch.linalg.pinv(XT @ X_design) @ XT @ y  # (n_features+1, 1)
+
+        # Extract parameters
+        with torch.no_grad():
+            b = beta[0, 0]
+            w = beta[1:, 0]
+
+        # Register as nn.Parameters
+        self.weight = nn.Parameter(w.clone())
+        self.bias = nn.Parameter(b.clone())
+
+        self.fitted = True
+
+    def encode(self, X):
+        """
+        Return linear scores X w + b.
+
+        X : (n_samples, n_features)
+        Returns : (n_samples,)
+        """
+        if not self.fitted:
+            raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
+
+        return X @ self.weight + self.bias
+
+
+class LogisticRegressionProbe(nn.Module):
+    """
+    Binary logistic regression probe with intercept.
+
+    Methods
+    -------
+    fit(X, y)  : gradient descent on BCE-with-logits
+    encode(X)  : return logits (X w + b), one per sample
+    """
+
+    def __init__(self, lr: float = 1e-2, max_iter: int = 1000, l2: float = 0.0):
+        super().__init__()
+        self.lr = lr
+        self.max_iter = max_iter
+        self.l2 = l2
+
+        self.weight = None  # nn.Parameter, shape (n_features,)
+        self.bias = None  # nn.Parameter, scalar
+        self.fitted = False
+
+    def fit(self, X, y):
+        """
+        X : (n_samples, n_features)
+        y : (n_samples,) with values in {0, 1}
+        """
+        y = y.view(-1)  # (n_samples,)
+
+        n_samples, n_features = X.shape
+
+        # Initialize parameters lazily
+        if self.weight is None or self.bias is None:
+            self.weight = nn.Parameter(torch.zeros(n_features, dtype=X.dtype, device=X.device))
+            self.bias = nn.Parameter(torch.zeros((), dtype=X.dtype, device=X.device))
+
+        optimizer = torch.optim.Adam([self.weight, self.bias], lr=self.lr)
+        loss_fn = nn.BCEWithLogitsLoss()
+
+        for _ in range(self.max_iter):
+            optimizer.zero_grad()
+            logits = self.encode(X)  # (n_samples,)
+            loss = loss_fn(logits, y)
+
+            if self.l2 > 0.0:
+                loss = loss + 0.5 * self.l2 * (self.weight**2).sum()
+
+            loss.backward()
+            optimizer.step()
+
+        self.fitted = True
+
+    def encode(self, X):
+        """
+        Return logits X w + b.
+
+        X : (n_samples, n_features)
+        Returns : (n_samples,)
+        """
+        if not self.fitted:
+            raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
+
+        return X @ self.weight + self.bias
+
+
+class LinearSVMProbe(nn.Module):
+    """
+    Linear SVM-style probe (soft-margin) with intercept.
+
+    Optimization:
+        minimize  mean(max(0, 1 - y * (Xw + b))) + 0.5 * l2 * ||w||^2
+
+    Labels:
+        y can be in {0, 1} or {-1, 1}.
+        Internally converted to {-1, 1}.
+
+    Methods
+    -------
+    fit(X, y)  : gradient-based optimization of hinge loss
+    encode(X)  : return margin scores X w + b
+    """
+
+    def __init__(self, lr: float = 1e-2, max_iter: int = 1000, l2: float = 0.0):
+        super().__init__()
+        self.lr = lr
+        self.max_iter = max_iter
+        self.l2 = l2  # L2 regularization strength
+
+        self.weight = None  # nn.Parameter, shape (n_features,)
+        self.bias = None  # nn.Parameter, scalar
+
+        self.fitted = False
+
+    def fit(self, X, y):
+        """
+        X : (n_samples, n_features)
+        y : (n_samples,) in {0,1} or {-1,1}
+        """
+        y = 2 * y - 1  # (n_samples,) from {0, 1} to {-1, 1}
+
+        n_samples, n_features = X.shape
+
+        # Initialize parameters lazily
+        if self.weight is None or self.bias is None:
+            self.weight = nn.Parameter(torch.zeros(n_features, dtype=X.dtype, device=X.device))
+            self.bias = nn.Parameter(torch.zeros((), dtype=X.dtype, device=X.device))
+
+        optimizer = torch.optim.Adam([self.weight, self.bias], lr=self.lr)
+
+        for _ in range(self.max_iter):
+            optimizer.zero_grad()
+
+            # Margin scores
+            logits = self.encode(X)  # (n_samples,)
+
+            # Hinge loss: max(0, 1 - y * f(x))
+            margins = 1.0 - y * logits
+            hinge_loss = torch.clamp(margins, min=0.0).mean()
+
+            loss = hinge_loss
+            if self.l2 > 0.0:
+                loss = loss + 0.5 * self.l2 * (self.weight**2).sum()
+
+            loss.backward()
+            optimizer.step()
+
+        self.fitted = True
+
+    def encode(self, X):
+        """
+        Return margin scores X w + b.
+
+        X : (n_samples, n_features)
+        Returns : (n_samples,)
+        """
+        if not self.fitted:
+            raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
+
+        return ((X @ self.weight + self.bias) + 1) / 2
 
 
 class ProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
@@ -53,20 +249,16 @@ class ProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
     ):
         """Fit the concept model."""
         split_activations = self._sanitize_activations(activations)
-        np_activations = np.array(split_activations)
 
-        if len(np_activations.shape) != 2:
-            raise ValueError(
-                "Expected activations to be a 2D array, (n, d), got shape "
-                f"{np_activations.shape}"
-            )
-        if np_activations.shape[0] != labels.shape[0]:
+        if len(split_activations.shape) != 2:
+            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {split_activations.shape}")
+        if split_activations.shape[0] != labels.shape[0]:
             raise ValueError(
                 "Expected activations and labels to have the same number of rows, "
-                f"got {np_activations.shape[0]} and {labels.shape[0]}"
+                f"got {split_activations.shape[0]} and {labels.shape[0]}"
             )
 
-        self.concept_model.fit(np_activations, labels)
+        self.concept_model.fit(split_activations, labels)
 
     # TODO: check fitted
     def encode_activations(self, activations: LatentActivations) -> ConceptsActivations:
