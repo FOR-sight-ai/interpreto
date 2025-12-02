@@ -240,8 +240,9 @@ class BaseConceptInterpretationMethod(ABC):
             see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
-        device (torch.device | str | None):
-            The device to use for the interpretation.
+        concept_model_device (torch.device | str | None):
+            The device to use for the concept model forward pass.
+            If None, does not change the device.
     """
 
     def __init__(
@@ -252,7 +253,7 @@ class BaseConceptInterpretationMethod(ABC):
         use_vocab: bool = False,
         use_unique_words: bool = False,
         unique_words_kwargs: dict = {},
-        device: torch.device | str | None = "cpu",
+        concept_model_device: torch.device | str | None = None,
     ):
         if activation_granularity not in (
             ActivationGranularity.CLS_TOKEN,
@@ -275,7 +276,7 @@ class BaseConceptInterpretationMethod(ABC):
         self.use_vocab: bool = use_vocab
         self.use_unique_words: bool = use_unique_words
         self.unique_words_kwargs: dict = unique_words_kwargs
-        self.device: torch.device | str | None = device
+        self.concept_model_device: torch.device | str | None = concept_model_device
 
     @abstractmethod
     def interpret(
@@ -337,8 +338,11 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if latent_activations is not None:
-            if hasattr(self.concept_explainer.concept_model, "to"):
-                self.concept_explainer.concept_model.to(self.device)  # type: ignore
+            device: str | torch.device = self.concept_model_device if self.concept_model_device is not None else "cpu"
+            if self.concept_model_device is not None:
+                if hasattr(self.concept_explainer.concept_model, "to"):
+                    device = self.concept_explainer.concept_model.device
+                    self.concept_explainer.concept_model.to(device)  # type: ignore
 
             # batch over latent activations for concept encoding
             concepts_activations_list = []
@@ -347,7 +351,7 @@ class BaseConceptInterpretationMethod(ABC):
                 batch_latent_activations = latent_activations[batch_idx : batch_idx + self.concept_encoding_batch_size]
 
                 # concept model forward pass
-                batch_latent_activations = batch_latent_activations.to(self.device)
+                batch_latent_activations = batch_latent_activations.to(device)
                 batch_concepts_activations = self.concept_explainer.encode_activations(batch_latent_activations)
                 batch_latent_activations.cpu()
 
