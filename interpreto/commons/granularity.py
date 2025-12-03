@@ -35,8 +35,8 @@ import torch
 from beartype import beartype
 from jaxtyping import Bool, Float, Int, jaxtyped
 from transformers.tokenization_utils import PreTrainedTokenizer
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from transformers.tokenization_utils_base import BatchEncoding
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 # Lazy spacy import for SENTENCE granularities
 try:
@@ -257,7 +257,7 @@ class Granularity(Enum):
                     for i in range(n_inputs)
                 ]
             case _:
-                raise NotImplementedError(f"Granularity level {granularity} not implemented")
+                raise NotImplementedError(f"Granularity level {self} not implemented")
 
     @staticmethod
     def __all_tokens_get_indices(tokens_ids: torch.Tensor) -> list[list[int]]:
@@ -627,6 +627,6 @@ class Granularity(Enum):
                             )
                     contribution = aggregated_contribution
                 case _:
-                    raise NotImplementedError(f"Invalid granularity for aggregation: {granularity}")
+                    raise NotImplementedError(f"Invalid granularity for aggregation: {self}")
 
         return contribution

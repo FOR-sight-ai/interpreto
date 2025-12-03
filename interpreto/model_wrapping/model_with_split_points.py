@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 import gc
+import warnings
 from collections.abc import Callable, Iterable
 from enum import Enum
 from math import ceil
@@ -46,6 +47,18 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.splitting_utils import get_layer_by_idx, sort_paths, validate_path, walk_modules
 from interpreto.typing import ConceptsActivations, LatentActivations
+
+# Prevents:
+# UserWarning: Module ... of type ... has pre-defined a `output` attribute.
+# nnsight access for `output` will be mounted at `.nns_output` instead of `.output` for this module only.
+# This error message is raised by `nnsight` but it is treated by interpreto with the following line:
+# `output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"`
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    module="nnsight.intervention.envoy",
+    message=r".*has pre-defined a `output` attribute.*",
+)
 
 
 class InitializationError(ValueError):
@@ -308,7 +321,7 @@ class ModelWithSplitPoints(LanguageModel):
         self.split_points = split_points  # this uses the setter which handles validation
         self._model: PreTrainedModel  # specify type of `_model` attribute from NNsight
         if self.repo_id is None:
-            self.repo_id = self._model.config.name_or_path
+            self.repo_id = self._model.config.name_or_path  # type: ignore  (under specification from NNsight)
         self.batch_size = batch_size
 
         if not isinstance(model_or_repo_id, str):
@@ -635,6 +648,7 @@ class ModelWithSplitPoints(LanguageModel):
 
             case AG.CLS_TOKEN:
                 # reintegrate the reconstructed CLS token activations into the initial activations
+                initial_activations = initial_activations.clone()
                 initial_activations[:, 0, :] = new_activations
                 return initial_activations
 
@@ -869,6 +883,7 @@ class ModelWithSplitPoints(LanguageModel):
                     "`include_predicted_classes` is only supported for classification models. "
                     f"Provided model is a {self._model.__class__.__name__}."
                 )
+        self.tokenizer.padding_side = pad_side
 
         # add padding token to vocabulary if not present (model and tokenizer)
         if not hasattr(self.tokenizer, "pad_token") or self.tokenizer.pad_token is None:
@@ -912,8 +927,6 @@ class ModelWithSplitPoints(LanguageModel):
                     if isinstance(batch_inputs, list):
                         # tokenize text inputs for granularity selection
                         # include "offsets_mapping" for sentence selection strategy
-                        if activation_granularity == AG.CLS_TOKEN:
-                            self.tokenizer.padding_side = "right"
                         tokenized_inputs = self.tokenizer(
                             batch_inputs,
                             return_tensors="pt",

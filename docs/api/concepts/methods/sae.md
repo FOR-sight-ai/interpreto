@@ -22,7 +22,17 @@ icon: material/middleware-outline
 
 ## List of available SAEs
 
-::: interpreto.concepts.methods.VanillaSAEConcepts
+::: interpreto.concepts.methods.BatchTopKSAEConcepts
+    handler: python
+    options:
+      show_root_heading: true
+
+::: interpreto.concepts.methods.JumpReLUSAEConcepts
+    handler: python
+    options:
+      show_root_heading: true
+
+::: interpreto.concepts.methods.MpSAEConcepts
     handler: python
     options:
       show_root_heading: true
@@ -32,12 +42,7 @@ icon: material/middleware-outline
     options:
       show_root_heading: true
 
-::: interpreto.concepts.methods.BatchTopKSAEConcepts
-    handler: python
-    options:
-      show_root_heading: true
-
-::: interpreto.concepts.methods.JumpReLUSAEConcepts
+::: interpreto.concepts.methods.VanillaSAEConcepts
     handler: python
     options:
       show_root_heading: true

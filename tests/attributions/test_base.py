@@ -22,12 +22,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pytest
-import torch
 import pickle
 
-from interpreto.attributions.base import InferenceModes
-from interpreto.attributions.base import ClassificationAttributionExplainer
+import pytest
+import torch
+
+from interpreto.attributions.base import ClassificationAttributionExplainer, InferenceModes
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

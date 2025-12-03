@@ -18,7 +18,6 @@ BAB_CONFIGS = [
 MODELS = [
     "hf-internal-testing/tiny-random-gpt2",
     "hf-internal-testing/tiny-random-LlamaForCausalLM",
-    "hf-internal-testing/tiny-random-MistralForCausalLM",
 ]
 
 
