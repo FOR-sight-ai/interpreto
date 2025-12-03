@@ -472,6 +472,8 @@
       
         
       
+        
+      
     
     
     
@@ -550,14 +552,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../notebooks/concept_examples/" class="md-nav__link">
+      <a href="../../../notebooks/classification_concept_tutorial/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Training a Concept Explainer
+    Concept-based Explanations for Classification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../notebooks/generation_concept_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Generation
   
 
     
@@ -1731,10 +1761,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#interpreto.concepts.interpretations.TopKInputs(device)" class="md-nav__link">
+  <a href="#interpreto.concepts.interpretations.TopKInputs(concept_model_device)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model_device
       
     </span>
   </a>
@@ -1796,6 +1826,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;llm_interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.concepts.interpretations.LLMLabels(concept_encoding_batch_size)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_encoding_batch_size
       
     </span>
   </a>
@@ -1884,6 +1925,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;system_prompt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.concepts.interpretations.LLMLabels(concept_model_device)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model_device
       
     </span>
   </a>
@@ -2461,10 +2513,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#interpreto.concepts.interpretations.TopKInputs(device)" class="md-nav__link">
+  <a href="#interpreto.concepts.interpretations.TopKInputs(concept_model_device)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model_device
       
     </span>
   </a>
@@ -2526,6 +2578,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;llm_interface
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.concepts.interpretations.LLMLabels(concept_encoding_batch_size)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_encoding_batch_size
       
     </span>
   </a>
@@ -2614,6 +2677,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;system_prompt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.concepts.interpretations.LLMLabels(concept_model_device)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model_device
       
     </span>
   </a>
@@ -2762,7 +2836,7 @@
   
       class-attribute
       instance-attribute
-   (interpreto.model_wrapping.model_with_split_points.ActivationGranularity.WORD)" href="../model_with_split_points/#interpreto.model_wrapping.model_with_split_points.ActivationGranularity.WORD">WORD</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="concept_encoding_batch_size (interpreto.concepts.interpretations.TopKInputs(concept_encoding_batch_size))" href="#interpreto.concepts.interpretations.TopKInputs(concept_encoding_batch_size)">concept_encoding_batch_size</a></span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="k (interpreto.concepts.interpretations.TopKInputs(k))" href="#interpreto.concepts.interpretations.TopKInputs(k)">k</a></span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_vocab (interpreto.concepts.interpretations.TopKInputs(use_vocab))" href="#interpreto.concepts.interpretations.TopKInputs(use_vocab)">use_vocab</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_unique_words (interpreto.concepts.interpretations.TopKInputs(use_unique_words))" href="#interpreto.concepts.interpretations.TopKInputs(use_unique_words)">use_unique_words</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="unique_words_kwargs (interpreto.concepts.interpretations.TopKInputs(unique_words_kwargs))" href="#interpreto.concepts.interpretations.TopKInputs(unique_words_kwargs)">unique_words_kwargs</a></span><span class="o">=</span><span class="p">{},</span> <span class="n"><a class="autorefs autorefs-internal" title="device (interpreto.concepts.interpretations.TopKInputs(device))" href="#interpreto.concepts.interpretations.TopKInputs(device)">device</a></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+   (interpreto.model_wrapping.model_with_split_points.ActivationGranularity.WORD)" href="../model_with_split_points/#interpreto.model_wrapping.model_with_split_points.ActivationGranularity.WORD">WORD</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="concept_encoding_batch_size (interpreto.concepts.interpretations.TopKInputs(concept_encoding_batch_size))" href="#interpreto.concepts.interpretations.TopKInputs(concept_encoding_batch_size)">concept_encoding_batch_size</a></span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="k (interpreto.concepts.interpretations.TopKInputs(k))" href="#interpreto.concepts.interpretations.TopKInputs(k)">k</a></span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_vocab (interpreto.concepts.interpretations.TopKInputs(use_vocab))" href="#interpreto.concepts.interpretations.TopKInputs(use_vocab)">use_vocab</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_unique_words (interpreto.concepts.interpretations.TopKInputs(use_unique_words))" href="#interpreto.concepts.interpretations.TopKInputs(use_unique_words)">use_unique_words</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="unique_words_kwargs (interpreto.concepts.interpretations.TopKInputs(unique_words_kwargs))" href="#interpreto.concepts.interpretations.TopKInputs(unique_words_kwargs)">unique_words_kwargs</a></span><span class="o">=</span><span class="p">{},</span> <span class="n"><a class="autorefs autorefs-internal" title="concept_model_device (interpreto.concepts.interpretations.TopKInputs(concept_model_device))" href="#interpreto.concepts.interpretations.TopKInputs(concept_model_device)">concept_model_device</a></span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -2927,19 +3001,19 @@ Possible arguments are <code>count_min_threshold</code>, <code>lemmatize</code>,
           </tr>
           <tr class="doc-section-item">
             <td>
-<h3 id="interpreto.concepts.interpretations.TopKInputs(device)" class="doc doc-heading doc-heading-parameter">                  <code>device</code>
-<a href="#interpreto.concepts.interpretations.TopKInputs(device)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
+<h3 id="interpreto.concepts.interpretations.TopKInputs(concept_model_device)" class="doc doc-heading doc-heading-parameter">                  <code>concept_model_device</code>
+<a href="#interpreto.concepts.interpretations.TopKInputs(concept_model_device)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
                   <code><span title="torch.device">device</span> | <span title="str">str</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The device to use for forward passes.
-If None, use the one from <code>model_with_split_points</code>.</p>
+                <p>The device to use for the concept model forward pass.
+If None, does not change the device.</p>
               </div>
             </td>
             <td>
-                  <code>&#39;cpu&#39;</code>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -3108,7 +3182,7 @@ then use <code>TopKInputs</code> with <code>use_unique_words=True</code> and <co
 <a id="__codelineno-0-223" name="__codelineno-0-223"></a>    <span class="n">use_vocab</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-224" name="__codelineno-0-224"></a>    <span class="n">use_unique_words</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-225" name="__codelineno-0-225"></a>    <span class="n">unique_words_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
-<a id="__codelineno-0-226" name="__codelineno-0-226"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a>    <span class="n">concept_model_device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="p">):</span>
 <a id="__codelineno-0-228" name="__codelineno-0-228"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-229" name="__codelineno-0-229"></a>        <span class="n">concept_explainer</span><span class="o">=</span><span class="n">concept_explainer</span><span class="p">,</span>
@@ -3117,7 +3191,7 @@ then use <code>TopKInputs</code> with <code>use_unique_words=True</code> and <co
 <a id="__codelineno-0-232" name="__codelineno-0-232"></a>        <span class="n">use_vocab</span><span class="o">=</span><span class="n">use_vocab</span><span class="p">,</span>
 <a id="__codelineno-0-233" name="__codelineno-0-233"></a>        <span class="n">use_unique_words</span><span class="o">=</span><span class="n">use_unique_words</span><span class="p">,</span>
 <a id="__codelineno-0-234" name="__codelineno-0-234"></a>        <span class="n">unique_words_kwargs</span><span class="o">=</span><span class="n">unique_words_kwargs</span><span class="p">,</span>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a>        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>        <span class="n">concept_model_device</span><span class="o">=</span><span class="n">concept_model_device</span><span class="p">,</span>
 <a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="p">)</span>
 <a id="__codelineno-0-237" name="__codelineno-0-237"></a>
 <a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span>
@@ -3398,7 +3472,7 @@ it is computed from the inputs or latent activations.</p>
   
       class-attribute
       instance-attribute
-   (interpreto.model_wrapping.model_with_split_points.ActivationGranularity.TOKEN)" href="../model_with_split_points/#interpreto.model_wrapping.model_with_split_points.ActivationGranularity.TOKEN">TOKEN</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="llm_interface (interpreto.concepts.interpretations.LLMLabels(llm_interface))" href="#interpreto.concepts.interpretations.LLMLabels(llm_interface)">llm_interface</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="sampling_method (interpreto.concepts.interpretations.LLMLabels(sampling_method))" href="#interpreto.concepts.interpretations.LLMLabels(sampling_method)">sampling_method</a></span><span class="o">=</span><span class="n"><span title="interpreto.concepts.interpretations.llm_labels.SamplingMethod.TOP">TOP</span></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="k_examples (interpreto.concepts.interpretations.LLMLabels(k_examples))" href="#interpreto.concepts.interpretations.LLMLabels(k_examples)">k_examples</a></span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="k_context (interpreto.concepts.interpretations.LLMLabels(k_context))" href="#interpreto.concepts.interpretations.LLMLabels(k_context)">k_context</a></span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_vocab (interpreto.concepts.interpretations.LLMLabels(use_vocab))" href="#interpreto.concepts.interpretations.LLMLabels(use_vocab)">use_vocab</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_unique_words (interpreto.concepts.interpretations.LLMLabels(use_unique_words))" href="#interpreto.concepts.interpretations.LLMLabels(use_unique_words)">use_unique_words</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="unique_words_kwargs (interpreto.concepts.interpretations.LLMLabels(unique_words_kwargs))" href="#interpreto.concepts.interpretations.LLMLabels(unique_words_kwargs)">unique_words_kwargs</a></span><span class="o">=</span><span class="p">{},</span> <span class="n"><a class="autorefs autorefs-internal" title="k_quantile (interpreto.concepts.interpretations.LLMLabels(k_quantile))" href="#interpreto.concepts.interpretations.LLMLabels(k_quantile)">k_quantile</a></span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="system_prompt (interpreto.concepts.interpretations.LLMLabels(system_prompt))" href="#interpreto.concepts.interpretations.LLMLabels(system_prompt)">system_prompt</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.interpretations.LLMLabels(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+   (interpreto.model_wrapping.model_with_split_points.ActivationGranularity.TOKEN)" href="../model_with_split_points/#interpreto.model_wrapping.model_with_split_points.ActivationGranularity.TOKEN">TOKEN</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="llm_interface (interpreto.concepts.interpretations.LLMLabels(llm_interface))" href="#interpreto.concepts.interpretations.LLMLabels(llm_interface)">llm_interface</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="concept_encoding_batch_size (interpreto.concepts.interpretations.LLMLabels(concept_encoding_batch_size))" href="#interpreto.concepts.interpretations.LLMLabels(concept_encoding_batch_size)">concept_encoding_batch_size</a></span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="sampling_method (interpreto.concepts.interpretations.LLMLabels(sampling_method))" href="#interpreto.concepts.interpretations.LLMLabels(sampling_method)">sampling_method</a></span><span class="o">=</span><span class="n"><span title="interpreto.concepts.interpretations.llm_labels.SamplingMethod.TOP">TOP</span></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="k_examples (interpreto.concepts.interpretations.LLMLabels(k_examples))" href="#interpreto.concepts.interpretations.LLMLabels(k_examples)">k_examples</a></span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="k_context (interpreto.concepts.interpretations.LLMLabels(k_context))" href="#interpreto.concepts.interpretations.LLMLabels(k_context)">k_context</a></span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_vocab (interpreto.concepts.interpretations.LLMLabels(use_vocab))" href="#interpreto.concepts.interpretations.LLMLabels(use_vocab)">use_vocab</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_unique_words (interpreto.concepts.interpretations.LLMLabels(use_unique_words))" href="#interpreto.concepts.interpretations.LLMLabels(use_unique_words)">use_unique_words</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="unique_words_kwargs (interpreto.concepts.interpretations.LLMLabels(unique_words_kwargs))" href="#interpreto.concepts.interpretations.LLMLabels(unique_words_kwargs)">unique_words_kwargs</a></span><span class="o">=</span><span class="p">{},</span> <span class="n"><a class="autorefs autorefs-internal" title="k_quantile (interpreto.concepts.interpretations.LLMLabels(k_quantile))" href="#interpreto.concepts.interpretations.LLMLabels(k_quantile)">k_quantile</a></span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="system_prompt (interpreto.concepts.interpretations.LLMLabels(system_prompt))" href="#interpreto.concepts.interpretations.LLMLabels(system_prompt)">system_prompt</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="concept_model_device (interpreto.concepts.interpretations.LLMLabels(concept_model_device))" href="#interpreto.concepts.interpretations.LLMLabels(concept_model_device)">concept_model_device</a></span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -3487,6 +3561,22 @@ Ignored when use_vocab=True.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="interpreto.concepts.interpretations.LLMLabels(concept_encoding_batch_size)" class="doc doc-heading doc-heading-parameter">                  <code>concept_encoding_batch_size</code>
+<a href="#interpreto.concepts.interpretations.LLMLabels(concept_encoding_batch_size)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The batch size to use for the concept encoding.</p>
+              </div>
+            </td>
+            <td>
+                  <code>1024</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -3622,6 +3712,23 @@ Possible arguments are <code>count_min_threshold</code>, <code>lemmatize</code>,
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="interpreto.concepts.interpretations.LLMLabels(concept_model_device)" class="doc doc-heading doc-heading-parameter">                  <code>concept_model_device</code>
+<a href="#interpreto.concepts.interpretations.LLMLabels(concept_model_device)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
+            <td>
+                  <code><span title="torch.device">device</span> | <span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The device to use for the concept model forward pass.
+If None, does not change the device.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3634,14 +3741,7 @@ Possible arguments are <code>count_min_threshold</code>, <code>lemmatize</code>,
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>interpreto/concepts/interpretations/llm_labels.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-150">150</a></span>
-<span class="normal"><a href="#__codelineno-0-151">151</a></span>
-<span class="normal"><a href="#__codelineno-0-152">152</a></span>
-<span class="normal"><a href="#__codelineno-0-153">153</a></span>
-<span class="normal"><a href="#__codelineno-0-154">154</a></span>
-<span class="normal"><a href="#__codelineno-0-155">155</a></span>
-<span class="normal"><a href="#__codelineno-0-156">156</a></span>
-<span class="normal"><a href="#__codelineno-0-157">157</a></span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-157">157</a></span>
 <span class="normal"><a href="#__codelineno-0-158">158</a></span>
 <span class="normal"><a href="#__codelineno-0-159">159</a></span>
 <span class="normal"><a href="#__codelineno-0-160">160</a></span>
@@ -3671,44 +3771,55 @@ Possible arguments are <code>count_min_threshold</code>, <code>lemmatize</code>,
 <span class="normal"><a href="#__codelineno-0-184">184</a></span>
 <span class="normal"><a href="#__codelineno-0-185">185</a></span>
 <span class="normal"><a href="#__codelineno-0-186">186</a></span>
-<span class="normal"><a href="#__codelineno-0-187">187</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-150" name="__codelineno-0-150"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-<a id="__codelineno-0-151" name="__codelineno-0-151"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-152" name="__codelineno-0-152"></a>    <span class="o">*</span><span class="p">,</span>
-<a id="__codelineno-0-153" name="__codelineno-0-153"></a>    <span class="n">concept_explainer</span><span class="p">:</span> <span class="n">ConceptEncoderExplainer</span><span class="p">,</span>
-<a id="__codelineno-0-154" name="__codelineno-0-154"></a>    <span class="n">activation_granularity</span><span class="p">:</span> <span class="n">ActivationGranularity</span> <span class="o">=</span> <span class="n">ActivationGranularity</span><span class="o">.</span><span class="n">TOKEN</span><span class="p">,</span>
-<a id="__codelineno-0-155" name="__codelineno-0-155"></a>    <span class="n">llm_interface</span><span class="p">:</span> <span class="n">LLMInterface</span><span class="p">,</span>
-<a id="__codelineno-0-156" name="__codelineno-0-156"></a>    <span class="n">sampling_method</span><span class="p">:</span> <span class="n">SamplingMethod</span> <span class="o">=</span> <span class="n">SamplingMethod</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span>
-<a id="__codelineno-0-157" name="__codelineno-0-157"></a>    <span class="n">k_examples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30</span><span class="p">,</span>
-<a id="__codelineno-0-158" name="__codelineno-0-158"></a>    <span class="n">k_context</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-<a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="n">use_vocab</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="n">use_unique_words</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="n">unique_words_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
-<a id="__codelineno-0-162" name="__codelineno-0-162"></a>    <span class="n">k_quantile</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
-<a id="__codelineno-0-163" name="__codelineno-0-163"></a>    <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-164" name="__codelineno-0-164"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="p">):</span>
-<a id="__codelineno-0-166" name="__codelineno-0-166"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-<a id="__codelineno-0-167" name="__codelineno-0-167"></a>        <span class="n">concept_explainer</span><span class="o">=</span><span class="n">concept_explainer</span><span class="p">,</span>
-<a id="__codelineno-0-168" name="__codelineno-0-168"></a>        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
-<a id="__codelineno-0-169" name="__codelineno-0-169"></a>        <span class="n">use_vocab</span><span class="o">=</span><span class="n">use_vocab</span><span class="p">,</span>
-<a id="__codelineno-0-170" name="__codelineno-0-170"></a>        <span class="n">use_unique_words</span><span class="o">=</span><span class="n">use_unique_words</span><span class="p">,</span>
-<a id="__codelineno-0-171" name="__codelineno-0-171"></a>        <span class="n">unique_words_kwargs</span><span class="o">=</span><span class="n">unique_words_kwargs</span><span class="p">,</span>
-<a id="__codelineno-0-172" name="__codelineno-0-172"></a>        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
-<a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="p">)</span>
-<a id="__codelineno-0-174" name="__codelineno-0-174"></a>
-<a id="__codelineno-0-175" name="__codelineno-0-175"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">llm_interface</span> <span class="o">=</span> <span class="n">llm_interface</span>
-<a id="__codelineno-0-176" name="__codelineno-0-176"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">sampling_method</span> <span class="o">=</span> <span class="n">sampling_method</span>
-<a id="__codelineno-0-177" name="__codelineno-0-177"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">k_examples</span> <span class="o">=</span> <span class="n">k_examples</span>
-<a id="__codelineno-0-178" name="__codelineno-0-178"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">k_context</span> <span class="o">=</span> <span class="n">k_context</span>
-<a id="__codelineno-0-179" name="__codelineno-0-179"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">k_quantile</span> <span class="o">=</span> <span class="n">k_quantile</span>
-<a id="__codelineno-0-180" name="__codelineno-0-180"></a>
-<a id="__codelineno-0-181" name="__codelineno-0-181"></a>    <span class="k">if</span> <span class="n">system_prompt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-182" name="__codelineno-0-182"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_context</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-<a id="__codelineno-0-183" name="__codelineno-0-183"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span> <span class="o">=</span> <span class="n">SYSTEM_PROMPT_WITH_CONTEXT</span>
-<a id="__codelineno-0-184" name="__codelineno-0-184"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-185" name="__codelineno-0-185"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span> <span class="o">=</span> <span class="n">SYSTEM_PROMPT_WITHOUT_CONTEXT</span>
-<a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-187" name="__codelineno-0-187"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span> <span class="o">=</span> <span class="n">system_prompt</span>
+<span class="normal"><a href="#__codelineno-0-187">187</a></span>
+<span class="normal"><a href="#__codelineno-0-188">188</a></span>
+<span class="normal"><a href="#__codelineno-0-189">189</a></span>
+<span class="normal"><a href="#__codelineno-0-190">190</a></span>
+<span class="normal"><a href="#__codelineno-0-191">191</a></span>
+<span class="normal"><a href="#__codelineno-0-192">192</a></span>
+<span class="normal"><a href="#__codelineno-0-193">193</a></span>
+<span class="normal"><a href="#__codelineno-0-194">194</a></span>
+<span class="normal"><a href="#__codelineno-0-195">195</a></span>
+<span class="normal"><a href="#__codelineno-0-196">196</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-157" name="__codelineno-0-157"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-158" name="__codelineno-0-158"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="n">concept_explainer</span><span class="p">:</span> <span class="n">ConceptEncoderExplainer</span><span class="p">,</span>
+<a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="n">activation_granularity</span><span class="p">:</span> <span class="n">ActivationGranularity</span> <span class="o">=</span> <span class="n">ActivationGranularity</span><span class="o">.</span><span class="n">TOKEN</span><span class="p">,</span>
+<a id="__codelineno-0-162" name="__codelineno-0-162"></a>    <span class="n">llm_interface</span><span class="p">:</span> <span class="n">LLMInterface</span><span class="p">,</span>
+<a id="__codelineno-0-163" name="__codelineno-0-163"></a>    <span class="n">concept_encoding_batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">,</span>
+<a id="__codelineno-0-164" name="__codelineno-0-164"></a>    <span class="n">sampling_method</span><span class="p">:</span> <span class="n">SamplingMethod</span> <span class="o">=</span> <span class="n">SamplingMethod</span><span class="o">.</span><span class="n">TOP</span><span class="p">,</span>
+<a id="__codelineno-0-165" name="__codelineno-0-165"></a>    <span class="n">k_examples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30</span><span class="p">,</span>
+<a id="__codelineno-0-166" name="__codelineno-0-166"></a>    <span class="n">k_context</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-167" name="__codelineno-0-167"></a>    <span class="n">use_vocab</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-168" name="__codelineno-0-168"></a>    <span class="n">use_unique_words</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a>    <span class="n">unique_words_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+<a id="__codelineno-0-170" name="__codelineno-0-170"></a>    <span class="n">k_quantile</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-172" name="__codelineno-0-172"></a>    <span class="n">concept_model_device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="p">):</span>
+<a id="__codelineno-0-174" name="__codelineno-0-174"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-175" name="__codelineno-0-175"></a>        <span class="n">concept_explainer</span><span class="o">=</span><span class="n">concept_explainer</span><span class="p">,</span>
+<a id="__codelineno-0-176" name="__codelineno-0-176"></a>        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
+<a id="__codelineno-0-177" name="__codelineno-0-177"></a>        <span class="n">concept_encoding_batch_size</span><span class="o">=</span><span class="n">concept_encoding_batch_size</span><span class="p">,</span>
+<a id="__codelineno-0-178" name="__codelineno-0-178"></a>        <span class="n">use_vocab</span><span class="o">=</span><span class="n">use_vocab</span><span class="p">,</span>
+<a id="__codelineno-0-179" name="__codelineno-0-179"></a>        <span class="n">use_unique_words</span><span class="o">=</span><span class="n">use_unique_words</span><span class="p">,</span>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a>        <span class="n">unique_words_kwargs</span><span class="o">=</span><span class="n">unique_words_kwargs</span><span class="p">,</span>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a>        <span class="n">concept_model_device</span><span class="o">=</span><span class="n">concept_model_device</span><span class="p">,</span>
+<a id="__codelineno-0-182" name="__codelineno-0-182"></a>    <span class="p">)</span>
+<a id="__codelineno-0-183" name="__codelineno-0-183"></a>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">llm_interface</span> <span class="o">=</span> <span class="n">llm_interface</span>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">sampling_method</span> <span class="o">=</span> <span class="n">sampling_method</span>
+<a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">k_examples</span> <span class="o">=</span> <span class="n">k_examples</span>
+<a id="__codelineno-0-187" name="__codelineno-0-187"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">k_context</span> <span class="o">=</span> <span class="n">k_context</span>
+<a id="__codelineno-0-188" name="__codelineno-0-188"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">k_quantile</span> <span class="o">=</span> <span class="n">k_quantile</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="k">if</span> <span class="n">system_prompt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_context</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-192" name="__codelineno-0-192"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span> <span class="o">=</span> <span class="n">SYSTEM_PROMPT_WITH_CONTEXT</span>
+<a id="__codelineno-0-193" name="__codelineno-0-193"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-194" name="__codelineno-0-194"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span> <span class="o">=</span> <span class="n">SYSTEM_PROMPT_WITHOUT_CONTEXT</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span> <span class="o">=</span> <span class="n">system_prompt</span>
 </code></pre></div></td></tr></table></div>
                   </details>
 
@@ -3850,16 +3961,7 @@ it is computed from the inputs or latent activations.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/interpretations/llm_labels.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-189">189</a></span>
-<span class="normal"><a href="#__codelineno-0-190">190</a></span>
-<span class="normal"><a href="#__codelineno-0-191">191</a></span>
-<span class="normal"><a href="#__codelineno-0-192">192</a></span>
-<span class="normal"><a href="#__codelineno-0-193">193</a></span>
-<span class="normal"><a href="#__codelineno-0-194">194</a></span>
-<span class="normal"><a href="#__codelineno-0-195">195</a></span>
-<span class="normal"><a href="#__codelineno-0-196">196</a></span>
-<span class="normal"><a href="#__codelineno-0-197">197</a></span>
-<span class="normal"><a href="#__codelineno-0-198">198</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-198">198</a></span>
 <span class="normal"><a href="#__codelineno-0-199">199</a></span>
 <span class="normal"><a href="#__codelineno-0-200">200</a></span>
 <span class="normal"><a href="#__codelineno-0-201">201</a></span>
@@ -3917,74 +4019,83 @@ it is computed from the inputs or latent activations.</p>
 <span class="normal"><a href="#__codelineno-0-253">253</a></span>
 <span class="normal"><a href="#__codelineno-0-254">254</a></span>
 <span class="normal"><a href="#__codelineno-0-255">255</a></span>
-<span class="normal"><a href="#__codelineno-0-256">256</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="k">def</span><span class="w"> </span><span class="nf">interpret</span><span class="p">(</span>
-<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-191" name="__codelineno-0-191"></a>    <span class="n">concepts_indices</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;all&quot;</span><span class="p">],</span>
-<a id="__codelineno-0-192" name="__codelineno-0-192"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-193" name="__codelineno-0-193"></a>    <span class="n">latent_activations</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">|</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-194" name="__codelineno-0-194"></a>    <span class="n">concepts_activations</span><span class="p">:</span> <span class="n">ConceptsActivations</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-195" name="__codelineno-0-195"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
-<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">    Give the interpretation of the concepts dimensions in the latent space into a human-readable format.</span>
-<a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">    The interpretation is a mapping between the concepts indices and a short textual description.</span>
-<a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">    The granularity of input examples is determined by the `activation_granularity` class attribute.</span>
-<a id="__codelineno-0-200" name="__codelineno-0-200"></a>
-<a id="__codelineno-0-201" name="__codelineno-0-201"></a>
-<a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">        concepts_indices (int | list[int] | Literal[&quot;all&quot;]):</span>
-<a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">            The indices of the concepts to interpret. If &quot;all&quot;, all concepts are interpreted.</span>
-<a id="__codelineno-0-205" name="__codelineno-0-205"></a>
-<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">        inputs (list[str] | None):</span>
-<a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">            The inputs to use for the interpretation.</span>
-<a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="sd">            Necessary if not `use_vocab`,as examples are extracted from the inputs.</span>
+<span class="normal"><a href="#__codelineno-0-256">256</a></span>
+<span class="normal"><a href="#__codelineno-0-257">257</a></span>
+<span class="normal"><a href="#__codelineno-0-258">258</a></span>
+<span class="normal"><a href="#__codelineno-0-259">259</a></span>
+<span class="normal"><a href="#__codelineno-0-260">260</a></span>
+<span class="normal"><a href="#__codelineno-0-261">261</a></span>
+<span class="normal"><a href="#__codelineno-0-262">262</a></span>
+<span class="normal"><a href="#__codelineno-0-263">263</a></span>
+<span class="normal"><a href="#__codelineno-0-264">264</a></span>
+<span class="normal"><a href="#__codelineno-0-265">265</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="k">def</span><span class="w"> </span><span class="nf">interpret</span><span class="p">(</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a>    <span class="n">concepts_indices</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;all&quot;</span><span class="p">],</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="n">latent_activations</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">|</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>    <span class="n">concepts_activations</span><span class="p">:</span> <span class="n">ConceptsActivations</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">    Give the interpretation of the concepts dimensions in the latent space into a human-readable format.</span>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">    The interpretation is a mapping between the concepts indices and a short textual description.</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="sd">    The granularity of input examples is determined by the `activation_granularity` class attribute.</span>
 <a id="__codelineno-0-209" name="__codelineno-0-209"></a>
-<a id="__codelineno-0-210" name="__codelineno-0-210"></a><span class="sd">        latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, &quot;nl d&quot;] | None):</span>
-<a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">            The latent activations matching the inputs. If not provided,</span>
-<a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="sd">            it is computed from the inputs.</span>
-<a id="__codelineno-0-213" name="__codelineno-0-213"></a>
-<a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="sd">        concepts_activations (Float[torch.Tensor, &quot;nl cpt&quot;] | None):</span>
-<a id="__codelineno-0-215" name="__codelineno-0-215"></a><span class="sd">            The concepts activations matching the inputs. If not provided,</span>
-<a id="__codelineno-0-216" name="__codelineno-0-216"></a><span class="sd">            it is computed from the inputs or latent activations.</span>
-<a id="__codelineno-0-217" name="__codelineno-0-217"></a>
-<a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="sd">        Mapping[int, str | None]: The textual labels of the concepts indices.</span>
-<a id="__codelineno-0-220" name="__codelineno-0-220"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-221" name="__codelineno-0-221"></a>    <span class="n">sure_concepts_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
-<a id="__codelineno-0-222" name="__codelineno-0-222"></a>    <span class="n">granular_inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-<a id="__codelineno-0-223" name="__codelineno-0-223"></a>    <span class="n">sure_concepts_activations</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;nl cpt&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-224" name="__codelineno-0-224"></a>    <span class="n">granular_sample_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
-<a id="__codelineno-0-225" name="__codelineno-0-225"></a>    <span class="n">sure_concepts_indices</span><span class="p">,</span> <span class="n">granular_inputs</span><span class="p">,</span> <span class="n">sure_concepts_activations</span><span class="p">,</span> <span class="n">granular_sample_ids</span> <span class="o">=</span> <span class="p">(</span>
-<a id="__codelineno-0-226" name="__codelineno-0-226"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">get_granular_inputs_and_concept_activations</span><span class="p">(</span>
-<a id="__codelineno-0-227" name="__codelineno-0-227"></a>            <span class="n">concepts_indices</span><span class="o">=</span><span class="n">concepts_indices</span><span class="p">,</span>
-<a id="__codelineno-0-228" name="__codelineno-0-228"></a>            <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
-<a id="__codelineno-0-229" name="__codelineno-0-229"></a>            <span class="n">latent_activations</span><span class="o">=</span><span class="n">latent_activations</span><span class="p">,</span>
-<a id="__codelineno-0-230" name="__codelineno-0-230"></a>            <span class="n">concepts_activations</span><span class="o">=</span><span class="n">concepts_activations</span><span class="p">,</span>
-<a id="__codelineno-0-231" name="__codelineno-0-231"></a>        <span class="p">)</span>
-<a id="__codelineno-0-232" name="__codelineno-0-232"></a>    <span class="p">)</span>
-<a id="__codelineno-0-233" name="__codelineno-0-233"></a>
-<a id="__codelineno-0-234" name="__codelineno-0-234"></a>    <span class="n">labels</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a>    <span class="k">for</span> <span class="n">concept_idx</span> <span class="ow">in</span> <span class="n">sure_concepts_indices</span><span class="p">:</span>
-<a id="__codelineno-0-236" name="__codelineno-0-236"></a>        <span class="n">example_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_method</span><span class="o">.</span><span class="n">sample_examples</span><span class="p">(</span>
-<a id="__codelineno-0-237" name="__codelineno-0-237"></a>            <span class="n">concept_activations</span><span class="o">=</span><span class="n">sure_concepts_activations</span><span class="p">[:,</span> <span class="n">concept_idx</span><span class="p">],</span>
-<a id="__codelineno-0-238" name="__codelineno-0-238"></a>            <span class="n">k_examples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_examples</span><span class="p">,</span>
-<a id="__codelineno-0-239" name="__codelineno-0-239"></a>            <span class="n">k_quantile</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_quantile</span><span class="p">,</span>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a>
+<a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="sd">        concepts_indices (int | list[int] | Literal[&quot;all&quot;]):</span>
+<a id="__codelineno-0-213" name="__codelineno-0-213"></a><span class="sd">            The indices of the concepts to interpret. If &quot;all&quot;, all concepts are interpreted.</span>
+<a id="__codelineno-0-214" name="__codelineno-0-214"></a>
+<a id="__codelineno-0-215" name="__codelineno-0-215"></a><span class="sd">        inputs (list[str] | None):</span>
+<a id="__codelineno-0-216" name="__codelineno-0-216"></a><span class="sd">            The inputs to use for the interpretation.</span>
+<a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="sd">            Necessary if not `use_vocab`,as examples are extracted from the inputs.</span>
+<a id="__codelineno-0-218" name="__codelineno-0-218"></a>
+<a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="sd">        latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, &quot;nl d&quot;] | None):</span>
+<a id="__codelineno-0-220" name="__codelineno-0-220"></a><span class="sd">            The latent activations matching the inputs. If not provided,</span>
+<a id="__codelineno-0-221" name="__codelineno-0-221"></a><span class="sd">            it is computed from the inputs.</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a>
+<a id="__codelineno-0-223" name="__codelineno-0-223"></a><span class="sd">        concepts_activations (Float[torch.Tensor, &quot;nl cpt&quot;] | None):</span>
+<a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="sd">            The concepts activations matching the inputs. If not provided,</span>
+<a id="__codelineno-0-225" name="__codelineno-0-225"></a><span class="sd">            it is computed from the inputs or latent activations.</span>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="sd">        Mapping[int, str | None]: The textual labels of the concepts indices.</span>
+<a id="__codelineno-0-229" name="__codelineno-0-229"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-230" name="__codelineno-0-230"></a>    <span class="n">sure_concepts_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+<a id="__codelineno-0-231" name="__codelineno-0-231"></a>    <span class="n">granular_inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a>    <span class="n">sure_concepts_activations</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;nl cpt&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a>    <span class="n">granular_sample_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+<a id="__codelineno-0-234" name="__codelineno-0-234"></a>    <span class="n">sure_concepts_indices</span><span class="p">,</span> <span class="n">granular_inputs</span><span class="p">,</span> <span class="n">sure_concepts_activations</span><span class="p">,</span> <span class="n">granular_sample_ids</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">get_granular_inputs_and_concept_activations</span><span class="p">(</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a>            <span class="n">concepts_indices</span><span class="o">=</span><span class="n">concepts_indices</span><span class="p">,</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a>            <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a>            <span class="n">latent_activations</span><span class="o">=</span><span class="n">latent_activations</span><span class="p">,</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a>            <span class="n">concepts_activations</span><span class="o">=</span><span class="n">concepts_activations</span><span class="p">,</span>
 <a id="__codelineno-0-240" name="__codelineno-0-240"></a>        <span class="p">)</span>
-<a id="__codelineno-0-241" name="__codelineno-0-241"></a>        <span class="n">examples</span> <span class="o">=</span> <span class="n">_format_examples</span><span class="p">(</span>
-<a id="__codelineno-0-242" name="__codelineno-0-242"></a>            <span class="n">example_ids</span><span class="o">=</span><span class="n">example_idx</span><span class="p">,</span>
-<a id="__codelineno-0-243" name="__codelineno-0-243"></a>            <span class="n">inputs</span><span class="o">=</span><span class="n">granular_inputs</span><span class="p">,</span>
-<a id="__codelineno-0-244" name="__codelineno-0-244"></a>            <span class="n">concept_activations</span><span class="o">=</span><span class="n">sure_concepts_activations</span><span class="p">[:,</span> <span class="n">concept_idx</span><span class="p">],</span>
-<a id="__codelineno-0-245" name="__codelineno-0-245"></a>            <span class="n">sample_ids</span><span class="o">=</span><span class="n">granular_sample_ids</span><span class="p">,</span>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a>            <span class="n">k_context</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_context</span><span class="p">,</span>
-<a id="__codelineno-0-247" name="__codelineno-0-247"></a>        <span class="p">)</span>
-<a id="__codelineno-0-248" name="__codelineno-0-248"></a>        <span class="n">example_prompt</span> <span class="o">=</span> <span class="n">_build_example_prompt</span><span class="p">(</span><span class="n">examples</span><span class="p">)</span>
-<a id="__codelineno-0-249" name="__codelineno-0-249"></a>        <span class="n">prompt</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Role</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
-<a id="__codelineno-0-250" name="__codelineno-0-250"></a>            <span class="p">(</span><span class="n">Role</span><span class="o">.</span><span class="n">SYSTEM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">),</span>
-<a id="__codelineno-0-251" name="__codelineno-0-251"></a>            <span class="p">(</span><span class="n">Role</span><span class="o">.</span><span class="n">USER</span><span class="p">,</span> <span class="n">example_prompt</span><span class="p">),</span>
-<a id="__codelineno-0-252" name="__codelineno-0-252"></a>            <span class="p">(</span><span class="n">Role</span><span class="o">.</span><span class="n">ASSISTANT</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a>        <span class="p">]</span>
-<a id="__codelineno-0-254" name="__codelineno-0-254"></a>        <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_interface</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a>        <span class="n">labels</span><span class="p">[</span><span class="n">concept_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">label</span>
-<a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="k">return</span> <span class="n">labels</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>    <span class="p">)</span>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a>    <span class="n">labels</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a>    <span class="k">for</span> <span class="n">concept_idx</span> <span class="ow">in</span> <span class="n">sure_concepts_indices</span><span class="p">:</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a>        <span class="n">example_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_method</span><span class="o">.</span><span class="n">sample_examples</span><span class="p">(</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a>            <span class="n">concept_activations</span><span class="o">=</span><span class="n">sure_concepts_activations</span><span class="p">[:,</span> <span class="n">concept_idx</span><span class="p">],</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a>            <span class="n">k_examples</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_examples</span><span class="p">,</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>            <span class="n">k_quantile</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_quantile</span><span class="p">,</span>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a>        <span class="p">)</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a>        <span class="n">examples</span> <span class="o">=</span> <span class="n">_format_examples</span><span class="p">(</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a>            <span class="n">example_ids</span><span class="o">=</span><span class="n">example_idx</span><span class="p">,</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>            <span class="n">inputs</span><span class="o">=</span><span class="n">granular_inputs</span><span class="p">,</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>            <span class="n">concept_activations</span><span class="o">=</span><span class="n">sure_concepts_activations</span><span class="p">[:,</span> <span class="n">concept_idx</span><span class="p">],</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a>            <span class="n">sample_ids</span><span class="o">=</span><span class="n">granular_sample_ids</span><span class="p">,</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a>            <span class="n">k_context</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">k_context</span><span class="p">,</span>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a>        <span class="p">)</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a>        <span class="n">example_prompt</span> <span class="o">=</span> <span class="n">_build_example_prompt</span><span class="p">(</span><span class="n">examples</span><span class="p">)</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a>        <span class="n">prompt</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Role</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a>            <span class="p">(</span><span class="n">Role</span><span class="o">.</span><span class="n">SYSTEM</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">system_prompt</span><span class="p">),</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a>            <span class="p">(</span><span class="n">Role</span><span class="o">.</span><span class="n">USER</span><span class="p">,</span> <span class="n">example_prompt</span><span class="p">),</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>            <span class="p">(</span><span class="n">Role</span><span class="o">.</span><span class="n">ASSISTANT</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a>        <span class="p">]</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a>        <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_interface</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a>        <span class="n">labels</span><span class="p">[</span><span class="n">concept_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">label</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="k">return</span> <span class="n">labels</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

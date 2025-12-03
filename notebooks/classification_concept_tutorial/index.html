@@ -1,0 +1,3420 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Interpretability Toolkit for LLMs">
+      
+      
+      
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/notebooks/classification_concept_tutorial/">
+      
+      
+        <link rel="prev" href="../attribution_walkthrough/">
+      
+      
+        <link rel="next" href="../generation_concept_tutorial/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/img/interpreto_logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Concept-based Explanations for Classification - Interpreto</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/css/custom.css">
+    
+      <link rel="stylesheet" href="../../css/ansi-colours.css">
+    
+      <link rel="stylesheet" href="../../css/jupyter-cells.css">
+    
+      <link rel="stylesheet" href="../../css/pandas-dataframe.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#classification-concept-based-explanation-tutorial" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Interpreto" class="md-header__button md-logo" aria-label="Interpreto" data-md-component="logo">
+      
+  <img src="../../assets/img/interpreto_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Interpreto
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Concept-based Explanations for Classification
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="http://github.com/FOR-sight-ai/interpreto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    FOR-sight-ai/interpreto
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../attribution_walkthrough/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/attributions/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../about/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  About
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../citation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Citation
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Interpreto" class="md-nav__button md-logo" aria-label="Interpreto" data-md-component="logo">
+      
+  <img src="../../assets/img/interpreto_logo.png" alt="logo">
+
+    </a>
+    Interpreto
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="http://github.com/FOR-sight-ai/interpreto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    FOR-sight-ai/interpreto
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attribution_walkthrough/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Use Attribution Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Classification
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Classification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-split-your-model-in-two-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. ➗ Split your model in two parts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-compute-a-datasets-of-activations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 🚦 Compute a datasets of activations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-fit-a-concept-model-on-activations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 🏋️‍♂️ Fit a concept model on activations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-interpret-the-concept-dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 🏷️ Interpret the concept dimensions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-find-the-globally-important-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 🌍 Find the globally important concepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-better-concepts-with-class-wise-concepts-and-llm-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 📚 Better concepts with class-wise concepts and LLM labels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-locally-important-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 📍 Locally important concepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-evaluate-concept-based-explanations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. ⚖️ Evaluate concept-based explanations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. ⚖️ Evaluate concept-based explanations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-evaluate-the-concept-space-from-the-third-part" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 🌐 Evaluate the concept-space from the third part
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-evaluate-the-concepts-interpretations-from-the-fourth-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 💭 Evaluate the concepts-interpretations from the fourth step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-evaluate-the-whole-concept-based-explanations-with-consim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 ↔️ Evaluate the whole concept-based explanations with ConSim
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-using-your-own-llm-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Using your own LLM interface
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generation_concept_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Generation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attribution Explainers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Attribution Explainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/gradient_shap/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    GradientShap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/integrated_gradients/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    IntegratedGradients
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/kernelshap/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    KernelShap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/lime/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Lime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/occlusion/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Occlusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/saliency/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Saliency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/smoothgrad/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SmoothGrad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/squaregrad/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SquareGrad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/sobol/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Sobol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/methods/vargrad/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    VarGrad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_3" id="__nav_3_1_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/metrics/deletion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deletion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/attributions/metrics/insertion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Insertion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept Explainers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concept Explainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/model_with_split_points/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 3h2v2H5v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 0 0-2-2H0v-2h1a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2m14 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3zm-7 12a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-4 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m8 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    ModelWithSplitPoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2_3" id="__nav_3_2_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/methods/base/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/methods/cockatiel/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Cockatiel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/methods/neurons_as_concepts/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Neurons as Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/methods/optim/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimization Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/methods/sae/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SAEs (Sparse AutoEncoders)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/concepts_interpretations/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 6H2v12h2m7-12-6 6 6 6 1.41-1.42L8.83 13H23v-2H8.83l3.58-3.59z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept Interpretations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2_5" id="__nav_3_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/metrics/overview/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 9h16v2H4zm0 4h10v2H4z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/metrics/consim/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 11h6V8l4 4-4 4v-3H9v3l-4-4 4-4zm-7 9V4h2v16zm18 0V4h2v16z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    ConSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/metrics/dictionary_metrics/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 3v15h3V3zm3 2 4 13 3-1-4-13zM5 5v13h3V5zM3 19v2h18v-2z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Dictionary Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/metrics/reconstruction_metrics/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 1c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h2v-2H3V3h11v2h2V3c0-1.11-.89-2-2-2zm6 6c-1.11 0-2 .89-2 2v2h2V9h2V7zm4 0v2h1v1h2V7zm5 0v2h2v11H9v-2H7v2c0 1.11.89 2 2 2h11c1.11 0 2-.89 2-2V9c0-1.11-.89-2-2-2zm-4 5v2h-2v2h2c1.11 0 2-.89 2-2v-2zm-7 1v3h3v-2H9v-1z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Reconstruction Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/concepts/metrics/sparsity_metrics/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 22V8h4v14zm7 0V2h4v20zm7 0v-8h4v8z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Sparsity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-split-your-model-in-two-parts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. ➗ Split your model in two parts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-compute-a-datasets-of-activations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 🚦 Compute a datasets of activations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-fit-a-concept-model-on-activations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 🏋️‍♂️ Fit a concept model on activations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-interpret-the-concept-dimensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 🏷️ Interpret the concept dimensions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-find-the-globally-important-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 🌍 Find the globally important concepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-better-concepts-with-class-wise-concepts-and-llm-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 📚 Better concepts with class-wise concepts and LLM labels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-locally-important-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 📍 Locally important concepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-evaluate-concept-based-explanations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. ⚖️ Evaluate concept-based explanations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. ⚖️ Evaluate concept-based explanations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#71-evaluate-the-concept-space-from-the-third-part" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 🌐 Evaluate the concept-space from the third part
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-evaluate-the-concepts-interpretations-from-the-fourth-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 💭 Evaluate the concepts-interpretations from the fourth step
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-evaluate-the-whole-concept-based-explanations-with-consim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 ↔️ Evaluate the whole concept-based explanations with ConSim
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-using-your-own-llm-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Using your own LLM interface
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script>
+(function() {
+  function addWidgetsRenderer() {
+    var requireJsScript = document.createElement('script');
+    requireJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js';
+
+    var mimeElement = document.querySelector('script[type="application/vnd.jupyter.widget-view+json"]');
+    var jupyterWidgetsScript = document.createElement('script');
+    var widgetRendererSrc = 'https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js';
+    var widgetState;
+
+    // Fallback for older version:
+    try {
+      widgetState = mimeElement && JSON.parse(mimeElement.innerHTML);
+
+      if (widgetState && (widgetState.version_major < 2 || !widgetState.version_major)) {
+        widgetRendererSrc = 'jupyter-js-widgets@*/dist/embed.js';
+      }
+    } catch(e) {}
+
+    jupyterWidgetsScript.src = widgetRendererSrc;
+
+    document.body.appendChild(requireJsScript);
+    document.body.appendChild(jupyterWidgetsScript);
+  }
+
+  document.addEventListener('DOMContentLoaded', addWidgetsRenderer);
+}());
+</script>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><img alt="interpreto_banner" src="../../assets/img/interpreto_banner.png" /></p>
+<h1 id="classification-concept-based-explanation-tutorial">Classification Concept-based Explanation Tutorial<a class="headerlink" href="#classification-concept-based-explanation-tutorial" title="Permanent link">&para;</a></h1>
+<p>Welcome to this tutorial, our will be to obtain concept-based explanations starting from the beginning.</p>
+<p>For any precision, please refer to the <a href="https://for-sight-ai.github.io/interpreto/"><strong>Interpreto documentation</strong></a>.</p>
+<p>There are five key steps for concepts based explanations:</p>
+<ol>
+<li><a href="#split">➗ <strong>Split</strong> your model in two parts</a></li>
+<li><a href="#activations">🚦 Compute a dataset of <strong>activations</strong></a></li>
+<li><a href="#fit">🏋️‍♂️ <strong>Fit</strong> a concept model on activations</a></li>
+<li><a href="#interpret">🏷️ <strong>Interpret</strong> the concept dimensions</a></li>
+<li><a href="#important">🌍 Find the globally <strong>important</strong> concepts</a></li>
+</ol>
+<p>On which we add three bonus steps:</p>
+<ol>
+<li><a href="#class-wise">📚 <strong>Class-wise</strong> concepts and LLM label</a></li>
+<li><a href="#locally">📍 <strong>Locally</strong> important concepts</a></li>
+<li><a href="#evaluate">⚖️ <strong>Evaluate</strong> concept-based explanations</a></li>
+</ol>
+<p><em>Author: Antonin Poché</em></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="n">DEVICE</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="1-split-your-model-in-two-parts">1. ➗ <strong>Split</strong> your model in two parts <a class="anchor" id="split"></a><a class="headerlink" href="#1-split-your-model-in-two-parts" title="Permanent link">&para;</a></h2>
+<p>We choose a <code>DistilBERT</code> fine-tuned on the <code>AG-News</code> dataset and split it just before the classification head.</p>
+<p>To split the model, we use the <a href="https://for-sight-ai.github.io/interpreto/api/concepts/model_with_split_points/"><code>interpreto.ModelWithSplitPoints</code></a> which wraps around the <code>transformers</code> model and allows the computation of activations at the specified <code>split_points</code>.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForSequenceClassification</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">ModelWithSplitPoints</span>
+
+<span class="n">model_with_split_points</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="p">(</span>
+    <span class="n">model_or_repo_id</span><span class="o">=</span><span class="s2">&quot;textattack/distilbert-base-uncased-ag-news&quot;</span><span class="p">,</span>
+    <span class="n">automodel</span><span class="o">=</span><span class="n">AutoModelForSequenceClassification</span><span class="p">,</span>
+    <span class="n">split_points</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span>  <span class="c1"># split at the sixth layer</span>
+    <span class="n">device_map</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="2-compute-a-datasets-of-activations">2. 🚦 Compute a datasets of <strong>activations</strong> <a class="anchor" id="activations"></a><a class="headerlink" href="#2-compute-a-datasets-of-activations" title="Permanent link">&para;</a></h2>
+<p>We load the first 10000 documents of the <code>AG-News</code> train set.</p>
+<p>Then we extract the activations of the [CLS] token of each document.</p>
+<p>&gt; ➡️ <strong>Common practice</strong>
+&gt;
+&gt; In the literature, to train concepts for classification it is common to use the [CLS] just before the classification head.
+&gt;
+&gt; In fact, at this layer, it makes no sense to use other elements.</p>
+<p>&gt; ⚠️ <strong>Warning</strong>
+&gt;
+&gt; In this notebook, many things are specific to the use of the [CLS] token.</p>
+<p><a href="https://for-sight-ai.github.io/interpreto/api/concepts/model_with_split_points/#interpreto.ModelWithSplitPoints.get_activations"><code>interpreto.ModelWithSplitPoints.get_activations()</code></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dataset</span>
+
+<span class="c1"># load the AG-News dataset</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;fancyzhx/ag_news&quot;</span><span class="p">)</span>
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">][:</span><span class="mi">1000</span><span class="p">]</span>  <span class="c1"># here we use only 1000 examples to go faster, but the more, the better</span>
+<span class="n">classes_names</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="s2">&quot;label&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">names</span>
+
+<span class="c1"># Compute the [CLS] token activations</span>
+<span class="n">granularity</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="o">.</span><span class="n">activation_granularities</span><span class="o">.</span><span class="n">CLS_TOKEN</span>
+<span class="n">activations</span> <span class="o">=</span> <span class="n">model_with_split_points</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+    <span class="n">include_predicted_classes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="3-fit-a-concept-model-on-activations">3. 🏋️‍♂️ <strong>Fit</strong> a concept model on activations <a class="anchor" id="fit"></a><a class="headerlink" href="#3-fit-a-concept-model-on-activations" title="Permanent link">&para;</a></h2>
+<p>With activations, we can train a concept model to find patterns (concepts).</p>
+<p>The <code>concept_model</code> is an attribute of our concept explainer, similarly to the <code>model_with_split_points</code>. With these these two elements, we can go from inputs to concepts and from concepts to outputs.</p>
+<p>In this tutorial, we use <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ICAConcepts"><code>interpreto.concepts.ICAConcepts</code></a> built upon the ICA (Independent Component Analysis) dimension reduction algorithm.</p>
+<p>There are at least 15 others concept model available in interpreto. do not hesitate to explore them.</p>
+<p>&gt; 🔥 <strong>Tip</strong>
+&gt;
+&gt; <code>ICAConcepts</code> is a good first candidate for classification. It has no requirements, is fast, and provide correct first results on most datasets.
+&gt;
+&gt; Well the <code>SemiNMFConcepts</code> used in the <a href="#class-wise">better concepts section</a> is too.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts</span><span class="w"> </span><span class="kn">import</span> <span class="n">ICAConcepts</span>
+
+<span class="c1"># instantiate the concept explainer</span>
+<span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+
+<span class="c1"># fit the concept explainer on activations</span>
+<span class="n">concept_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="4-interpret-the-concept-dimensions">4. 🏷️ <strong>Interpret</strong> the concept dimensions <a class="anchor" id="interpret"></a><a class="headerlink" href="#4-interpret-the-concept-dimensions" title="Permanent link">&para;</a></h2>
+<p>We have our concepts and the link between concepts and classes. But now, we need to make sense of these concepts.</p>
+<p>In this case, we will use the <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.TopKInputs"><code>interpreto.concepts.interpretations.TopKInputs</code></a> to find the 8 words which activates the most our concepts.</p>
+<p>&gt; ⚠️ <strong>Warning</strong>
+&gt;
+&gt; If the <code>granularity</code> specified to the interpretation method is not the same as the one used for activations, the results will be wrong.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.interpretations</span><span class="w"> </span><span class="kn">import</span> <span class="n">TopKInputs</span>
+
+<span class="c1"># instantiate the interpretation method with the concept explainer</span>
+<span class="n">topk_inputs_method</span> <span class="o">=</span> <span class="n">TopKInputs</span><span class="p">(</span>
+    <span class="n">concept_explainer</span><span class="o">=</span><span class="n">concept_explainer</span><span class="p">,</span>
+    <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+    <span class="n">use_unique_words</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># with the [CLS] token granularity, we are forced to use unique words</span>
+    <span class="n">unique_words_kwargs</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;count_min_threshold&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.002</span>
+        <span class="p">),</span>  <span class="c1"># appear in at least 0.2% of the samples | increase if random words appear and decrease if some words appear too often</span>
+        <span class="s2">&quot;lemmatize&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">&quot;words_to_ignore&quot;</span><span class="p">:</span> <span class="p">[],</span>  <span class="c1"># include noise words and punctuation</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># call the interpretation methods on the inputs</span>
+<span class="c1"># we cannot give the previously computed activations because `use_unique_words=True` creates samples with a single word inside</span>
+<span class="n">topk_words</span> <span class="o">=</span> <span class="n">topk_inputs_method</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+    <span class="n">concepts_indices</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="5-find-the-globally-important-concepts">5. 🌍 Find the globally <strong>important</strong> concepts <a class="anchor" id="important"></a><a class="headerlink" href="#5-find-the-globally-important-concepts" title="Permanent link">&para;</a></h2>
+<p>We have concept directions, it means that our model has access to them, but not that it uses them.</p>
+<p>It is the same when you train a model on tabular data, not all features are used.</p>
+<p>In this step, we use the <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/base/#interpreto.concepts.ConceptAutoEncoderExplainer.concept_output_gradient"><code>ConceptAutoEncoderExplainer.concept_output_gradients</code></a> to evaluate the importance of each concept with respect to the predicted classes.</p>
+<p>&gt; ➡️ <strong>Note</strong>
+&gt;
+&gt; All unsupervised concept-based explainers in Interpreto inherit from <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/base/#interpreto.concepts.ConceptAutoEncoderExplainer"><code>ConceptAutoEncoderExplainer</code></a>.</p>
+<p>&gt; ➡️ <strong>Note 2</strong>
+&gt;
+&gt; This step can be done prior to the interpretation, as the interpretation step can be compute heavy. Then specify using the <code>concept_indices</code> parameter.
+&gt; Only interpreting the important concepts can be wise. (Here we only have 50 concepts, so it does not matter.)</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="c1"># estimate the importance of concepts for each class using the gradient</span>
+<span class="n">gradients</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+    <span class="n">targets</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># None means all classes</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+    <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># the concept to output gradients are multiplied by the concepts values, this is common practice in the literature</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># stack gradients on samples and average them over samples</span>
+<span class="n">mean_gradients</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">gradients</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># (num_classes, num_concepts)</span>
+
+<span class="c1"># for each class, sort the importance scores</span>
+<span class="n">order</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">mean_gradients</span><span class="p">,</span> <span class="n">descending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># visualize the top 5 concepts for each class</span>
+<span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">order</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Class: </span><span class="si">{</span><span class="n">classes_names</span><span class="p">[</span><span class="n">target</span><span class="p">]</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+        <span class="n">concept_id</span> <span class="o">=</span> <span class="n">order</span><span class="p">[</span><span class="n">target</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">importance</span> <span class="o">=</span> <span class="n">mean_gradients</span><span class="p">[</span><span class="n">target</span><span class="p">,</span> <span class="n">concept_id</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">words</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">topk_words</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">concept_id</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">concept id: </span><span class="si">{</span><span class="n">concept_id</span><span class="si">}</span><span class="s2">,</span><span class="se">\t</span><span class="s2">importance: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">importance</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="se">\t</span><span class="s2">topk words: </span><span class="si">{</span><span class="n">words</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>
+Class: World:
+    concept id: 27, importance: 0.091,  topk words: ['serbia-montenegro', 'nato', 'liechtenstein', 'nikkei', 'ossetia']
+    concept id: 45, importance: 0.078,  topk words: ['separatist', 'militia', 'militiaman', 'usatoday.com', 'inquirer']
+    concept id: 11, importance: 0.07,   topk words: ['betting', 'saudi', 'gambler', 'shark', 'kidnapper']
+    concept id: 31, importance: 0.064,  topk words: ['betting', 'fraud', 'holy', 'kmart', 'p.m.']
+    concept id: 48, importance: 0.041,  topk words: ['afp', 'armed', 'hue', 'anarchist', 'naval']
+
+Class: Sports:
+    concept id: 7,  importance: 0.111,  topk words: ['phelps', '200-meter', 'batter', 'inning', 'homered']
+    concept id: 49, importance: 0.092,  topk words: ['heat', '100-meter', 'fastest', '200-meter', '200m']
+    concept id: 30, importance: 0.087,  topk words: ['200-meter', '100-meter', 'breaststroke', '400-meter', 'heat']
+    concept id: 33, importance: 0.069,  topk words: ['phillies', 'mets', 'baltimore', 'sox', 'nl']
+    concept id: 24, importance: 0.062,  topk words: ['stryker', 'nfl', 'armadillo', 'homer', 'autodesk']
+
+Class: Business:
+    concept id: 13, importance: 0.084,  topk words: ['pharmacare', 'procurement', 'costly', 'sector', 'marketer']
+    concept id: 28, importance: 0.067,  topk words: ['vodafone', 'antitrust', 'ipo.google.com', 'verizon', 'lenovo']
+    concept id: 19, importance: 0.046,  topk words: [';', 'ott', 'atp', 'fcc', '3g']
+    concept id: 7,  importance: 0.042,  topk words: ['phelps', '200-meter', 'batter', 'inning', 'homered']
+    concept id: 37, importance: 0.04,   topk words: ['eurozone', 'finance', 'imf', 'economy', 'balance']
+
+Class: Sci/Tech:
+    concept id: 7,  importance: 0.057,  topk words: ['phelps', '200-meter', 'batter', 'inning', 'homered']
+    concept id: 49, importance: 0.053,  topk words: ['heat', '100-meter', 'fastest', '200-meter', '200m']
+    concept id: 13, importance: 0.052,  topk words: ['pharmacare', 'procurement', 'costly', 'sector', 'marketer']
+    concept id: 27, importance: 0.05,   topk words: ['serbia-montenegro', 'nato', 'liechtenstein', 'nikkei', 'ossetia']
+    concept id: 30, importance: 0.046,  topk words: ['200-meter', '100-meter', 'breaststroke', '400-meter', 'heat']
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>&gt; ❓ <strong>The concepts are not interpretable, what do I do?</strong>
+&gt;
+&gt; - Try to improve the concept-space:
+&gt;   - Increases the number of samples. You can artificially do so by splitting then by sentences (not included)
+&gt;   - Try different concept-models and parameters
+&gt;   - Try to compute concepts class-wise see <a href="#class-wise">next section</a>
+&gt;
+&gt; - Improve the interpretation of concepts:
+&gt;   - Play with the parameters
+&gt;   - Try <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.LLMLabels"><code>LLMLabels</code></a> see <a href="#class-wise">next section</a>
+&gt;
+&gt; - Try to evaluate the concepts, to automatically find the best methods. Check this other tutorial: <a href="TODO">TODO</a>
+&gt;
+&gt; - Never forget the <strong>faithfulness-plausibility trade-off</strong> of explanations</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="6-better-concepts-with-class-wise-concepts-and-llm-labels">6. 📚 Better concepts with class-wise concepts and LLM labels <a class="anchor" id="class-wise"></a><a class="headerlink" href="#6-better-concepts-with-class-wise-concepts-and-llm-labels" title="Permanent link">&para;</a></h2>
+<p>This section aims at improving the concepts learned by the model. We try three different approaches:</p>
+<ul>
+<li>Training class-wise concepts</li>
+<li>Using another concept model: <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SemiNMFConcepts"><code>SemiNMFConcepts</code></a></li>
+<li>Using <a href="https://for-sight-ai.github.io/interpreto/"><code>interpreto.concepts.LLMLabels</code></a> to interpret the concepts</li>
+</ul>
+<p>When a single concept-space is defined for all classes, concepts tend to correspond to the classes themselves. In particular, when the concept-space is built upon on the latent space just before the classification head.</p>
+<p>In this section, we will learn a concept space for each class separately. Thus, the class-wise concept explainers will only see examples from a single class (based on the predictions).</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>&gt; ⚠️ <strong>Warning</strong>
+&gt;
+&gt; The following cell and several others will not work with an OpenAI API key. As <code>LLMLabels</code> requires a <code>LLMInterface</code>, and we chose the <code>OpenAILLM</code> one.
+&gt;
+&gt; What you can do to make it work:
+&gt; - Get an OpenAI API key and set it as an environment variable <code>OPENAI_API_KEY</code>.
+&gt; - Use <code>TopKInputs</code> to replace <code>LLMLabels</code>.
+&gt; - Branch your own LLMInterface and use it instead of <code>OpenAILLM</code>. See <a href="#interface">last section</a> for an example.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMLabels</span><span class="p">,</span> <span class="n">SemiNMFConcepts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.model_wrapping.llm_interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAILLM</span>
+
+<span class="c1"># Load API key from environment variable</span>
+<span class="n">api_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;OPENAI_API_KEY&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">api_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="s2">&quot;An API key is required to use `OpenAILLM` interface. &quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Cannot use LLMLabels without an LLM interface. &quot;</span><span class="p">,</span>
+        <span class="s2">&quot;See last section for an example of how to branch one.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="c1"># set the LLM interface used to generate labels based on the constructed prompts</span>
+<span class="n">llm_interface</span> <span class="o">=</span> <span class="n">OpenAILLM</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4.1-nano&quot;</span><span class="p">)</span>
+
+<span class="n">concept_explainers</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">concept_interpretations</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">concept_importances</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1"># iterate over classes</span>
+<span class="k">for</span> <span class="n">target</span><span class="p">,</span> <span class="n">class_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">classes_names</span><span class="p">):</span>
+    <span class="c1"># ----------------------------------------------------------------------------------------------</span>
+    <span class="c1"># 2. construct the dataset of activations (extract the ones related to the class)</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">as_tuple</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">class_wise_inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">]</span>
+    <span class="n">class_wise_activations</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">activations</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="c1"># ----------------------------------------------------------------------------------------------</span>
+    <span class="c1"># 3. train concept model</span>
+    <span class="n">concept_explainers</span><span class="p">[</span><span class="n">target</span><span class="p">]</span> <span class="o">=</span> <span class="n">SemiNMFConcepts</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+    <span class="n">concept_explainers</span><span class="p">[</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">class_wise_activations</span><span class="p">)</span>
+
+    <span class="c1"># ----------------------------------------------------------------------------------------------</span>
+    <span class="c1"># 5. compute concepts importance (before interpretations to limit the number of concepts interpreted)</span>
+    <span class="n">gradients</span> <span class="o">=</span> <span class="n">concept_explainers</span><span class="p">[</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="n">class_wise_inputs</span><span class="p">,</span>
+        <span class="n">targets</span><span class="o">=</span><span class="p">[</span><span class="n">target</span><span class="p">],</span>
+        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+        <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># stack gradients on samples and average them over samples</span>
+    <span class="n">concept_importances</span><span class="p">[</span><span class="n">target</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">gradients</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># (num_concepts,)</span>
+
+    <span class="c1"># for each class, sort the importance scores</span>
+    <span class="n">important_concept_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">concept_importances</span><span class="p">[</span><span class="n">target</span><span class="p">],</span> <span class="n">descending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="c1"># ----------------------------------------------------------------------------------------------</span>
+    <span class="c1"># 4. interpret the important concepts concepts</span>
+    <span class="n">llm_labels_method</span> <span class="o">=</span> <span class="n">LLMLabels</span><span class="p">(</span>
+        <span class="n">concept_explainer</span><span class="o">=</span><span class="n">concept_explainers</span><span class="p">[</span><span class="n">target</span><span class="p">],</span>
+        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+        <span class="n">llm_interface</span><span class="o">=</span><span class="n">llm_interface</span><span class="p">,</span>
+        <span class="n">k_examples</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">concept_interpretations</span><span class="p">[</span><span class="n">target</span><span class="p">]</span> <span class="o">=</span> <span class="n">llm_labels_method</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="n">class_wise_inputs</span><span class="p">,</span>
+        <span class="n">concepts_indices</span><span class="o">=</span><span class="n">important_concept_indices</span><span class="p">,</span>  <span class="c1"># only the top 5 concepts for this class</span>
+    <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Class: </span><span class="si">{</span><span class="n">class_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">concept_id</span> <span class="ow">in</span> <span class="n">important_concept_indices</span><span class="p">[:</span><span class="mi">5</span><span class="p">]:</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">concept_interpretations</span><span class="p">[</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">concept_id</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">importance</span> <span class="o">=</span> <span class="n">concept_importances</span><span class="p">[</span><span class="n">target</span><span class="p">][</span><span class="n">concept_id</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">importance: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">importance</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">,</span><span class="se">\t</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>
+Class: World
+    importance: 0.088,  Diverse topics unified by factual reporting and event-focused language
+    importance: 0.086,  Consistent focus on named entities, events, and quotations.
+    importance: 0.084,  Consistently presents factual info with emphasis on notable events or figures.
+    importance: 0.082,  Recurring topics and formal reporting language.
+    importance: 0.078,  Concise reporting style with specific names, events, and dates.
+
+Class: Sports
+    importance: 0.112,  Patterns involve sports, achievements, and event summaries with emphasis on names, scores, and outcomes.
+    importance: 0.105,  Structured sports and news summaries emphasize game events, scores, and highlights, often including player performances and outcomes in concise, formulaic language. The pattern involves brief, factual narration focusing on key actions and results.
+    importance: 0.082,  Focus on key entities, events, and record-breaking achievements.
+    importance: 0.076,  Consistent references to sports events, players, and results.
+    importance: 0.07,   Concise patterns: factual summaries with focus on specific event outcomes.
+
+Class: Business
+    importance: 0.092,  Concise patterns involve financial, infrastructural, and cultural references.
+    importance: 0.083,  Structured information emphasis, financial and infrastructural keywords.
+    importance: 0.081,  Topical focus, political or economic narratives, and authoritative tone.
+    importance: 0.074,  Concise patterns include focus on current events, economic issues, and industry developments.
+    importance: 0.072,  Focus on comparative categories and rankings across regions.
+
+Class: Sci/Tech
+    importance: 0.121,  Language features that explicitly reference entities, events, or dates.
+    importance: 0.101,  Consistent focus on environmental impacts, species, and conservation initiatives.
+    importance: 0.095,  Scientific observations of natural phenomena and technological descriptions.
+    importance: 0.093,  Factual reporting with scientific, environmental, and technological focus, structured as objective summaries.
+    importance: 0.081,  Factual, technical, and headline-like language with specific details
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="6-locally-important-concepts">6. 📍 <strong>Locally</strong> important concepts <a class="anchor" id="locally"></a><a class="headerlink" href="#6-locally-important-concepts" title="Permanent link">&para;</a></h2>
+<p>We got which concept are important for the classes globally. However, the concepts are not all present in each sample and the model might rely on a specific concept for a specific sample. Let's look at locally important concepts, meaning, the concepts the model used in a specific sample.</p>
+<p>&gt; ➡️ Note
+&gt;
+&gt; We cannot look at which word activates which concept without doing a forward pass for each word individually, because we use the [CLS] token. You could do the following cell, iterate on words and replace the example by the word.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">example</span> <span class="o">=</span> <span class="s2">&quot;Bio-engineered shoes will revolutionized running throughout the world, as they cost only 50 dollars.&quot;</span>
+
+<span class="n">pred</span> <span class="o">=</span> <span class="n">model_with_split_points</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">example</span><span class="p">],</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+    <span class="n">include_predicted_classes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Example: </span><span class="si">{</span><span class="n">example</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Predicted class: </span><span class="si">{</span><span class="n">classes_names</span><span class="p">[</span><span class="n">pred</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># compute local concepts importance for the class</span>
+<span class="c1"># we use the class-wise</span>
+<span class="n">local_importance</span> <span class="o">=</span> <span class="n">concept_explainers</span><span class="p">[</span><span class="n">pred</span><span class="p">]</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">example</span><span class="p">],</span>
+    <span class="n">targets</span><span class="o">=</span><span class="p">[</span><span class="n">pred</span><span class="p">],</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+    <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">tqdm_bar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># there is only one sample</span>
+
+<span class="c1"># importance of shape (t, g, c) -&amp;gt; (c,)</span>
+<span class="c1"># with t the target, here 1 as we have a single target</span>
+<span class="c1"># g the number of activation granularity elements in one input, here 1 as we focus on the CLS_TOKEN</span>
+<span class="c1"># c the number of concepts</span>
+<span class="n">local_importance</span> <span class="o">=</span> <span class="n">local_importance</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+<span class="c1"># order the concepts by importance</span>
+<span class="n">ordered_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">local_importance</span><span class="p">,</span> <span class="n">descending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># print top 5 concepts</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">local importance</span><span class="se">\t</span><span class="s2">| concept label&quot;</span><span class="p">,</span> <span class="s2">&quot;------------------------+--------------&quot;</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">concept_id</span> <span class="ow">in</span> <span class="n">ordered_indices</span><span class="p">[:</span><span class="mi">5</span><span class="p">]:</span>
+    <span class="n">importance</span> <span class="o">=</span> <span class="n">local_importance</span><span class="p">[</span><span class="n">concept_id</span><span class="p">]</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">concept_interpretations</span><span class="p">[</span><span class="n">target</span><span class="p">][</span><span class="n">concept_id</span><span class="o">.</span><span class="n">item</span><span class="p">()]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">importance</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="se">\t\t\t</span><span class="s2">| </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Example: Bio-engineered shoes will revolutionized running throughout the world, as they cost only 50 dollars.
+Predicted class: Sci/Tech
+
+local importance    | concept label
+------------------------+--------------
+0.123           | Factual, technical, and headline-like language with specific details
+0.115           | Structured informational content with consistent sentence patterns and varied topics.
+0.076           | Scientific observations of natural phenomena and technological descriptions.
+0.064           | Factual reporting with scientific, environmental, and technological focus, structured as objective summaries.
+0.049           | Structured, factual reporting with explicit event details and dates.
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="7-evaluate-concept-based-explanations">7. ⚖️ <strong>Evaluate</strong> concept-based explanations <a class="anchor" id="evaluate"></a><a class="headerlink" href="#7-evaluate-concept-based-explanations" title="Permanent link">&para;</a></h2>
+<p>We take back the <code>ICAConcepts</code> explainer and evaluate it on new samples.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="n">test_inputs</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;test&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">][:</span><span class="mi">1000</span><span class="p">]</span>  <span class="c1"># let&#39;s take one thousand test samples</span>
+
+<span class="c1"># Compute the [CLS] token activations</span>
+<span class="n">test_activations</span> <span class="o">=</span> <span class="n">model_with_split_points</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="n">test_inputs</span><span class="p">,</span>
+    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
+    <span class="n">include_predicted_classes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="71-evaluate-the-concept-space-from-the-third-part">7.1 🌐 Evaluate the concept-space from the <a href="#fit">third part</a><a class="headerlink" href="#71-evaluate-the-concept-space-from-the-third-part" title="Permanent link">&para;</a></h3>
+<p>&gt; ⚠️ Warning:
+&gt;
+&gt; These metrics should only be used to compare the concept-space trained in similar contexts, same model, split point, activation dataset...</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h4 id="reconstruction-error">Reconstruction error<a class="headerlink" href="#reconstruction-error" title="Permanent link">&para;</a></h4>
+<ul>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.MSE"><code>interpreto.concepts.metrics.MSE</code></a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.FID"><code>interpreto.concepts.metrics.FID</code></a></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">FID</span><span class="p">,</span> <span class="n">MSE</span>
+
+<span class="n">mse</span> <span class="o">=</span> <span class="n">MSE</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">test_activations</span><span class="p">)</span>
+<span class="n">fid</span> <span class="o">=</span> <span class="n">FID</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">test_activations</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MSE: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">mse</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">, FID: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">fid</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>MSE: 165.919, FID: 0.041
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>&gt; ➡️ Note
+&gt;
+&gt; Alone these values are useless, they should be compared between several concept explainers.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h4 id="sparsity">Sparsity<a class="headerlink" href="#sparsity" title="Permanent link">&para;</a></h4>
+<ul>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.Sparsity"><code>interpreto.concepts.metrics.Sparsity</code></a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.SparsityRatio"><code>interpreto.concepts.metrics.SparsityRatio</code></a></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sparsity</span><span class="p">,</span> <span class="n">SparsityRatio</span>
+
+<span class="n">sparsity</span> <span class="o">=</span> <span class="n">Sparsity</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">test_activations</span><span class="p">)</span>
+<span class="n">ratio</span> <span class="o">=</span> <span class="n">SparsityRatio</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">test_activations</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sparsity: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">sparsity</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">, Sparsity ratio: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Sparsity: 1.0, Sparsity ratio: 0.02
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h4 id="dictionary-metrics">Dictionary metrics<a class="headerlink" href="#dictionary-metrics" title="Permanent link">&para;</a></h4>
+<ul>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/dictionary_metrics/#interpreto.concepts.metrics.Stability"><code>interpreto.concepts.metrics.Stability</code></a></li>
+</ul>
+<p>The <code>Stability</code> metric requires two concept explainer, hence our first step step will be to train a new <code>ICAConcepts</code> with the same model, split, dataset, and hyper-parameters as the original <code>ICAConcepts</code>. However, to get a statistically robust metric score, one should compare more than just two instances of the same explainer.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">Stability</span>
+
+<span class="c1"># instantiate and train a second concept explainer</span>
+<span class="n">second_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+<span class="n">second_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
+
+<span class="n">stability</span> <span class="o">=</span> <span class="n">Stability</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">,</span> <span class="n">second_explainer</span><span class="p">)</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+<span class="k">del</span> <span class="n">second_explainer</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Stability: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">stability</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Stability: 1.0
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="72-evaluate-the-concepts-interpretations-from-the-fourth-step">7.2 💭 Evaluate the concepts-interpretations from the <a href="#important">fourth step</a><a class="headerlink" href="#72-evaluate-the-concepts-interpretations-from-the-fourth-step" title="Permanent link">&para;</a></h3>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="c1"># Work in progress, coming soon</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h3 id="73-evaluate-the-whole-concept-based-explanations-with-consim">7.3 ↔️ Evaluate the whole concept-based explanations with <code>ConSim</code><a class="headerlink" href="#73-evaluate-the-whole-concept-based-explanations-with-consim" title="Permanent link">&para;</a></h3>
+<p><code>ConSim</code> is a metric evaluating the whole concept-based explanations in an end-to-end manner. Indeed, this metric, evaluates to which extend the provided concept-based explanations help a meta-predictor to predict what the studied model would have predicted. The idea is that is a meta-predictor understands the model, it is able to predict what the model would have predicted on new samples.</p>
+<ul>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/consim/#interpreto.concepts.metrics.ConSim"><code>interpreto.concepts.metrics.ConSim</code></a></li>
+</ul>
+<p>&gt; ➡️ Note
+&gt;
+&gt; For significant scores, we iterate on 10 different seeds. (5 were used in the paper).</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.metrics.consim</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConSim</span><span class="p">,</span> <span class="n">PromptTypes</span>
+
+<span class="c1"># convert step 5 global concept importances to a dictionary</span>
+<span class="n">global_importances</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">class_name</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">importances</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">class_name</span><span class="p">,</span> <span class="n">importances</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">classes_names</span><span class="p">,</span> <span class="n">mean_gradients</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c1"># Load API key from environment variable</span>
+<span class="n">api_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;OPENAI_API_KEY&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">api_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="s2">&quot;An API key is required to use `OpenAILLM` interface. &quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Cannot use LLMLabels without an LLM interface. &quot;</span><span class="p">,</span>
+        <span class="s2">&quot;See last section for an example of how to branch one.&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="c1"># set the LLM interface used to generate labels based on the constructed prompts</span>
+<span class="n">llm_interface</span> <span class="o">=</span> <span class="n">OpenAILLM</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4.1-nano&quot;</span><span class="p">)</span>
+
+<span class="c1"># Initialize the ConSim  with the model with split points and the user-llm</span>
+<span class="c1"># Therefore, a given ConSim metric can be used on different explainers for cleaner comparison</span>
+<span class="n">con_sim</span> <span class="o">=</span> <span class="n">ConSim</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">,</span> <span class="n">llm_interface</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="n">classes_names</span><span class="p">,</span> <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">)</span>
+
+<span class="n">baseline_list</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">ica_score_list</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">seed</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="c1"># Select examples for evaluation</span>
+    <span class="n">samples</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">con_sim</span><span class="o">.</span><span class="n">select_examples</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">][:</span><span class="mi">5000</span><span class="p">],</span>
+        <span class="n">labels</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;label&quot;</span><span class="p">][:</span><span class="mi">5000</span><span class="p">])</span><span class="o">.</span><span class="n">cuda</span><span class="p">(),</span>
+        <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Compute a baseline and ConSim score to give sense to the explainer ConSim score</span>
+    <span class="n">baseline</span> <span class="o">=</span> <span class="n">con_sim</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+        <span class="n">interesting_samples</span><span class="o">=</span><span class="n">samples</span><span class="p">,</span> <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span> <span class="n">prompt_type</span><span class="o">=</span><span class="n">PromptTypes</span><span class="o">.</span><span class="n">L2_baseline_with_lp</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">baseline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">continue</span>
+
+    <span class="c1"># Compute the ConSim score for an explainer</span>
+    <span class="n">ica_score</span> <span class="o">=</span> <span class="n">con_sim</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span>
+        <span class="n">interesting_samples</span><span class="o">=</span><span class="n">samples</span><span class="p">,</span>
+        <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span>
+        <span class="n">concept_explainer</span><span class="o">=</span><span class="n">concept_explainer</span><span class="p">,</span>
+        <span class="n">concepts_interpretation</span><span class="o">=</span><span class="n">topk_words</span><span class="p">,</span>
+        <span class="n">global_importances</span><span class="o">=</span><span class="n">global_importances</span><span class="p">,</span>
+        <span class="n">prompt_type</span><span class="o">=</span><span class="n">PromptTypes</span><span class="o">.</span><span class="n">E2_global_concepts_with_lp</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ica_score</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">continue</span>
+
+    <span class="n">baseline_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
+    <span class="n">ica_score_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ica_score</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Baseline: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">baseline_list</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">, ICA: </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">ica_score_list</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Baseline: 0.28, ICA: 0.29
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>&gt; ➡️ Note
+&gt;
+&gt; We evaluated the first ICA explainer here. Concepts where not really interpretable, ConSim agrees.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="8-using-your-own-llm-interface">8. Using your own LLM interface <a class="anchor" id="interface"></a><a class="headerlink" href="#8-using-your-own-llm-interface" title="Permanent link">&para;</a></h2>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.model_wrapping.llm_interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMInterface</span><span class="p">,</span> <span class="n">Role</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">GeminiLLM</span><span class="p">(</span><span class="n">LLMInterface</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gemini-1.5-flash&quot;</span><span class="p">,</span> <span class="n">num_try</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">google.generativeai</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">genai</span>  <span class="c1"># noqa: PLC0415  # ruff: disable=import-outside-toplevel</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;Install google-generativeai to use Google Gemini API.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">genai</span> <span class="o">=</span> <span class="n">genai</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">genai</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_try</span> <span class="o">=</span> <span class="n">num_try</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Role</span><span class="p">,</span> <span class="nb">str</span><span class="p">]])</span> <span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Build system instruction and chat history for Gemini</span>
+        <span class="n">system_messages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">contents</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">role</span><span class="p">,</span> <span class="n">content</span> <span class="ow">in</span> <span class="n">prompt</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">role</span> <span class="o">==</span> <span class="n">Role</span><span class="o">.</span><span class="n">SYSTEM</span><span class="p">:</span>
+                <span class="n">system_messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">role</span> <span class="o">==</span> <span class="n">Role</span><span class="o">.</span><span class="n">USER</span><span class="p">:</span>
+                <span class="n">contents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;parts&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">content</span><span class="p">}],</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">role</span> <span class="o">==</span> <span class="n">Role</span><span class="o">.</span><span class="n">ASSISTANT</span><span class="p">:</span>
+                <span class="n">contents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;model&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;parts&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">content</span><span class="p">}],</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown role for google gemini api: </span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">system_instruction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">system_messages</span><span class="p">)</span> <span class="k">if</span> <span class="n">system_messages</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_try</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">genai</span><span class="o">.</span><span class="n">GenerativeModel</span><span class="p">(</span>
+                    <span class="n">model_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">system_instruction</span><span class="o">=</span><span class="n">system_instruction</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate_content</span><span class="p">(</span><span class="n">contents</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+                <span class="c1"># google-generativeai exposes the main text as .text</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
+                <span class="k">break</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">label</span>
+</code></pre></div>
+
+
+
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../attribution_walkthrough/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Use Attribution Methods">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Use Attribution Methods
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../generation_concept_tutorial/" class="md-footer__link md-footer__link--next" aria-label="Next: Concept-based Explanations for Generation">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Concept-based Explanations for Generation
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/FOR-sight-ai/interpreto" target="_blank" rel="noopener" title="Interpreto on Github" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/interpreto/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ANITI_Toulouse" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="../../assets/js/custom.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

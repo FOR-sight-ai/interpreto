@@ -472,6 +472,8 @@
       
         
       
+        
+      
     
     
     
@@ -550,14 +552,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../notebooks/concept_examples/" class="md-nav__link">
+      <a href="../../../../notebooks/classification_concept_tutorial/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Training a Concept Explainer
+    Concept-based Explanations for Classification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../notebooks/generation_concept_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Generation
   
 
     
@@ -1792,10 +1822,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.concepts.methods.VanillaSAEConcepts" class="md-nav__link">
+  <a href="#interpreto.concepts.methods.BatchTopKSAEConcepts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VanillaSAEConcepts
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;BatchTopKSAEConcepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.concepts.methods.JumpReLUSAEConcepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;JumpReLUSAEConcepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.concepts.methods.MpSAEConcepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;MpSAEConcepts
       
     </span>
   </a>
@@ -1814,21 +1866,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.concepts.methods.BatchTopKSAEConcepts" class="md-nav__link">
+  <a href="#interpreto.concepts.methods.VanillaSAEConcepts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;BatchTopKSAEConcepts
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.concepts.methods.JumpReLUSAEConcepts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;JumpReLUSAEConcepts
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VanillaSAEConcepts
       
     </span>
   </a>
@@ -2456,10 +2497,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.concepts.methods.VanillaSAEConcepts" class="md-nav__link">
+  <a href="#interpreto.concepts.methods.BatchTopKSAEConcepts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VanillaSAEConcepts
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;BatchTopKSAEConcepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.concepts.methods.JumpReLUSAEConcepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;JumpReLUSAEConcepts
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.concepts.methods.MpSAEConcepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;MpSAEConcepts
       
     </span>
   </a>
@@ -2478,21 +2541,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#interpreto.concepts.methods.BatchTopKSAEConcepts" class="md-nav__link">
+  <a href="#interpreto.concepts.methods.VanillaSAEConcepts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;BatchTopKSAEConcepts
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.concepts.methods.JumpReLUSAEConcepts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;JumpReLUSAEConcepts
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;VanillaSAEConcepts
       
     </span>
   </a>
@@ -2946,7 +2998,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 
 
 <a href="#interpreto.concepts.methods.SAEExplainer.fit" class="headerlink" title="Permanent link">&para;</a></h3>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">fit</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="activations (interpreto.concepts.methods.SAEExplainer.fit(activations))" href="#interpreto.concepts.methods.SAEExplainer.fit(activations)">activations</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_amp (interpreto.concepts.methods.SAEExplainer.fit(use_amp))" href="#interpreto.concepts.methods.SAEExplainer.fit(use_amp)">use_amp</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.SAEExplainer.fit(batch_size)">batch_size</span></span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="criterion (interpreto.concepts.methods.SAEExplainer.fit(criterion))" href="#interpreto.concepts.methods.SAEExplainer.fit(criterion)">criterion</a></span><span class="o">=</span><span class="n"><span title="interpreto.concepts.methods.overcomplete.MSELoss">MSELoss</span></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="optimizer_class (interpreto.concepts.methods.SAEExplainer.fit(optimizer_class))" href="#interpreto.concepts.methods.SAEExplainer.fit(optimizer_class)">optimizer_class</a></span><span class="o">=</span><span class="n"><span title="torch.optim.Adam">Adam</span></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="scheduler_class (interpreto.concepts.methods.SAEExplainer.fit(scheduler_class))" href="#interpreto.concepts.methods.SAEExplainer.fit(scheduler_class)">scheduler_class</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="lr (interpreto.concepts.methods.SAEExplainer.fit(lr))" href="#interpreto.concepts.methods.SAEExplainer.fit(lr)">lr</a></span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="nb_epochs (interpreto.concepts.methods.SAEExplainer.fit(nb_epochs))" href="#interpreto.concepts.methods.SAEExplainer.fit(nb_epochs)">nb_epochs</a></span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="clip_grad (interpreto.concepts.methods.SAEExplainer.fit(clip_grad))" href="#interpreto.concepts.methods.SAEExplainer.fit(clip_grad)">clip_grad</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="monitoring (interpreto.concepts.methods.SAEExplainer.fit(monitoring))" href="#interpreto.concepts.methods.SAEExplainer.fit(monitoring)">monitoring</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="device (interpreto.concepts.methods.SAEExplainer.fit(device))" href="#interpreto.concepts.methods.SAEExplainer.fit(device)">device</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="max_nan_fallbacks (interpreto.concepts.methods.SAEExplainer.fit(max_nan_fallbacks))" href="#interpreto.concepts.methods.SAEExplainer.fit(max_nan_fallbacks)">max_nan_fallbacks</a></span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="overwrite (interpreto.concepts.methods.SAEExplainer.fit(overwrite))" href="#interpreto.concepts.methods.SAEExplainer.fit(overwrite)">overwrite</a></span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">fit</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="activations (interpreto.concepts.methods.SAEExplainer.fit(activations))" href="#interpreto.concepts.methods.SAEExplainer.fit(activations)">activations</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="use_amp (interpreto.concepts.methods.SAEExplainer.fit(use_amp))" href="#interpreto.concepts.methods.SAEExplainer.fit(use_amp)">use_amp</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.SAEExplainer.fit(batch_size)">batch_size</span></span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="criterion (interpreto.concepts.methods.SAEExplainer.fit(criterion))" href="#interpreto.concepts.methods.SAEExplainer.fit(criterion)">criterion</a></span><span class="o">=</span><span class="n"><span title="interpreto.concepts.methods.overcomplete.MSELoss">MSELoss</span></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="optimizer_class (interpreto.concepts.methods.SAEExplainer.fit(optimizer_class))" href="#interpreto.concepts.methods.SAEExplainer.fit(optimizer_class)">optimizer_class</a></span><span class="o">=</span><span class="n"><span title="torch.optim.Adam">Adam</span></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="optimizer_kwargs (interpreto.concepts.methods.SAEExplainer.fit(optimizer_kwargs))" href="#interpreto.concepts.methods.SAEExplainer.fit(optimizer_kwargs)">optimizer_kwargs</a></span><span class="o">=</span><span class="p">{},</span> <span class="n"><a class="autorefs autorefs-internal" title="scheduler_class (interpreto.concepts.methods.SAEExplainer.fit(scheduler_class))" href="#interpreto.concepts.methods.SAEExplainer.fit(scheduler_class)">scheduler_class</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="scheduler_kwargs (interpreto.concepts.methods.SAEExplainer.fit(scheduler_kwargs))" href="#interpreto.concepts.methods.SAEExplainer.fit(scheduler_kwargs)">scheduler_kwargs</a></span><span class="o">=</span><span class="p">{},</span> <span class="n"><a class="autorefs autorefs-internal" title="lr (interpreto.concepts.methods.SAEExplainer.fit(lr))" href="#interpreto.concepts.methods.SAEExplainer.fit(lr)">lr</a></span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="nb_epochs (interpreto.concepts.methods.SAEExplainer.fit(nb_epochs))" href="#interpreto.concepts.methods.SAEExplainer.fit(nb_epochs)">nb_epochs</a></span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="clip_grad (interpreto.concepts.methods.SAEExplainer.fit(clip_grad))" href="#interpreto.concepts.methods.SAEExplainer.fit(clip_grad)">clip_grad</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="monitoring (interpreto.concepts.methods.SAEExplainer.fit(monitoring))" href="#interpreto.concepts.methods.SAEExplainer.fit(monitoring)">monitoring</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="device (interpreto.concepts.methods.SAEExplainer.fit(device))" href="#interpreto.concepts.methods.SAEExplainer.fit(device)">device</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="max_nan_fallbacks (interpreto.concepts.methods.SAEExplainer.fit(max_nan_fallbacks))" href="#interpreto.concepts.methods.SAEExplainer.fit(max_nan_fallbacks)">max_nan_fallbacks</a></span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="overwrite (interpreto.concepts.methods.SAEExplainer.fit(overwrite))" href="#interpreto.concepts.methods.SAEExplainer.fit(overwrite)">overwrite</a></span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3032,6 +3084,22 @@ If a dictionary is provided, the activation corresponding to <code>split_point</
           </tr>
           <tr class="doc-section-item">
             <td>
+<h4 id="interpreto.concepts.methods.SAEExplainer.fit(optimizer_kwargs)" class="doc doc-heading doc-heading-parameter">                  <code>optimizer_kwargs</code>
+<a href="#interpreto.concepts.methods.SAEExplainer.fit(optimizer_kwargs)" class="headerlink" title="Permanent link">&para;</a></h4>            </td>
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Keyword arguments to pass to the optimizer.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
 <h4 id="interpreto.concepts.methods.SAEExplainer.fit(scheduler_class)" class="doc doc-heading doc-heading-parameter">                  <code>scheduler_class</code>
 <a href="#interpreto.concepts.methods.SAEExplainer.fit(scheduler_class)" class="headerlink" title="Permanent link">&para;</a></h4>            </td>
             <td>
@@ -3045,6 +3113,22 @@ training of the <code>concept_model</code>.</p>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="interpreto.concepts.methods.SAEExplainer.fit(scheduler_kwargs)" class="doc doc-heading doc-heading-parameter">                  <code>scheduler_kwargs</code>
+<a href="#interpreto.concepts.methods.SAEExplainer.fit(scheduler_kwargs)" class="headerlink" title="Permanent link">&para;</a></h4>            </td>
+            <td>
+                  <code><span title="dict">dict</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Keyword arguments to pass to the scheduler.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -3262,7 +3346,11 @@ Default: False.</p>
 <span class="normal"><a href="#__codelineno-0-311">311</a></span>
 <span class="normal"><a href="#__codelineno-0-312">312</a></span>
 <span class="normal"><a href="#__codelineno-0-313">313</a></span>
-<span class="normal"><a href="#__codelineno-0-314">314</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
+<span class="normal"><a href="#__codelineno-0-314">314</a></span>
+<span class="normal"><a href="#__codelineno-0-315">315</a></span>
+<span class="normal"><a href="#__codelineno-0-316">316</a></span>
+<span class="normal"><a href="#__codelineno-0-317">317</a></span>
+<span class="normal"><a href="#__codelineno-0-318">318</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
 <a id="__codelineno-0-243" name="__codelineno-0-243"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-244" name="__codelineno-0-244"></a>    <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LatentActivations</span><span class="p">],</span>
 <a id="__codelineno-0-245" name="__codelineno-0-245"></a>    <span class="o">*</span><span class="p">,</span>
@@ -3270,71 +3358,75 @@ Default: False.</p>
 <a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1024</span><span class="p">,</span>
 <a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="n">criterion</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">SAELoss</span><span class="p">]</span> <span class="o">=</span> <span class="n">MSELoss</span><span class="p">,</span>
 <a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="n">optimizer_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">,</span>
-<a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="n">scheduler_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">LRScheduler</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-251" name="__codelineno-0-251"></a>    <span class="n">lr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="p">,</span>
-<a id="__codelineno-0-252" name="__codelineno-0-252"></a>    <span class="n">nb_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="n">clip_grad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-254" name="__codelineno-0-254"></a>    <span class="n">monitoring</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="n">max_nan_fallbacks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
-<a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit an Overcomplete SAE model on the given activations.</span>
-<a id="__codelineno-0-260" name="__codelineno-0-260"></a>
-<a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">        activations (torch.Tensor | dict[str, torch.Tensor]): The activations used for fitting the `concept_model`.</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">            If a dictionary is provided, the activation corresponding to `split_point` will be used.</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">        use_amp (bool): Whether to use automatic mixed precision for fitting.</span>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">        criterion (interpreto.concepts.SAELoss): Loss criterion for the training of the `concept_model`.</span>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">        optimizer_class (type[torch.optim.Optimizer]): Optimizer for the training of the `concept_model`.</span>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">        scheduler_class (type[torch.optim.lr_scheduler.LRScheduler] | None): Learning rate scheduler for the</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">            training of the `concept_model`.</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">        lr (float): Learning rate for the training of the `concept_model`.</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">        nb_epochs (int): Number of epochs for the training of the `concept_model`.</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">        clip_grad (float | None): Gradient clipping value for the training of the `concept_model`.</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">        monitoring (int | None): Monitoring frequency for the training of the `concept_model`.</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">        device (torch.device | str): Device to use for the training of the `concept_model`.</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">        max_nan_fallbacks (int | None): Maximum number of fallbacks to use when NaNs are encountered during</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">            training. Ignored if use_amp is False.</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">        overwrite (bool): Whether to overwrite the current model if it has already been fitted.</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">            Default: False.</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">        A dictionary with training history logs.</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a>    <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a>        <span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a>    <span class="n">split_activations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_fit</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a>    <span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">TensorDataset</span><span class="p">(</span><span class="n">split_activations</span><span class="o">.</span><span class="n">detach</span><span class="p">()),</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="n">optimizer_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="n">lr</span><span class="p">}</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a>    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer_class</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">**</span><span class="n">optimizer_kwargs</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a>    <span class="n">train_params</span> <span class="o">=</span> <span class="p">{</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a>        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="p">,</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a>        <span class="s2">&quot;dataloader&quot;</span><span class="p">:</span> <span class="n">dataloader</span><span class="p">,</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a>        <span class="s2">&quot;criterion&quot;</span><span class="p">:</span> <span class="n">criterion</span><span class="p">(),</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a>        <span class="s2">&quot;optimizer&quot;</span><span class="p">:</span> <span class="n">optimizer</span><span class="p">,</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>        <span class="s2">&quot;nb_epochs&quot;</span><span class="p">:</span> <span class="n">nb_epochs</span><span class="p">,</span>
-<a id="__codelineno-0-294" name="__codelineno-0-294"></a>        <span class="s2">&quot;clip_grad&quot;</span><span class="p">:</span> <span class="n">clip_grad</span><span class="p">,</span>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a>        <span class="s2">&quot;monitoring&quot;</span><span class="p">:</span> <span class="n">monitoring</span><span class="p">,</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a>        <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="n">device</span><span class="p">,</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>    <span class="p">}</span>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a>    <span class="k">if</span> <span class="n">scheduler_class</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a>        <span class="n">scheduler</span> <span class="o">=</span> <span class="n">scheduler_class</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a>        <span class="n">train_params</span><span class="p">[</span><span class="s2">&quot;scheduler&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduler</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>    <span class="k">if</span> <span class="n">use_amp</span><span class="p">:</span>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a>        <span class="n">train_method</span> <span class="o">=</span> <span class="n">oc_sae</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">train_sae_amp</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a>        <span class="n">train_params</span><span class="p">[</span><span class="s2">&quot;max_nan_fallbacks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_nan_fallbacks</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a>        <span class="n">train_method</span> <span class="o">=</span> <span class="n">oc_sae</span><span class="o">.</span><span class="n">train_sae</span>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a>    <span class="n">log</span> <span class="o">=</span> <span class="n">train_method</span><span class="p">(</span><span class="o">**</span><span class="n">train_params</span><span class="p">)</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">fitted</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a>    <span class="c1"># Manually set `BatchTopKSAEConcepts` `.training` argument to `False`</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a>    <span class="c1"># Because overcomplete does not do it and it changes the `.encode()` method drastically.</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a>    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="p">,</span> <span class="s2">&quot;training&quot;</span><span class="p">):</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">training</span> <span class="o">=</span> <span class="kc">False</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a>    <span class="k">return</span> <span class="n">log</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="n">optimizer_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a>    <span class="n">scheduler_class</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">LRScheduler</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>    <span class="n">scheduler_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="n">lr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-3</span><span class="p">,</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a>    <span class="n">nb_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="n">clip_grad</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="n">monitoring</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="n">max_nan_fallbacks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit an Overcomplete SAE model on the given activations.</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">        activations (torch.Tensor | dict[str, torch.Tensor]): The activations used for fitting the `concept_model`.</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">            If a dictionary is provided, the activation corresponding to `split_point` will be used.</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">        use_amp (bool): Whether to use automatic mixed precision for fitting.</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">        criterion (interpreto.concepts.SAELoss): Loss criterion for the training of the `concept_model`.</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">        optimizer_class (type[torch.optim.Optimizer]): Optimizer for the training of the `concept_model`.</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">        optimizer_kwargs (dict): Keyword arguments to pass to the optimizer.</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="sd">        scheduler_class (type[torch.optim.lr_scheduler.LRScheduler] | None): Learning rate scheduler for the</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="sd">            training of the `concept_model`.</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">        scheduler_kwargs (dict): Keyword arguments to pass to the scheduler.</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">        lr (float): Learning rate for the training of the `concept_model`.</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">        nb_epochs (int): Number of epochs for the training of the `concept_model`.</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a><span class="sd">        clip_grad (float | None): Gradient clipping value for the training of the `concept_model`.</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">        monitoring (int | None): Monitoring frequency for the training of the `concept_model`.</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">        device (torch.device | str): Device to use for the training of the `concept_model`.</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="sd">        max_nan_fallbacks (int | None): Maximum number of fallbacks to use when NaNs are encountered during</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="sd">            training. Ignored if use_amp is False.</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">        overwrite (bool): Whether to overwrite the current model if it has already been fitted.</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">            Default: False.</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">        A dictionary with training history logs.</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a>        <span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a>    <span class="n">split_activations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_fit</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a>    <span class="n">dataloader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">TensorDataset</span><span class="p">(</span><span class="n">split_activations</span><span class="o">.</span><span class="n">detach</span><span class="p">()),</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a>    <span class="n">optimizer_kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="n">lr</span><span class="p">})</span>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a>    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer_class</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">**</span><span class="n">optimizer_kwargs</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a>    <span class="n">train_params</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a>        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="p">,</span>
+<a id="__codelineno-0-294" name="__codelineno-0-294"></a>        <span class="s2">&quot;dataloader&quot;</span><span class="p">:</span> <span class="n">dataloader</span><span class="p">,</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a>        <span class="s2">&quot;criterion&quot;</span><span class="p">:</span> <span class="n">criterion</span><span class="p">(),</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a>        <span class="s2">&quot;optimizer&quot;</span><span class="p">:</span> <span class="n">optimizer</span><span class="p">,</span>
+<a id="__codelineno-0-297" name="__codelineno-0-297"></a>        <span class="s2">&quot;nb_epochs&quot;</span><span class="p">:</span> <span class="n">nb_epochs</span><span class="p">,</span>
+<a id="__codelineno-0-298" name="__codelineno-0-298"></a>        <span class="s2">&quot;clip_grad&quot;</span><span class="p">:</span> <span class="n">clip_grad</span><span class="p">,</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>        <span class="s2">&quot;monitoring&quot;</span><span class="p">:</span> <span class="n">monitoring</span><span class="p">,</span>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a>        <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="n">device</span><span class="p">,</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>    <span class="p">}</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a>    <span class="k">if</span> <span class="n">scheduler_class</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>        <span class="n">scheduler</span> <span class="o">=</span> <span class="n">scheduler_class</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="o">**</span><span class="n">scheduler_kwargs</span><span class="p">)</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a>        <span class="n">train_params</span><span class="p">[</span><span class="s2">&quot;scheduler&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scheduler</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>    <span class="k">if</span> <span class="n">use_amp</span><span class="p">:</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a>        <span class="n">train_method</span> <span class="o">=</span> <span class="n">oc_sae</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">train_sae_amp</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a>        <span class="n">train_params</span><span class="p">[</span><span class="s2">&quot;max_nan_fallbacks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_nan_fallbacks</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a>        <span class="n">train_method</span> <span class="o">=</span> <span class="n">oc_sae</span><span class="o">.</span><span class="n">train_sae</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a>    <span class="n">log</span> <span class="o">=</span> <span class="n">train_method</span><span class="p">(</span><span class="o">**</span><span class="n">train_params</span><span class="p">)</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">fitted</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>    <span class="c1"># Manually set `BatchTopKSAEConcepts` `.training` argument to `False`</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>    <span class="c1"># Because overcomplete does not do it and it changes the `.encode()` method drastically.</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="p">,</span> <span class="s2">&quot;training&quot;</span><span class="p">):</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">training</span> <span class="o">=</span> <span class="kc">False</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>    <span class="k">return</span> <span class="n">log</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3413,11 +3505,7 @@ Default: False.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/methods/overcomplete.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-316">316</a></span>
-<span class="normal"><a href="#__codelineno-0-317">317</a></span>
-<span class="normal"><a href="#__codelineno-0-318">318</a></span>
-<span class="normal"><a href="#__codelineno-0-319">319</a></span>
-<span class="normal"><a href="#__codelineno-0-320">320</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-320">320</a></span>
 <span class="normal"><a href="#__codelineno-0-321">321</a></span>
 <span class="normal"><a href="#__codelineno-0-322">322</a></span>
 <span class="normal"><a href="#__codelineno-0-323">323</a></span>
@@ -3425,19 +3513,23 @@ Default: False.</p>
 <span class="normal"><a href="#__codelineno-0-325">325</a></span>
 <span class="normal"><a href="#__codelineno-0-326">326</a></span>
 <span class="normal"><a href="#__codelineno-0-327">327</a></span>
-<span class="normal"><a href="#__codelineno-0-328">328</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a><span class="k">def</span><span class="w"> </span><span class="nf">encode_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the `concept_model` encoder.</span>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a>
-<a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="sd">        activations (torch.Tensor): The activations to encode.</span>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">        The encoded concept activations.</span>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="c1"># SAEs.encode returns both codes (concepts activations) and pre_codes (before relu)</span>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>    <span class="n">_</span><span class="p">,</span> <span class="n">codes</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">encode_activations</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>    <span class="k">return</span> <span class="n">codes</span>
+<span class="normal"><a href="#__codelineno-0-328">328</a></span>
+<span class="normal"><a href="#__codelineno-0-329">329</a></span>
+<span class="normal"><a href="#__codelineno-0-330">330</a></span>
+<span class="normal"><a href="#__codelineno-0-331">331</a></span>
+<span class="normal"><a href="#__codelineno-0-332">332</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="nd">@check_fitted</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="k">def</span><span class="w"> </span><span class="nf">encode_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the `concept_model` encoder.</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a><span class="sd">        activations (torch.Tensor): The activations to encode.</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a><span class="sd">        The encoded concept activations.</span>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>    <span class="c1"># SAEs.encode returns both codes (concepts activations) and pre_codes (before relu)</span>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>    <span class="n">_</span><span class="p">,</span> <span class="n">codes</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">encode_activations</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>    <span class="k">return</span> <span class="n">codes</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3516,27 +3608,27 @@ Default: False.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/methods/overcomplete.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-330">330</a></span>
-<span class="normal"><a href="#__codelineno-0-331">331</a></span>
-<span class="normal"><a href="#__codelineno-0-332">332</a></span>
-<span class="normal"><a href="#__codelineno-0-333">333</a></span>
-<span class="normal"><a href="#__codelineno-0-334">334</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-334">334</a></span>
 <span class="normal"><a href="#__codelineno-0-335">335</a></span>
 <span class="normal"><a href="#__codelineno-0-336">336</a></span>
 <span class="normal"><a href="#__codelineno-0-337">337</a></span>
 <span class="normal"><a href="#__codelineno-0-338">338</a></span>
 <span class="normal"><a href="#__codelineno-0-339">339</a></span>
-<span class="normal"><a href="#__codelineno-0-340">340</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-330" name="__codelineno-0-330"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a><span class="k">def</span><span class="w"> </span><span class="nf">decode_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode the given concepts using the `concept_model` decoder.</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a><span class="sd">        concepts (torch.Tensor): The concepts to decode.</span>
-<a id="__codelineno-0-336" name="__codelineno-0-336"></a>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a><span class="sd">        The decoded concept activations.</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">concepts</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>  <span class="c1"># type: ignore</span>
+<span class="normal"><a href="#__codelineno-0-340">340</a></span>
+<span class="normal"><a href="#__codelineno-0-341">341</a></span>
+<span class="normal"><a href="#__codelineno-0-342">342</a></span>
+<span class="normal"><a href="#__codelineno-0-343">343</a></span>
+<span class="normal"><a href="#__codelineno-0-344">344</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-334" name="__codelineno-0-334"></a><span class="nd">@check_fitted</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a><span class="k">def</span><span class="w"> </span><span class="nf">decode_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode the given concepts using the `concept_model` decoder.</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="sd">        concepts (torch.Tensor): The concepts to decode.</span>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a><span class="sd">        The decoded concept activations.</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">concepts</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">))</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3679,7 +3771,7 @@ raise a :class:<code>NotImplementedError</code>.</p>
   
       class-attribute
       instance-attribute
-   (interpreto.model_wrapping.model_with_split_points.GranularityAggregationStrategy.MEAN)" href="../../model_with_split_points/#interpreto.model_wrapping.model_with_split_points.GranularityAggregationStrategy.MEAN">MEAN</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="concepts_x_gradients (interpreto.concepts.methods.SAEExplainer.concept_output_gradient(concepts_x_gradients))" href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(concepts_x_gradients)">concepts_x_gradients</a></span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="tqdm_bar (interpreto.concepts.methods.SAEExplainer.concept_output_gradient(tqdm_bar))" href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(tqdm_bar)">tqdm_bar</a></span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="batch_size (interpreto.concepts.methods.SAEExplainer.concept_output_gradient(batch_size))" href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(batch_size)">batch_size</a></span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+   (interpreto.model_wrapping.model_with_split_points.GranularityAggregationStrategy.MEAN)" href="../../model_with_split_points/#interpreto.model_wrapping.model_with_split_points.GranularityAggregationStrategy.MEAN">MEAN</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="concepts_x_gradients (interpreto.concepts.methods.SAEExplainer.concept_output_gradient(concepts_x_gradients))" href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(concepts_x_gradients)">concepts_x_gradients</a></span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="normalization (interpreto.concepts.methods.SAEExplainer.concept_output_gradient(normalization))" href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(normalization)">normalization</a></span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="tqdm_bar (interpreto.concepts.methods.SAEExplainer.concept_output_gradient(tqdm_bar))" href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(tqdm_bar)">tqdm_bar</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="batch_size (interpreto.concepts.methods.SAEExplainer.concept_output_gradient(batch_size))" href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(batch_size)">batch_size</a></span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3875,6 +3967,26 @@ Therefore the out put is <span class="arithmatex">\(C * \nabla{f_{co}}(C)\)</spa
           </tr>
           <tr class="doc-section-item">
             <td>
+<h4 id="interpreto.concepts.methods.SAEExplainer.concept_output_gradient(normalization)" class="doc doc-heading doc-heading-parameter">                  <code>normalization</code>
+<a href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(normalization)" class="headerlink" title="Permanent link">&para;</a></h4>            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to normalize the gradients.
+Gradients will be normalized on the concept (c) and sequence length (g) dimensions.
+Such that for a given sample-target-granular pair,
+the sum of the absolute values of the gradients is equal to 1.
+(The granular elements depend on the :arg:<code>activation_granularity</code>).</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
 <h4 id="interpreto.concepts.methods.SAEExplainer.concept_output_gradient(tqdm_bar)" class="doc doc-heading doc-heading-parameter">                  <code>tqdm_bar</code>
 <a href="#interpreto.concepts.methods.SAEExplainer.concept_output_gradient(tqdm_bar)" class="headerlink" title="Permanent link">&para;</a></h4>            </td>
             <td>
@@ -3886,7 +3998,7 @@ Therefore the out put is <span class="arithmatex">\(C * \nabla{f_{co}}(C)\)</spa
               </div>
             </td>
             <td>
-                  <code>True</code>
+                  <code>False</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -3940,25 +4052,7 @@ List length: correspond to the number of inputs.
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/base.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-367">367</a></span>
-<span class="normal"><a href="#__codelineno-0-368">368</a></span>
-<span class="normal"><a href="#__codelineno-0-369">369</a></span>
-<span class="normal"><a href="#__codelineno-0-370">370</a></span>
-<span class="normal"><a href="#__codelineno-0-371">371</a></span>
-<span class="normal"><a href="#__codelineno-0-372">372</a></span>
-<span class="normal"><a href="#__codelineno-0-373">373</a></span>
-<span class="normal"><a href="#__codelineno-0-374">374</a></span>
-<span class="normal"><a href="#__codelineno-0-375">375</a></span>
-<span class="normal"><a href="#__codelineno-0-376">376</a></span>
-<span class="normal"><a href="#__codelineno-0-377">377</a></span>
-<span class="normal"><a href="#__codelineno-0-378">378</a></span>
-<span class="normal"><a href="#__codelineno-0-379">379</a></span>
-<span class="normal"><a href="#__codelineno-0-380">380</a></span>
-<span class="normal"><a href="#__codelineno-0-381">381</a></span>
-<span class="normal"><a href="#__codelineno-0-382">382</a></span>
-<span class="normal"><a href="#__codelineno-0-383">383</a></span>
-<span class="normal"><a href="#__codelineno-0-384">384</a></span>
-<span class="normal"><a href="#__codelineno-0-385">385</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-385">385</a></span>
 <span class="normal"><a href="#__codelineno-0-386">386</a></span>
 <span class="normal"><a href="#__codelineno-0-387">387</a></span>
 <span class="normal"><a href="#__codelineno-0-388">388</a></span>
@@ -4068,135 +4162,177 @@ List length: correspond to the number of inputs.
 <span class="normal"><a href="#__codelineno-0-492">492</a></span>
 <span class="normal"><a href="#__codelineno-0-493">493</a></span>
 <span class="normal"><a href="#__codelineno-0-494">494</a></span>
-<span class="normal"><a href="#__codelineno-0-495">495</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-367" name="__codelineno-0-367"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-368" name="__codelineno-0-368"></a><span class="k">def</span><span class="w"> </span><span class="nf">concept_output_gradient</span><span class="p">(</span>
-<a id="__codelineno-0-369" name="__codelineno-0-369"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">BatchEncoding</span><span class="p">,</span>
-<a id="__codelineno-0-371" name="__codelineno-0-371"></a>    <span class="n">targets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-372" name="__codelineno-0-372"></a>    <span class="n">split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-373" name="__codelineno-0-373"></a>    <span class="n">activation_granularity</span><span class="p">:</span> <span class="n">ActivationGranularity</span> <span class="o">=</span> <span class="n">ActivationGranularity</span><span class="o">.</span><span class="n">TOKEN</span><span class="p">,</span>
-<a id="__codelineno-0-374" name="__codelineno-0-374"></a>    <span class="n">aggregation_strategy</span><span class="p">:</span> <span class="n">GranularityAggregationStrategy</span> <span class="o">=</span> <span class="n">GranularityAggregationStrategy</span><span class="o">.</span><span class="n">MEAN</span><span class="p">,</span>
-<a id="__codelineno-0-375" name="__codelineno-0-375"></a>    <span class="n">concepts_x_gradients</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-376" name="__codelineno-0-376"></a>    <span class="n">tqdm_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-377" name="__codelineno-0-377"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-378" name="__codelineno-0-378"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;t g c&quot;</span><span class="p">]]:</span>
-<a id="__codelineno-0-379" name="__codelineno-0-379"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-380" name="__codelineno-0-380"></a><span class="sd">    Compute the gradients of the predictions with respect to the concepts.</span>
-<a id="__codelineno-0-381" name="__codelineno-0-381"></a>
-<a id="__codelineno-0-382" name="__codelineno-0-382"></a><span class="sd">    To clarify what this function does, lets detail some notations.</span>
-<a id="__codelineno-0-383" name="__codelineno-0-383"></a><span class="sd">    Suppose the initial model was splitted such that $f = g \\circ h$.</span>
-<a id="__codelineno-0-384" name="__codelineno-0-384"></a><span class="sd">    Hence the concept model was fitted on $A = h(X)$ with $X$ a dataset of samples.</span>
-<a id="__codelineno-0-385" name="__codelineno-0-385"></a><span class="sd">    The resulting concept model encoders and decoders are noted $t$ and $t^{-1}$.</span>
-<a id="__codelineno-0-386" name="__codelineno-0-386"></a><span class="sd">    $t$ can be seen as projections from the latent space to the concept space.</span>
-<a id="__codelineno-0-387" name="__codelineno-0-387"></a><span class="sd">    Hence, the function going from the inputs to the concepts is $f_{ic} = t \\circ h$</span>
-<a id="__codelineno-0-388" name="__codelineno-0-388"></a><span class="sd">    and the function going from the concepts to the outputs is $f_{co} = g \\circ t^-1$.</span>
-<a id="__codelineno-0-389" name="__codelineno-0-389"></a>
-<a id="__codelineno-0-390" name="__codelineno-0-390"></a><span class="sd">    Given a set of samples $X$, and the functions $(h, t, t^{-1}, g)$</span>
-<a id="__codelineno-0-391" name="__codelineno-0-391"></a><span class="sd">    This function first compute $C = t(A) = t \\circ h(X)$, then returns $\\nabla{f_{co}}(C)$.</span>
-<a id="__codelineno-0-392" name="__codelineno-0-392"></a>
-<a id="__codelineno-0-393" name="__codelineno-0-393"></a><span class="sd">    In practice all computations are done by `ModelWithSplitPoints._get_concept_output_gradients`,</span>
-<a id="__codelineno-0-394" name="__codelineno-0-394"></a><span class="sd">    which relies on NNsight. The current method only forwards the $t$ and $t^{-1}$,</span>
-<a id="__codelineno-0-395" name="__codelineno-0-395"></a><span class="sd">    respectively `self.encode_activations` and `self.decode_concepts` methods.</span>
-<a id="__codelineno-0-396" name="__codelineno-0-396"></a>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="sd">        inputs (list[str] | torch.Tensor | BatchEncoding):</span>
-<a id="__codelineno-0-399" name="__codelineno-0-399"></a><span class="sd">            The input data, either a list of samples, the tokenized input or a batch of samples.</span>
+<span class="normal"><a href="#__codelineno-0-495">495</a></span>
+<span class="normal"><a href="#__codelineno-0-496">496</a></span>
+<span class="normal"><a href="#__codelineno-0-497">497</a></span>
+<span class="normal"><a href="#__codelineno-0-498">498</a></span>
+<span class="normal"><a href="#__codelineno-0-499">499</a></span>
+<span class="normal"><a href="#__codelineno-0-500">500</a></span>
+<span class="normal"><a href="#__codelineno-0-501">501</a></span>
+<span class="normal"><a href="#__codelineno-0-502">502</a></span>
+<span class="normal"><a href="#__codelineno-0-503">503</a></span>
+<span class="normal"><a href="#__codelineno-0-504">504</a></span>
+<span class="normal"><a href="#__codelineno-0-505">505</a></span>
+<span class="normal"><a href="#__codelineno-0-506">506</a></span>
+<span class="normal"><a href="#__codelineno-0-507">507</a></span>
+<span class="normal"><a href="#__codelineno-0-508">508</a></span>
+<span class="normal"><a href="#__codelineno-0-509">509</a></span>
+<span class="normal"><a href="#__codelineno-0-510">510</a></span>
+<span class="normal"><a href="#__codelineno-0-511">511</a></span>
+<span class="normal"><a href="#__codelineno-0-512">512</a></span>
+<span class="normal"><a href="#__codelineno-0-513">513</a></span>
+<span class="normal"><a href="#__codelineno-0-514">514</a></span>
+<span class="normal"><a href="#__codelineno-0-515">515</a></span>
+<span class="normal"><a href="#__codelineno-0-516">516</a></span>
+<span class="normal"><a href="#__codelineno-0-517">517</a></span>
+<span class="normal"><a href="#__codelineno-0-518">518</a></span>
+<span class="normal"><a href="#__codelineno-0-519">519</a></span>
+<span class="normal"><a href="#__codelineno-0-520">520</a></span>
+<span class="normal"><a href="#__codelineno-0-521">521</a></span>
+<span class="normal"><a href="#__codelineno-0-522">522</a></span>
+<span class="normal"><a href="#__codelineno-0-523">523</a></span>
+<span class="normal"><a href="#__codelineno-0-524">524</a></span>
+<span class="normal"><a href="#__codelineno-0-525">525</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-385" name="__codelineno-0-385"></a><span class="nd">@check_fitted</span>
+<a id="__codelineno-0-386" name="__codelineno-0-386"></a><span class="k">def</span><span class="w"> </span><span class="nf">concept_output_gradient</span><span class="p">(</span>
+<a id="__codelineno-0-387" name="__codelineno-0-387"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-388" name="__codelineno-0-388"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">BatchEncoding</span><span class="p">,</span>
+<a id="__codelineno-0-389" name="__codelineno-0-389"></a>    <span class="n">targets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-390" name="__codelineno-0-390"></a>    <span class="n">split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-391" name="__codelineno-0-391"></a>    <span class="n">activation_granularity</span><span class="p">:</span> <span class="n">ActivationGranularity</span> <span class="o">=</span> <span class="n">ActivationGranularity</span><span class="o">.</span><span class="n">TOKEN</span><span class="p">,</span>
+<a id="__codelineno-0-392" name="__codelineno-0-392"></a>    <span class="n">aggregation_strategy</span><span class="p">:</span> <span class="n">GranularityAggregationStrategy</span> <span class="o">=</span> <span class="n">GranularityAggregationStrategy</span><span class="o">.</span><span class="n">MEAN</span><span class="p">,</span>
+<a id="__codelineno-0-393" name="__codelineno-0-393"></a>    <span class="n">concepts_x_gradients</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-394" name="__codelineno-0-394"></a>    <span class="n">normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-395" name="__codelineno-0-395"></a>    <span class="n">tqdm_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-396" name="__codelineno-0-396"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;t g c&quot;</span><span class="p">]]:</span>
+<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-399" name="__codelineno-0-399"></a><span class="sd">    Compute the gradients of the predictions with respect to the concepts.</span>
 <a id="__codelineno-0-400" name="__codelineno-0-400"></a>
-<a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="sd">        targets (list[int] | None):</span>
-<a id="__codelineno-0-402" name="__codelineno-0-402"></a><span class="sd">            Specify which outputs of the model should be used to compute the gradients.</span>
-<a id="__codelineno-0-403" name="__codelineno-0-403"></a><span class="sd">            Note that $f_{co}$ often has several outputs, by default gradients are computed for each output.</span>
-<a id="__codelineno-0-404" name="__codelineno-0-404"></a><span class="sd">            The `t` dimension of the returned tensor is equal to the number of selected targets.</span>
-<a id="__codelineno-0-405" name="__codelineno-0-405"></a><span class="sd">            (For classification, those are the classes logits and for generation, those are the most probable tokens probabilities).</span>
-<a id="__codelineno-0-406" name="__codelineno-0-406"></a>
-<a id="__codelineno-0-407" name="__codelineno-0-407"></a><span class="sd">        split_point (str | None):</span>
-<a id="__codelineno-0-408" name="__codelineno-0-408"></a><span class="sd">            The split point used to train the `concept_model`.</span>
-<a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="sd">            If None, tries to use the split point of `model_with_split_points` if a single one is defined.</span>
-<a id="__codelineno-0-410" name="__codelineno-0-410"></a>
-<a id="__codelineno-0-411" name="__codelineno-0-411"></a><span class="sd">        activation_granularity (ActivationGranularity):</span>
-<a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="sd">            The granularity of the activations to use for the attribution.</span>
-<a id="__codelineno-0-413" name="__codelineno-0-413"></a><span class="sd">            It is highly recommended to to use the same granularity as the one used in the `fit` method.</span>
-<a id="__codelineno-0-414" name="__codelineno-0-414"></a><span class="sd">            Possibles values are:</span>
+<a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="sd">    To clarify what this function does, lets detail some notations.</span>
+<a id="__codelineno-0-402" name="__codelineno-0-402"></a><span class="sd">    Suppose the initial model was splitted such that $f = g \\circ h$.</span>
+<a id="__codelineno-0-403" name="__codelineno-0-403"></a><span class="sd">    Hence the concept model was fitted on $A = h(X)$ with $X$ a dataset of samples.</span>
+<a id="__codelineno-0-404" name="__codelineno-0-404"></a><span class="sd">    The resulting concept model encoders and decoders are noted $t$ and $t^{-1}$.</span>
+<a id="__codelineno-0-405" name="__codelineno-0-405"></a><span class="sd">    $t$ can be seen as projections from the latent space to the concept space.</span>
+<a id="__codelineno-0-406" name="__codelineno-0-406"></a><span class="sd">    Hence, the function going from the inputs to the concepts is $f_{ic} = t \\circ h$</span>
+<a id="__codelineno-0-407" name="__codelineno-0-407"></a><span class="sd">    and the function going from the concepts to the outputs is $f_{co} = g \\circ t^-1$.</span>
+<a id="__codelineno-0-408" name="__codelineno-0-408"></a>
+<a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="sd">    Given a set of samples $X$, and the functions $(h, t, t^{-1}, g)$</span>
+<a id="__codelineno-0-410" name="__codelineno-0-410"></a><span class="sd">    This function first compute $C = t(A) = t \\circ h(X)$, then returns $\\nabla{f_{co}}(C)$.</span>
+<a id="__codelineno-0-411" name="__codelineno-0-411"></a>
+<a id="__codelineno-0-412" name="__codelineno-0-412"></a><span class="sd">    In practice all computations are done by `ModelWithSplitPoints._get_concept_output_gradients`,</span>
+<a id="__codelineno-0-413" name="__codelineno-0-413"></a><span class="sd">    which relies on NNsight. The current method only forwards the $t$ and $t^{-1}$,</span>
+<a id="__codelineno-0-414" name="__codelineno-0-414"></a><span class="sd">    respectively `self.encode_activations` and `self.decode_concepts` methods.</span>
 <a id="__codelineno-0-415" name="__codelineno-0-415"></a>
-<a id="__codelineno-0-416" name="__codelineno-0-416"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:</span>
-<a id="__codelineno-0-417" name="__codelineno-0-417"></a><span class="sd">                only the first token (e.g. ``[CLS]``) activation is returned ``(batch, d_model)``.</span>
-<a id="__codelineno-0-418" name="__codelineno-0-418"></a>
-<a id="__codelineno-0-419" name="__codelineno-0-419"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:</span>
-<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">                every token activation is treated as a separate element ``(batch x seq_len, d_model)``.</span>
-<a id="__codelineno-0-421" name="__codelineno-0-421"></a>
-<a id="__codelineno-0-422" name="__codelineno-0-422"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.TOKEN``: remove special tokens.</span>
-<a id="__codelineno-0-423" name="__codelineno-0-423"></a>
-<a id="__codelineno-0-424" name="__codelineno-0-424"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.WORD``:</span>
-<a id="__codelineno-0-425" name="__codelineno-0-425"></a><span class="sd">                aggregate by words following the split defined by</span>
-<a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="sd">                :class:`~interpreto.commons.granularity.Granularity.WORD`.</span>
-<a id="__codelineno-0-427" name="__codelineno-0-427"></a>
-<a id="__codelineno-0-428" name="__codelineno-0-428"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:</span>
-<a id="__codelineno-0-429" name="__codelineno-0-429"></a><span class="sd">                aggregate by sentences following the split defined by</span>
-<a id="__codelineno-0-430" name="__codelineno-0-430"></a><span class="sd">                :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.</span>
-<a id="__codelineno-0-431" name="__codelineno-0-431"></a><span class="sd">                Requires `spacy` to be installed.</span>
-<a id="__codelineno-0-432" name="__codelineno-0-432"></a>
-<a id="__codelineno-0-433" name="__codelineno-0-433"></a><span class="sd">        aggregation_strategy:</span>
-<a id="__codelineno-0-434" name="__codelineno-0-434"></a><span class="sd">            Strategy to aggregate token activations into larger inputs granularities.</span>
-<a id="__codelineno-0-435" name="__codelineno-0-435"></a><span class="sd">            Applied for `WORD` and `SENTENCE` activation strategies.</span>
-<a id="__codelineno-0-436" name="__codelineno-0-436"></a><span class="sd">            Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.</span>
-<a id="__codelineno-0-437" name="__codelineno-0-437"></a><span class="sd">            The concatenated into (ng, d) tensors.</span>
-<a id="__codelineno-0-438" name="__codelineno-0-438"></a><span class="sd">            Existing strategies are:</span>
-<a id="__codelineno-0-439" name="__codelineno-0-439"></a>
-<a id="__codelineno-0-440" name="__codelineno-0-440"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SUM``:</span>
-<a id="__codelineno-0-441" name="__codelineno-0-441"></a><span class="sd">                Tokens activations are summed along the sequence length dimension.</span>
+<a id="__codelineno-0-416" name="__codelineno-0-416"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-417" name="__codelineno-0-417"></a><span class="sd">        inputs (list[str] | torch.Tensor | BatchEncoding):</span>
+<a id="__codelineno-0-418" name="__codelineno-0-418"></a><span class="sd">            The input data, either a list of samples, the tokenized input or a batch of samples.</span>
+<a id="__codelineno-0-419" name="__codelineno-0-419"></a>
+<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">        targets (list[int] | None):</span>
+<a id="__codelineno-0-421" name="__codelineno-0-421"></a><span class="sd">            Specify which outputs of the model should be used to compute the gradients.</span>
+<a id="__codelineno-0-422" name="__codelineno-0-422"></a><span class="sd">            Note that $f_{co}$ often has several outputs, by default gradients are computed for each output.</span>
+<a id="__codelineno-0-423" name="__codelineno-0-423"></a><span class="sd">            The `t` dimension of the returned tensor is equal to the number of selected targets.</span>
+<a id="__codelineno-0-424" name="__codelineno-0-424"></a><span class="sd">            (For classification, those are the classes logits and for generation, those are the most probable tokens probabilities).</span>
+<a id="__codelineno-0-425" name="__codelineno-0-425"></a>
+<a id="__codelineno-0-426" name="__codelineno-0-426"></a><span class="sd">        split_point (str | None):</span>
+<a id="__codelineno-0-427" name="__codelineno-0-427"></a><span class="sd">            The split point used to train the `concept_model`.</span>
+<a id="__codelineno-0-428" name="__codelineno-0-428"></a><span class="sd">            If None, tries to use the split point of `model_with_split_points` if a single one is defined.</span>
+<a id="__codelineno-0-429" name="__codelineno-0-429"></a>
+<a id="__codelineno-0-430" name="__codelineno-0-430"></a><span class="sd">        activation_granularity (ActivationGranularity):</span>
+<a id="__codelineno-0-431" name="__codelineno-0-431"></a><span class="sd">            The granularity of the activations to use for the attribution.</span>
+<a id="__codelineno-0-432" name="__codelineno-0-432"></a><span class="sd">            It is highly recommended to to use the same granularity as the one used in the `fit` method.</span>
+<a id="__codelineno-0-433" name="__codelineno-0-433"></a><span class="sd">            Possibles values are:</span>
+<a id="__codelineno-0-434" name="__codelineno-0-434"></a>
+<a id="__codelineno-0-435" name="__codelineno-0-435"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:</span>
+<a id="__codelineno-0-436" name="__codelineno-0-436"></a><span class="sd">                only the first token (e.g. ``[CLS]``) activation is returned ``(batch, d_model)``.</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a>
+<a id="__codelineno-0-438" name="__codelineno-0-438"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:</span>
+<a id="__codelineno-0-439" name="__codelineno-0-439"></a><span class="sd">                every token activation is treated as a separate element ``(batch x seq_len, d_model)``.</span>
+<a id="__codelineno-0-440" name="__codelineno-0-440"></a>
+<a id="__codelineno-0-441" name="__codelineno-0-441"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.TOKEN``: remove special tokens.</span>
 <a id="__codelineno-0-442" name="__codelineno-0-442"></a>
-<a id="__codelineno-0-443" name="__codelineno-0-443"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:</span>
-<a id="__codelineno-0-444" name="__codelineno-0-444"></a><span class="sd">                Tokens activations are averaged along the sequence length dimension.</span>
-<a id="__codelineno-0-445" name="__codelineno-0-445"></a>
-<a id="__codelineno-0-446" name="__codelineno-0-446"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MAX``:</span>
-<a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">                The maximum of the token activations along the sequence length dimension is selected.</span>
-<a id="__codelineno-0-448" name="__codelineno-0-448"></a>
-<a id="__codelineno-0-449" name="__codelineno-0-449"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:</span>
-<a id="__codelineno-0-450" name="__codelineno-0-450"></a><span class="sd">                The maximum of the absolute value of the activations multiplied by its initial sign.</span>
-<a id="__codelineno-0-451" name="__codelineno-0-451"></a><span class="sd">                signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]</span>
-<a id="__codelineno-0-452" name="__codelineno-0-452"></a>
-<a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="sd">        concepts_x_gradients (bool):</span>
-<a id="__codelineno-0-454" name="__codelineno-0-454"></a><span class="sd">            If the resulting gradients should be multiplied by the concepts activations.</span>
-<a id="__codelineno-0-455" name="__codelineno-0-455"></a><span class="sd">            True by default (similarly to attributions), because of mathematical properties.</span>
-<a id="__codelineno-0-456" name="__codelineno-0-456"></a><span class="sd">            Therefore the out put is $C * \\nabla{f_{co}}(C)$.</span>
-<a id="__codelineno-0-457" name="__codelineno-0-457"></a>
-<a id="__codelineno-0-458" name="__codelineno-0-458"></a><span class="sd">        tqdm_bar (bool):</span>
-<a id="__codelineno-0-459" name="__codelineno-0-459"></a><span class="sd">            Whether to display a progress bar.</span>
-<a id="__codelineno-0-460" name="__codelineno-0-460"></a>
-<a id="__codelineno-0-461" name="__codelineno-0-461"></a><span class="sd">        batch_size (int | None):</span>
-<a id="__codelineno-0-462" name="__codelineno-0-462"></a><span class="sd">            Batch size for the model.</span>
-<a id="__codelineno-0-463" name="__codelineno-0-463"></a><span class="sd">            It might be different from the one used in `ModelWithSplitPoints.get_activations`</span>
-<a id="__codelineno-0-464" name="__codelineno-0-464"></a><span class="sd">            because gradients have a much larger impact on the memory.</span>
-<a id="__codelineno-0-465" name="__codelineno-0-465"></a>
-<a id="__codelineno-0-466" name="__codelineno-0-466"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-467" name="__codelineno-0-467"></a><span class="sd">        list[Float[torch.Tensor, &quot;t g c&quot;]]:</span>
-<a id="__codelineno-0-468" name="__codelineno-0-468"></a><span class="sd">            The gradients of the model output with respect to the concept activations.</span>
-<a id="__codelineno-0-469" name="__codelineno-0-469"></a><span class="sd">            List length: correspond to the number of inputs.</span>
-<a id="__codelineno-0-470" name="__codelineno-0-470"></a><span class="sd">                Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of</span>
-<a id="__codelineno-0-471" name="__codelineno-0-471"></a><span class="sd">                concepts.</span>
-<a id="__codelineno-0-472" name="__codelineno-0-472"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-473" name="__codelineno-0-473"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_differentiable_concept_decoder</span><span class="p">:</span>
-<a id="__codelineno-0-474" name="__codelineno-0-474"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-475" name="__codelineno-0-475"></a>            <span class="s2">&quot;The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. &quot;</span>
-<a id="__codelineno-0-476" name="__codelineno-0-476"></a>            <span class="sa">f</span><span class="s2">&quot;Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
-<a id="__codelineno-0-477" name="__codelineno-0-477"></a>        <span class="p">)</span>
-<a id="__codelineno-0-478" name="__codelineno-0-478"></a>
-<a id="__codelineno-0-479" name="__codelineno-0-479"></a>    <span class="c1"># put everything on device</span>
-<a id="__codelineno-0-480" name="__codelineno-0-480"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-<a id="__codelineno-0-481" name="__codelineno-0-481"></a>
-<a id="__codelineno-0-482" name="__codelineno-0-482"></a>    <span class="c1"># forward all computations to</span>
-<a id="__codelineno-0-483" name="__codelineno-0-483"></a>    <span class="n">gradients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">_get_concept_output_gradients</span><span class="p">(</span>
-<a id="__codelineno-0-484" name="__codelineno-0-484"></a>        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
-<a id="__codelineno-0-485" name="__codelineno-0-485"></a>        <span class="n">targets</span><span class="o">=</span><span class="n">targets</span><span class="p">,</span>
-<a id="__codelineno-0-486" name="__codelineno-0-486"></a>        <span class="n">encode_activations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encode_activations</span><span class="p">,</span>
-<a id="__codelineno-0-487" name="__codelineno-0-487"></a>        <span class="n">decode_concepts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">decode_concepts</span><span class="p">,</span>
-<a id="__codelineno-0-488" name="__codelineno-0-488"></a>        <span class="n">split_point</span><span class="o">=</span><span class="n">split_point</span><span class="p">,</span>
-<a id="__codelineno-0-489" name="__codelineno-0-489"></a>        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
-<a id="__codelineno-0-490" name="__codelineno-0-490"></a>        <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">aggregation_strategy</span><span class="p">,</span>
-<a id="__codelineno-0-491" name="__codelineno-0-491"></a>        <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="n">concepts_x_gradients</span><span class="p">,</span>
-<a id="__codelineno-0-492" name="__codelineno-0-492"></a>        <span class="n">tqdm_bar</span><span class="o">=</span><span class="n">tqdm_bar</span><span class="p">,</span>
-<a id="__codelineno-0-493" name="__codelineno-0-493"></a>        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
-<a id="__codelineno-0-494" name="__codelineno-0-494"></a>    <span class="p">)</span>
-<a id="__codelineno-0-495" name="__codelineno-0-495"></a>    <span class="k">return</span> <span class="n">gradients</span>
+<a id="__codelineno-0-443" name="__codelineno-0-443"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.WORD``:</span>
+<a id="__codelineno-0-444" name="__codelineno-0-444"></a><span class="sd">                aggregate by words following the split defined by</span>
+<a id="__codelineno-0-445" name="__codelineno-0-445"></a><span class="sd">                :class:`~interpreto.commons.granularity.Granularity.WORD`.</span>
+<a id="__codelineno-0-446" name="__codelineno-0-446"></a>
+<a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:</span>
+<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">                aggregate by sentences following the split defined by</span>
+<a id="__codelineno-0-449" name="__codelineno-0-449"></a><span class="sd">                :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.</span>
+<a id="__codelineno-0-450" name="__codelineno-0-450"></a><span class="sd">                Requires `spacy` to be installed.</span>
+<a id="__codelineno-0-451" name="__codelineno-0-451"></a>
+<a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="sd">        aggregation_strategy:</span>
+<a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="sd">            Strategy to aggregate token activations into larger inputs granularities.</span>
+<a id="__codelineno-0-454" name="__codelineno-0-454"></a><span class="sd">            Applied for `WORD` and `SENTENCE` activation strategies.</span>
+<a id="__codelineno-0-455" name="__codelineno-0-455"></a><span class="sd">            Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.</span>
+<a id="__codelineno-0-456" name="__codelineno-0-456"></a><span class="sd">            The concatenated into (ng, d) tensors.</span>
+<a id="__codelineno-0-457" name="__codelineno-0-457"></a><span class="sd">            Existing strategies are:</span>
+<a id="__codelineno-0-458" name="__codelineno-0-458"></a>
+<a id="__codelineno-0-459" name="__codelineno-0-459"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SUM``:</span>
+<a id="__codelineno-0-460" name="__codelineno-0-460"></a><span class="sd">                Tokens activations are summed along the sequence length dimension.</span>
+<a id="__codelineno-0-461" name="__codelineno-0-461"></a>
+<a id="__codelineno-0-462" name="__codelineno-0-462"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:</span>
+<a id="__codelineno-0-463" name="__codelineno-0-463"></a><span class="sd">                Tokens activations are averaged along the sequence length dimension.</span>
+<a id="__codelineno-0-464" name="__codelineno-0-464"></a>
+<a id="__codelineno-0-465" name="__codelineno-0-465"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MAX``:</span>
+<a id="__codelineno-0-466" name="__codelineno-0-466"></a><span class="sd">                The maximum of the token activations along the sequence length dimension is selected.</span>
+<a id="__codelineno-0-467" name="__codelineno-0-467"></a>
+<a id="__codelineno-0-468" name="__codelineno-0-468"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:</span>
+<a id="__codelineno-0-469" name="__codelineno-0-469"></a><span class="sd">                The maximum of the absolute value of the activations multiplied by its initial sign.</span>
+<a id="__codelineno-0-470" name="__codelineno-0-470"></a><span class="sd">                signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]</span>
+<a id="__codelineno-0-471" name="__codelineno-0-471"></a>
+<a id="__codelineno-0-472" name="__codelineno-0-472"></a><span class="sd">        concepts_x_gradients (bool):</span>
+<a id="__codelineno-0-473" name="__codelineno-0-473"></a><span class="sd">            If the resulting gradients should be multiplied by the concepts activations.</span>
+<a id="__codelineno-0-474" name="__codelineno-0-474"></a><span class="sd">            True by default (similarly to attributions), because of mathematical properties.</span>
+<a id="__codelineno-0-475" name="__codelineno-0-475"></a><span class="sd">            Therefore the out put is $C * \\nabla{f_{co}}(C)$.</span>
+<a id="__codelineno-0-476" name="__codelineno-0-476"></a>
+<a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="sd">        normalization (bool):</span>
+<a id="__codelineno-0-478" name="__codelineno-0-478"></a><span class="sd">            Whether to normalize the gradients.</span>
+<a id="__codelineno-0-479" name="__codelineno-0-479"></a><span class="sd">            Gradients will be normalized on the concept (c) and sequence length (g) dimensions.</span>
+<a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="sd">            Such that for a given sample-target-granular pair,</span>
+<a id="__codelineno-0-481" name="__codelineno-0-481"></a><span class="sd">            the sum of the absolute values of the gradients is equal to 1.</span>
+<a id="__codelineno-0-482" name="__codelineno-0-482"></a><span class="sd">            (The granular elements depend on the :arg:`activation_granularity`).</span>
+<a id="__codelineno-0-483" name="__codelineno-0-483"></a>
+<a id="__codelineno-0-484" name="__codelineno-0-484"></a><span class="sd">        tqdm_bar (bool):</span>
+<a id="__codelineno-0-485" name="__codelineno-0-485"></a><span class="sd">            Whether to display a progress bar.</span>
+<a id="__codelineno-0-486" name="__codelineno-0-486"></a>
+<a id="__codelineno-0-487" name="__codelineno-0-487"></a><span class="sd">        batch_size (int | None):</span>
+<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">            Batch size for the model.</span>
+<a id="__codelineno-0-489" name="__codelineno-0-489"></a><span class="sd">            It might be different from the one used in `ModelWithSplitPoints.get_activations`</span>
+<a id="__codelineno-0-490" name="__codelineno-0-490"></a><span class="sd">            because gradients have a much larger impact on the memory.</span>
+<a id="__codelineno-0-491" name="__codelineno-0-491"></a>
+<a id="__codelineno-0-492" name="__codelineno-0-492"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">        list[Float[torch.Tensor, &quot;t g c&quot;]]:</span>
+<a id="__codelineno-0-494" name="__codelineno-0-494"></a><span class="sd">            The gradients of the model output with respect to the concept activations.</span>
+<a id="__codelineno-0-495" name="__codelineno-0-495"></a><span class="sd">            List length: correspond to the number of inputs.</span>
+<a id="__codelineno-0-496" name="__codelineno-0-496"></a><span class="sd">                Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of</span>
+<a id="__codelineno-0-497" name="__codelineno-0-497"></a><span class="sd">                concepts.</span>
+<a id="__codelineno-0-498" name="__codelineno-0-498"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-499" name="__codelineno-0-499"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_differentiable_concept_decoder</span><span class="p">:</span>
+<a id="__codelineno-0-500" name="__codelineno-0-500"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-501" name="__codelineno-0-501"></a>            <span class="s2">&quot;The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. &quot;</span>
+<a id="__codelineno-0-502" name="__codelineno-0-502"></a>            <span class="sa">f</span><span class="s2">&quot;Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-503" name="__codelineno-0-503"></a>        <span class="p">)</span>
+<a id="__codelineno-0-504" name="__codelineno-0-504"></a>
+<a id="__codelineno-0-505" name="__codelineno-0-505"></a>    <span class="c1"># put everything on device</span>
+<a id="__codelineno-0-506" name="__codelineno-0-506"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+<a id="__codelineno-0-507" name="__codelineno-0-507"></a>
+<a id="__codelineno-0-508" name="__codelineno-0-508"></a>    <span class="c1"># forward all computations to</span>
+<a id="__codelineno-0-509" name="__codelineno-0-509"></a>    <span class="n">gradients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">_get_concept_output_gradients</span><span class="p">(</span>
+<a id="__codelineno-0-510" name="__codelineno-0-510"></a>        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+<a id="__codelineno-0-511" name="__codelineno-0-511"></a>        <span class="n">targets</span><span class="o">=</span><span class="n">targets</span><span class="p">,</span>
+<a id="__codelineno-0-512" name="__codelineno-0-512"></a>        <span class="n">encode_activations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encode_activations</span><span class="p">,</span>
+<a id="__codelineno-0-513" name="__codelineno-0-513"></a>        <span class="n">decode_concepts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">decode_concepts</span><span class="p">,</span>
+<a id="__codelineno-0-514" name="__codelineno-0-514"></a>        <span class="n">split_point</span><span class="o">=</span><span class="n">split_point</span><span class="p">,</span>
+<a id="__codelineno-0-515" name="__codelineno-0-515"></a>        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
+<a id="__codelineno-0-516" name="__codelineno-0-516"></a>        <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">aggregation_strategy</span><span class="p">,</span>
+<a id="__codelineno-0-517" name="__codelineno-0-517"></a>        <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="n">concepts_x_gradients</span><span class="p">,</span>
+<a id="__codelineno-0-518" name="__codelineno-0-518"></a>        <span class="n">tqdm_bar</span><span class="o">=</span><span class="n">tqdm_bar</span><span class="p">,</span>
+<a id="__codelineno-0-519" name="__codelineno-0-519"></a>        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+<a id="__codelineno-0-520" name="__codelineno-0-520"></a>    <span class="p">)</span>
+<a id="__codelineno-0-521" name="__codelineno-0-521"></a>
+<a id="__codelineno-0-522" name="__codelineno-0-522"></a>    <span class="c1"># normalize the gradients if required</span>
+<a id="__codelineno-0-523" name="__codelineno-0-523"></a>    <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
+<a id="__codelineno-0-524" name="__codelineno-0-524"></a>        <span class="n">gradients</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__normalize_gradients</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">gradients</span><span class="p">]</span>
+<a id="__codelineno-0-525" name="__codelineno-0-525"></a>    <span class="k">return</span> <span class="n">gradients</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4216,33 +4352,150 @@ List length: correspond to the number of inputs.
 
 
 
-<h2 id="interpreto.concepts.methods.VanillaSAEConcepts" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.concepts.methods.VanillaSAEConcepts</span>
+<h2 id="interpreto.concepts.methods.BatchTopKSAEConcepts" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.concepts.methods.BatchTopKSAEConcepts</span>
 
 
-<a href="#interpreto.concepts.methods.VanillaSAEConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">VanillaSAEConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(model_with_split_points)">model_with_split_points</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(split_point)">split_point</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(encoder_module)">encoder_module</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(dictionary_params)">dictionary_params</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<a href="#interpreto.concepts.methods.BatchTopKSAEConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">BatchTopKSAEConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(model_with_split_points)">model_with_split_points</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(split_point)">split_point</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(encoder_module)">encoder_module</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(dictionary_params)">dictionary_params</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.methods.SAEExplainer (interpreto.concepts.methods.overcomplete.SAEExplainer)" href="#interpreto.concepts.methods.SAEExplainer">SAEExplainer</a>[<span title="overcomplete.sae.SAE">SAE</span>]</code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.methods.SAEExplainer (interpreto.concepts.methods.overcomplete.SAEExplainer)" href="#interpreto.concepts.methods.SAEExplainer">SAEExplainer</a>[<span title="overcomplete.sae.BatchTopKSAE">BatchTopKSAE</span>]</code></p>
 
 
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
-<p><code>ConceptAutoEncoderExplainer</code> with the Vanilla SAE from Cunningham et al. (2023)<sup id="interpreto.concepts.methods.VanillaSAEConcepts--fnref:1"><a class="footnote-ref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fn:1">1</a></sup> and Bricken et al. (2023)<sup id="interpreto.concepts.methods.VanillaSAEConcepts--fnref:2"><a class="footnote-ref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fn:2">2</a></sup> as concept model.</p>
-<p>Vanilla SAE implementation from <a href="https://kempnerinstitute.github.io/overcomplete/saes/vanilla/">overcomplete.sae.SAE</a> class.</p>
+<p><code>ConceptAutoEncoderExplainer</code> with the BatchTopK SAE from Bussmann et al. (2024)<sup id="interpreto.concepts.methods.BatchTopKSAEConcepts--fnref:4"><a class="footnote-ref" href="#interpreto.concepts.methods.BatchTopKSAEConcepts--fn:4">1</a></sup> as concept model.</p>
+<p>BatchTopK SAE implementation from <a href="https://kempnerinstitute.github.io/overcomplete/saes/batchtopk_sae/">overcomplete.sae.BatchTopKSAE</a> class.</p>
 <div class="footnote">
 <hr />
 <ol>
-<li id="interpreto.concepts.methods.VanillaSAEConcepts--fn:1">
-<p>Huben, R., Cunningham, H., Smith, L. R., Ewart, A., Sharkey, L. <a href="https://openreview.net/forum?id=F76bwRSLeK">Sparse Autoencoders Find Highly Interpretable Features in Language Models</a>.
-The Twelfth International Conference on Learning Representations, 2024.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+<li id="interpreto.concepts.methods.BatchTopKSAEConcepts--fn:4">
+<p>Bussmann, B., Leask, P., Nanda, N. <a href="https://arxiv.org/abs/2412.06410">BatchTopK Sparse Autoencoders</a>.
+Arxiv Preprint, 2024.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.BatchTopKSAEConcepts--fnref:4" title="Jump back to footnote 1 in the text">&#8617;</a></p>
 </li>
-<li id="interpreto.concepts.methods.VanillaSAEConcepts--fn:2">
-<p>Bricken, T. et al., <a href="https://transformer-circuits.pub/2023/monosemantic-features">Towards Monosemanticity: Decomposing Language Models With Dictionary Learning</a>,
-Transformer Circuits Thread, 2023.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</ol>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="interpreto.concepts.methods.JumpReLUSAEConcepts" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.concepts.methods.JumpReLUSAEConcepts</span>
+
+
+<a href="#interpreto.concepts.methods.JumpReLUSAEConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">JumpReLUSAEConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(model_with_split_points)">model_with_split_points</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(split_point)">split_point</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(encoder_module)">encoder_module</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(dictionary_params)">dictionary_params</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.methods.SAEExplainer (interpreto.concepts.methods.overcomplete.SAEExplainer)" href="#interpreto.concepts.methods.SAEExplainer">SAEExplainer</a>[<span title="overcomplete.sae.JumpSAE">JumpSAE</span>]</code></p>
+
+
+
+        <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
+<p><code>ConceptAutoEncoderExplainer</code> with the JumpReLU SAE from Rajamanoharan et al. (2024)<sup id="interpreto.concepts.methods.JumpReLUSAEConcepts--fnref:5"><a class="footnote-ref" href="#interpreto.concepts.methods.JumpReLUSAEConcepts--fn:5">1</a></sup> as concept model.</p>
+<p>JumpReLU SAE implementation from <a href="https://kempnerinstitute.github.io/overcomplete/saes/jump_sae/">overcomplete.sae.JumpReLUSAE</a> class.</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="interpreto.concepts.methods.JumpReLUSAEConcepts--fn:5">
+<p>Rajamanoharan, S. et al., <a href="https://arxiv.org/abs/2407.14435">Jumping Ahead: Improving Reconstruction Fidelity with JumpReLU Sparse Autoencoders</a>.
+Arxiv Preprint, 2024.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.JumpReLUSAEConcepts--fnref:5" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="interpreto.concepts.methods.MpSAEConcepts" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.concepts.methods.MpSAEConcepts</span>
+
+
+<a href="#interpreto.concepts.methods.MpSAEConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">MpSAEConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.methods.MpSAEConcepts(model_with_split_points)">model_with_split_points</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.MpSAEConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.MpSAEConcepts(split_point)">split_point</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.MpSAEConcepts(encoder_module)">encoder_module</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.MpSAEConcepts(dictionary_params)">dictionary_params</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.MpSAEConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.methods.MpSAEConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.methods.SAEExplainer (interpreto.concepts.methods.overcomplete.SAEExplainer)" href="#interpreto.concepts.methods.SAEExplainer">SAEExplainer</a>[<span title="overcomplete.sae.MpSAE">MpSAE</span>]</code></p>
+
+
+
+        <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
+<p><code>ConceptAutoEncoderExplainer</code> with the MpSAE from Costa et al. (2025)<sup id="interpreto.concepts.methods.MpSAEConcepts--fnref:6"><a class="footnote-ref" href="#interpreto.concepts.methods.MpSAEConcepts--fn:6">1</a></sup> as concept model.</p>
+<p>Matching Pursuit SAE implementation from <a href="https://github.com/KempnerInstitute/overcomplete/blob/f86ecab80333bb0fad77337f8e6b7aa649a3ae34/overcomplete/sae/mp_sae.py">overcomplete.sae.MpSAE</a> class.</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="interpreto.concepts.methods.MpSAEConcepts--fn:6">
+<p>Valérie Costa, Thomas Fel, Ekdeep Singh Lubana, Bahareh Tolooshams, Demba Ba (2025).
+<a href="https://arxiv.org/abs/2506.03093">From Flat to Hierarchical: Extracting Sparse Representations with Matching Pursuit</a>.
+arXiv preprint arXiv:2506.03093.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.MpSAEConcepts--fnref:6" title="Jump back to footnote 1 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div>
@@ -4340,89 +4593,33 @@ The Thirteenth International Conference on Learning Representations, 2025.&#160;
 
 
 
-<h2 id="interpreto.concepts.methods.BatchTopKSAEConcepts" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.concepts.methods.BatchTopKSAEConcepts</span>
+<h2 id="interpreto.concepts.methods.VanillaSAEConcepts" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.concepts.methods.VanillaSAEConcepts</span>
 
 
-<a href="#interpreto.concepts.methods.BatchTopKSAEConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">BatchTopKSAEConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(model_with_split_points)">model_with_split_points</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(split_point)">split_point</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(encoder_module)">encoder_module</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(dictionary_params)">dictionary_params</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.methods.BatchTopKSAEConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<a href="#interpreto.concepts.methods.VanillaSAEConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">VanillaSAEConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(model_with_split_points)">model_with_split_points</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(split_point)">split_point</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(encoder_module)">encoder_module</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(dictionary_params)">dictionary_params</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.methods.VanillaSAEConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
             <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.methods.SAEExplainer (interpreto.concepts.methods.overcomplete.SAEExplainer)" href="#interpreto.concepts.methods.SAEExplainer">SAEExplainer</a>[<span title="overcomplete.sae.BatchTopKSAE">BatchTopKSAE</span>]</code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.methods.SAEExplainer (interpreto.concepts.methods.overcomplete.SAEExplainer)" href="#interpreto.concepts.methods.SAEExplainer">SAEExplainer</a>[<span title="overcomplete.sae.SAE">SAE</span>]</code></p>
 
 
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
-<p><code>ConceptAutoEncoderExplainer</code> with the BatchTopK SAE from Bussmann et al. (2024)<sup id="interpreto.concepts.methods.BatchTopKSAEConcepts--fnref:4"><a class="footnote-ref" href="#interpreto.concepts.methods.BatchTopKSAEConcepts--fn:4">1</a></sup> as concept model.</p>
-<p>BatchTopK SAE implementation from <a href="https://kempnerinstitute.github.io/overcomplete/saes/batchtopk_sae/">overcomplete.sae.BatchTopKSAE</a> class.</p>
+<p><code>ConceptAutoEncoderExplainer</code> with the Vanilla SAE from Cunningham et al. (2023)<sup id="interpreto.concepts.methods.VanillaSAEConcepts--fnref:1"><a class="footnote-ref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fn:1">1</a></sup> and Bricken et al. (2023)<sup id="interpreto.concepts.methods.VanillaSAEConcepts--fnref:2"><a class="footnote-ref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fn:2">2</a></sup> as concept model.</p>
+<p>Vanilla SAE implementation from <a href="https://kempnerinstitute.github.io/overcomplete/saes/vanilla/">overcomplete.sae.SAE</a> class.</p>
 <div class="footnote">
 <hr />
 <ol>
-<li id="interpreto.concepts.methods.BatchTopKSAEConcepts--fn:4">
-<p>Bussmann, B., Leask, P., Nanda, N. <a href="https://arxiv.org/abs/2412.06410">BatchTopK Sparse Autoencoders</a>.
-Arxiv Preprint, 2024.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.BatchTopKSAEConcepts--fnref:4" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+<li id="interpreto.concepts.methods.VanillaSAEConcepts--fn:1">
+<p>Huben, R., Cunningham, H., Smith, L. R., Ewart, A., Sharkey, L. <a href="https://openreview.net/forum?id=F76bwRSLeK">Sparse Autoencoders Find Highly Interpretable Features in Language Models</a>.
+The Twelfth International Conference on Learning Representations, 2024.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
 </li>
-</ol>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-  <div class="doc doc-children">
-
-
-
-
-
-
-
-
-
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-class">
-
-
-
-<h2 id="interpreto.concepts.methods.JumpReLUSAEConcepts" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.concepts.methods.JumpReLUSAEConcepts</span>
-
-
-<a href="#interpreto.concepts.methods.JumpReLUSAEConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">JumpReLUSAEConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(model_with_split_points)">model_with_split_points</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(split_point)">split_point</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(encoder_module)">encoder_module</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(dictionary_params)">dictionary_params</span></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.methods.JumpReLUSAEConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
-</code></pre></div>
-
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.methods.SAEExplainer (interpreto.concepts.methods.overcomplete.SAEExplainer)" href="#interpreto.concepts.methods.SAEExplainer">SAEExplainer</a>[<span title="overcomplete.sae.JumpSAE">JumpSAE</span>]</code></p>
-
-
-
-        <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
-<p><code>ConceptAutoEncoderExplainer</code> with the JumpReLU SAE from Rajamanoharan et al. (2024)<sup id="interpreto.concepts.methods.JumpReLUSAEConcepts--fnref:5"><a class="footnote-ref" href="#interpreto.concepts.methods.JumpReLUSAEConcepts--fn:5">1</a></sup> as concept model.</p>
-<p>JumpReLU SAE implementation from <a href="https://kempnerinstitute.github.io/overcomplete/saes/jump_sae/">overcomplete.sae.JumpReLUSAE</a> class.</p>
-<div class="footnote">
-<hr />
-<ol>
-<li id="interpreto.concepts.methods.JumpReLUSAEConcepts--fn:5">
-<p>Rajamanoharan, S. et al., <a href="https://arxiv.org/abs/2407.14435">Jumping Ahead: Improving Reconstruction Fidelity with JumpReLU Sparse Autoencoders</a>.
-Arxiv Preprint, 2024.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.JumpReLUSAEConcepts--fnref:5" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+<li id="interpreto.concepts.methods.VanillaSAEConcepts--fn:2">
+<p>Bricken, T. et al., <a href="https://transformer-circuits.pub/2023/monosemantic-features">Towards Monosemanticity: Decomposing Language Models With Dictionary Learning</a>,
+Transformer Circuits Thread, 2023.&#160;<a class="footnote-backref" href="#interpreto.concepts.methods.VanillaSAEConcepts--fnref:2" title="Jump back to footnote 2 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div>

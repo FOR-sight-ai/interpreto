@@ -472,6 +472,8 @@
       
         
       
+        
+      
     
     
     
@@ -550,14 +552,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../../notebooks/concept_examples/" class="md-nav__link">
+      <a href="../../../../notebooks/classification_concept_tutorial/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Training a Concept Explainer
+    Concept-based Explanations for Classification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../notebooks/generation_concept_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Generation
   
 
     
@@ -2501,7 +2531,7 @@ Both types are supported and can be mixed.</p>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a>    <span class="n">comparisons</span> <span class="o">=</span> <span class="p">[]</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>    <span class="k">for</span> <span class="n">dict_1</span><span class="p">,</span> <span class="n">dict_2</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dictionaries</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a>        <span class="c1"># compute pairwise comparison</span>
-<a id="__codelineno-0-195" name="__codelineno-0-195"></a>        <span class="n">comparison</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_function</span><span class="p">(</span><span class="n">dict_1</span><span class="p">,</span> <span class="n">dict_2</span><span class="p">)</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a>        <span class="n">comparison</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_function</span><span class="p">(</span><span class="n">dict_1</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">dict_2</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
 <a id="__codelineno-0-196" name="__codelineno-0-196"></a>        <span class="n">comparisons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">comparison</span><span class="p">)</span>
 <a id="__codelineno-0-197" name="__codelineno-0-197"></a>
 <a id="__codelineno-0-198" name="__codelineno-0-198"></a>    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">comparisons</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
