@@ -199,16 +199,14 @@ class GenerationInferenceWrapper(InferenceWrapper):
             for elem in model_inputs
         ]
         all_logits = self._get_logits_from_iterable(model_inputs)
-        # TODO: remove debug lists
-        logits_debug_list = list(all_logits)
-        targets_debug_list = list(targets)
-        for logits, target in zip(logits_debug_list, targets_debug_list, strict=True):
-            # for logits, target in zip(all_logits, targets, strict=True):
+
+        for logits, target in zip(all_logits, targets, strict=True):
             target_length = target.shape[-1]
             targeted_logits = logits[..., -target_length:, :]
 
             targeted_logits = self.mode(targeted_logits)
 
-            extended_target = target.expand(logits.shape[0], -1)
+            extended_target = target.expand(logits.shape[0], -1).to(self.device)
+
             selected_logits = targeted_logits.gather(dim=-1, index=extended_target.unsqueeze(-1)).squeeze(-1)
             yield selected_logits

@@ -92,6 +92,16 @@ def real_bert_tokenizer():
 
 
 @fixture(scope="session")
+def bert_imdb_model():
+    return AutoModelForSequenceClassification.from_pretrained("textattack/bert-base-uncased-imdb")
+
+
+@fixture(scope="session")
+def bert_imdb_tokenizer():
+    return AutoTokenizer.from_pretrained("textattack/bert-base-uncased-imdb")
+
+
+@fixture(scope="session")
 def gpt2_model():
     return AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
 
