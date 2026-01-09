@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2259,26 +2259,31 @@
 <a id="interpreto.attributions.metrics.insertion_deletion.Insertion"></a>
     <div class="doc doc-contents first">
             <p class="doc doc-class-bases">
-              Bases: <code><span title="interpreto.attributions.metrics.insertion_deletion.InsertionDeletionBase">InsertionDeletionBase</span></code></p>
+              Bases: <code><span title="interpreto.attributions.metrics.insertion_deletion.MultitaskMetricMixin">MultitaskMetricMixin</span></code>, <code><span title="interpreto.attributions.metrics.insertion_deletion.InsertionDeletionBase">InsertionDeletionBase</span></code></p>
 
 
 
-        <p>The insertion metric measures the quality of an attribution method by evaluating how the prediction score of a
+        <p>The insertion metric measures the faithfulness of an attribution method by evaluating how the prediction score of a
 model improves when the most important elements of a sequence are gradually added. The importance of the elements
 is determined by the attribution-based method.</p>
+<p>Insertion was introduced by Petsiuk et al. (2017) for image classification.
+This is our adaptation to the metric for text and in particular for generation (multi-predictions).</p>
 <p>A curve is built by computing the prediction score while iteratively inserting the most important elements,
 starting from a masked sequence. The scores are the softmax outputs, between 0 and 1. The area under this curve
-(AUC) is then computed to quantify the quality of the attribution method. A higher AUC is better.</p>
+(AUC) is then computed to quantify the faithfulness of the attribution method. A higher AUC is better.</p>
 <p>The <code>evaluate</code> method returns both:</p>
 <ul>
 <li>the average AUC across all sequences and targets,</li>
 <li>for each sequence-target pair, the softmax scores associated to the successive insertions. The softmax scores are
     preferred over logits as they are bounded between 0 and 1, which makes the AUC more interpretable.</li>
 </ul>
-<p>An attribution method is considered good if the AUC is high, meaning that the model's prediction score increases
+<p>An attribution method is considered good if the Insertion AUC is high, meaning that the model's prediction score increases
 significantly as the most important elements are added back to the sequence. Conversely, a low AUC indicates that
 the attribution method is not effective in identifying the most important elements for the model's prediction.</p>
 <p>This metric only evaluates the order of importance of the elements in the sequence, not their actual values.</p>
+<p><strong>Reference:</strong>
+Vitali Petsiuk, Abir Das, and Kate Saenko. (2017). <em>RISE: Randomized Input Sampling for Explanation of Black-box Models</em>
+<a href="https://arxiv.org/abs/1806.07421">Paper</a></p>
 
 
 <p><span class="doc-section-title">Examples:</span></p>
@@ -2310,7 +2315,7 @@ the attribution method is not effective in identifying the most important elemen
 <h2 id="interpreto.attributions.metrics.insertion_deletion.Insertion(model)" class="doc doc-heading doc-heading-parameter">                  <code>model</code>
 <a href="#interpreto.attributions.metrics.insertion_deletion.Insertion(model)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
             <td>
-                  <code><span title="PreTrainedModel">PreTrainedModel</span></code>
+                  <code><span title="transformers.modeling_utils.PreTrainedModel">PreTrainedModel</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2588,10 +2593,10 @@ low scores in long sequences.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
         <script src="../../../../assets/js/custom.js"></script>
       
