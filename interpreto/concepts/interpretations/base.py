@@ -42,7 +42,6 @@ from jaxtyping import Float, jaxtyped
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-from interpreto import Granularity, ModelWithSplitPoints
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
@@ -406,22 +405,51 @@ class BaseConceptInterpretationMethod(ABC):
         # extract and sort the vocabulary
         vocab_dict: dict[str, int] = self.concept_explainer.model_with_split_points.tokenizer.get_vocab()
         inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
-        inputs: list[str] = list(inputs)
+        inputs: list[str] = list(inputs)  # type: ignore
 
-        inputs_or_ids: list[str] | Float[torch.Tensor, "v 1"]
-        if self.aggregation_strategy == ActivationGranularity.CLS_TOKEN:
-            inputs_or_ids = torch.tensor(input_ids).unsqueeze(1)
+        # unsqueeze for all ids to be considered as a single sample
+        input_ids: Float[torch.Tensor, "v 1"] = torch.tensor(list(input_ids)).unsqueeze(1)
+        vocab_size = input_ids.shape[0]
+
+        if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
+            # compute the vocabulary's latent activations
+            activations_dict: dict[str, LatentActivations] = (
+                self.concept_explainer.model_with_split_points.get_activations(
+                    input_ids,
+                    activation_granularity=ActivationGranularity.ALL_TOKENS,
+                )
+            )  # type: ignore
         else:
-            inputs_or_ids = inputs
+            # we need to add the CLS token and maybe the EOS token to the ids
+            # so that we can get correct CLS activations
 
-        # compute the vocabulary's latent activations
-        activations_dict: dict[str, LatentActivations] = (
-            self.concept_explainer.model_with_split_points.get_activations(
-                inputs_or_ids,
-                activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS,
-                aggregation_strategy=self.aggregation_strategy,
-            )
-        )  # type: ignore
+            # first step extract the template
+            template_ids = self.concept_explainer.model_with_split_points.tokenizer("a", return_tensors="pt")[
+                "input_ids"
+            ]
+
+            # if we are not in a template [CLS] a [EOS]
+            if len(template_ids) != 3:  # type: ignore
+                warnings.warn(
+                    "When tokenizing a single character, the provided model does not output 3 token ids. "
+                    "Our implementation assumes that the model outputs is [CLS] a [EOS]. "
+                    "Indeed, when `aggregation_strategy` is `CLS_TOKEN`, the first token is considered as the CLS token. "
+                    "If the [CLS] token is still the first token, you can ignore this warning. "
+                    "Otherwise, either choose another model or contact the developers to find a workaround.",
+                    stacklevel=2,
+                )
+
+            # repeat the template and replace "a" token ids by the vocabulary ids
+            repeated_template_ids = template_ids.repeat(vocab_size, 1)
+            repeated_template_ids[:, 1] = input_ids[:, 0]
+
+            # compute the vocabulary's latent activations
+            activations_dict: dict[str, LatentActivations] = (
+                self.concept_explainer.model_with_split_points.get_activations(
+                    repeated_template_ids,
+                    activation_granularity=self.activation_granularity,
+                )
+            )  # type: ignore
 
         # compute the vocabulary's concepts activations
         latent_activations: LatentActivations = self.concept_explainer.model_with_split_points.get_split_activations(
