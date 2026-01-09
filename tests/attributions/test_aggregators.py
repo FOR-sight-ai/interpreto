@@ -91,7 +91,6 @@ def test_aggregator_shapes_with_mask(aggregator_cls_with_mask):
     agg = aggregator_cls_with_mask()
     result = agg(x, mask)
 
-    print("Testing", aggregator_cls_with_mask.__name__, "with input shape:", x.shape, " Result shape:", result.shape)
     assert result.shape == expected_shape, (
         f"{aggregator_cls_with_mask.__name__} with input shape {x.shape} and mask shape {mask.shape} returned {result.shape}, expected {expected_shape}"
     )

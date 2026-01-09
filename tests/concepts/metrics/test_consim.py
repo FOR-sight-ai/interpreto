@@ -332,8 +332,6 @@ def test_consim_filter_and_quantize_concepts_importances():
         "concepts with low global importance should be removed from the local importances"
     )
 
-    print(interp)
-
     # ensure other concepts are not removed
     for c in [0, 1, 3]:
         assert c in interp, "concepts with high global importance should be kept in the interpretation"

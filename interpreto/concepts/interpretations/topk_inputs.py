@@ -85,9 +85,9 @@ class TopKInputs(BaseConceptInterpretationMethod):
             See [`extract_unique_words`][interpreto.concepts.interpretations.extract_unique_words] for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
-        device (torch.device | str | None):
-            The device to use for forward passes.
-            If None, use the one from `model_with_split_points`.
+        concept_model_device (torch.device | str | None):
+            The device to use for the concept model forward pass.
+            If None, does not change the device.
 
     Examples:
         **Minimal example**, finding the topk tokens activating a neuron:
@@ -223,7 +223,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         use_vocab: bool = False,
         use_unique_words: bool = False,
         unique_words_kwargs: dict = {},
-        device: torch.device | str | None = "cpu",
+        concept_model_device: torch.device | str | None = None,
     ):
         super().__init__(
             concept_explainer=concept_explainer,
@@ -232,7 +232,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
-            device=device,
+            concept_model_device=concept_model_device,
         )
 
         self.k = k
