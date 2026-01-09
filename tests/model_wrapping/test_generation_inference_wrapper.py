@@ -25,20 +25,22 @@
 import pytest
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers.utils.quantization_config import BitsAndBytesConfig
 
 from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 generation_models = ["hf-internal-testing/tiny-random-LlamaForCausalLM", "hf-internal-testing/tiny-random-gpt2"]
+bab_configs = [BitsAndBytesConfig(load_in_8bit=True), BitsAndBytesConfig(load_in_4bit=True), None]
 
 
-def prepare_model_and_tokenizer(model_name: str):
+def prepare_model_and_tokenizer(model_name: str, bab_config: BitsAndBytesConfig | None = None):
     """
     Helper function to prepare the tokenizer and model.
     """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, quantization_config=bab_config)
     inference_wrapper = GenerationInferenceWrapper(model, batch_size=5, device=DEVICE)
     return tokenizer, model, inference_wrapper
 
@@ -107,8 +109,9 @@ def test_generation_inference_wrapper_single_sentence(model_name, sentences):
     )
 
 
+@pytest.mark.parametrize("bab_config", bab_configs)
 @pytest.mark.parametrize("model_name", generation_models)
-def test_generation_inference_wrapper_multiple_sentences(model_name, sentences):
+def test_generation_inference_wrapper_multiple_sentences(model_name, sentences, bab_config):
     """
     Tests all function of the generation inference wrapper with multiple sentences input.
 
@@ -119,7 +122,7 @@ def test_generation_inference_wrapper_multiple_sentences(model_name, sentences):
       - The logits, targeted logits, and gradient matrix have the expected shapes for all sentences.
     """
     # Model preparation
-    tokenizer, model, inference_wrapper = prepare_model_and_tokenizer(model_name)
+    tokenizer, model, inference_wrapper = prepare_model_and_tokenizer(model_name, bab_config=bab_config)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     n_sentences = len(sentences)

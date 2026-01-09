@@ -117,6 +117,9 @@ class LLMLabels(BaseConceptInterpretationMethod):
         llm_interface (LLMInterface):
             The LLM interface to use for the interpretation.
 
+        concept_encoding_batch_size (int):
+            The batch size to use for the concept encoding.
+
         sampling_method (SAMPLING_METHOD):
             The method to use for sampling the inputs provided to the LLM.
 
@@ -145,6 +148,10 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
         system_prompt (str | None):
             The system prompt to use for the LLM. If None, a default prompt is used.
+
+        concept_model_device (torch.device | str | None):
+            The device to use for the concept model forward pass.
+            If None, does not change the device.
     """
 
     def __init__(
@@ -153,6 +160,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
         llm_interface: LLMInterface,
+        concept_encoding_batch_size: int = 1024,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
         k_context: int = 0,
@@ -161,15 +169,16 @@ class LLMLabels(BaseConceptInterpretationMethod):
         unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,
-        device: torch.device | str | None = "cpu",
+        concept_model_device: torch.device | str | None = None,
     ):
         super().__init__(
             concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
+            concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
-            device=device,
+            concept_model_device=concept_model_device,
         )
 
         self.llm_interface = llm_interface
@@ -365,19 +374,19 @@ def _format_examples(
     k_context: int,
 ) -> list[Example]:
     """Format examples for the LLM input. If k_context > 0, it will add context around
-    the selected text (for instance tokens befor and after the selected token). Concept
+    the selected text (for instance tokens before and after the selected token). Concept
     activations are normalized to a scale of 0 to 10, 10 being the maximum activation
     for the concept in the set of inputs.
 
     Args:
         example_ids (list[int]): selected example ids to provide to the LLM.
-        inputs (list[str]): the list of all granular texts from the inputs, flatened.
+        inputs (list[str]): the list of all granular texts from the inputs, flattened.
         concept_activations (Float[torch.Tensor, &quot;ng&quot;]): the concept activations for each granular text.
         sample_ids (list[int]): the id of which sample each granular text belongs to.
 
     Raises:
         ValueError: if concept_activations is not a 1D tensor
-        ValueError: if the lenght of inputs, sample_ids, and concept_activations do not match.
+        ValueError: if the length of inputs, sample_ids, and concept_activations do not match.
 
     Returns:
         list[Example]: list of Example objects, each containing the texts and normalized concept
@@ -450,6 +459,11 @@ def _build_example_prompt(examples: list[Example]) -> str:
         str: prompt containing the formatted examples for the LLM.
     """
     example_prompts: list[str] = []
+
+    # Text without context and only unique words or tokens
+    if all(isinstance(e.texts, str) for e in examples):
+        return ", ".join([f'("{e.texts}", {e.activations})' for e in examples])
+
     for i, example in enumerate(examples):
         if isinstance(example.texts, str) and isinstance(example.activations, int):
             # Text without context
@@ -480,18 +494,23 @@ def _build_example_prompt(examples: list[Example]) -> str:
 
 
 # From https://github.com/EleutherAI/delphi/blob/article_version/sae_auto_interp/explainers/default/prompts.py
-SYSTEM_PROMPT_WITH_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
-Your task is to analyze text and provide an explanation that thoroughly encapsulates possible patterns found in it.
-Guidelines:
+SYSTEM_PROMPT_WITH_CONTEXT = """Your role is to label the concepts/patterns present in the different examples.
 
 You will be given a list of text examples on which special tokens are selected and between delimiters like <<this>>.
 How important each token is for the behavior is listed after each example in parentheses, with importance from 0 to 10.
 
-- Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
-- If the examples are uninformative, you don't need to mention them. Don't focus on giving examples of important tokens, but try to summarize the patterns found in the examples.
-- Do not mention the marker tokens (<< >>) in your explanation.
-- Do not make lists of possible explanations.
-- Keep your explanations short and concise, with no more that 15 words, for example "reference to blue objects" or "word before a comma"
+Hard rules:
+- The label should summarize the concept linking the examples together. Give a single label describing all examples highlighted tokens.
+- The label should be between 1 and 5 words long.
+- The shorter the label the better. The best is a word.
+- Do not make a sentence.
+- The label should be the most precise possible. The goal is to be able to differentiate between concepts.
+- The label should encompass most examples. But you can ignore the non-informative ones.
+- Do not mention the marker tokens (<< >>) in your explanation. Nor refer to the importance.
+- Only focus on the content and the label.
+- Never ever give labels with more than 5 words, they would be cut out.
+
+Some examples: 'blue', 'positive sentiment and enthusiasm', 'legal entities', 'medical places', 'hate', 'noun phrase', 'ion or iou sounds', 'questions' final words'...
 """
 
 SYSTEM_PROMPT_WITHOUT_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
@@ -503,6 +522,7 @@ How important each text is for the behavior is listed after each example in pare
 
 - Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
 - If the examples are uninformative, you don't need to mention them. Don't focus on giving examples, but try to summarize the patterns found in the examples.
-- Do not make lists of possible explanations.
-- Keep your explanations short and concise, with no more that 15 words, for example "reference to blue objects" or "word before a comma"
+- Do not make lists of possible explanations. Find a single concept that best describes the examples.
+- Strike the balance between being concise and informative. From 1 to 5 words. 5 is an absolute maximum.
+- Refrain from including uninformative elements like "patterns found include ...", "the examples show ...", or "text contains ...".
 """

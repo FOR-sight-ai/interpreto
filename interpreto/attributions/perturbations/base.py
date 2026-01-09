@@ -239,7 +239,7 @@ class IdsPerturbator(Perturbator):
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod
-    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "{self.n_perturbations} {mask_dim}"]:
+    def get_mask(self, mask_dim: int, **kwargs) -> Float[torch.Tensor, "{self.n_perturbations} {mask_dim}"]:
         """
         Method returning a perturbation mask for a given set of inputs
         This method should be implemented in subclasses
@@ -249,6 +249,7 @@ class IdsPerturbator(Perturbator):
 
         Args:
             mask_dim (int): length of the sequence according to the granularity level
+            kwargs: additional arguments if needed by the specific implementation of the mask
 
         Returns:
             torch.Tensor: mask to apply on the inputs, of shape (n_perturbations, mask_dim)
@@ -276,9 +277,7 @@ class IdsPerturbator(Perturbator):
 
         # compute association matrix between the granularity level and ALL_TOKENS
         association_matrix: Int[torch.Tensor, "g l"] = (
-            Granularity.get_association_matrix(model_inputs, self.granularity, self.tokenizer)[0]
-            .float()
-            .to(self.device)
+            self.granularity.get_association_matrix(model_inputs, self.tokenizer)[0].float().to(self.device)  # type: ignore
         )
 
         # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)

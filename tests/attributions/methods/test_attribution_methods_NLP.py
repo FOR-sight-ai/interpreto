@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
 import os
 
 import pytest
@@ -63,7 +64,7 @@ attribution_method_kwargs = {
         "noise_std": 0.001,
     },
     Saliency: {},
-    IntegratedGradients: {"n_perturbations": 3, "baseline": 0.0},
+    IntegratedGradients: {"n_perturbations": 3, "baseline": 0},
     SmoothGrad: {
         "n_perturbations": 3,
         "noise_std": 0.1,
@@ -144,10 +145,7 @@ def test_attribution_methods_with_text_long(model_name, attribution_explainer):
 @pytest.mark.parametrize(
     "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
 )
-@pytest.mark.parametrize(
-    "attribution_explainer",
-    [Occlusion, KernelShap, Lime, Sobol, GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
-)
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize(
     "granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE]
 )
@@ -165,10 +163,7 @@ def test_attribution_methods_granularity(model_name, attribution_explainer, gran
 @pytest.mark.parametrize(
     "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
 )
-@pytest.mark.parametrize(
-    "attribution_explainer",
-    [GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
-)
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize("granularity", [Granularity.WORD, Granularity.SENTENCE])
 @pytest.mark.parametrize(
     "aggregation_strategy",
@@ -290,6 +285,61 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
             len(attribution.elements) == (attribution.attributions).shape[-1] for attribution in attributions
         ), "In the AttributionOutput class, elements and attributions must have the same length."
 
+        if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
+            for att_output in attributions:
+                att = att_output.attributions
+                t, l = att.shape
+                assert l >= t, (
+                    "The attributions must have the shape (t, l) where l is l_in + t. "
+                    "Hence l must be greater than t. "
+                    f"Got {att.shape} for {att_output.elements}."
+                )
+
+                # Example with l = 6 and t = 3
+                # [[ x, x, x, NaN, NaN, NaN],
+                #  [ x, x, x, x  , NaN, NaN],
+                #  [ x, x, x, x  , x  , NaN]]
+                # The number of NaNs corresponds to the sum of natural
+                assert att.isnan().sum() == t * (t + 1) / 2, (
+                    "In the case of generation attributions, only the upper triangular matrix should be filled with NaNs. "
+                    f"Got {att.isnan().sum()} for shape {att.shape}. "
+                    f"Expected {t * (t + 1) / 2}. "
+                    f"The matrix is {att}."
+                )
+        else:
+            for att_output in attributions:
+                assert att_output.attributions.isnan().sum().item() == 0, (
+                    "In the case of classification attributions, the attributions should not contain NaNs."
+                    f"Got {att_output.attributions.isnan()} for {att_output.elements}."
+                )
+
+
+@pytest.mark.parametrize("method_class", [Lime, VarGrad])
+def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sentences):
+    explainer = method_class(model=bert_model, tokenizer=bert_tokenizer, batch_size=3, device=DEVICE)
+
+    attr_output = explainer.explain(sentences)
+
+    for s, ao in zip(sentences, attr_output, strict=True):
+        # (t, l)
+        assert ao.attributions.shape == (1, len(ao.elements)), (
+            "AttributionOutput: number of elements and attributions length mismatch"
+        )
+        assert math.prod(ao.attributions.shape) < 1000, "AttributionOutput: attributions tensor too large"
+
+        for key, value in ao.model_inputs_to_explain.items():
+            assert value.shape[0] == 1, (
+                f"AttributionOutput: model_inputs_to_explain[{key}] should only contain one sample, no batching or perturbations"
+            )
+            assert math.prod(value.shape) < len(s) * 100, (
+                f"AttributionOutput: model_inputs_to_explain[{key}] tensor too large"
+                f"shape: {value.shape}, sentence length: {len(s)}"
+            )
+
+        assert "inputs_embeds" not in ao.model_inputs_to_explain.keys(), (
+            "AttributionOutput: inputs_embeds should not be in model_inputs_to_explain"
+        )
+
 
 # TODO: test that targets are correctly processed
 
@@ -303,7 +353,37 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
 #       There should be a counter wrapped around a model to verify that the number of calls to the model is correct.
 
 if __name__ == "__main__":
-    test_attribution_methods_with_text_short(
-        model_name="hf-internal-testing/tiny-random-bert",
-        attribution_explainer=Lime,
-    )
+    # test_attribution_methods_with_text_short(
+    #     model_name="hf-internal-testing/tiny-random-bert",
+    #     attribution_explainer=IntegratedGradients,
+    # )
+    # test_attribution_methods_with_text_short(
+    #     model_name="hf-internal-testing/tiny-random-gpt2",
+    #     attribution_explainer=Lime,
+    # )
+    # test_attribution_methods_granularity(
+    #     model_name="hf-internal-testing/tiny-random-bert",
+    #     attribution_explainer=Occlusion,
+    #     granularity=Granularity.WORD,
+    # )
+    # test_attribution_methods_granularity(
+    #     model_name="hf-internal-testing/tiny-random-gpt2",
+    #     attribution_explainer=Occlusion,
+    #     granularity=Granularity.WORD,
+    # )
+    # test_attribution_methods_granularity_aggregation_strategy(
+    #     model_name="hf-internal-testing/tiny-random-gpt2",
+    #     attribution_explainer=VarGrad,
+    #     granularity=Granularity.WORD,
+    #     aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
+    # )
+
+    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    sentences = [
+        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
+        "Interpreto is magical",
+        "Testing interpreto",
+    ]
+    test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
+    test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)

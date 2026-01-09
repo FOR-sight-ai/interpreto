@@ -245,8 +245,8 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
     # Define expected shapes for the different granularity levels
     batch, seq_len = tokens["input_ids"].shape
     hidden = mwsp._model.config.hidden_size
-    total_token_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.TOKEN, tokenizer))
-    total_word_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.WORD, tokenizer))
+    total_token_len = sum(len(idx) for idx in Granularity.TOKEN.get_indices(tokens, tokenizer))
+    total_word_len = sum(len(idx) for idx in Granularity.WORD.get_indices(tokens, tokenizer))
 
     expected = {
         ActivationGranularity.ALL: (batch, seq_len, hidden),
@@ -386,8 +386,8 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
     # Define expected shapes for the different granularity levels
     batch, seq_len = tokens["input_ids"].shape
     hidden = mwsp._model.config.hidden_size
-    total_token_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.TOKEN, tokenizer))
-    total_word_len = sum(len(idx) for idx in Granularity.get_indices(tokens, Granularity.WORD, tokenizer))
+    total_token_len = sum(len(idx) for idx in Granularity.TOKEN.get_indices(tokens, tokenizer))
+    total_word_len = sum(len(idx) for idx in Granularity.WORD.get_indices(tokens, tokenizer))
 
     granularities_expected_shapes = {
         # ActivationGranularity.ALL_TOKENS: cannot be tested as the output shape depends on the batch size
@@ -438,7 +438,7 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
         if granularity == ActivationGranularity.CLS_TOKEN:
             indices_list = [[[0]]] * len(sentences)  # type: ignore
         else:
-            indices_list = Granularity.get_indices(tokens, granularity.value, tokenizer)  # type: ignore
+            indices_list = granularity.value.get_indices(tokens, tokenizer)  # type: ignore
 
         # -------------
         # Get gradients

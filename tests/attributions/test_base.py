@@ -22,10 +22,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import pickle
+
 import pytest
 import torch
 
-from interpreto.attributions.base import ClassificationAttributionExplainer
+from interpreto.attributions.base import ClassificationAttributionExplainer, InferenceModes
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,6 +36,13 @@ class DummyInferenceWrapper:
     def get_targets(self, _):
         # For each input, return a dummy tensor with logits
         return [torch.tensor([1]), torch.tensor([0])]
+
+
+def test_inference_mode():
+    # check that inference mode is picklable
+    pickled = pickle.dumps(InferenceModes.LOG_SOFTMAX)
+    unpickled = pickle.loads(pickled)
+    assert unpickled == InferenceModes.LOG_SOFTMAX
 
 
 def test_process_targets(bert_model, bert_tokenizer):
@@ -75,7 +84,7 @@ def test_process_targets(bert_model, bert_tokenizer):
     # Iterable of ints
     result = explainer.process_targets([1, 2, 3], expected_length=3)
     assert len(result) == 3  # type: ignore
-    assert all(torch.equal(r, torch.tensor(v)) for r, v in zip(result, [1, 2, 3], strict=True))
+    assert all(torch.equal(r, torch.tensor([v])) for r, v in zip(result, [1, 2, 3], strict=True))
 
     # Iterable of ints with mismatch
     with pytest.raises(ValueError, match="Mismatch.*length of the inputs is 2"):

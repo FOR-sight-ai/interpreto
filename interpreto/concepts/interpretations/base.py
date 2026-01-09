@@ -32,6 +32,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Mapping
+from functools import lru_cache
 from typing import Any, Literal
 
 import nltk
@@ -41,10 +42,26 @@ from jaxtyping import Float, jaxtyped
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-from interpreto import Granularity, ModelWithSplitPoints
+from interpreto import ModelWithSplitPoints
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
+
+
+@lru_cache(maxsize=1)
+def _ensure_nltk_resources(lemmatize: bool) -> None:
+    """
+    Ensure NLTK resources are downloaded.
+
+    Only used in `extract_unique_words`.
+
+    The `lru_cache` ensures the download are only called once.
+    """
+    # Use NLTK's own installer check; will skip download if already present.
+    needed = ["punkt", "punkt_tab"] + (["wordnet"] if lemmatize else [])
+    for res in needed:
+        # quiet=True prevents logs; raise_on_error=True surfaces failures.
+        nltk.download(res, quiet=True, raise_on_error=True)
 
 
 @jaxtyped(typechecker=beartype)
@@ -118,9 +135,9 @@ def extract_unique_words(
         ValueError:
             If the input is not a list of strings.
     """
-    nltk.download("wordnet", quiet=True)
-    nltk.download("punkt", quiet=True)
-    nltk.download("punkt_tab", quiet=True)
+    # ensure NLTK resources are downloaded
+    _ensure_nltk_resources(lemmatize=lemmatize)
+
     if lemmatize:
         lemmatizer = WordNetLemmatizer()
 
@@ -223,8 +240,9 @@ class BaseConceptInterpretationMethod(ABC):
             see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
-        device (torch.device | str | None):
-            The device to use for the interpretation.
+        concept_model_device (torch.device | str | None):
+            The device to use for the concept model forward pass.
+            If None, does not change the device.
     """
 
     def __init__(
@@ -235,7 +253,7 @@ class BaseConceptInterpretationMethod(ABC):
         use_vocab: bool = False,
         use_unique_words: bool = False,
         unique_words_kwargs: dict = {},
-        device: torch.device | str | None = "cpu",
+        concept_model_device: torch.device | str | None = None,
     ):
         if activation_granularity not in (
             ActivationGranularity.CLS_TOKEN,
@@ -258,7 +276,7 @@ class BaseConceptInterpretationMethod(ABC):
         self.use_vocab: bool = use_vocab
         self.use_unique_words: bool = use_unique_words
         self.unique_words_kwargs: dict = unique_words_kwargs
-        self.device: torch.device | str | None = device
+        self.concept_model_device: torch.device | str | None = concept_model_device
 
     @abstractmethod
     def interpret(
@@ -320,15 +338,22 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if latent_activations is not None:
+            device: str | torch.device = self.concept_model_device if self.concept_model_device is not None else "cpu"
+            if self.concept_model_device is not None:
+                if hasattr(self.concept_explainer.concept_model, "to"):
+                    device = self.concept_explainer.concept_model.device
+                    self.concept_explainer.concept_model.to(device)  # type: ignore
+
             # batch over latent activations for concept encoding
             concepts_activations_list = []
             for batch_idx in range(0, latent_activations.shape[0], self.concept_encoding_batch_size):
                 # extract and encode a batch of latent activations
                 batch_latent_activations = latent_activations[batch_idx : batch_idx + self.concept_encoding_batch_size]
 
-                if hasattr(batch_latent_activations, "to"):
-                    batch_latent_activations = batch_latent_activations.to(self.device)
+                # concept model forward pass
+                batch_latent_activations = batch_latent_activations.to(device)
                 batch_concepts_activations = self.concept_explainer.encode_activations(batch_latent_activations)
+                batch_latent_activations.cpu()
 
                 concepts_activations_list.append(batch_concepts_activations.cpu())
             concepts_activations = torch.cat(concepts_activations_list, dim=0)
@@ -414,11 +439,14 @@ class BaseConceptInterpretationMethod(ABC):
 
         # Get granular texts from the inputs
         tokens = self.concept_explainer.model_with_split_points.tokenizer(
-            inputs, return_tensors="pt", padding=True, return_offsets_mapping=True
+            inputs,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            return_offsets_mapping=True,
         )
-        granular_texts: list[list[str]] = Granularity.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
+        granular_texts: list[list[str]] = self.activation_granularity.value.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
             tokens,
-            granularity=self.activation_granularity.value,  # type: ignore
             tokenizer=self.concept_explainer.model_with_split_points.tokenizer,
             return_text=True,
         )
@@ -474,8 +502,6 @@ class BaseConceptInterpretationMethod(ABC):
         # verify
         if latent_activations is not None:
             latent_activations = self.concept_explainer._sanitize_activations(latent_activations)
-        else:
-            latent_activations = None
 
         # compute the concepts activations from the provided source, can also create inputs from the vocabulary
         if self.use_vocab:

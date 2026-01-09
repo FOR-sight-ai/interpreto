@@ -1,6 +1,8 @@
-<div align="center">
-  <img src="docs/assets/img/interpreto_banner.png" alt="Interpreto: Interpretability Toolkit for LLMs">
-<br/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/img/interpreto_banner_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/img/interpreto_banner.png">
+  <img src="docs/assets/img/interpreto_banner_dark.png" alt="Interpreto: Interpretability Toolkit for LLMs" />
+</picture>
 
 [![Build status](https://img.shields.io/github/actions/workflow/status/FOR-sight-ai/interpreto/build.yml?branch=main)](https://github.com/FOR-sight-ai/interpreto/actions?query=workflow%3Abuild)
 [![Version](https://img.shields.io/pypi/v/interpreto?color=blue)](https://pypi.org/project/interpreto/)
@@ -14,25 +16,15 @@
 
 </div>
 
-## 📚 Table of contents
-
-- [📚 Table of contents](#-table-of-contents)
-- [🚀 Quick Start](#-quick-start)
-- [📦 What's Included](#-whats-included)
-- [👍 Contributing](#-contributing)
-- [👀 See Also](#-see-also)
-- [🙏 Acknowledgments](#-acknowledgments)
-- [👨‍🎓 Creators](#-creators)
-- [🗞️ Citation](#️-citation)
-- [📝 License](#-license)
-
 ## 🚀 Quick Start
 
-The library should be available on PyPI soon. Try `pip install interpreto` to install it.
+The library is available on PyPI, try `pip install interpreto` to install it.
 
-Otherwise, you can clone the repository and install it locally with `pip install -e .`.
+Checkout the tutorials to get started:
 
-And any case, checkout the [attribution walkthrough](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_walkthrough.ipynb) to get started!
+- [Attributions walkthrough](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_walkthrough.ipynb) (both classification and generation)
+- [Classification concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/classification_concepts_tutorial.ipynb)
+- [Generation concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/generation_concepts_tutorial.ipynb)
 
 ## 📦 What's Included
 
@@ -40,36 +32,30 @@ Interpreto 🪄 provides a modular framework encompassing Attribution Methods, C
 
 ### Attribution Methods
 
-<details>
-<summary>Interpreto includes both inference-based and gradient-based attribution methods:</summary>
+Interpreto includes both inference-based and gradient-based attribution methods.
 
-*We currently have these methods available:*
+They all work seamlessly for both classification (`...ForSequenceClassification`) and generation (`...ForCausalLM`)
 
 **Inference-based Methods:**
 
-- Kernel SHAP: [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
-- LIME: [Ribeiro et al. 2013, *"Why should i trust you?" explaining the predictions of any classifier*](https://dl.acm.org/doi/abs/10.1145/2939672.2939778).
-- Occlusion: [Zeiler and Fergus, 2014. *Visualizing and understanding convolutional networks*](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53).
-- Sobol Attribution: [Fel et al. 2021, *Look at the variance! efficient black-box explanations with sobol-based sensitivity analysis*](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html).
+- [`KernelShap`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernel_shap/) — [Lundberg and Lee, 2017](https://arxiv.org/abs/1705.07874)
+- [`LIME`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/lime/) — [Ribeiro et al., 2013](https://dl.acm.org/doi/abs/10.1145/2939672.2939778)
+- [`Occlusion`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/occlusion/) — [Zeiler and Fergus, 2014](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53)
+- [`Sobol`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/sobol/) — [Fel et al., 2021](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html)
 
-**Gradient based methods:**
+**Gradient-based methods:**
 
-- Gradient Shap: [Lundberg and Lee, 2017, *A Unified Approach to Interpreting Model Predictions*](https://arxiv.org/abs/1705.07874).
-- InputxGradient: [Simonyan et al. 2013, *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps*](https://arxiv.org/abs/1312.6034).
-- Integrated Gradient: [Sundararajan et al. 2017, *Axiomatic Attribution for Deep Networks*](http://proceedings.mlr.press/v70/sundararajan17a.html).
-- Saliency: [Simonyan et al. 2013, *Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps*](https://arxiv.org/abs/1312.6034).
-- SmoothGrad: [Smilkov et al. 2017, *SmoothGrad: removing noise by adding noise*](https://arxiv.org/abs/1706.03825)
- - SquareGrad: [Hooker et al. (2019). *A Benchmark for Interpretability Methods in Deep Neural Networks*](https://arxiv.org/abs/1806.10758).
-- VarGrad: [Richter et al. 2020, *VarGrad: A Low-Variance Gradient Estimator for Variational Inference*](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
+- [`GradientShap`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/gradient_shap/) — [Lundberg and Lee, 2017](https://arxiv.org/abs/1705.07874)
+- [`InputxGradient`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/inputx_gradient/) — [Simonyan et al., 2013](https://arxiv.org/abs/1312.6034)
+- [`Integrated Gradient`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradient/) — [Sundararajan et al., 2017](http://proceedings.mlr.press/v70/sundararajan17a.html)
+- [`Saliency`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/saliency/) — [Simonyan et al., 2013](https://arxiv.org/abs/1312.6034)
+- [`SmoothGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/smooth_grad/) — [Smilkov et al., 2017](https://arxiv.org/abs/1706.03825)
+- [`SquareGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/square_grad/) — [Hooker et al., 2019](https://arxiv.org/abs/1806.10758)
+- [`VarGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/var_grad/) — [Richter et al., 2020](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
 
+### Concept-Based Methods or Mechanistic Interpretability
 
-</details>
-
-### Concept-Based Methods
-
-<details>
-
-<summary> Concept-based explanations aim to provide high-level interpretations of latent model representations. </summary>
+Concept-based explanations aim to provide high-level interpretations of latent model representations.
 
 Interpreto generalizes these methods through three core steps:
 
@@ -77,38 +63,38 @@ Interpreto generalizes these methods through three core steps:
 2. Concept Interpretation (mapping discovered concepts to human-understandable elements)
 3. Concept-to-Output Attribution (assessing concept relevance to model outputs)
 
-**Concept Discovery Techniques** (via [Overcomplete](https://github.com/KempnerInstitute/overcomplete)):
+**Dictionary Learning for Concept Discovery** (mainly via [Overcomplete](https://github.com/KempnerInstitute/overcomplete)):
 
-- NMF, Semi-NMF, ConvexNMF
-- ICA, SVD, PCA, KMeans
-- SAE variants (Vanilla SAE, TopK SAE, JumpReLU SAE, BatchTopK SAE)
+- Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/)
+- [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ConvexNMFConcepts)
+- [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.KMeansConcepts)
+- SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.BatchTopKSAEConcepts)
 
 **Available Concept Interpretation Techniques:**
 
-- Top-k tokens from tokenizer vocabulary
-- Top-k tokens/words/sentences/samples from specific datasets
-- LLM Labeling ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
+- Top-k tokens from tokenizer vocabulary via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.TopKInputs) and `use_vocab=True`
+- Top-k tokens/words/sentences/samples from specific datasets via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.TopKInputs)
+- Label concepts via LLMs with [`LLMLabels`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.LLMLabels) ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
 
-*Concept Interpretation Techniques Added Soon:*
+<details><summary>Concept Interpretation Techniques Added in the future:</summary>
 
 - Input-to-concept attribution from dataset examples ([Jourdan et al. 2023](https://aclanthology.org/2023.findings-acl.317/))
 - Theme prediction via LLMs from top-k tokens/sentences
-
-*Concept Interpretation Techniques Added Later:*
-
 - Aligning concepts with human labels ([Sajjad et al. 2022](https://aclanthology.org/2022.naacl-main.225/))
 - Word cloud visualizations of concepts ([Dalvi et al. 2022](https://arxiv.org/abs/2205.07237))
 - VocabProj & TokenChange ([Gur-Arieh et al. 2025](https://arxiv.org/abs/2501.08319))
 
+</details>
+
 **Concept-to-Output Attribution:**
 
-This part will be implemented later, but all the attribution methods presented above will be available here.
+Estimate the contribution of each concept to the model output.
 
-*Note that only methods with a concept extraction that has an encoder (input to concept) AND a decoder (concept to output) can use this function.*
+Can be obtained with any concept-based explainer via [`MethodConcepts.concept_output_gradient()`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/base/#interpreto.concepts.ConceptAutoEncoderExplainer.concept_output_gradient).
 
-**Specific methods:**
+<details><summary><b>Papers available in the future:</b></summary>
 
-**[Available later when all parts are implemented]** Thanks to this generalization encompassing all concept-based methods and our highly flexible architecture, we can easily obtain a large number of concept-based methods:
+Thanks to this generalization encompassing all concept-based methods and our highly flexible architecture, we can easily obtain a large number of concept-based methods:
 
 - CAV and TCAV: [Kim et al. 2018, Interpretability Beyond Feature Attribution: Quantitative Testing with Concept Activation Vectors (TCAV)](http://proceedings.mlr.press/v80/kim18d.html)
 - ConceptSHAP: [Yeh et al. 2020, On Completeness-aware Concept-Based Explanations in Deep Neural Networks](https://proceedings.neurips.cc/paper/2020/hash/ecb287ff763c169694f682af52c1f309-Abstract.html)
@@ -124,20 +110,22 @@ This part will be implemented later, but all the attribution methods presented a
 
 **Evaluation Metrics for Attribution**
 
-We don't yet have metrics implemented for attribution methods, but that's coming soon!
+To evaluate attribution methods faithfulness, there are the [`Insertion`](https://for-sight-ai.github.io/interpreto/api/attributions/metrics/insertion/) and [`Deletion`](https://for-sight-ai.github.io/interpreto/api/attributions/metrics/deletion/) metrics.
 
 **Evaluation Metrics for Concepts**
 
-<details>
+Concept-based methods have several steps that can be evaluated together via [`ConSim`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/consim/).
 
-<summary> Several properties of the concept-space are desirable. The concept-space should (1) be faithful to the latent space data distribution; (2) have a low complexity to push toward interpretability; (3) be stable across different training regimes.
- </summary>
+Or independently:
 
-- *Concept-space faithfulness:* In Interpreto, you can use the ReconstructionError to define a custom metric by specifying a reconstruction_space and a distance_function. The MSE or FID metrics are also available.
-- *Concept-space complexity:* Sparsity and SparsityRatio metric are available.
-- *Concept-space stability:* You can use Stability metric to compare concept-model dictionaries.
-
-</details>
+- Concept-space (dictionary learning evaluation)
+  - faithfulness: [`MSE`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.MSE), [`FID`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.FID), and [`ReconstructionError`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.ReconstructionError)
+  - complexity: [`Sparsity`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.Sparsity), [`SparsityRatio`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity/), [`SparsityRatio`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity/#interpreto.concepts.metrics.SparsityRatio)
+  - stability: [`Stability`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/dictionary_metrics/#interpreto.concepts.metrics.Stability)
+- Concepts interpretations
+  - No metric yet, will be included soon.
+- Concept-to-Output attribution
+  - No metric yet, will be included soon.
 
 ## 👍 Contributing
 
@@ -165,10 +153,15 @@ Interpreto 🪄 is a project of the [FOR](https://www.irt-saintexupery.com/fr/fo
 
 ## 🗞️ Citation
 
-If you use Interpreto 🪄 as part of your workflow in a scientific publication, please consider citing 🗞️ our paper (coming soon):
+If you use Interpreto 🪄 as part of your workflow in a scientific publication, please consider citing 🗞️ our paper:
 
 ```bibtex
-BibTeX entry coming soon
+@article{poche2025interpreto,
+    title       = {Interpreto: An Explainability Library for Transformers},
+    author      = {Poch{\'e}, Antonin and Mullor, Thomas and Sarti, Gabriele and Boisnard, Fr{\'e}d{\'e}ric and Friedrich, Corentin and Claye, Charlotte and Hoofd, Fran{\c{c}}ois and Bernas, Raphael and Hudelot, C{\'e}line and Jourdan, Fanny},
+    journal     = {arXiv preprint arXiv:2512.09730},
+    year        = {2025}
+}
 ```
 
 ## 📝 License

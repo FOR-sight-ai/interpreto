@@ -87,17 +87,17 @@ def test_low_level_granularities_indices(simple_text, real_bert_tokenizer):
     print("\nBERT tokens:", real_bert_tokenizer.tokenize(simple_text))
 
     # ALL_TOKENS
-    all_tokens_indices = Granularity.get_indices(tokens, Granularity.ALL_TOKENS, real_bert_tokenizer)[0]
+    all_tokens_indices = Granularity.ALL_TOKENS.get_indices(tokens, real_bert_tokenizer)[0]
     assert all_tokens_indices == [[i] for i in range(seq_len)]
 
     # TOKEN
-    token_indices = Granularity.get_indices(tokens, Granularity.TOKEN, real_bert_tokenizer)[0]
+    token_indices = Granularity.TOKEN.get_indices(tokens, real_bert_tokenizer)[0]
     special = set(real_bert_tokenizer.all_special_ids)
     expected_token_pos = [i for i, tid in enumerate(tokens["input_ids"][0]) if int(tid) not in special]
     assert [idx[0] for idx in token_indices] == expected_token_pos
 
     # WORD
-    word_indices = Granularity.get_indices(tokens, Granularity.WORD, real_bert_tokenizer)[0]
+    word_indices = Granularity.WORD.get_indices(tokens, real_bert_tokenizer)[0]
     # We know there are exactly 3 human words in *simple_text*: "word longword verylongword".
     assert len(word_indices) == 3
     # First word should decode to "word"
@@ -112,20 +112,20 @@ def test_low_level_granularities_matrices_and_decomposition(simple_text, real_be
     seq_len = tokens["input_ids"].shape[1]
 
     for gran in (Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD):
-        indices = Granularity.get_indices(tokens, gran, real_bert_tokenizer)[0]
+        indices = gran.get_indices(tokens, real_bert_tokenizer)[0]
 
         # Association matrix
-        assoc = Granularity.get_association_matrix(tokens, gran, real_bert_tokenizer)[0]
+        assoc = gran.get_association_matrix(tokens, real_bert_tokenizer)[0]
         expected_mat = _build_expected_matrix(indices, seq_len)
         assert torch.equal(assoc, expected_mat)
 
         # Decomposition (ids)
-        decomp_ids = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer)[0]
+        decomp_ids = gran.get_decomposition(tokens, real_bert_tokenizer)[0]
         # Compare raw ids – order + content must match indices
         assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
 
         # Decomposition (text)
-        decomp_text = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer, return_text=True)[0]
+        decomp_text: list[str] = gran.get_decomposition(tokens, real_bert_tokenizer, return_text=True)[0]  # type: ignore
         # Join all segments and strip spaces; must equal original (without specials)
         match gran:
             case Granularity.ALL_TOKENS:
@@ -140,7 +140,16 @@ def test_low_level_granularities_matrices_and_decomposition(simple_text, real_be
                 assert joined == simple_text
 
 
-def test_aggregate_score_for_gradient_method_alltokens_granularity_manual_ids(simple_text, real_bert_tokenizer):
+def test_starts_word():
+    assert not Granularity._starts_word("##foo"), "'##foo' cannot be the start of a word"
+    assert not Granularity._starts_word("@@bar"), "'@@bar' cannot be the start of a word"
+    assert Granularity._starts_word("__init__"), "'__init__' should be considered the start of a word"
+    assert Granularity._starts_word("ĠHello"), "'ĠHello' should be considered the start of a word"
+    assert Granularity._starts_word(" World"), "' World' should be considered the start of a word"
+    assert not Granularity._starts_word("token"), "'token' cannot be the start of a word"
+
+
+def test_granularity_score_aggregation_alltokens_manual_ids(simple_text, real_bert_tokenizer):
     """Test score aggregation for ALL_TOKENS"""
 
     tokenizer = real_bert_tokenizer
@@ -152,16 +161,16 @@ def test_aggregate_score_for_gradient_method_alltokens_granularity_manual_ids(si
     fake_scores = torch.arange(seq_len).float().unsqueeze(0)
 
     # ALL_TOKENS → passthrough
-    agg_all_tokens = Granularity.aggregate_score_for_gradient_method(
+    agg_all_tokens = Granularity.ALL_TOKENS.granularity_score_aggregation(
         contribution=fake_scores,
-        granularity=Granularity.ALL_TOKENS,
         inputs=tokens,
         tokenizer=tokenizer,
+        aggregate_inputs=True,
     )
     assert torch.equal(agg_all_tokens, fake_scores)
 
 
-def test_aggregate_score_for_gradient_method_token_granularity_manual_ids(real_bert_tokenizer):
+def test_granularity_score_aggregation_token_manual_ids(real_bert_tokenizer):
     """
     Test TOKEN-level aggregation using manually constructed input_ids.
 
@@ -191,11 +200,11 @@ def test_aggregate_score_for_gradient_method_token_granularity_manual_ids(real_b
     fake_scores = torch.tensor([[10.0, 20.0, 31.1, 41.2, 55.2], [12.0, 21.0, 30.0, 40.0, 50.0]])  # shape (2, 5)
 
     # Apply TOKEN-level aggregation (no actual reduction since each token is treated individually)
-    aggregated = Granularity.aggregate_score_for_gradient_method(
+    aggregated = Granularity.TOKEN.granularity_score_aggregation(
         contribution=fake_scores,
-        granularity=Granularity.TOKEN,
         inputs=tokens,
         tokenizer=tokenizer,
+        aggregate_inputs=True,
     )
 
     # Expect scores of regular tokens only (i.e., skip the first one)
@@ -260,16 +269,16 @@ def test_word_aggregation_matches_manual(simple_text, real_bert_tokenizer, strat
     scores = torch.randn(2, seq_len)
 
     # Group token indices by word
-    indices = Granularity.get_indices(tok, Granularity.WORD, real_bert_tokenizer)[0]
+    indices = Granularity.WORD.get_indices(tok, real_bert_tokenizer)[0]
 
     expected = _manual_aggregate(scores, indices, strategy)
 
-    obtained = Granularity.aggregate_score_for_gradient_method(
+    obtained = Granularity.WORD.granularity_score_aggregation(
         contribution=scores,
-        granularity=Granularity.WORD,
         granularity_aggregation_strategy=strategy,
         inputs=tok,
         tokenizer=real_bert_tokenizer,
+        aggregate_inputs=True,
     )
 
     assert torch.allclose(obtained, expected, atol=1e-6)
@@ -290,7 +299,7 @@ def test_spacy_granularities_indices(complex_text, real_bert_tokenizer):
 
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
 
-    sent_idx = Granularity.get_indices(tokens, Granularity.SENTENCE, real_bert_tokenizer)[0]
+    sent_idx = Granularity.SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
 
     # We know our handcrafted *complex_text*:
     # 1st sentence (2 clauses): "Although it was raining, we went for a walk. "
@@ -316,19 +325,19 @@ def test_spacy_granularities_matrices_and_decomposition(complex_text, real_bert_
 
     gran = Granularity.SENTENCE
 
-    indices = Granularity.get_indices(tokens, gran, real_bert_tokenizer)[0]
+    indices = gran.get_indices(tokens, real_bert_tokenizer)[0]
 
     # Association matrix
-    assoc = Granularity.get_association_matrix(tokens, gran, real_bert_tokenizer)[0]
+    assoc = gran.get_association_matrix(tokens, real_bert_tokenizer)[0]
     expected_mat = _build_expected_matrix(indices, seq_len)
     assert torch.equal(assoc, expected_mat)
 
     # Decomposition (ids)
-    decomp_ids = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer)[0]
+    decomp_ids = gran.get_decomposition(tokens, real_bert_tokenizer)[0]
     assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
 
     # Decomposition (text)
-    decomp_text = Granularity.get_decomposition(tokens, gran, real_bert_tokenizer, return_text=True)[0]
+    decomp_text: list[str] = gran.get_decomposition(tokens, real_bert_tokenizer, return_text=True)[0]  # type: ignore
     # Silent print for manual inspection when running directly
     print(f"\n[{gran}] decomposition:\n", decomp_text)
 
@@ -354,16 +363,16 @@ def test_sentence_aggregation_matches_manual(complex_text, real_bert_tokenizer, 
     seq_len = tok["input_ids"].shape[1]
     scores = torch.randn(3, seq_len)  # three scores per token for variation
 
-    indices = Granularity.get_indices(tok, Granularity.SENTENCE, real_bert_tokenizer)[0]
+    indices = Granularity.SENTENCE.get_indices(tok, real_bert_tokenizer)[0]
 
     expected = _manual_aggregate(scores, indices, strategy)
 
-    obtained = Granularity.aggregate_score_for_gradient_method(
+    obtained = Granularity.SENTENCE.granularity_score_aggregation(
         contribution=scores,
-        granularity=Granularity.SENTENCE,
         granularity_aggregation_strategy=strategy,
         inputs=tok,
         tokenizer=real_bert_tokenizer,
+        aggregate_inputs=True,
     )
 
     assert torch.allclose(obtained, expected, atol=1e-6)

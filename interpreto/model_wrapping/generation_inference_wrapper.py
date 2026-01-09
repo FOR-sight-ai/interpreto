@@ -79,7 +79,7 @@ class GenerationInferenceWrapper(InferenceWrapper):
         """
         filtered_model_inputs = {key: model_inputs[key].to(self.device) for key in ("input_ids", "attention_mask")}
 
-        full_ids = self.model.generate(**filtered_model_inputs, **generation_kwargs)
+        full_ids = self.model.generate(**filtered_model_inputs, **generation_kwargs)  # type: ignore
         original_length = model_inputs["attention_mask"].shape[-1]
         targets_ids = full_ids[..., original_length:]
         full_attention_mask = torch.cat(
@@ -126,11 +126,11 @@ class GenerationInferenceWrapper(InferenceWrapper):
         )
 
     @get_targeted_logits.register(MutableMapping)
-    def _(
+    def _get_targeted_logits_from_mapping(
         self,
         model_inputs: TensorMapping,
         targets: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         """Retrieve logits for a single batch of inputs.
 
         Args:
@@ -199,16 +199,14 @@ class GenerationInferenceWrapper(InferenceWrapper):
             for elem in model_inputs
         ]
         all_logits = self._get_logits_from_iterable(model_inputs)
-        # TODO: remove debug lists
-        logits_debug_list = list(all_logits)
-        targets_debug_list = list(targets)
-        for logits, target in zip(logits_debug_list, targets_debug_list, strict=True):
-            # for logits, target in zip(all_logits, targets, strict=True):
+
+        for logits, target in zip(all_logits, targets, strict=True):
             target_length = target.shape[-1]
             targeted_logits = logits[..., -target_length:, :]
 
             targeted_logits = self.mode(targeted_logits)
 
-            extended_target = target.expand(logits.shape[0], -1)
+            extended_target = target.expand(logits.shape[0], -1).to(self.device)
+
             selected_logits = targeted_logits.gather(dim=-1, index=extended_target.unsqueeze(-1)).squeeze(-1)
             yield selected_logits
