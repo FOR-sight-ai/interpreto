@@ -107,7 +107,6 @@ class ActivationGranularity(Enum):
 
     ALL_TOKENS = Granularity.ALL_TOKENS
     CLS_TOKEN = "cls_token"
-    LAST_TOKEN = "last_token"  # TODO: integrate to selection and reintegration and test
     SAMPLE = "sample"
     SENTENCE = Granularity.SENTENCE
     TOKEN = Granularity.TOKEN
@@ -795,9 +794,6 @@ class ModelWithSplitPoints(LanguageModel):
                 - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:
                     for each sample, only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.
                     This will raise an error if the model is not `ForSequenceClassification`.
-
-                - ``ModelWithSplitPoints.activation_granularities.LAST_TOKEN``:
-                    only the non-special last token activation is returned ``(n, d)``.
 
                 - ``ModelWithSplitPoints.activation_granularities.SAMPLE``:
                     special tokens are removed and the remaining ones are aggregated on the whole sample ``(n, d)``.
