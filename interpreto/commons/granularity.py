@@ -73,7 +73,7 @@ class GranularityAggregationStrategy(Enum):
     FIRST = "first"  # TODO: test
     LAST = "last"  # TODO: test
 
-    def aggregate(
+    def aggregate(  # noqa: PLR0911  # ignore too many return statements
         self, x: Float[torch.Tensor, "l d"], dim: int
     ) -> Float[torch.Tensor, "1 d"]:
         """
@@ -242,7 +242,7 @@ class Granularity(Enum):
 
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
 
-                if tokenizer.is_fast and isinstance(inputs, BatchEncoding):
+                if tokenizer.is_fast:
                     return [
                         Granularity.__word_get_indices_from_word_ids(inputs.word_ids(i))
                         for i in range(n_inputs)
@@ -369,9 +369,8 @@ class Granularity(Enum):
                     ``g`` is the padded sequence length in the specific granularity,
                     and ``lp`` is the padded sequence length.
         """
-        if indices_list is None:
-            # get indices correspondence between granularity and ALL_TOKENS
-            indices_list = self.get_indices(inputs, tokenizer)
+        # get indices correspondence between granularity and ALL_TOKENS
+        indices_list: list[list[list[int]]] = self.get_indices(inputs, tokenizer)
 
         # iterate over the samples
         assoc_matrix_list: list[Bool[torch.Tensor, g, lp]] = []
