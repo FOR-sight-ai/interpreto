@@ -366,7 +366,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
 
     def __normalize_gradients(self, gradients: Float[torch.Tensor, "t g c"]) -> Float[torch.Tensor, "t g c"]:
         """
-        Normalize the gradients as described in parameter `sample_target_normalization` of `concept_output_gradient`.
+        Normalize the gradients as described in parameter `normalization` of `concept_output_gradient`.
         But for a single sample.
 
         Args:
@@ -377,9 +377,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             The normalized gradients.
         """
         # normalize the gradients
-        target_importance_sum: Float[torch.Tensor, "t 1 1"] = (
-            gradients.abs().sum(dim=-1, keepdim=True).sum(dim=-1, keepdim=True)
-        )
+        target_importance_sum: Float[torch.Tensor, "t 1 1"] = gradients.abs().sum(dim=-1).sum(dim=-1).view(-1, 1, 1)
         normalized_gradients: Float[torch.Tensor, "t g c"] = gradients / target_importance_sum
 
         return normalized_gradients
@@ -393,7 +391,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concepts_x_gradients: bool = True,
-        sample_target_normalization: bool = True,
+        normalization: bool = True,
         tqdm_bar: bool = False,
         batch_size: int | None = None,
     ) -> list[Float[torch.Tensor, "t g c"]]:
@@ -476,9 +474,9 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 True by default (similarly to attributions), because of mathematical properties.
                 Therefore the out put is $C * \\nabla{f_{co}}(C)$.
 
-            sample_target_normalization (bool):
+            normalization (bool):
                 Whether to normalize the gradients.
-                Gradients will be normalized on the concept dimension.
+                Gradients will be normalized on the concept (c) and sequence length (g) dimensions.
                 Such that for a given sample-target-granular pair,
                 the sum of the absolute values of the gradients is equal to 1.
                 (The granular elements depend on the :arg:`activation_granularity`).
@@ -522,6 +520,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         )
 
         # normalize the gradients if required
-        if sample_target_normalization:
+        if normalization:
             gradients = [self.__normalize_gradients(g) for g in gradients]
         return gradients

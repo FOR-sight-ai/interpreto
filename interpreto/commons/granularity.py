@@ -35,8 +35,8 @@ import torch
 from beartype import beartype
 from jaxtyping import Bool, Float, Int, jaxtyped
 from transformers.tokenization_utils import PreTrainedTokenizer
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from transformers.tokenization_utils_base import BatchEncoding
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 # Lazy spacy import for SENTENCE granularities
 try:
@@ -230,7 +230,7 @@ class Granularity(Enum):
 
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
 
-                if tokenizer.is_fast:
+                if tokenizer.is_fast and isinstance(inputs, BatchEncoding):
                     return [Granularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
                 return [
                     Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
@@ -331,6 +331,7 @@ class Granularity(Enum):
         self,
         inputs: BatchEncoding,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
+        indices_list: list[list[list[int]]] | None = None,
     ) -> list[Bool[torch.Tensor, "g lp"]]:
         """
         Creates the matrix to pass from one granularity level to ALL_TOKENS granularity level (finally used by the perturbator)
@@ -338,6 +339,7 @@ class Granularity(Enum):
         Args:
             inputs (BatchEncoding): Tokenized inputs, the output of `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast): Hugging-Face tokenizer used downstream.
+            indices_list (list[list[list[int]]] | None): Precomputed indices list from `get_indices` method to avoid recomputation.
 
         Raises:
             NotImplementedError: if granularity level is unknown, raises NotImplementedError
@@ -348,8 +350,9 @@ class Granularity(Enum):
                     ``g`` is the padded sequence length in the specific granularity,
                     and ``lp`` is the padded sequence length.
         """
-        # get indices correspondence between granularity and ALL_TOKENS
-        indices_list: list[list[list[int]]] = self.get_indices(inputs, tokenizer)
+        if indices_list is None:
+            # get indices correspondence between granularity and ALL_TOKENS
+            indices_list = self.get_indices(inputs, tokenizer)
 
         # iterate over the samples
         assoc_matrix_list: list[Bool[torch.Tensor, g, lp]] = []
@@ -371,6 +374,7 @@ class Granularity(Enum):
         inputs: BatchEncoding,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         return_text: bool = False,
+        indices_list: list[list[list[int]]] | None = None,
     ) -> list[list[list[int]]] | list[list[str]]:
         """
         Returns the token decomposition at the requested granularity level.
@@ -384,7 +388,10 @@ class Granularity(Enum):
             inputs (BatchEncoding): Tokenized inputs to decompose, the output of
                 `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast): Huggingface tokenizer used downstream.
-            return_text (bool, optional): If True, the text corresponding to the token indices is returned.
+            return_text (bool, optional):
+                If True, the text corresponding to the token indices is returned.
+                If False, the token ids are returned. Defaults to False.
+            indices_list (list[list[list[int]]] | None): Precomputed indices list from `get_indices` method to avoid recomputation.
 
         Returns:
             list[list[int]]: A nested list where the first level
@@ -399,8 +406,9 @@ class Granularity(Enum):
                 "Tokenizer must be provided if return_text is True. Please provide a PreTrainedTokenizer or PreTrainedTokenizerFast instance."
             )
 
-        # get indices correspondence between granularity and ALL_TOKENS
-        indices_list = self.get_indices(inputs, tokenizer)
+        if indices_list is None:
+            # get indices correspondence between granularity and ALL_TOKENS
+            indices_list = self.get_indices(inputs, tokenizer)
 
         all_decompositions: list[list] = []
         for i, indices in enumerate(indices_list):
@@ -476,6 +484,7 @@ class Granularity(Enum):
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         aggregate_inputs: bool = False,
         aggregate_targets: bool = False,
+        indices_list: list[list[list[int]]] | None = None,
     ) -> Float[torch.Tensor, "t g"]:
         """
         Aggregate contribution according to the specified granularity.
@@ -516,6 +525,15 @@ class Granularity(Enum):
             tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None):
                 Required for TOKEN/WORD-level filtering.
 
+            aggregate_inputs (bool):
+                If True, aggregate inputs. Used for gradient-based methods.
+
+            aggregate_targets (bool):
+                If True, aggregate targets. Used for generation tasks.
+
+            indices_list (list[list[list[int]]] | None):
+                Precomputed indices list from `get_indices` method to avoid recomputation.
+
         Returns:
             torch.Tensor: The aggregated contribution.
         """
@@ -529,8 +547,9 @@ class Granularity(Enum):
         if inputs is None:
             raise ValueError("Inputs are required for non ALL_TOKENS granularity.")
 
-        # extract indices of contribution to keep from inputs
-        indices_list = self.get_indices(inputs, tokenizer)  # type: ignore
+        if indices_list is None:
+            # extract indices of contribution to keep from inputs
+            indices_list = self.get_indices(inputs, tokenizer)  # type: ignore
 
         if len(indices_list) > 1:
             raise ValueError(

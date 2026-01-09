@@ -70,6 +70,7 @@ jobs:
             "hf-internal-testing/tiny-random-LlamaForCausalLM",
             "hf-internal-testing/tiny-random-roberta",
             "hf-internal-testing/tiny-random-t5",
+            "textattack/bert-base-uncased-imdb",
         ]
 
         # We will call .from_pretrained(...) once per model_id, 

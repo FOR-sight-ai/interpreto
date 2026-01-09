@@ -31,7 +31,6 @@ from __future__ import annotations
 import pytest
 import torch
 
-from interpreto import Granularity
 from interpreto.concepts import (
     BatchTopKSAEConcepts,
     Cockatiel,

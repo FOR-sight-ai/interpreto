@@ -158,6 +158,10 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
         system_prompt (str | None):
             The system prompt to use for the LLM. If None, a default prompt is used.
+
+        concept_model_device (torch.device | str | None):
+            The device to use for the concept model forward pass.
+            If None, does not change the device.
     """
 
     def __init__(
@@ -176,7 +180,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,
-        device: torch.device | str | None = "cpu",
+        concept_model_device: torch.device | str | None = None,
     ):
         super().__init__(
             concept_explainer=concept_explainer,
@@ -186,7 +190,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
-            device=device,
+            concept_model_device=concept_model_device,
         )
 
         if k_context > 0 and (
