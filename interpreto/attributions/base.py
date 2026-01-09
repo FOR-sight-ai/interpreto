@@ -79,22 +79,49 @@ def clone_tensor_mapping(tm: TensorMapping, detach: bool = False) -> TensorMappi
 class AttributionOutput:
     """
     Class to store the output of an attribution method.
-    __init__ Args:
-        attributions (Iterable[SingleAttribution]): A list (n elements, with n the number of samples) of attribution score tensors:
-            - `l` represents the number of elements for which attribution is computed (for NLP tasks: can be the total sequence length).
-            - Shapes depend on the task:
-                - Classification (single class): `(l)`
-                - Classification (multi classes): `(c, l)`, where `c` is the number of classes.
-                - Generative models: `(l_g, l)`, where `l_g` is the length of the generated part.
-                    - For non-generated elements, there are `l_g` attribution scores.
-                    - For generated elements, scores are zero for previously generated tokens.
-                - Token classification: `(l_t, l)`, where `l_t` is the number of token classes. When the tokens are disturbed, l = l_t.
-        elements (Iterable[list[str]] | Iterable[torch.Tensor]): A list or tensor representing the elements for which attributions are computed.
-            - These elements can be tokens, words, sentences, or tensors of size `l`.
-        model_task (ModelTask): An enum representing the task of the model explained, such as SINGLE_CLASS_CLASSIFICATION, MULTI_CLASS_CLASSIFICATION, or GENERATION.
-        classes (torch.Tensor | None): Optional tensor of class labels.
-            - For single-class classification: tensor of shape `(1)`
-            - For multi-class classification: tensor of shape `(c)` where `c` is the number of classes
+
+    It contains every element needed to visualize the explanations and compute the metrics.
+
+    Attributes:
+        attributions (SingleAttribution):
+            A list (n elements, with n the number of samples) of attribution score tensors:
+                - `l` represents the number of elements for which attribution is computed (for NLP tasks: can be the total sequence length).
+                - Shapes depend on the task:
+                    - Classification (single class): `(l)`
+                    - Classification (multi classes): `(c, l)`, where `c` is the number of classes.
+                    - Generative models: `(l_g, l)`, where `l_g` is the length of the generated part.
+                        - For non-generated elements, there are `l_g` attribution scores.
+                        - For generated elements, scores are zero for previously generated tokens.
+                    - Token classification: `(l_t, l)`, where `l_t` is the number of token classes. When the tokens are disturbed, l = l_t.
+
+        elements (list[str] | torch.Tensor):
+            A list or tensor representing the elements for which attributions are computed.
+                - These elements can be tokens, words, sentences, or tensors of size `l`.
+
+        model_inputs_to_explain (TensorMapping):
+            The encoding post tokenization of the input text with `return_tensors="pt"`.
+            In the case of generation, the target is included in it.
+
+        targets (torch.Tensor):
+            The target classes or tokens.
+
+        model_task (ModelTask):
+            An enum representing the task of the model explained, such as SINGLE_CLASS_CLASSIFICATION, MULTI_CLASS_CLASSIFICATION, or GENERATION.
+
+        classes (torch.Tensor | None):
+            Optional tensor of class labels.
+                - For single-class classification: tensor of shape `(1)`
+                - For multi-class classification: tensor of shape `(c)` where `c` is the number of classes
+
+        granularity (Granularity):
+            The granularity level of the explanation.
+
+        granularity_aggregation_strategy (GranularityAggregationStrategy):
+            The aggregation method used for aggregating the scores at the specified granularity.
+
+        inference_mode (Callable[[torch.Tensor], torch.Tensor]):
+            The mode used for inference.
+            It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
     """
 
     attributions: SingleAttribution
@@ -104,6 +131,7 @@ class AttributionOutput:
     model_task: ModelTask
     classes: torch.Tensor | None = None
     granularity: Granularity = Granularity.DEFAULT
+    granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN
     inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
 
     # TODO: Harmonize even more, all attributions could be of the shape (t, l),
@@ -331,11 +359,12 @@ class AttributionExplainer:
 
         Args:
             model_inputs (ModelInputs): Raw inputs for the model.
-            targets (torch.Tensor | Iterable[torch.Tensor] | None): Targets for which explanations are desired.
-            Further types might be supported by sub-classes.
-            It depends on the task:
-                - For classification tasks, encodes the target class or classes to explain.
-                - For generation tasks, encodes the target text or tokens to explain.
+            targets (torch.Tensor | Iterable[torch.Tensor] | None):
+                Targets for which explanations are desired.
+                Further types might be supported by sub-classes.
+                It depends on the task:
+                    - For classification tasks, encodes the target class or classes to explain.
+                    - For generation tasks, encodes the target text or tokens to explain.
 
         Returns:
             List[AttributionOutput]: A list of attribution outputs, one per input sample.
@@ -428,6 +457,7 @@ class AttributionExplainer:
                 classes=classes,
                 targets=target.cpu(),  # TODO: manage target device in the inference wrapper
                 granularity=self.granularity,
+                granularity_aggregation_strategy=self.granularity_aggregation_strategy,
                 inference_mode=self.inference_wrapper.mode,
             )
             results.append(attribution_output)
@@ -642,7 +672,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
         model_inputs: Iterable[TensorMapping],
         targets: GeneratedTarget | None = None,
         **model_kwargs,
-    ) -> tuple[Iterable[TensorMapping], Iterable[torch.Tensor]]:
+    ) -> tuple[Iterable[BatchEncoding], Iterable[torch.Tensor]]:
         """
         Processes the inputs and targets for the generative model.
         If targets are not provided, create them with model_inputs_to_explain. Otherwise, for each input-target pair:
