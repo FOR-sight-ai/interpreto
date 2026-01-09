@@ -239,7 +239,6 @@ def test_build_example_prompt():
     ]
     prompt = _build_example_prompt(examples)
     assert isinstance(prompt, str)
-    print(prompt)
     assert prompt == '("This is a test with sentences", 10), ("This is another sentence", 4)'
 
     # Test with examples with context
