@@ -265,14 +265,14 @@ STRATS = [
 def test_aggregate_and_unfold(strategy):
     tensor = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float)
 
-    agg = GranularityAggregationStrategy.aggregate(tensor, strategy, dim=0)
+    agg = strategy.aggregate(tensor, dim=0)
 
     assert agg.shape == (1, 3), (
         "Wrong activation aggregation output shape. ",
         f"Expected shape (1, 3), got {agg.shape}",
     )
 
-    unfolded = GranularityAggregationStrategy.unfold(agg, strategy, 2)
+    unfolded = strategy.unfold(agg, 2)
 
     assert unfolded.shape == (2, 3), (
         "Wrong activation unfolding output shape. ",
