@@ -70,8 +70,12 @@ class GranularityAggregationStrategy(Enum):
     MIN = "min"
     SUM = "sum"
     SIGNED_MAX = "signed_max"
+    FIRST = "first"  # TODO: test
+    LAST = "last"  # TODO: test
 
-    def aggregate(self, x: Float[torch.Tensor, "l d"], dim: int) -> Float[torch.Tensor, "1 d"]:
+    def aggregate(  # noqa: PLR0911  # ignore too many return statements
+        self, x: Float[torch.Tensor, "l d"], dim: int
+    ) -> Float[torch.Tensor, "1 d"]:
         """
         Aggregate activations.
         Args:
@@ -90,6 +94,12 @@ class GranularityAggregationStrategy(Enum):
                 return x.min(dim=dim, keepdim=True).values
             case GranularityAggregationStrategy.SIGNED_MAX:
                 return x.gather(dim, x.abs().max(dim=dim)[1].unsqueeze(dim))
+            case GranularityAggregationStrategy.FIRST:
+                # Select the first element along the aggregation dimension, keepdim=True
+                return x.narrow(dim, start=0, length=1)
+            case GranularityAggregationStrategy.LAST:
+                # Select the last element along the aggregation dimension, keepdim=True
+                return x.narrow(dim, start=x.size(dim) - 1, length=1)
             case _:
                 raise NotImplementedError(f"Aggregation strategy {self} not implemented.")
 
@@ -110,6 +120,8 @@ class GranularityAggregationStrategy(Enum):
                 | GranularityAggregationStrategy.MAX
                 | GranularityAggregationStrategy.MIN
                 | GranularityAggregationStrategy.SIGNED_MAX
+                | GranularityAggregationStrategy.FIRST
+                | GranularityAggregationStrategy.LAST
             ):
                 return x.repeat(new_dim_length, 1)
             case _:

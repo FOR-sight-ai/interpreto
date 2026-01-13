@@ -238,6 +238,10 @@ def _manual_aggregate(
         elif strategy is GranularityAggregationStrategy.SIGNED_MAX:
             idx = chunk.abs().argmax(dim=1).unsqueeze(1)
             agg = chunk.gather(1, idx)
+        elif strategy is GranularityAggregationStrategy.FIRST:
+            agg = chunk.narrow(1, 0, 1)
+        elif strategy is GranularityAggregationStrategy.LAST:
+            agg = chunk.narrow(1, chunk.shape[1] - 1, 1)
         else:  # should never happen
             raise ValueError(f"Unknown strategy: {strategy}")
 
@@ -252,7 +256,28 @@ STRATS = [
     GranularityAggregationStrategy.MIN,
     GranularityAggregationStrategy.SUM,
     GranularityAggregationStrategy.SIGNED_MAX,
+    GranularityAggregationStrategy.FIRST,
+    GranularityAggregationStrategy.LAST,
 ]
+
+
+@pytest.mark.parametrize("strategy", STRATS)
+def test_aggregate_and_unfold(strategy):
+    tensor = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.float)
+
+    agg = strategy.aggregate(tensor, dim=0)
+
+    assert agg.shape == (1, 3), (
+        "Wrong activation aggregation output shape. ",
+        f"Expected shape (1, 3), got {agg.shape}",
+    )
+
+    unfolded = strategy.unfold(agg, 2)
+
+    assert unfolded.shape == (2, 3), (
+        "Wrong activation unfolding output shape. ",
+        f"Expected shape (2, 3), got {unfolded.shape}",
+    )
 
 
 @pytest.mark.parametrize("strategy", STRATS)
