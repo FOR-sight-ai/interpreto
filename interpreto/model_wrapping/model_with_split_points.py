@@ -761,7 +761,7 @@ class ModelWithSplitPoints(LanguageModel):
         pad_side: str | None = None,
         tqdm_bar: bool = False,
         include_predicted_classes: bool = False,
-        flatten_activations: bool = True,  # TODO: test
+        flatten_activations: bool = True,
         model_forward_kwargs: dict[str, Any] = {},
     ) -> dict[str, LatentActivations] | dict[str, list[LatentActivations]]:
         """

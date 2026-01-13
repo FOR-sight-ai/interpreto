@@ -42,7 +42,7 @@ from jaxtyping import Float, jaxtyped
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-from interpreto import ModelWithSplitPoints
+from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
@@ -197,11 +197,13 @@ def verify_granular_inputs(
             raise ValueError(
                 f"The lengths of the granulated inputs do not match the number of provided latent activations {len(granular_inputs)} != {len(latent_activations)}"
                 "If you provide latent activations, make sure they have the same granularity as the inputs."
+                "This might happen if you use `use_vocab=True` and `use_unique_words=True` and provide `latent_activations`."
             )
         if concepts_activations is not None and len(granular_inputs) != len(concepts_activations):
             raise ValueError(
                 f"The lengths of the granulated inputs do not match the number of provided concepts activations {len(granular_inputs)} != {len(concepts_activations)}"
                 "If you provide concepts activations, make sure they have the same granularity as the inputs."
+                "This might happen if you use `use_vocab=True` and `use_unique_words=True` and provide `concepts_activations`."
             )
         raise ValueError(
             f"The lengths of the granulated inputs do not match the number of concepts activations {len(granular_inputs)} != {len(sure_concepts_activations)}"
@@ -220,6 +222,11 @@ class BaseConceptInterpretationMethod(ABC):
 
         activation_granularity (ActivationGranularity):
             The granularity of the activations to use for the interpretation.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+
+        aggregation_strategy (GranularityAggregationStrategy):
+            The aggregation strategy to use for the activations.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -249,6 +256,7 @@ class BaseConceptInterpretationMethod(ABC):
         self,
         concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
         use_unique_words: bool = False,
@@ -272,6 +280,7 @@ class BaseConceptInterpretationMethod(ABC):
 
         self.concept_explainer: ConceptEncoderExplainer = concept_explainer
         self.activation_granularity: ActivationGranularity = activation_granularity
+        self.aggregation_strategy: GranularityAggregationStrategy = aggregation_strategy
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
         self.use_unique_words: bool = use_unique_words
@@ -364,11 +373,12 @@ class BaseConceptInterpretationMethod(ABC):
                 self.concept_explainer.model_with_split_points.get_activations(
                     inputs,
                     activation_granularity=self.activation_granularity,
+                    aggregation_strategy=self.aggregation_strategy,
                 )
-            )
+            )  # type: ignore
             latent_activations = self.concept_explainer.model_with_split_points.get_split_activations(
                 activations_dict, split_point=self.concept_explainer.split_point
-            )
+            )  # type: ignore
             return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
         raise ValueError(
@@ -395,25 +405,56 @@ class BaseConceptInterpretationMethod(ABC):
         # extract and sort the vocabulary
         vocab_dict: dict[str, int] = self.concept_explainer.model_with_split_points.tokenizer.get_vocab()
         inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
-        inputs: list[str] = list(inputs)
+        inputs: list[str] = list(inputs)  # type: ignore
 
-        # compute the vocabulary's latent activations
-        if self.activation_granularity == ActivationGranularity.CLS_TOKEN:
+        # unsqueeze for all ids to be considered as a single sample
+        input_ids: Float[torch.Tensor, "v 1"] = torch.tensor(list(input_ids)).unsqueeze(1)
+        vocab_size = input_ids.shape[0]
+
+        if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
+            # compute the vocabulary's latent activations
             activations_dict: dict[str, LatentActivations] = (
                 self.concept_explainer.model_with_split_points.get_activations(
-                    inputs, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
+                    input_ids,
+                    activation_granularity=ActivationGranularity.ALL_TOKENS,
                 )
-            )
+            )  # type: ignore
         else:
-            input_tensor: Float[torch.Tensor, "v 1"] = torch.tensor(input_ids).unsqueeze(1)
+            # we need to add the CLS token and maybe the EOS token to the ids
+            # so that we can get correct CLS activations
+
+            # first step extract the template
+            template_ids = self.concept_explainer.model_with_split_points.tokenizer("a", return_tensors="pt")[
+                "input_ids"
+            ]
+
+            # if we are not in a template [CLS] a [EOS]
+            if len(template_ids) != 3:  # type: ignore
+                warnings.warn(
+                    "When tokenizing a single character, the provided model does not output 3 token ids. "
+                    "Our implementation assumes that the model outputs is [CLS] a [EOS]. "
+                    "Indeed, when `aggregation_strategy` is `CLS_TOKEN`, the first token is considered as the CLS token. "
+                    "If the [CLS] token is still the first token, you can ignore this warning. "
+                    "Otherwise, either choose another model or contact the developers to find a workaround.",
+                    stacklevel=2,
+                )
+
+            # repeat the template and replace "a" token ids by the vocabulary ids
+            repeated_template_ids = template_ids.repeat(vocab_size, 1)
+            repeated_template_ids[:, 1] = input_ids[:, 0]
+
+            # compute the vocabulary's latent activations
             activations_dict: dict[str, LatentActivations] = (
                 self.concept_explainer.model_with_split_points.get_activations(
-                    input_tensor, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
+                    repeated_template_ids,
+                    activation_granularity=self.activation_granularity,
                 )
-            )
-        latent_activations = self.concept_explainer.model_with_split_points.get_split_activations(
+            )  # type: ignore
+
+        # compute the vocabulary's concepts activations
+        latent_activations: LatentActivations = self.concept_explainer.model_with_split_points.get_split_activations(
             activations_dict, split_point=self.concept_explainer.split_point
-        )
+        )  # type: ignore
         concepts_activations = self.concept_explainer.encode_activations(latent_activations)
         return inputs, concepts_activations
 
@@ -429,11 +470,20 @@ class BaseConceptInterpretationMethod(ABC):
             inputs (list[str]): n text samples
 
         Returns:
-            tuple[list[str], list[int]]:
-                - list[str]: The granular texts from the inputs, flattened
-                - list[int]: The sample id for each granular text, to keep track of which sample the text belongs to.
+            granular_flattened_texts (list[str]):
+                The granular texts elements from the inputs, flattened.
+                [Example1_Tok1, Example1_Tok2, ... Example2_Tok1, Example2_Tok2, ...]
+
+            granular_flattened_sample_id (list[int]):
+                The sample id for each granular text, to keep track of which sample the text belongs to.
+                It should have the same length as `granular_flattened_texts`.
+                It elements indicates the sample if for the corresponding granular text in `granular_flattened_texts`.
+                [0, 0, ... 1, 1, ...]
         """
-        if self.activation_granularity in (ActivationGranularity.SAMPLE, ActivationGranularity.CLS_TOKEN):
+        if self.activation_granularity in (
+            ActivationGranularity.SAMPLE,
+            ActivationGranularity.CLS_TOKEN,
+        ):
             # no activation_granularity is needed
             return inputs, list(range(len(inputs)))
 
@@ -494,6 +544,8 @@ class BaseConceptInterpretationMethod(ABC):
 
             granular_sample_ids (list[int]):
                 The granular sample ids for the specified concepts.
+                Each element of the list is the index of the input sample from which the corresponding granular input was extracted.
+                It has the same length as `granular_inputs`.
 
         """
         if concepts_indices == "all":
@@ -553,7 +605,8 @@ class BaseConceptInterpretationMethod(ABC):
                 granular_inputs, granular_sample_ids = self.get_granular_inputs(inputs)
 
         sure_concepts_indices = verify_concepts_indices(
-            concepts_activations=sure_concepts_activations, concepts_indices=concepts_indices
+            concepts_activations=sure_concepts_activations,
+            concepts_indices=concepts_indices,
         )
         verify_granular_inputs(
             granular_inputs=granular_inputs,
@@ -562,4 +615,9 @@ class BaseConceptInterpretationMethod(ABC):
             concepts_activations=concepts_activations,
         )
 
-        return (sure_concepts_indices, granular_inputs, sure_concepts_activations, granular_sample_ids)
+        return (
+            sure_concepts_indices,
+            granular_inputs,
+            sure_concepts_activations,
+            granular_sample_ids,
+        )
