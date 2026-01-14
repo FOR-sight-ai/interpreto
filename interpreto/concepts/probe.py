@@ -212,6 +212,138 @@ class LinearSVMProbe(nn.Module):
         return X @ self.weight + self.bias
 
 
+class MeansDiffProbe(nn.Module):
+    """
+    MeansDiff probe (multi-label, multi-output).
+
+    For each concept j:
+        w_j = mean(X | y_j=1) - mean(X | y_j=0)
+
+    Produces:
+        weight: (d, c)
+        bias:   (c,)
+        encode(X) = X @ weight + bias
+
+    bias modes:
+        - "zero":     b = 0
+        - "midpoint": nearest-centroid midpoint bias
+        - "bce":      choose b_j to minimize binary cross-entropy on logits for class j
+                      with fixed w_j (1D convex optimization per class via Newton)
+    """
+
+    def __init__(
+        self,
+        bias: str = "zero",  # no impact on the direction itself
+        eps: float = 1e-8,
+        bce_newton_iters: int = 50,
+        bce_newton_tol: float = 1e-8,
+    ):
+        super().__init__()
+        if bias not in {"zero", "midpoint", "bce"}:
+            raise ValueError("bias must be one of {'zero', 'midpoint', 'bce'}")
+        self.bias_mode = bias
+        self.eps = eps
+        self.bce_newton_iters = int(bce_newton_iters)
+        self.bce_newton_tol = float(bce_newton_tol)
+
+        self.weight = None  # nn.Parameter, shape (d, c)
+        self.bias = None  # nn.Parameter, shape (c,)
+        self.fitted = False
+
+    @torch.no_grad()
+    def _bce_optimal_bias(self, scores: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """
+        Find per-class bias b (c,) minimizing BCEWithLogitsLoss(scores + b, y)
+        with scores fixed. Uses Newton iterations on b (convex in b).
+
+        scores: (n, c)
+        y:      (n, c) in {0,1}
+        """
+        # Good initialization: logit of prevalence (works even if scores ~ 0)
+        p = y.mean(dim=0).clamp(self.eps, 1.0 - self.eps)  # (c,)
+        b = torch.log(p / (1.0 - p))  # (c,)
+
+        for _ in range(self.bce_newton_iters):
+            logits = scores + b  # broadcast: (n, c)
+            p_hat = torch.sigmoid(logits)  # (n, c)
+
+            # Gradient and Hessian of mean BCE wrt b:
+            # g = mean(p_hat - y)
+            # h = mean(p_hat * (1 - p_hat))
+            g = (p_hat - y).mean(dim=0)  # (c,)
+            h = (p_hat * (1.0 - p_hat)).mean(dim=0).clamp_min(self.eps)  # (c,)
+
+            step = g / h
+            b_next = b - step
+
+            if step.abs().max().item() < self.bce_newton_tol:
+                b = b_next
+                break
+            b = b_next
+
+        return b
+
+    def fit(self, X: torch.Tensor, y: torch.Tensor):
+        """
+        X : (n, d)
+        y : (n, c) with values in {0, 1}
+        """
+        n, d = X.shape
+
+        y = y.to(dtype=X.dtype)
+
+        # Counts
+        n1 = y.sum(dim=0)  # (c,)
+        n0 = n - n1  # (c,)
+
+        # Sums
+        s1 = y.t() @ X  # (c, d)
+        sumX = X.sum(dim=0)  # (d,)
+        s0 = (n * sumX.unsqueeze(0)) - s1  # (c, d)
+
+        # Means (avoid division by 0)
+        mu1 = s1 / (n1.unsqueeze(1).clamp_min(self.eps))  # (c, d)
+        mu0 = s0 / (n0.unsqueeze(1).clamp_min(self.eps))  # (c, d)
+
+        w = (mu1 - mu0).t()  # (d, c)
+
+        if self.bias_mode == "zero":
+            b = torch.zeros(y.size(1), dtype=X.dtype, device=X.device)  # (c,)
+        elif self.bias_mode == "midpoint":
+            # midpoint / nearest-centroid bias
+            mu1_sq = (mu1 * mu1).sum(dim=1)  # (c,)
+            mu0_sq = (mu0 * mu0).sum(dim=1)  # (c,)
+            b = -0.5 * (mu1_sq - mu0_sq)  # (c,)
+
+        else:  # "bce"
+            # scores = X @ w are fixed; find b that minimizes BCE per column
+            with torch.no_grad():
+                scores = X @ w  # (n, c)
+                b = self._bce_optimal_bias(scores=scores, y=y)  # (c,)
+
+        # If a class has no positives or no negatives, w/b are ill-defined.
+        # Set them to 0 to avoid inf/nan, but keep shapes consistent.
+        invalid = (n1 < 1) | (n0 < 1)  # (c,)
+        if invalid.any():
+            w = w.clone()
+            b = b.clone()
+            w[:, invalid] = 0.0
+            b[invalid] = 0.0
+
+        self.weight = nn.Parameter(w.clone())
+        self.bias = nn.Parameter(b.clone())
+        self.fitted = True
+
+    def encode(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        X : (n, d)
+        Returns : (n, c)
+        """
+        if not self.fitted:
+            raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
+        return X @ self.weight + self.bias  # type: ignore
+
+
 class ProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
     def __init__(
         self,
