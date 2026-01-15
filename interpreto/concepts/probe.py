@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
@@ -32,246 +33,79 @@ class SklearnProbe:
         return self.model.decision_function(x)
 
 
-class LinearRegressionProbe(nn.Module):
+class LinearProbeBase(nn.Module, ABC):
     """
-    Linear regression probe (closed-form solution) with intercept.
+    Base class for linear probes with intercept.
 
-    Supports:
-        y : (n, c)
+    Stores:
+        weight: (d, c)
+        bias:   (c,)
+
+    encode(X) returns logits/scores: (n, c)
     """
 
     def __init__(self):
         super().__init__()
-        self.weight = None  # nn.Parameter, shape (d, c)
-        self.bias = None  # nn.Parameter, shape (c,)
+        self.weight = None  # nn.Parameter, (d, c)
+        self.bias = None  # nn.Parameter, (c,)
         self.fitted = False
 
-    def fit(self, X, y):
-        """
-        X : (n, d)
-        y : (n, c)
-        """
-        n, d = X.shape
-
-        # Design matrix with bias
-        ones = torch.ones(n, 1, dtype=X.dtype, device=X.device)
-        X_design = torch.cat([ones, X], dim=1)  # (n, 1 + d)
-
-        # Closed-form OLS: beta = (X^T X)^(-1) X^T y
-        XT = X_design.T
-        beta = torch.linalg.pinv(XT @ X_design) @ XT @ y  # (d+1, c)
-
-        # Extract parameters
-        with torch.no_grad():
-            b = beta[0]  # (c,)
-            w = beta[1:]  # (d, c)
-
-        self.weight = nn.Parameter(w.clone())
-        self.bias = nn.Parameter(b.clone())
-
-        self.fitted = True
-
-    def encode(self, X):
-        """
-        X : (n, d)
-        Returns :
-            (n, c)
-        """
+    def _check_fitted(self):
         if not self.fitted:
             raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
 
-        scores = X @ self.weight + self.bias  # (n, c)
-        return scores
+    def _init_params(self, d: int, c: int, *, dtype: torch.dtype, device: torch.device):
+        self.weight = nn.Parameter(torch.zeros(d, c, dtype=dtype, device=device))
+        self.bias = nn.Parameter(torch.zeros(c, dtype=dtype, device=device))
+
+    def encode(self, X: torch.Tensor) -> torch.Tensor:
+        self._check_fitted()
+        return X @ self.weight + self.bias  # type: ignore
 
 
-class LogisticRegressionProbe(nn.Module):
-    """
-    (Multi-label) logistic regression probe with intercept.
-
-    Each output column is an independent binary classifier.
-    """
-
-    def __init__(self, lr: float = 1e-2, max_iter: int = 1000, l2: float = 0.0):
-        super().__init__()
-        self.lr = lr
-        self.max_iter = max_iter
-        self.l2 = l2
-
-        self.weight = None  # nn.Parameter, shape (d, c)
-        self.bias = None  # nn.Parameter, shape (c,)
-        self.fitted = False
-
-    def fit(self, X, y):
-        """
-        X : (n, d)
-        y : (n, c) with values in {0, 1}
-        """
-        n, d = X.shape
-
-        y = y.float()  # (n, c)
-        c = y.size(1)
-
-        if self.weight is None or self.bias is None:
-            self.weight = nn.Parameter(
-                torch.zeros(d, c, dtype=X.dtype, device=X.device)
-            )
-            self.bias = nn.Parameter(torch.zeros(c, dtype=X.dtype, device=X.device))
-
-        optimizer = torch.optim.Adam([self.weight, self.bias], lr=self.lr)
-        loss_fn = nn.BCEWithLogitsLoss()
-
-        for _ in range(self.max_iter):
-            optimizer.zero_grad()
-            logits = X @ self.weight + self.bias  # (n, c)
-            loss = loss_fn(logits, y)
-
-            if self.l2 > 0.0:
-                loss = loss + 0.5 * self.l2 * (self.weight**2).sum()
-
-            loss.backward()
-            optimizer.step()
-
-        self.fitted = True
-
-    def encode(self, X):
-        """
-        X : (n, d)
-        Returns :
-            (n, c)
-        """
-        if not self.fitted:
-            raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
-
-        return X @ self.weight + self.bias
-
-
-class LinearSVMProbe(nn.Module):
-    """
-    Linear SVM-style probe (soft-margin) with intercept.
-
-    Multi-label: each output column is an independent classifier.
-    """
-
-    def __init__(self, lr: float = 1e-2, max_iter: int = 1000, l2: float = 0.0):
-        super().__init__()
-        self.lr = lr
-        self.max_iter = max_iter
-        self.l2 = l2
-
-        self.weight = None  # nn.Parameter, shape (d, c)
-        self.bias = None  # nn.Parameter, shape (c,)
-
-        self.fitted = False
-
-    def fit(self, X, y):
-        """
-        X : (n, d)
-        y : (n, c) in {0,1} (mapped to {-1,1})
-        """
-        n, d = X.shape
-
-        y = y.float()  # (n, c)
-        c = y.size(1)
-
-        # Map {0,1} -> {-1,1}
-        y = 2 * y - 1
-
-        if self.weight is None or self.bias is None:
-            self.weight = nn.Parameter(
-                torch.zeros(d, c, dtype=X.dtype, device=X.device)
-            )
-            self.bias = nn.Parameter(torch.zeros(c, dtype=X.dtype, device=X.device))
-
-        optimizer = torch.optim.Adam([self.weight, self.bias], lr=self.lr)
-
-        for _ in range(self.max_iter):
-            optimizer.zero_grad()
-            logits = X @ self.weight + self.bias  # (n, c)
-
-            margins = 1.0 - y * logits
-            hinge_loss = torch.clamp(margins, min=0.0).mean()
-
-            loss = hinge_loss
-            if self.l2 > 0.0:
-                loss = loss + 0.5 * self.l2 * (self.weight**2).sum()
-
-            loss.backward()
-            optimizer.step()
-
-        self.fitted = True
-
-    def encode(self, X):
-        """
-        X : (n, d)
-        Returns :
-            (n, c)
-        """
-        if not self.fitted:
-            raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
-
-        return X @ self.weight + self.bias
-
-
-class MeansDiffProbe(nn.Module):
+class MeansDiffProbe(LinearProbeBase):
     """
     MeansDiff probe (multi-label, multi-output).
 
     For each concept j:
         w_j = mean(X | y_j=1) - mean(X | y_j=0)
 
-    Produces:
-        weight: (d, c)
-        bias:   (c,)
-        encode(X) = X @ weight + bias
-
     bias modes:
-        - "zero":     b = 0
-        - "midpoint": nearest-centroid midpoint bias
-        - "bce":      choose b_j to minimize binary cross-entropy on logits for class j
-                      with fixed w_j (1D convex optimization per class via Newton)
+        - "zero":       b = 0
+        - "midpoint":   nearest-centroid midpoint bias
+        - "prevalence": b_j = logit(mean(y_j))
+        - "bce":        choose b_j to minimize BCE on logits with fixed w_j (Newton)
     """
 
     def __init__(
         self,
-        bias: str = "zero",  # no impact on the direction itself
+        bias: str = "zero",
         eps: float = 1e-8,
         bce_newton_iters: int = 50,
         bce_newton_tol: float = 1e-8,
     ):
         super().__init__()
-        if bias not in {"zero", "midpoint", "bce"}:
-            raise ValueError("bias must be one of {'zero', 'midpoint', 'bce'}")
+        if bias not in {"zero", "midpoint", "prevalence", "bce"}:
+            raise ValueError(
+                "bias must be one of {'zero','midpoint','prevalence','bce'}"
+            )
+
         self.bias_mode = bias
-        self.eps = eps
+        self.eps = float(eps)
         self.bce_newton_iters = int(bce_newton_iters)
         self.bce_newton_tol = float(bce_newton_tol)
 
-        self.weight = None  # nn.Parameter, shape (d, c)
-        self.bias = None  # nn.Parameter, shape (c,)
-        self.fitted = False
-
     @torch.no_grad()
     def _bce_optimal_bias(self, scores: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        """
-        Find per-class bias b (c,) minimizing BCEWithLogitsLoss(scores + b, y)
-        with scores fixed. Uses Newton iterations on b (convex in b).
-
-        scores: (n, c)
-        y:      (n, c) in {0,1}
-        """
-        # Good initialization: logit of prevalence (works even if scores ~ 0)
         p = y.mean(dim=0).clamp(self.eps, 1.0 - self.eps)  # (c,)
         b = torch.log(p / (1.0 - p))  # (c,)
 
         for _ in range(self.bce_newton_iters):
-            logits = scores + b  # broadcast: (n, c)
-            p_hat = torch.sigmoid(logits)  # (n, c)
+            logits = scores + b
+            p_hat = torch.sigmoid(logits)
 
-            # Gradient and Hessian of mean BCE wrt b:
-            # g = mean(p_hat - y)
-            # h = mean(p_hat * (1 - p_hat))
-            g = (p_hat - y).mean(dim=0)  # (c,)
-            h = (p_hat * (1.0 - p_hat)).mean(dim=0).clamp_min(self.eps)  # (c,)
+            g = (p_hat - y).mean(dim=0)
+            h = (p_hat * (1.0 - p_hat)).mean(dim=0).clamp_min(self.eps)
 
             step = g / h
             b_next = b - step
@@ -284,55 +118,194 @@ class MeansDiffProbe(nn.Module):
         return b
 
     def fit(self, X: torch.Tensor, y: torch.Tensor):
-        """
-        X : (n, d)
-        y : (n, c) with values in {0, 1}
-        """
+        if X.ndim != 2 or y.ndim != 2:
+            raise ValueError(f"Expected X and y to be 2D, got {X.shape=} {y.shape=}")
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("X and y must have the same number of samples")
+
         n, d = X.shape
-
         y = y.to(dtype=X.dtype)
+        c = y.shape[1]
 
-        # Counts
         n1 = y.sum(dim=0)  # (c,)
-        n0 = n - n1  # (c,)
+        n0 = n - n1
 
-        # Sums
-        s1 = y.t() @ X  # (c, d)
-        sumX = X.sum(dim=0)  # (d,)
-        s0 = (n * sumX.unsqueeze(0)) - s1  # (c, d)
+        s1 = y.t() @ X
+        sumX = X.sum(dim=0)
+        s0 = (n * sumX.unsqueeze(0)) - s1
 
-        # Means (avoid division by 0)
-        mu1 = s1 / (n1.unsqueeze(1).clamp_min(self.eps))  # (c, d)
-        mu0 = s0 / (n0.unsqueeze(1).clamp_min(self.eps))  # (c, d)
+        mu1 = s1 / n1.unsqueeze(1).clamp_min(self.eps)
+        mu0 = s0 / n0.unsqueeze(1).clamp_min(self.eps)
 
         w = (mu1 - mu0).t()  # (d, c)
 
         if self.bias_mode == "zero":
-            b = torch.zeros(y.size(1), dtype=X.dtype, device=X.device)  # (c,)
+            b = torch.zeros(c, dtype=X.dtype, device=X.device)
+
         elif self.bias_mode == "midpoint":
-            # midpoint / nearest-centroid bias
-            mu1_sq = (mu1 * mu1).sum(dim=1)  # (c,)
-            mu0_sq = (mu0 * mu0).sum(dim=1)  # (c,)
-            b = -0.5 * (mu1_sq - mu0_sq)  # (c,)
+            mu1_sq = (mu1 * mu1).sum(dim=1)
+            mu0_sq = (mu0 * mu0).sum(dim=1)
+            b = -0.5 * (mu1_sq - mu0_sq)
+
+        elif self.bias_mode == "prevalence":
+            p = y.mean(dim=0).clamp(self.eps, 1.0 - self.eps)
+            b = torch.log(p / (1.0 - p))
 
         else:  # "bce"
-            # scores = X @ w are fixed; find b that minimizes BCE per column
-            with torch.no_grad():
-                scores = X @ w  # (n, c)
-                b = self._bce_optimal_bias(scores=scores, y=y)  # (c,)
+            scores = X @ w
+            b = self._bce_optimal_bias(scores=scores, y=y)
 
         self.weight = nn.Parameter(w.clone())
         self.bias = nn.Parameter(b.clone())
         self.fitted = True
 
-    def encode(self, X: torch.Tensor) -> torch.Tensor:
-        """
-        X : (n, d)
-        Returns : (n, c)
-        """
-        if not self.fitted:
-            raise RuntimeError("Model is not fitted or loaded (self.fitted is False).")
-        return X @ self.weight + self.bias  # type: ignore
+
+class _GDLinearProbe(LinearProbeBase):
+    """
+    Gradient-descent linear probe skeleton.
+
+    Optional init:
+        - init="zeros": standard zero init
+        - means_diff_init: wether to initialize weight with MeansDiffProbe direction.
+            init_bias:
+                - "zero":      b = 0
+                - "midpoint":  MeansDiff midpoint bias
+                - "prevalence": b = logit(prevalence) (logistic-friendly)
+    """
+
+    def __init__(
+        self,
+        lr: float = 1e-2,
+        max_iter: int = 1000,
+        l2: float = 0.0,
+        *,
+        means_diff_init: bool = False,
+        init_bias: str = "zero",  # "zero" | "midpoint" | "prevalence"
+        init_eps: float = 1e-8,
+    ):
+        super().__init__()
+        if init_bias not in {"zero", "midpoint", "prevalence"}:
+            raise ValueError(
+                "init_bias must be one of {'zero','midpoint','prevalence'}"
+            )
+
+        self.lr = float(lr)
+        self.max_iter = int(max_iter)
+        self.l2 = float(l2)
+
+        self.means_diff_init = means_diff_init
+        self.init_bias = init_bias
+        self.init_eps = float(init_eps)
+
+    @abstractmethod
+    def _prepare_targets(self, y: torch.Tensor, *, dtype: torch.dtype) -> torch.Tensor:
+        raise NotImplementedError
+
+    @abstractmethod
+    def _loss(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError
+
+    def _init_from_means_diff(self, X: torch.Tensor, y01: torch.Tensor):
+        md = MeansDiffProbe(bias=self.init_bias, eps=self.init_eps).to(device=X.device)
+
+        # MeansDiff expects float {0,1}
+        md.fit(X, y01.to(dtype=X.dtype))
+
+        self.weight.copy_(md.weight)  # type: ignore
+        self.bias.copy_(md.bias)  # type: ignore
+
+        del md
+
+    def fit(self, X: torch.Tensor, y: torch.Tensor):
+        if X.ndim != 2 or y.ndim != 2:
+            raise ValueError(f"Expected X and y to be 2D, got {X.shape=} {y.shape=}")
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("X and y must have the same number of samples")
+
+        n, d = X.shape
+        c = y.shape[1]
+
+        # initialize parameters
+        if self.means_diff_init:
+            # Ensure {0,1} for init
+            y01 = (y.to(dtype=X.dtype) > 0.5).to(dtype=X.dtype)
+            self._init_from_means_diff(X, y01)
+        else:
+            self._init_params(d, c, dtype=X.dtype, device=X.device)
+
+        y_prepared = self._prepare_targets(y, dtype=X.dtype)
+
+        optimizer = torch.optim.Adam([self.weight, self.bias], lr=self.lr)  # type: ignore
+
+        for _ in range(self.max_iter):
+            optimizer.zero_grad()
+            logits = X @ self.weight + self.bias  # type: ignore
+            loss = self._loss(logits, y_prepared)
+
+            if self.l2 > 0.0:
+                loss = loss + 0.5 * self.l2 * (self.weight**2).sum()  # type: ignore
+
+            loss.backward()
+            optimizer.step()
+
+        self.fitted = True
+
+
+class LogisticRegressionProbe(_GDLinearProbe):
+    def __init__(
+        self,
+        lr: float = 1e-2,
+        max_iter: int = 1000,
+        l2: float = 0.0,
+        *,
+        means_diff_init: bool = False,
+        init_bias: str = "prevalence",
+        init_eps: float = 1e-8,
+    ):
+        super().__init__(
+            lr=lr,
+            max_iter=max_iter,
+            l2=l2,
+            means_diff_init=means_diff_init,
+            init_bias=init_bias,
+            init_eps=init_eps,
+        )
+        self._loss_fn = nn.BCEWithLogitsLoss()
+
+    def _prepare_targets(self, y: torch.Tensor, *, dtype: torch.dtype) -> torch.Tensor:
+        return y.to(dtype=dtype)
+
+    def _loss(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        return self._loss_fn(logits, y)
+
+
+class LinearSVMProbe(_GDLinearProbe):
+    def __init__(
+        self,
+        lr: float = 1e-2,
+        max_iter: int = 1000,
+        l2: float = 0.0,
+        *,
+        means_diff_init: bool = False,
+        init_bias: str = "midpoint",
+        init_eps: float = 1e-8,
+    ):
+        super().__init__(
+            lr=lr,
+            max_iter=max_iter,
+            l2=l2,
+            means_diff_init=means_diff_init,
+            init_bias=init_bias,
+            init_eps=init_eps,
+        )
+
+    def _prepare_targets(self, y: torch.Tensor, *, dtype: torch.dtype) -> torch.Tensor:
+        y = y.to(dtype=dtype)
+        return 2.0 * y - 1.0
+
+    def _loss(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        margins = 1.0 - y * logits
+        return torch.clamp(margins, min=0.0).mean()
 
 
 class _CentroidBaseProbe(nn.Module):
@@ -704,9 +677,14 @@ class SVDDProbe(nn.Module):
         n_pos = y.sum(dim=0)  # (c,)
         sum_pos = y.t() @ X  # (c, d)
         mu_pos = sum_pos / n_pos.unsqueeze(1).clamp_min(self.eps)  # (c, d)
+        invalid = n_pos < 1
+        if invalid.any():
+            mu_pos = mu_pos.clone()
+            mu_pos[invalid] = 0.0
 
         if self.center is None or self._log_radius is None:
             self.center = nn.Parameter(mu_pos.clone())
+            # init radius from median pos distance (approx), else 1.0
             with torch.no_grad():
                 # dist2 for init (n,c)
                 diff = X.unsqueeze(1) - mu_pos.unsqueeze(0)
@@ -715,6 +693,7 @@ class SVDDProbe(nn.Module):
                 denom = n_pos.clamp_min(1.0).unsqueeze(0)
                 mean_dist2 = (dist2 * y).sum(dim=0) / denom.squeeze(0)
                 r0 = torch.sqrt(mean_dist2.clamp_min(self.eps))
+                r0[invalid] = 1.0
                 # inverse softplus approx: softplus(z)=r -> z ~ log(exp(r)-1)
                 log_r0 = torch.log(torch.expm1(r0.clamp_min(self.eps)))
             self._log_radius = nn.Parameter(log_r0.clone())
@@ -746,6 +725,14 @@ class SVDDProbe(nn.Module):
             loss.backward()
             optimizer.step()
 
+        # If no positives for a concept: zero out parameters
+        with torch.no_grad():
+            if invalid.any():
+                self.center[invalid] = 0.0
+                self._log_radius[invalid] = torch.log(
+                    torch.expm1(torch.tensor(1.0, device=X.device, dtype=X.dtype))
+                )
+
         self.fitted = True
 
     def encode(self, X: torch.Tensor) -> torch.Tensor:
@@ -759,7 +746,7 @@ class SVDDProbe(nn.Module):
         r = self._radius()  # (c,)
         r2 = r * r
 
-        diff = X.unsqueeze(1) - self.center.unsqueeze(0)  # (n,c,d)  # type: ignore
+        diff = X.unsqueeze(1) - self.center.unsqueeze(0)  # (n,c,d)
         dist2 = (diff * diff).sum(dim=2)  # (n,c)
         return r2.unsqueeze(0) - dist2
 
