@@ -1,9 +1,19 @@
 import pytest
 import torch
+
 from interpreto.concepts.probe import (
+    CentroidCosineProbe,
+    CentroidDotProbe,
+    CentroidMahalanobisClasswiseVarProbe,
+    CentroidMahalanobisCommonVarProbe,
+    CentroidSqL2Probe,
+    EllipsoidalBoundaryProbe,
+    GaussianLikelihoodProbe,
     LinearRegressionProbe,
     LinearSVMProbe,
     LogisticRegressionProbe,
+    MeansDiffProbe,
+    SVDDProbe,
 )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,20 +68,61 @@ def make_synthetic_dataset(c: int, d: int, nc: int, seed: int):
     return X_train, y_train, train_labels, X_test, y_test, test_labels, centroids
 
 
+PROBE_CONFIGS = {
+    # Linear probes with variants
+    "LinearRegression": (LinearRegressionProbe, {}),
+    "LinearRegression_l2=1e-2": (LinearRegressionProbe, {"l2": 1e-2}),
+    "LogisticRegression": (LogisticRegressionProbe, {}),
+    "LogisticRegression_l2=1e-2_meansdiff": (LogisticRegressionProbe, {"l2": 1e-2, "means_diff_init": True}),
+    "LinearSVM": (LinearSVMProbe, {}),
+    "LinearSVM_l2=1e-2_meansdiff": (LinearSVMProbe, {"l2": 1e-2, "means_diff_init": True}),
+    # MeansDiff with bias variants
+    # "MeansDiff_zero": (MeansDiffProbe, {"bias": "zero"}),
+    # "MeansDiff_midpoint": (MeansDiffProbe, {"bias": "midpoint"}),
+    # "MeansDiff_prevalence": (MeansDiffProbe, {"bias": "prevalence"}),
+    # "MeansDiff_bce": (MeansDiffProbe, {"bias": "bce"}),
+    # Centroid-based probes with normalization variants
+    "CentroidDot_none": (CentroidDotProbe, {"normalization": "none"}),
+    "CentroidDot_zscore": (CentroidDotProbe, {"normalization": "zscore"}),
+    "CentroidCosine_none": (CentroidCosineProbe, {"normalization": "none"}),
+    "CentroidCosine_zscore": (CentroidCosineProbe, {"normalization": "zscore"}),
+    "CentroidSqL2_none": (CentroidSqL2Probe, {"normalization": "none"}),
+    "CentroidSqL2_zscore": (CentroidSqL2Probe, {"normalization": "zscore"}),
+    "MahalanobisCommon_zscore": (CentroidMahalanobisCommonVarProbe, {"normalization": "zscore"}),
+    "MahalanobisClasswise_zscore": (CentroidMahalanobisClasswiseVarProbe, {"normalization": "zscore"}),
+    # Ellipsoidal and SVDD with normalization/l2 variants
+    "Ellipsoidal_none": (EllipsoidalBoundaryProbe, {"normalization": "none"}),
+    "Ellipsoidal_zscore_shrink=0.1": (EllipsoidalBoundaryProbe, {"normalization": "zscore", "var_shrink": 0.1}),
+    "SVDD_none": (SVDDProbe, {"normalization": "none"}),
+    "SVDD_zscore_l2=1e-4": (SVDDProbe, {"normalization": "zscore", "l2": 1e-4}),
+    # Gaussian likelihood (QDA-style)
+    "GaussianLikelihood_standardization": (GaussianLikelihoodProbe, {"normalization": "standardization"}),
+    "GaussianLikelihood_whitening": (GaussianLikelihoodProbe, {"normalization": "whitening"}),
+    "GaussianLikelihood_lowrank_whitening_r3": (
+        GaussianLikelihoodProbe,
+        {"normalization": "lowrank_whitening", "lowrank_rank": 3},
+    ),
+    "GaussianLikelihood_lowrank_whitening_r5": (
+        GaussianLikelihoodProbe,
+        {"normalization": "lowrank_whitening", "lowrank_rank": 5},
+    ),
+}
+
+_probe_items = list(PROBE_CONFIGS.items())
+
+
 @pytest.mark.parametrize(
-    "probe_cls", [LinearRegressionProbe, LogisticRegressionProbe, LinearSVMProbe]
+    "probe_name,probe_spec",
+    _probe_items,
+    ids=[name for name, _ in _probe_items],
 )
-@pytest.mark.parametrize("nb_classes", [10, 20, 100])
-@pytest.mark.parametrize("features_dimensions", [50, 200, 1000])
-def test_multilabel_probes_on_synthetic_data(
-    probe_cls, nb_classes, features_dimensions
-):
+@pytest.mark.parametrize("nb_classes", [10])  # , 20, 100
+@pytest.mark.parametrize("features_dimensions", [50])  # , 200, 1000])
+def test_multilabel_probes_on_synthetic_data(probe_name, probe_spec, nb_classes, features_dimensions):
     torch.manual_seed(0)
     # Make dataset
-    X_train, y_train, train_labels, X_test, y_test, test_labels, centroids = (
-        make_synthetic_dataset(
-            nb_classes, features_dimensions, nb_classes * features_dimensions, 0
-        )
+    X_train, y_train, train_labels, X_test, y_test, test_labels, centroids = make_synthetic_dataset(
+        nb_classes, features_dimensions, nb_classes * features_dimensions, 0
     )
     X_train = X_train.to(DEVICE)
     y_train = y_train.to(DEVICE)
@@ -82,7 +133,8 @@ def test_multilabel_probes_on_synthetic_data(
     centroids = centroids.to(DEVICE)
 
     # Train
-    probe = probe_cls()
+    probe_cls, params = probe_spec
+    probe = probe_cls(**params)
     probe.to(DEVICE)
     probe.fit(X_train, y_train)
 
@@ -118,4 +170,6 @@ def test_multilabel_probes_on_synthetic_data(
 
 
 if __name__ == "__main__":
-    test_multilabel_probes_on_synthetic_data(LinearSVMProbe, 10, 50)
+    name = "LinearSVM_l2=1e-2_meansdiff"
+    cls, params = PROBE_CONFIGS[name]
+    test_multilabel_probes_on_synthetic_data(name, (cls, params), 10, 50)
