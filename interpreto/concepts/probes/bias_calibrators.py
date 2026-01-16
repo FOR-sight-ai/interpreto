@@ -73,7 +73,7 @@ class FPRBias(BiasCalibratorBase):
         idx = torch.floor((m - 1.0) * q).to(torch.long)  # (c,)
         t = sorted_neg.gather(0, idx.unsqueeze(0)).squeeze(0)  # (c,)
 
-        return = (-t).detach()
+        return (-t).detach()
 
 
 class BCEBias(BiasCalibratorBase):
