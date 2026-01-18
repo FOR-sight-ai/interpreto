@@ -5,7 +5,7 @@ Module for Top-k Sparse SAE (TopKSAE).
 import torch
 from torch import nn
 
-from overcomplete.sae.base import SAE
+from ..sae.base import SAE
 
 
 class TopKSAE(SAE):

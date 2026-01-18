@@ -5,7 +5,7 @@ Module for Matching Pursuit Sparse Autoencoder (MpSAE).
 import torch
 from torch import nn
 
-from overcomplete.sae import SAE
+from ..sae import SAE
 
 
 class MpSAE(SAE):

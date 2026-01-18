@@ -3,8 +3,8 @@ Module for Orthogonal Matching Pursuit Sparse Autoencoder (OMPSAE).
 """
 
 import torch
-from overcomplete.sae import SAE
-from overcomplete.optimization import batched_matrix_nnls
+from ..sae import SAE
+from ..optimization import batched_matrix_nnls
 
 
 class OMPSAE(SAE):

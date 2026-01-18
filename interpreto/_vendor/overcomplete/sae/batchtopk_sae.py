@@ -5,7 +5,7 @@ Module for Batch Top-k Sparse Autoencoder (BatchTopKSAE).
 import torch
 from torch import nn
 
-from overcomplete.sae import SAE
+from ..sae import SAE
 
 
 class BatchTopKSAE(SAE):
