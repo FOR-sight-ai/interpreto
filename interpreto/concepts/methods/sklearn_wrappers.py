@@ -31,13 +31,13 @@ from typing import Generic, TypeVar
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from overcomplete.optimization import BaseOptimDictionaryLearning
 from sklearn.base import TransformerMixin
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA, FastICA, TruncatedSVD
 from torch import nn
 
 from interpreto import ModelWithSplitPoints
+from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer
 

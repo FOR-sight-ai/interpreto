@@ -36,9 +36,9 @@ from typing import Any, Generic, TypeVar
 
 import torch
 from jaxtyping import Float
-from overcomplete.base import BaseDictionaryLearning
 from transformers.tokenization_utils_base import BatchEncoding
 
+from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
 from interpreto.attributions.base import AttributionExplainer
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,

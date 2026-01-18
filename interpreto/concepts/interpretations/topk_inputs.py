@@ -323,9 +323,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         ):
             interpretation_dict[cpt_idx] = {}
             # iterate over k
-            for activation, input_index in zip(
-                topk_activations, topk_indices, strict=True
-            ):
+            for activation, input_index in zip(topk_activations, topk_indices, strict=True):
                 # ensure that the input is not already in the interpretation
                 if len(interpretation_dict[cpt_idx]) >= self.k:
                     break
