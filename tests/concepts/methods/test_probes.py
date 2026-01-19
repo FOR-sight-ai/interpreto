@@ -22,21 +22,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from functools import partial
+
 import pytest
 import torch
 
-from interpreto.concepts.probe import (
-    CentroidCosineProbe,
-    CentroidDotProbe,
-    CentroidMahalanobisClasswiseVarProbe,
-    CentroidMahalanobisCommonVarProbe,
-    CentroidSqL2Probe,
-    EllipsoidalBoundaryProbe,
-    GaussianLikelihoodProbe,
+# Bias calibrators
+from interpreto.concepts.probes.bias_calibrators import (
+    bce_bias,
+    fpr_bias,
+    lda_shared_var_bias,
+    midpoint_bias,
+    prevalence_bias,
+)
+
+# Centroid probes
+from interpreto.concepts.probes.centroid_probe_models import (
+    CosineCentroidProbe,
+    DiagonalMahalanobisCentroidProbe,
+    DotProductCentroidProbe,
+    SqL2CentroidProbe,
+    SVDDCentroidProbe,
+)
+
+# Linear probes
+from interpreto.concepts.probes.linear_probe_models import (
     LinearRegressionProbe,
     LinearSVMProbe,
     LogisticRegressionProbe,
-    SVDDProbe,
+    MeansDiffProbe,
+)
+
+# Normalizations
+from interpreto.concepts.probes.normalizations import (
+    Standardization,
+    Whitening,
 )
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -91,44 +111,192 @@ def make_synthetic_dataset(c: int, d: int, nc: int, seed: int):
     return X_train, y_train, train_labels, X_test, y_test, test_labels, centroids
 
 
+# =============================================================================
+# PROBE CONFIGURATIONS
+# =============================================================================
+# Each entry: (ProbeClass, {params})
+#
+# Pertinent hyperparameters per probe:
+#
+# LinearRegressionProbe:
+#   - l2: float (ridge regularization, 0.0 = OLS)
+#   - bias_calibrator: BiasCalibrator | None
+#   - normalization: NormalizationBase | None
+#
+# MeansDiffProbe:
+#   - bias_calibrator: BiasCalibrator | None
+#   - normalization: NormalizationBase | None
+#
+# LogisticRegressionProbe / LinearSVMProbe:
+#   - lr: float (learning rate)
+#   - max_iter: int
+#   - l2: float (weight decay)
+#   - init_from_means_diff: bool
+#   - init_bias_calibrator: BiasCalibrator | None
+#   - normalization: NormalizationBase | None
+#
+# DotProductCentroidProbe / CosineCentroidProbe / SqL2CentroidProbe:
+#   - normalization: NormalizationBase | None
+#   - bias_calibrator: BiasCalibrator | None
+#
+# DiagonalMahalanobisCentroidProbe:
+#   - normalization: NormalizationBase | None (default: Standardization)
+#   - bias_calibrator: BiasCalibrator | None
+#   - shrinkage: float in [0, 1] (0=classwise var, 1=global var)
+#
+# SVDDCentroidProbe:
+#   - lr: float
+#   - max_iter: int
+#   - C: float (hinge loss weight)
+#   - l2: float (center regularization)
+#   - normalization: NormalizationBase | None
+# =============================================================================
+
 PROBE_CONFIGS = {
-    # Linear probes with variants
+    # -------------------------------------------------------------------------
+    # Linear Regression Probe
+    # -------------------------------------------------------------------------
     "LinearRegression": (LinearRegressionProbe, {}),
-    "LinearRegression_l2=1e-2": (LinearRegressionProbe, {"l2": 1e-2}),
+    "LinearRegression_l2": (LinearRegressionProbe, {"l2": 1e-2}),
+    "LinearRegression_standardization": (
+        LinearRegressionProbe,
+        {"normalization": Standardization()},
+    ),
+    "LinearRegression_l2_standardization": (
+        LinearRegressionProbe,
+        {"l2": 1e-2, "normalization": Standardization()},
+    ),
+    "LinearRegression_midpoint_bias": (
+        LinearRegressionProbe,
+        {"bias_calibrator": midpoint_bias},
+    ),
+    # -------------------------------------------------------------------------
+    # MeansDiff Probe
+    # -------------------------------------------------------------------------
+    "MeansDiff": (MeansDiffProbe, {}),
+    "MeansDiff_midpoint": (MeansDiffProbe, {"bias_calibrator": midpoint_bias}),
+    "MeansDiff_prevalence": (MeansDiffProbe, {"bias_calibrator": prevalence_bias}),
+    "MeansDiff_bce": (MeansDiffProbe, {"bias_calibrator": bce_bias}),
+    "MeansDiff_lda": (MeansDiffProbe, {"bias_calibrator": lda_shared_var_bias}),
+    "MeansDiff_fpr": (MeansDiffProbe, {"bias_calibrator": partial(fpr_bias, target_fpr=0.05)}),
+    "MeansDiff_standardization": (MeansDiffProbe, {"normalization": Standardization()}),
+    "MeansDiff_standardization_midpoint": (
+        MeansDiffProbe,
+        {"normalization": Standardization(), "bias_calibrator": midpoint_bias},
+    ),
+    # -------------------------------------------------------------------------
+    # Logistic Regression Probe
+    # -------------------------------------------------------------------------
     "LogisticRegression": (LogisticRegressionProbe, {}),
-    "LogisticRegression_l2=1e-2_meansdiff": (LogisticRegressionProbe, {"l2": 1e-2, "means_diff_init": True}),
+    "LogisticRegression_no_init": (
+        LogisticRegressionProbe,
+        {"init_from_means_diff": False},
+    ),
+    "LogisticRegression_l2": (LogisticRegressionProbe, {"l2": 1e-2}),
+    "LogisticRegression_standardization": (
+        LogisticRegressionProbe,
+        {"normalization": Standardization()},
+    ),
+    "LogisticRegression_l2_standardization": (
+        LogisticRegressionProbe,
+        {"l2": 1e-2, "normalization": Standardization()},
+    ),
+    # -------------------------------------------------------------------------
+    # Linear SVM Probe
+    # -------------------------------------------------------------------------
     "LinearSVM": (LinearSVMProbe, {}),
-    "LinearSVM_l2=1e-2_meansdiff": (LinearSVMProbe, {"l2": 1e-2, "means_diff_init": True}),
-    # MeansDiff with bias variants
-    # "MeansDiff_zero": (MeansDiffProbe, {"bias": "zero"}),
-    # "MeansDiff_midpoint": (MeansDiffProbe, {"bias": "midpoint"}),
-    # "MeansDiff_prevalence": (MeansDiffProbe, {"bias": "prevalence"}),
-    # "MeansDiff_bce": (MeansDiffProbe, {"bias": "bce"}),
-    # Centroid-based probes with normalization variants
-    "CentroidDot_none": (CentroidDotProbe, {"normalization": "none"}),
-    "CentroidDot_zscore": (CentroidDotProbe, {"normalization": "zscore"}),
-    "CentroidCosine_none": (CentroidCosineProbe, {"normalization": "none"}),
-    "CentroidCosine_zscore": (CentroidCosineProbe, {"normalization": "zscore"}),
-    "CentroidSqL2_none": (CentroidSqL2Probe, {"normalization": "none"}),
-    "CentroidSqL2_zscore": (CentroidSqL2Probe, {"normalization": "zscore"}),
-    "MahalanobisCommon_zscore": (CentroidMahalanobisCommonVarProbe, {"normalization": "zscore"}),
-    "MahalanobisClasswise_zscore": (CentroidMahalanobisClasswiseVarProbe, {"normalization": "zscore"}),
-    # Ellipsoidal and SVDD with normalization/l2 variants
-    "Ellipsoidal_none": (EllipsoidalBoundaryProbe, {"normalization": "none"}),
-    "Ellipsoidal_zscore_shrink=0.1": (EllipsoidalBoundaryProbe, {"normalization": "zscore", "var_shrink": 0.1}),
-    "SVDD_none": (SVDDProbe, {"normalization": "none"}),
-    "SVDD_zscore_l2=1e-4": (SVDDProbe, {"normalization": "zscore", "l2": 1e-4}),
-    # Gaussian likelihood (QDA-style)
-    "GaussianLikelihood_standardization": (GaussianLikelihoodProbe, {"normalization": "standardization"}),
-    "GaussianLikelihood_whitening": (GaussianLikelihoodProbe, {"normalization": "whitening"}),
-    "GaussianLikelihood_lowrank_whitening_r3": (
-        GaussianLikelihoodProbe,
-        {"normalization": "lowrank_whitening", "lowrank_rank": 3},
+    "LinearSVM_no_init": (LinearSVMProbe, {"init_from_means_diff": False}),
+    "LinearSVM_l2": (LinearSVMProbe, {"l2": 1e-2}),
+    "LinearSVM_standardization": (LinearSVMProbe, {"normalization": Standardization()}),
+    "LinearSVM_l2_standardization": (
+        LinearSVMProbe,
+        {"l2": 1e-2, "normalization": Standardization()},
     ),
-    "GaussianLikelihood_lowrank_whitening_r5": (
-        GaussianLikelihoodProbe,
-        {"normalization": "lowrank_whitening", "lowrank_rank": 5},
+    # -------------------------------------------------------------------------
+    # Dot Product Centroid Probe
+    # -------------------------------------------------------------------------
+    "DotProductCentroid": (DotProductCentroidProbe, {}),
+    "DotProductCentroid_standardization": (
+        DotProductCentroidProbe,
+        {"normalization": Standardization()},
     ),
+    "DotProductCentroid_midpoint": (
+        DotProductCentroidProbe,
+        {"bias_calibrator": midpoint_bias},
+    ),
+    "DotProductCentroid_standardization_midpoint": (
+        DotProductCentroidProbe,
+        {"normalization": Standardization(), "bias_calibrator": midpoint_bias},
+    ),
+    # -------------------------------------------------------------------------
+    # Cosine Centroid Probe
+    # -------------------------------------------------------------------------
+    "CosineCentroid": (CosineCentroidProbe, {}),
+    "CosineCentroid_standardization": (
+        CosineCentroidProbe,
+        {"normalization": Standardization()},
+    ),
+    "CosineCentroid_midpoint": (
+        CosineCentroidProbe,
+        {"bias_calibrator": midpoint_bias},
+    ),
+    # -------------------------------------------------------------------------
+    # Squared L2 Centroid Probe
+    # -------------------------------------------------------------------------
+    "SqL2Centroid": (SqL2CentroidProbe, {}),
+    "SqL2Centroid_standardization": (
+        SqL2CentroidProbe,
+        {"normalization": Standardization()},
+    ),
+    "SqL2Centroid_whitening": (
+        SqL2CentroidProbe,
+        {"normalization": Whitening()},
+    ),
+    "SqL2Centroid_midpoint": (
+        SqL2CentroidProbe,
+        {"bias_calibrator": midpoint_bias},
+    ),
+    "SqL2Centroid_standardization_lda": (
+        SqL2CentroidProbe,
+        {"normalization": Standardization(), "bias_calibrator": lda_shared_var_bias},
+    ),
+    # -------------------------------------------------------------------------
+    # Diagonal Mahalanobis Centroid Probe
+    # -------------------------------------------------------------------------
+    "DiagMahalanobis_global": (
+        DiagonalMahalanobisCentroidProbe,
+        {"shrinkage": 1.0},  # default normalization is Standardization
+    ),
+    "DiagMahalanobis_classwise": (
+        DiagonalMahalanobisCentroidProbe,
+        {"shrinkage": 0.0},
+    ),
+    "DiagMahalanobis_mixed": (
+        DiagonalMahalanobisCentroidProbe,
+        {"shrinkage": 0.5},
+    ),
+    "DiagMahalanobis_global_midpoint": (
+        DiagonalMahalanobisCentroidProbe,
+        {"shrinkage": 1.0, "bias_calibrator": midpoint_bias},
+    ),
+    "DiagMahalanobis_whitening": (
+        DiagonalMahalanobisCentroidProbe,
+        {"normalization": Whitening(), "shrinkage": 1.0},
+    ),
+    # -------------------------------------------------------------------------
+    # SVDD Centroid Probe
+    # -------------------------------------------------------------------------
+    "SVDD": (SVDDCentroidProbe, {}),
+    "SVDD_standardization": (
+        SVDDCentroidProbe,
+        {"normalization": Standardization()},
+    ),
+    "SVDD_l2": (SVDDCentroidProbe, {"l2": 1e-4}),
+    "SVDD_standardization_l2": (
+        SVDDCentroidProbe,
+        {"normalization": Standardization(), "l2": 1e-4},
+    ),
+    "SVDD_high_C": (SVDDCentroidProbe, {"C": 10.0}),
 }
 
 _probe_items = list(PROBE_CONFIGS.items())
@@ -139,8 +307,8 @@ _probe_items = list(PROBE_CONFIGS.items())
     _probe_items,
     ids=[name for name, _ in _probe_items],
 )
-@pytest.mark.parametrize("nb_classes", [10])  # , 20, 100
-@pytest.mark.parametrize("features_dimensions", [50])  # , 200, 1000])
+@pytest.mark.parametrize("nb_classes", [10])
+@pytest.mark.parametrize("features_dimensions", [50])
 def test_multilabel_probes_on_synthetic_data(probe_name, probe_spec, nb_classes, features_dimensions):
     torch.manual_seed(0)
     # Make dataset
@@ -177,22 +345,11 @@ def test_multilabel_probes_on_synthetic_data(probe_name, probe_spec, nb_classes,
     train_acc = (train_pred == train_labels).float().mean().item()
     test_acc = (test_pred == test_labels).float().mean().item()
 
-    assert train_acc > 0.9, "Probe training accuracy should be high on easy dataset"
-    assert test_acc > 0.9, "Probe test accuracy should be high on easy dataset"
-
-    # # Cosine similarity between centroids and learned weights
-    # # centroids: (c, d), weights: (d, c) -> transpose to (c, d)
-    # weights = probe.weight  # (d, c)
-    # weight_rows = weights.t()  # (c, d)
-
-    # cos_sim = F.cosine_similarity(weight_rows, centroids, dim=1)  # (c,)
-    # # Cosine similarity should be high
-    # assert torch.all(cos_sim > 0.7), (
-    #     "Probe concept vector should be aligned with centroids"
-    # )
+    assert train_acc > 0.9, f"Probe {probe_name} training accuracy too low: {train_acc:.3f}"
+    assert test_acc > 0.9, f"Probe {probe_name} test accuracy too low: {test_acc:.3f}"
 
 
 if __name__ == "__main__":
-    name = "LinearSVM_l2=1e-2_meansdiff"
+    name = "MeansDiff_midpoint"
     cls, params = PROBE_CONFIGS[name]
     test_multilabel_probes_on_synthetic_data(name, (cls, params), 10, 50)
