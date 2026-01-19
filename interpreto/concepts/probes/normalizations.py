@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-
 from functools import wraps
 
 import torch
-import torch.nn as nn
+from torch import nn
+
 
 def assert_fitted(fn):
     @wraps(fn)
@@ -15,6 +15,7 @@ def assert_fitted(fn):
         return fn(self, *args, **kwargs)
 
     return wrapper
+
 
 class NormalizationBase(nn.Module):
     def __init__(self, eps: float = 1e-8):
@@ -44,6 +45,7 @@ class Standardization(NormalizationBase):
     """
     z = (x - mean) / std
     """
+
     def __init__(self, eps: float = 1e-8):
         super().__init__(eps=eps)
         self.register_buffer("mean", torch.empty(0))
@@ -53,6 +55,7 @@ class Standardization(NormalizationBase):
     def fit(self, X: torch.Tensor) -> "Standardization":
         self.mean = X.mean(dim=0).detach()
         self.std = X.std(dim=0, unbiased=False).clamp_min(self.eps).detach()
+        self.fitted = True
         return self
 
     @assert_fitted
@@ -70,12 +73,13 @@ class Whitening(NormalizationBase):
       - None (default): full whitening (r = min(n, d))
       - int: low-rank whitening keeping top-r components
     """
+
     def __init__(self, rank: int | None = None, eps: float = 1e-8):
         super().__init__(eps=eps)
         self.rank = None if rank is None else int(rank)
         self.register_buffer("mean", torch.empty(0))
-        self.register_buffer("V", torch.empty(0))       # (d, r)
-        self.register_buffer("inv_s", torch.empty(0))   # (r,)
+        self.register_buffer("V", torch.empty(0))  # (d, r)
+        self.register_buffer("inv_s", torch.empty(0))  # (r,)
 
     @torch.no_grad()
     def fit(self, X: torch.Tensor) -> "Whitening":
@@ -96,6 +100,7 @@ class Whitening(NormalizationBase):
         self.mean = mean.detach()
         self.V = V.detach()
         self.inv_s = inv_s.detach()
+        self.fitted = True
         return self
 
     @assert_fitted
