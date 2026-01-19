@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 import torch
-import torch.nn.functional as F
 from torch import nn
+import torch.nn.functional as F
 
-from interpreto.concepts.probes.bias_calibrators import BiasCalibrator
 from interpreto.concepts.probes.linear_probe_models import ProbeModelInterface, assert_fitted
+from interpreto.concepts.probes.bias_calibrators import BiasCalibrator
 from interpreto.concepts.probes.normalizations import NormalizationBase, Standardization
 
 
@@ -176,7 +176,7 @@ class DiagonalMahalanobisCentroidProbe(_BaseCentroidProbe):
         return -dist2
 
 
-class SVDDCentroidProbe(ProbeModelInterface):
+class SVDDCentroidProbe(_BaseCentroidProbe):
     """
     Multi-label SVDD (Support Vector Data Description), one hyper-sphere per concept.
 
@@ -199,15 +199,14 @@ class SVDDCentroidProbe(ProbeModelInterface):
         normalization: NormalizationBase | None = None,
         eps: float = 1e-8,
     ):
-        super().__init__()
+        super().__init__(normalization=normalization, eps=eps)
         self.lr = float(lr)
         self.max_iter = int(max_iter)
         self.C = float(C)
         self.l2 = float(l2)
-        self.normalization = normalization
-        self.eps = float(eps)
 
-        self.centroids = None  # nn.Parameter, shape (c, d)
+        # Use base centroids container for centers
+        # self.centroids: nn.Parameter, shape (c, d)
         self._log_radius = None  # nn.Parameter, shape (c,)   (radius = softplus(log)+eps)
         self.fitted = False
 
@@ -217,14 +216,11 @@ class SVDDCentroidProbe(ProbeModelInterface):
         y : (n, c) in {0,1}
         """
         # Initialize centroids from positive means
-        Xn = self.normalization.fit_transform(X) if self.normalization else X
-
-        # Compute positive centroids
-        n_pos = y.sum(dim=0)  # (c,)
-        sum_pos = y.transpose(0, 1) @ Xn  # (c, d)
-        mu_pos = sum_pos / n_pos.unsqueeze(1).clamp_min(self.eps)  # (c, d)
-
-        self.centroids = nn.Parameter(mu_pos.clone())
+        Xn = self.normalization.fit_transform(X) if self.normalization else X if self.normalization else X
+        n_pos = self._fit_centroids(Xn, y)  # (c,)
+        mu_pos = self.centroids  # (c, d)
+        del self.centroids  # pass from buffer to parameter
+        self.centroids = nn.Parameter(mu_pos)
 
         # Initialize radius from median pos distance (approx), else 1.0
         with torch.no_grad():
@@ -235,7 +231,7 @@ class SVDDCentroidProbe(ProbeModelInterface):
             mean_dist2 = (dist2 * y).sum(dim=0) / n_pos.clamp_min(1.0)  # (c,)
             r0 = torch.sqrt(mean_dist2.clamp_min(self.eps))  # (c,)
             # inverse softplus approx: softplus(z)=r -> z ~ log(exp(r)-1)
-            log_r0 = torch.log(torch.expm1(r0.clamp_min(self.eps)))
+            log_r0 = torch.log(torch.expm1(r0))
         self._log_radius = nn.Parameter(log_r0.clone())
 
         optimizer = torch.optim.Adam([self.centroids, self._log_radius], lr=self.lr)
