@@ -6,7 +6,8 @@ from functools import wraps
 import torch
 from torch import nn
 
-from interpreto.concepts.probes.bias_calibrators import BiasCalibratorBase, PrevalenceBias
+from interpreto.concepts.probes.bias_calibrators import BiasCalibrator, prevalence_bias
+from interpreto.concepts.probes.normalizations import NormalizationBase
 
 
 def assert_fitted(fn):
@@ -45,8 +46,9 @@ class LinearProbeBase(ProbeModelInterface, ABC):
     encode(X) returns logits/scores: (n, c)
     """
 
-    def __init__(self):
+    def __init__(self, normalization: NormalizationBase | None = None):
         super().__init__()
+        self.normalization = normalization
         self.weight = None  # nn.Parameter, (d, c)
         self.bias = None  # nn.Parameter, (c,)
         self.fitted = False
@@ -57,7 +59,8 @@ class LinearProbeBase(ProbeModelInterface, ABC):
 
     @assert_fitted
     def encode(self, X: torch.Tensor) -> torch.Tensor:
-        return X @ self.weight + self.bias  # type: ignore
+        Xn = self.normalization(X) if self.normalization else X
+        return Xn @ self.weight + self.bias  # type: ignore
 
 
 class LinearRegressionProbe(LinearProbeBase):
@@ -69,15 +72,23 @@ class LinearRegressionProbe(LinearProbeBase):
       without penalizing the intercept term.
     """
 
-    def __init__(self, l2: float = 0.0, bias_calibrator: BiasCalibratorBase | None = None):
-        super().__init__()
+    def __init__(
+        self,
+        l2: float = 0.0,
+        bias_calibrator: BiasCalibrator | None = None,
+        normalization: NormalizationBase | None = None,
+    ):
+        super().__init__(normalization=normalization)
         self.l2 = float(l2)
         self.bias_calibrator = bias_calibrator
 
     @torch.no_grad()
     def fit(self, X: torch.Tensor, y: torch.Tensor):
-        ones = torch.ones(X.shape[0], 1, dtype=X.dtype, device=X.device)
-        X_aug = torch.cat([X, ones], dim=1)  # (n, d+1)
+        Xn = self.normalization.fit_transform(X) if self.normalization else X
+        n, d = Xn.shape
+
+        ones = torch.ones(n, 1, dtype=Xn.dtype, device=Xn.device)
+        X_aug = torch.cat([Xn, ones], dim=1)  # (n, d+1)
 
         if self.l2 == 0.0:
             # OLS via pseudo-inverse for stability
@@ -89,19 +100,20 @@ class LinearRegressionProbe(LinearProbeBase):
             XtX = X_aug.T @ X_aug  # (d+1, d+1)
             Xty = X_aug.T @ y  # (d+1, c)
 
-            reg = torch.ones(d + 1, dtype=X.dtype, device=X.device)
+            reg = torch.ones(d + 1, dtype=Xn.dtype, device=Xn.device)
             reg[-1] = 0.0  # no penalty on bias
             A = XtX + self.l2 * torch.diag(reg)
             W_aug = torch.linalg.solve(A, Xty)  # (d+1, c)
 
+        weight = W_aug[:d, :].clone()
+
         if self.bias_calibrator is None:
             bias = W_aug[d, :].clone()
         else:
-            self.bias_calibrator.fit(scores=X @ self.weight, y=y)
-            bias = self.bias_calibrator.bias.clone()
-            del self.bias_calibrator
+            scores = Xn @ weight
+            bias = self.bias_calibrator(scores, y)
 
-        self.weight = nn.Parameter(W_aug[:d, :].clone())  # (d, c)
+        self.weight = nn.Parameter(weight)  # (d, c)
         self.bias = nn.Parameter(bias)  # (c,)
         self.fitted = True
 
@@ -116,32 +128,38 @@ class MeansDiffProbe(LinearProbeBase):
 
     def __init__(
         self,
-        bias_calibrator: BiasCalibratorBase | None = None,
+        bias_calibrator: BiasCalibrator | None = None,
+        normalization: NormalizationBase | None = None,
         eps: float = 1e-8,
     ):
-        super().__init__()
+        super().__init__(normalization=normalization)
+        self.bias_calibrator = bias_calibrator
         self.eps = float(eps)
 
+    @torch.no_grad()
     def fit(self, X: torch.Tensor, y: torch.Tensor):
+        Xn = self.normalization.fit_transform(X) if self.normalization else X
+        n = Xn.shape[0]
+        c = y.shape[1]
+
         # number of positive and negative samples per class
         n1 = y.sum(dim=0)  # (c,)
         n0 = n - n1
 
-        s1 = y.t() @ X
-        sumX = X.sum(dim=0)
-        s0 = (X.shape[0] * sumX.unsqueeze(0)) - s1
+        s1 = y.t() @ Xn  # (c, d)
+        sumX = Xn.sum(dim=0)  # (d,)
+        s0 = sumX.unsqueeze(0) - s1  # (c, d)
 
         mu1 = s1 / n1.unsqueeze(1).clamp_min(self.eps)
         mu0 = s0 / n0.unsqueeze(1).clamp_min(self.eps)
 
         w = (mu1 - mu0).t()  # (d, c)
-        
+
         if self.bias_calibrator is None:
-            bias = torch.zeros(c, dtype=X.dtype, device=X.device)
+            bias = torch.zeros(c, dtype=Xn.dtype, device=Xn.device)
         else:
-            self.bias_calibrator.fit(scores=X @ self.weight, y=y)
-            bias = self.bias_calibrator.bias.clone()
-            del self.bias_calibrator
+            scores = Xn @ w
+            bias = self.bias_calibrator(scores, y)
 
         self.weight = nn.Parameter(w.clone())
         self.bias = nn.Parameter(bias)
@@ -153,9 +171,7 @@ class _GDLinearProbe(LinearProbeBase):
     Gradient-descent linear probe skeleton.
 
     Optional init:
-        - init_bias:
-            - None: no initialization
-            - otherwise initialize with mean difference  with specified bias calibrator
+        - init_from_means_diff: if True, initialize weight and bias from MeansDiff
     """
 
     def __init__(
@@ -163,32 +179,32 @@ class _GDLinearProbe(LinearProbeBase):
         lr: float = 1e-2,
         max_iter: int = 20,
         l2: float = 0.0,
-        init_bias: BiasCalibratorBase | None = None,
+        init_from_means_diff: bool = True,
+        init_bias_calibrator: BiasCalibrator | None = prevalence_bias,
+        normalization: NormalizationBase | None = None,
     ):
-        super().__init__()
-        if init_bias not in {"zero", "prevalence"}:
-            raise ValueError("init_bias must be one of {'zero','prevalence'}")
-
+        super().__init__(normalization=normalization)
         self.lr = float(lr)
         self.max_iter = int(max_iter)
         self.l2 = float(l2)
-        self.init_bias = init_bias
+        self.init_from_means_diff = init_from_means_diff
+        self.init_bias_calibrator = init_bias_calibrator
 
     @abstractmethod
-    def _prepare_targets(self, y: torch.Tensor, *, dtype: torch.dtype) -> torch.Tensor:
+    def _prepare_targets(self, y: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError
 
     @abstractmethod
     def _loss(self, logits: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError
 
-    def _init_from_means_diff(self, X: torch.Tensor, y: torch.Tensor):
-
-        md = MeansDiffProbe(bias=self.init_bias).to(device=X.device)
-        md.fit(X, y)
+    def _init_from_means_diff(self, Xn: torch.Tensor, y: torch.Tensor):
+        """Initialize from MeansDiff on already-normalized data."""
+        md = MeansDiffProbe(bias_calibrator=self.init_bias_calibrator, eps=1e-8)
+        md.to(device=Xn.device)
+        md.fit(Xn, y)  # fit on normalized data directly (no normalization in md)
 
         # Initialize parameters from MeansDiff without tracking gradients
-        # to avoid in-place ops on leaf Variables that require grad.
         with torch.no_grad():
             self.weight.copy_(md.weight.detach())  # type: ignore
             self.bias.copy_(md.bias.detach())  # type: ignore
@@ -196,22 +212,22 @@ class _GDLinearProbe(LinearProbeBase):
         del md
 
     def fit(self, X: torch.Tensor, y: torch.Tensor):
-        n, d = X.shape
+        Xn = self.normalization.fit_transform(X) if self.normalization else X
+        n, d = Xn.shape
         c = y.shape[1]
 
         # initialize parameters
-        self._init_params(d, c, dtype=X.dtype, device=X.device)
-        if self.init_bias:  # init weight and bias with means diff
-            # Ensure {0,1} for init
-            self._init_from_means_diff(X, y)
+        self._init_params(d, c, dtype=Xn.dtype, device=Xn.device)
+        if self.init_from_means_diff:
+            self._init_from_means_diff(Xn, y)
 
-        y_prepared = self._prepare_targets(y, dtype=X.dtype)
+        y_prepared = self._prepare_targets(y)
 
         optimizer = torch.optim.Adam([self.weight, self.bias], lr=self.lr)  # type: ignore
 
         for _ in range(self.max_iter):
             optimizer.zero_grad()
-            logits = X @ self.weight + self.bias  # type: ignore
+            logits = Xn @ self.weight + self.bias  # type: ignore
             loss = self._loss(logits, y_prepared)
 
             if self.l2 > 0.0:
@@ -228,13 +244,17 @@ class LogisticRegressionProbe(_GDLinearProbe):
         lr: float = 1e-2,
         max_iter: int = 20,
         l2: float = 0.0,
-        init_bias: BiasCalibratorBase | None = PrevalenceBias(),
+        init_from_means_diff: bool = True,
+        init_bias_calibrator: BiasCalibrator | None = prevalence_bias,
+        normalization: NormalizationBase | None = None,
     ):
         super().__init__(
             lr=lr,
             max_iter=max_iter,
             l2=l2,
-            init_bias=init_bias,
+            init_from_means_diff=init_from_means_diff,
+            init_bias_calibrator=init_bias_calibrator,
+            normalization=normalization,
         )
         self._loss_fn = nn.BCEWithLogitsLoss()
 
@@ -251,13 +271,17 @@ class LinearSVMProbe(_GDLinearProbe):
         lr: float = 1e-2,
         max_iter: int = 20,
         l2: float = 0.0,
-        init_bias: BiasCalibratorBase | None = PrevalenceBias(),
+        init_from_means_diff: bool = True,
+        init_bias_calibrator: BiasCalibrator | None = prevalence_bias,
+        normalization: NormalizationBase | None = None,
     ):
         super().__init__(
             lr=lr,
             max_iter=max_iter,
             l2=l2,
-            init_bias=init_bias,
+            init_from_means_diff=init_from_means_diff,
+            init_bias_calibrator=init_bias_calibrator,
+            normalization=normalization,
         )
 
     def _prepare_targets(self, y: torch.Tensor) -> torch.Tensor:
