@@ -42,7 +42,6 @@ maintainers = [
   { name = "Fanny Jourdan", email = "fanny.jourdan@irt-saintexupery.com" },
   { name = "Antonin Poché", email = "antonin.poche@irt-saintexupery.com" },
   { name = "Thomas Mullor", email = "thomas.mullor@irt-saintexupery.com" },
-  { name = "Gabriele Sarti", email = "gabriele.sarti996@gmail.com" },
 ]
 # Pypi classifiers: https://pypi.org/classifiers/
 classifiers = [
