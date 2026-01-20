@@ -28,7 +28,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interpreto"
-version = "0.4.14"
+version = "0.4.15"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -59,6 +59,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Visualization",
   "Typing :: Typed",
