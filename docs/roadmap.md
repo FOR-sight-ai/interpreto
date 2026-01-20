@@ -8,13 +8,8 @@ Welcome to the roadmap of Interpreto 🪄. This document outlines the planned fe
 
 ### 1. Evaluation Metrics for Attribution Methods
 
-We plan to integrate a set of standardized evaluation metrics to assess the quality and reliability of attribution methods. We'll start by adding the **insertion/deletion metrics** then **AOPC Comprehensiveness** and **AOPC Sufficiency** (DeYoung et al., 2020).
+The framework currently includes **insertion** and **deletion** metrics for attribution evaluation, with **AOPC Comprehensiveness** and **AOPC Sufficiency** (DeYoung et al., 2020) planned as upcoming additions.
 
-
-
-### 2. Integration of ConSim metric
-
-We will implement **ConSim**, a robust evaluation metric measuring how well concept‑based explanations enable automated simulators (LLMs) to mimic the predictions of the original model. ConSim goes beyond evaluating just the concept space or importance alignment—it captures end-to-end interpretability effectiveness by testing whether the conveyed concepts actually allow a “simulator” to reproduce model outputs.
 
 ---
 
