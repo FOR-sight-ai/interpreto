@@ -1,0 +1,54 @@
+diff --git a/interpreto/_vendor/overcomplete/sae/batchtopk_sae.py b/interpreto/_vendor/overcomplete/sae/batchtopk_sae.py
+index eeeea64..dbb2c15 100644
+--- a/interpreto/_vendor/overcomplete/sae/batchtopk_sae.py
++++ b/interpreto/_vendor/overcomplete/sae/batchtopk_sae.py
+@@ -5,7 +5,7 @@ Module for Batch Top-k Sparse Autoencoder (BatchTopKSAE).
+ import torch
+ from torch import nn
+ 
+-from overcomplete.sae import SAE
++from ..sae import SAE
+ 
+ 
+ class BatchTopKSAE(SAE):
+diff --git a/interpreto/_vendor/overcomplete/sae/mp_sae.py b/interpreto/_vendor/overcomplete/sae/mp_sae.py
+index b2a3e1d..4e961bd 100644
+--- a/interpreto/_vendor/overcomplete/sae/mp_sae.py
++++ b/interpreto/_vendor/overcomplete/sae/mp_sae.py
+@@ -5,7 +5,7 @@ Module for Matching Pursuit Sparse Autoencoder (MpSAE).
+ import torch
+ from torch import nn
+ 
+-from overcomplete.sae import SAE
++from ..sae import SAE
+ 
+ 
+ class MpSAE(SAE):
+diff --git a/interpreto/_vendor/overcomplete/sae/omp_sae.py b/interpreto/_vendor/overcomplete/sae/omp_sae.py
+index 22b25cb..bdfd796 100644
+--- a/interpreto/_vendor/overcomplete/sae/omp_sae.py
++++ b/interpreto/_vendor/overcomplete/sae/omp_sae.py
+@@ -3,8 +3,8 @@ Module for Orthogonal Matching Pursuit Sparse Autoencoder (OMPSAE).
+ """
+ 
+ import torch
+-from overcomplete.sae import SAE
+-from overcomplete.optimization import batched_matrix_nnls
++from ..sae import SAE
++from ..optimization import batched_matrix_nnls
+ 
+ 
+ class OMPSAE(SAE):
+diff --git a/interpreto/_vendor/overcomplete/sae/topk_sae.py b/interpreto/_vendor/overcomplete/sae/topk_sae.py
+index 7010bcb..b50a753 100644
+--- a/interpreto/_vendor/overcomplete/sae/topk_sae.py
++++ b/interpreto/_vendor/overcomplete/sae/topk_sae.py
+@@ -5,7 +5,7 @@ Module for Top-k Sparse SAE (TopKSAE).
+ import torch
+ from torch import nn
+ 
+-from overcomplete.sae.base import SAE
++from ..sae.base import SAE
+ 
+ 
+ class TopKSAE(SAE):
