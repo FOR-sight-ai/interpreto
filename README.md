@@ -30,7 +30,7 @@ Checkout the tutorials to get started:
 
 Interpreto 🪄 provides a modular framework encompassing Attribution Methods, Concept-Based Methods, and Evaluation Metrics.
 
-### Attribution Methods
+### 🔥 Attribution Methods
 
 Interpreto includes both inference-based and gradient-based attribution methods.
 
@@ -53,24 +53,29 @@ They all work seamlessly for both classification (`...ForSequenceClassification`
 - [`SquareGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/square_grad/) — [Hooker et al., 2019](https://arxiv.org/abs/1806.10758)
 - [`VarGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/var_grad/) — [Richter et al., 2020](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
 
-### Concept-Based Methods or Mechanistic Interpretability
+### 💡 Concept-Based Methods or Mechanistic Interpretability
 
 Concept-based explanations aim to provide high-level interpretations of latent model representations.
 
-Interpreto generalizes these methods through three core steps:
+Interpreto generalizes these methods through four core steps:
 
-1. Concept Discovery (e.g., from latent embeddings)
-2. Concept Interpretation (mapping discovered concepts to human-understandable elements)
-3. Concept-to-Output Attribution (assessing concept relevance to model outputs)
+1. Split a model in two and obtain a dataset of activations
+2. Concept Discovery (e.g., from latent embeddings)
+3. Concept Interpretation (mapping discovered concepts to human-understandable elements)
+4. Concept-to-Output Attribution (assessing concept relevance to model outputs)
 
-**Dictionary Learning for Concept Discovery** (mainly via [Overcomplete](https://github.com/KempnerInstitute/overcomplete)):
+**1. Split a model in two and obtain a dataset of activations:** (mainly via [`nnsight`](https://github.com/ndif-team/nnsight)):
+
+Choose any layer in any HuggingFace language model with our `ModelWithSplitPoints` based on `nnsight`. Then pass a dataset through it to obtain a dataset of activations.
+
+**2. Dictionary Learning for Concept Discovery** (mainly via [`overcomplete`](https://github.com/KempnerInstitute/overcomplete)):
 
 - Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/)
 - [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ConvexNMFConcepts)
 - [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.KMeansConcepts)
 - SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.BatchTopKSAEConcepts)
 
-**Available Concept Interpretation Techniques:**
+**3. Available Concept Interpretation Techniques:**
 
 - Top-k tokens from tokenizer vocabulary via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.TopKInputs) and `use_vocab=True`
 - Top-k tokens/words/sentences/samples from specific datasets via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.TopKInputs)
@@ -86,7 +91,7 @@ Interpreto generalizes these methods through three core steps:
 
 </details>
 
-**Concept-to-Output Attribution:**
+**4. Concept-to-Output Attribution:**
 
 Estimate the contribution of each concept to the model output.
 
@@ -106,7 +111,7 @@ Thanks to this generalization encompassing all concept-based methods and our hig
 
 </details>
 
-### Evaluation Metrics
+### 📊 Evaluation Metrics
 
 **Evaluation Metrics for Attribution**
 

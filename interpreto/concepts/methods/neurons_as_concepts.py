@@ -29,8 +29,8 @@ Concept Bottleneck Explainer based on Overcomplete concept-encoder-decoder frame
 from __future__ import annotations
 
 import torch
-from overcomplete.base import BaseDictionaryLearning
 
+from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import ConceptsActivations, LatentActivations
