@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
-from interpreto.concepts.probes.linear_probe_models import ProbeModelInterface, assert_fitted
 from interpreto.concepts.probes.bias_calibrators import BiasCalibrator
+from interpreto.concepts.probes.linear_probe_models import ProbeModelInterface, assert_fitted
 from interpreto.concepts.probes.normalizations import NormalizationBase, Standardization
 
 
