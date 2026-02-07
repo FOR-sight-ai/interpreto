@@ -43,11 +43,10 @@ from .commons import (
     Granularity,
 )
 from .model_wrapping import ModelWithSplitPoints
-from .visualizations.attributions import (
+from .visualizations import (
     AttributionVisualization,
-)
-from .visualizations.concepts import (
-    ConceptHighlightVisualization,
+    plot_attributions,
+    plot_concepts,
 )
 
 
@@ -62,8 +61,6 @@ def get_version() -> str:
 
 
 __all__ = [
-    "AttributionVisualization",
-    "ConceptHighlightVisualization",
     "GradientShap",
     "Granularity",
     "IntegratedGradients",
@@ -77,4 +74,7 @@ __all__ = [
     "Sobol",
     "VarGrad",
     "get_version",
+    "AttributionVisualization",
+    "plot_attributions",
+    "plot_concepts",
 ]
