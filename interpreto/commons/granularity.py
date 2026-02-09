@@ -631,7 +631,7 @@ class Granularity(Enum):
                 if return_text:
                     assert tokenizer is not None
                     if (
-                        self is Granularity.SENTENCE
+                        (self is Granularity.SENTENCE or self is Granularity.WORD)
                         and raw_text is not None
                         and tokenizer.is_fast
                         and isinstance(inputs, BatchEncoding)
