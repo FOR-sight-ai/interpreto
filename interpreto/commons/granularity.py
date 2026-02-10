@@ -169,6 +169,7 @@ class Granularity(Enum):
         self,
         inputs: BatchEncoding,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None,
+        raw_text: list[str] | None = None,
     ) -> list[list[list[int]]]:
         """
         Return *indices* of the tokens that correspond to the desired
@@ -273,6 +274,7 @@ class Granularity(Enum):
                             inputs["input_ids"][i],  # type: ignore
                             inputs.encodings[i].offsets,  # type: ignore[attr-defined]
                             tokenizer,
+                            raw_text=None if raw_text is None else raw_text[i],
                         )
                         for i in range(n_inputs)
                     ]
@@ -314,9 +316,7 @@ class Granularity(Enum):
         return token.startswith((" ", "Ġ", "__"))
 
     @staticmethod
-    def __word_get_indices_from_input_ids(
-        input_ids: list[int], tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast
-    ) -> list[list[int]]:
+    def __word_get_indices_from_input_ids(input_ids: list[int], tokenizer: PreTrainedTokenizer) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         special_ids = tokenizer.all_special_ids
         tokens = tokenizer.convert_ids_to_tokens(input_ids, skip_special_tokens=False)
@@ -348,6 +348,14 @@ class Granularity(Enum):
             if ids[j] not in special_ids:
                 return j
         return None
+
+    @staticmethod
+    def __decode_one(tokenizer: PreTrainedTokenizer, tok_id: int) -> str:
+        return tokenizer.decode(
+            [tok_id],
+            skip_special_tokens=False,
+            clean_up_tokenization_spaces=False,
+        )
 
     @staticmethod
     def __build_sentence_exception_id_seqs(
@@ -415,6 +423,7 @@ class Granularity(Enum):
         input_ids: torch.Tensor,
         offsets: list[tuple[int, int]],
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+        raw_text: str | None = None,
     ) -> list[list[int]]:
         """
         Split ONLY when there is an end-of-sentence punctuation (., ?, !) followed by whitespace
@@ -432,13 +441,6 @@ class Granularity(Enum):
         indices: list[list[int]] = []
         current_sentence: list[int] = []
 
-        def decode_one(tok_id: int) -> str:
-            return tokenizer.decode(
-                [tok_id],
-                skip_special_tokens=False,
-                clean_up_tokenization_spaces=False,
-            )
-
         for i, (tok_id, tok_str) in enumerate(zip(ids, tokens, strict=True)):
             if tok_id in special_ids:
                 continue
@@ -446,6 +448,21 @@ class Granularity(Enum):
             current_sentence.append(i)
 
             j = Granularity.__next_non_special(i + 1, ids, special_ids)
+
+            cur_piece = Granularity.__decode_one(tokenizer, tok_id)
+            if "\n" in cur_piece or "\r" in cur_piece:
+                indices.append(current_sentence)
+                current_sentence = []
+                continue
+            if raw_text is not None:
+                curr_end = offsets[i][1]
+                next_start = offsets[j][0]
+                if 0 <= curr_end <= next_start <= len(raw_text):
+                    gap = raw_text[curr_end:next_start]
+                    if "\n" in gap or "\r" in gap:
+                        indices.append(current_sentence)
+                        current_sentence = []
+                        continue
             if j is None:
                 continue
 
@@ -465,7 +482,7 @@ class Granularity(Enum):
 
             # GPT2-like tokenizers: whitespace may be inside the next token, so gap can be 0.
             if not has_whitespace_after:
-                next_piece = decode_one(ids[j])
+                next_piece = Granularity.__decode_one(tokenizer, ids[j])
                 has_whitespace_after = bool(next_piece) and next_piece[0].isspace()
 
             if has_whitespace_after:
@@ -501,6 +518,11 @@ class Granularity(Enum):
         current_sentence: list[int] = []
 
         for i, (tok_id, tok_str) in enumerate(zip(ids, tokens, strict=True)):
+            piece = Granularity.__decode_one(tokenizer, tok_id)
+            if "\n" in piece or "\r" in piece:
+                indices.append(current_sentence)
+                current_sentence = []
+                continue
             if tok_id in special_ids:
                 continue
 
