@@ -23,8 +23,8 @@ The library is available on PyPI, try `pip install interpreto` to install it.
 Checkout the tutorials to get started:
 
 - [Attributions walkthrough](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_walkthrough.ipynb) (both classification and generation)
-- [Classification concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/classification_concepts_tutorial.ipynb)
-- [Generation concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/generation_concepts_tutorial.ipynb)
+- [Classification concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/classification_concept_tutorial.ipynb)
+- [Generation concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/generation_concept_tutorial.ipynb)
 
 ## 📦 What's Included
 
