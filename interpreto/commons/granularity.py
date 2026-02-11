@@ -344,6 +344,9 @@ class Granularity(Enum):
     # Mini functions for sentence splitting, to keep the main function clearer:
     @staticmethod
     def __next_non_special(start: int, ids, special_ids) -> int | None:
+        """
+        Find the next non-special token index after `start` (used to look ahead safely).
+        """
         for j in range(start, len(ids)):
             if ids[j] not in special_ids:
                 return j
@@ -351,6 +354,9 @@ class Granularity(Enum):
 
     @staticmethod
     def __decode_one(tokenizer: PreTrainedTokenizer, tok_id: int) -> str:
+        """
+        Decode a single token id without normalizing spaces, to reliably detect leading whitespace/newlines.
+        """
         return tokenizer.decode(
             [tok_id],
             skip_special_tokens=False,
@@ -432,6 +438,8 @@ class Granularity(Enum):
         For some tokenizers (e.g., GPT2 byte-level BPE), the whitespace can be included in the
         *next token span*, so offset gaps alone are not sufficient. We thus also check whether
         the next token *decodes* with a leading whitespace.
+
+        Additionally, split on newline boundaries so that "\n" stays attached to the previous sentence.
         """
         special_ids = tokenizer.all_special_ids
         ids = [int(x) for x in input_ids.tolist()]
@@ -442,18 +450,19 @@ class Granularity(Enum):
         current_sentence: list[int] = []
 
         for i, (tok_id, tok_str) in enumerate(zip(ids, tokens, strict=True)):
+            # Skip special tokens (CLS/SEP/PAD...):
             if tok_id in special_ids:
                 continue
-
             current_sentence.append(i)
 
-            j = Granularity.__next_non_special(i + 1, ids, special_ids)
-
+            # If the current token itself contains a newline (e.g., GPT2 newline token), end the sentence here:
             cur_piece = Granularity.__decode_one(tokenizer, tok_id)
             if "\n" in cur_piece or "\r" in cur_piece:
                 indices.append(current_sentence)
                 current_sentence = []
                 continue
+            # If the newline is not a token (common for BERT-like), detect it in the raw-text gap between spans:
+            # TODO I added this for BERT tokenizer but that doesn't work...
             if raw_text is not None:
                 curr_end = offsets[i][1]
                 next_start = offsets[j][0]
@@ -463,6 +472,8 @@ class Granularity(Enum):
                         indices.append(current_sentence)
                         current_sentence = []
                         continue
+
+            j = Granularity.__next_non_special(i + 1, ids, special_ids)
             if j is None:
                 continue
 
@@ -501,8 +512,9 @@ class Granularity(Enum):
     ) -> list[list[int]]:
         """
         Slow tokenizers (no offsets): SIMPLE fallback.
-        Split on '.' directly, EXCEPT if inside an exception.
+        Split on end punctuation directly, EXCEPT if inside an exception.
         Avoid splitting multiple times for '...' when it is tokenized as ".", ".", ".".
+        Also split when a newline token is explicitly present (if the tokenizer encodes it as a token).
         """
         special_ids = tokenizer.all_special_ids
 
@@ -518,17 +530,19 @@ class Granularity(Enum):
         current_sentence: list[int] = []
 
         for i, (tok_id, tok_str) in enumerate(zip(ids, tokens, strict=True)):
+            # Skip special tokens (CLS/SEP/PAD...):
+            if tok_id in special_ids:
+                continue
+            current_sentence.append(i)
+
+            # If the tokenizer represents newline as a token, split right after it:
             piece = Granularity.__decode_one(tokenizer, tok_id)
             if "\n" in piece or "\r" in piece:
                 indices.append(current_sentence)
                 current_sentence = []
                 continue
-            if tok_id in special_ids:
-                continue
 
-            current_sentence.append(i)
-
-            # Fallback rule: split on '.'
+            # Fallback rule: split on end-of-sentence (".", "?", "!") punctuation suffix.
             if not tok_str.endswith(END_SENTENCE):  # type: ignore
                 continue
 
