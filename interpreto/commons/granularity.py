@@ -169,7 +169,6 @@ class Granularity(Enum):
         self,
         inputs: BatchEncoding,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None,
-        raw_text: list[str] | None = None,
     ) -> list[list[list[int]]]:
         """
         Return *indices* of the tokens that correspond to the desired
@@ -274,7 +273,6 @@ class Granularity(Enum):
                             inputs["input_ids"][i],  # type: ignore
                             inputs.encodings[i].offsets,  # type: ignore[attr-defined]
                             tokenizer,
-                            raw_text=None if raw_text is None else raw_text[i],
                         )
                         for i in range(n_inputs)
                     ]
@@ -429,17 +427,14 @@ class Granularity(Enum):
         input_ids: torch.Tensor,
         offsets: list[tuple[int, int]],
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
-        raw_text: str | None = None,
     ) -> list[list[int]]:
         """
         Split ONLY when there is an end-of-sentence punctuation (., ?, !) followed by whitespace
-        in the ORIGINAL TEXT.
+        in the original text, EXCEPT if inside an exception (e.g., "U.S.", "Mr."...).
 
         For some tokenizers (e.g., GPT2 byte-level BPE), the whitespace can be included in the
         *next token span*, so offset gaps alone are not sufficient. We thus also check whether
         the next token *decodes* with a leading whitespace.
-
-        Additionally, split on newline boundaries so that "\n" stays attached to the previous sentence.
         """
         special_ids = tokenizer.all_special_ids
         ids = [int(x) for x in input_ids.tolist()]
@@ -455,23 +450,16 @@ class Granularity(Enum):
                 continue
             current_sentence.append(i)
 
+            # TODO : not necessary because models generally see \n after punctuation as a special token that is not
+            # taken into account when splitting sentences (it no longer appears). The only limitation we have is if
+            # there is a \n without punctuation before it, in which case we do not split to create a new sentence,
+            # but this is rare enough that we can ignore it.
             # If the current token itself contains a newline (e.g., GPT2 newline token), end the sentence here:
-            cur_piece = Granularity.__decode_one(tokenizer, tok_id)
-            if "\n" in cur_piece or "\r" in cur_piece:
-                indices.append(current_sentence)
-                current_sentence = []
-                continue
-            # If the newline is not a token (common for BERT-like), detect it in the raw-text gap between spans:
-            # TODO I added this for BERT tokenizer but that doesn't work...
-            if raw_text is not None:
-                curr_end = offsets[i][1]
-                next_start = offsets[j][0]
-                if 0 <= curr_end <= next_start <= len(raw_text):
-                    gap = raw_text[curr_end:next_start]
-                    if "\n" in gap or "\r" in gap:
-                        indices.append(current_sentence)
-                        current_sentence = []
-                        continue
+            # cur_piece = Granularity.__decode_one(tokenizer, tok_id)
+            # if "\n" in cur_piece or "\r" in cur_piece:
+            #     indices.append(current_sentence)
+            #     current_sentence = []
+            #     continue
 
             j = Granularity.__next_non_special(i + 1, ids, special_ids)
             if j is None:
@@ -511,10 +499,9 @@ class Granularity(Enum):
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
     ) -> list[list[int]]:
         """
-        Slow tokenizers (no offsets): SIMPLE fallback.
-        Split on end punctuation directly, EXCEPT if inside an exception.
+        Basic tokenizers (no offsets): simple split when we see ".", "?" or "!".
+        Split on end punctuation directly, EXCEPT if inside an exception (e.g., "U.S.", "Mr."...).
         Avoid splitting multiple times for '...' when it is tokenized as ".", ".", ".".
-        Also split when a newline token is explicitly present (if the tokenizer encodes it as a token).
         """
         special_ids = tokenizer.all_special_ids
 
@@ -536,11 +523,11 @@ class Granularity(Enum):
             current_sentence.append(i)
 
             # If the tokenizer represents newline as a token, split right after it:
-            piece = Granularity.__decode_one(tokenizer, tok_id)
-            if "\n" in piece or "\r" in piece:
-                indices.append(current_sentence)
-                current_sentence = []
-                continue
+            # piece = Granularity.__decode_one(tokenizer, tok_id)
+            # if "\n" in piece or "\r" in piece:
+            #     indices.append(current_sentence)
+            #     current_sentence = []
+            #     continue
 
             # Fallback rule: split on end-of-sentence (".", "?", "!") punctuation suffix.
             if not tok_str.endswith(END_SENTENCE):  # type: ignore
