@@ -648,33 +648,35 @@ class Granularity(Enum):
             for gran_indices in indices:
                 ids = [int(input_ids[idx].item()) for idx in gran_indices]
                 # TODO: additional testing of this, it might cause issues for the TopKInputs concept interpretation method
-                # if return_text:
-                #    text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)  # type: ignore
-                #    decomposition.append(text)
                 if return_text:
-                    assert tokenizer is not None
-                    if (
-                        (self is Granularity.SENTENCE or self is Granularity.WORD)
-                        and raw_text is not None
-                        and tokenizer.is_fast
-                        and isinstance(inputs, BatchEncoding)
-                        and getattr(inputs, "encodings", None)
-                    ):
-                        # Offsets are aligned with token positions in the encoding
-                        offsets = inputs.encodings[i].offsets  # type: ignore[attr-defined]
+                    text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)  # type: ignore
+                    decomposition.append(text)
+                # Proposition for exact recontruction but too costly (I keep only if one day is necessary
+                # to have exact text reconstruction for sentences, but it is not the case for now):
+                # if return_text:
+                #     assert tokenizer is not None
+                #     if (
+                #         (self is Granularity.SENTENCE or self is Granularity.WORD)
+                #         and raw_text is not None
+                #         and tokenizer.is_fast
+                #         and isinstance(inputs, BatchEncoding)
+                #         and getattr(inputs, "encodings", None)
+                #     ):
+                #         # Offsets are aligned with token positions in the encoding
+                #         offsets = inputs.encodings[i].offsets  # type: ignore[attr-defined]
 
-                        start = offsets[gran_indices[0]][0]
-                        end = offsets[gran_indices[-1]][1]
+                #         start = offsets[gran_indices[0]][0]
+                #         end = offsets[gran_indices[-1]][1]
 
-                        # exact substring + remove leading whitespace
-                        text = raw_text[i][start:end].lstrip()
-                        decomposition.append(text)
-                    else:
-                        # Default: decode (works everywhere), but strip leading spaces for SENTENCE
-                        text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)
-                        if self is Granularity.SENTENCE:
-                            text = text.lstrip()
-                        decomposition.append(text)
+                #         # exact substring + remove leading whitespace
+                #         text = raw_text[i][start:end].lstrip()
+                #         decomposition.append(text)
+                #     else:
+                #         # Default: decode (works everywhere), but strip leading spaces for SENTENCE
+                #         text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)
+                #         if self is Granularity.SENTENCE:
+                #             text = text.lstrip()
+                #         decomposition.append(text)
                 else:
                     decomposition.append(ids)
             all_decompositions.append(decomposition)
