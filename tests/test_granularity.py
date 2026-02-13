@@ -310,32 +310,26 @@ def test_word_aggregation_matches_manual(simple_text, real_bert_tokenizer, strat
 
 
 # ----------------------------------------------------------
-# spaCy‑based granularities (SENTENCE )
+# SENTENCE granularities
 
-def test_spacy_granularities_indices(complex_text, real_bert_tokenizer):
-    """Basic sanity checks on the hierarchy of spaCy granularities."""
+
+def test_sentence_granularities_indices(complex_text, real_bert_tokenizer):
+    """Basic sanity checks on the hierarchy of sentence granularities."""
 
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
 
     sent_idx = Granularity.SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
 
     # We know our handcrafted *complex_text*:
-    # 1st sentence (2 clauses): "Although it was raining, we went for a walk. "
-    # 2nd sentence (1 clause) in same paragraph: "We took umbrellas.\n\n"
-    # 3rd sentence (1 clause) in a new paragraph: "It was fun."
+    # 1st sentence: "Although it was raining, we went for a walk. "
+    # 2nd sentence in same paragraph: "We took umbrellas.\n\n"
+    # 3rd sentence in a new paragraph: "It was fun."
 
-    #   • 4 clauses   (2 + 1 + 1)
-    #   • 3 sentences (2 + 1)
-    #   • 2 paragraphs
-    #assert len(sent_idx) == 3
-
-    # Hierarchy sanity: same tokens regrouped, nothing lost / duplicated
-    flat_sent = sorted(i for grp in sent_idx for i in grp)
-    # assert flat_sent == list(range(len(tokens["input_ids"][0])))
+    assert len(sent_idx) == 3, f"Expected 3 sentences, got {len(sent_idx)}"
 
 
-def test_spacy_granularities_matrices_and_decomposition(complex_text, real_bert_tokenizer):
-    """Full round‑trip checks for SENTENCE ."""
+def test_sentence_granularities_matrices_and_decomposition(complex_text, real_bert_tokenizer):
+    """Full round‑trip checks for SENTENCE."""
 
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
     seq_len = tokens["input_ids"].shape[1]
@@ -347,11 +341,11 @@ def test_spacy_granularities_matrices_and_decomposition(complex_text, real_bert_
     # Association matrix
     assoc = gran.get_association_matrix(tokens, real_bert_tokenizer)[0]
     expected_mat = _build_expected_matrix(indices, seq_len)
-    #assert torch.equal(assoc, expected_mat)
+    assert torch.equal(assoc, expected_mat)
 
     # Decomposition (ids)
     decomp_ids = gran.get_decomposition(tokens, real_bert_tokenizer)[0]
-    #assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
+    assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
 
     # Decomposition (text)
     decomp_text: list[str] = gran.get_decomposition(tokens, real_bert_tokenizer, return_text=True)[0]  # type: ignore
@@ -360,12 +354,12 @@ def test_spacy_granularities_matrices_and_decomposition(complex_text, real_bert_
 
     # Each segment must be non‑empty & appear verbatim in the original text
     raw_text = real_bert_tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)
-    # for segment in decomp_text:
-    #     assert segment.strip() in raw_text
+    for segment in decomp_text:
+        assert segment.strip() in raw_text
 
     # Join without spaces – coverage check (no char lost)
     joined = " ".join(seg.strip() for seg in decomp_text)
-    # assert joined == raw_text
+    assert joined == raw_text
 
 
 @pytest.mark.parametrize("strategy", STRATS)
@@ -390,8 +384,7 @@ def test_sentence_aggregation_matches_manual(complex_text, real_bert_tokenizer, 
         tokenizer=real_bert_tokenizer,
         aggregate_inputs=True,
     )
-
-    # assert torch.allclose(obtained, expected, atol=1e-6)
+    assert torch.allclose(obtained, expected, atol=1e-6)
 
 
 # -----------------------------------------------------------------
