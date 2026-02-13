@@ -277,7 +277,6 @@ class Granularity(Enum):
                         for i in range(n_inputs)
                     ]
 
-                # Fallback (slow tokenizers): best effort (cannot distinguish "." and ". ")
                 return [
                     Granularity.__sentence_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
                     for i in range(n_inputs)
@@ -450,17 +449,6 @@ class Granularity(Enum):
                 continue
             current_sentence.append(i)
 
-            # TODO : not necessary because models generally see \n after punctuation as a special token that is not
-            # taken into account when splitting sentences (it no longer appears). The only limitation we have is if
-            # there is a \n without punctuation before it, in which case we do not split to create a new sentence,
-            # but this is rare enough that we can ignore it.
-            # If the current token itself contains a newline (e.g., GPT2 newline token), end the sentence here:
-            # cur_piece = Granularity.__decode_one(tokenizer, tok_id)
-            # if "\n" in cur_piece or "\r" in cur_piece:
-            #     indices.append(current_sentence)
-            #     current_sentence = []
-            #     continue
-
             j = Granularity.__next_non_special(i + 1, ids, special_ids)
             if j is None:
                 continue
@@ -521,13 +509,6 @@ class Granularity(Enum):
             if tok_id in special_ids:
                 continue
             current_sentence.append(i)
-
-            # If the tokenizer represents newline as a token, split right after it:
-            # piece = Granularity.__decode_one(tokenizer, tok_id)
-            # if "\n" in piece or "\r" in piece:
-            #     indices.append(current_sentence)
-            #     current_sentence = []
-            #     continue
 
             # Fallback rule: split on end-of-sentence (".", "?", "!") punctuation suffix.
             if not tok_str.endswith(END_SENTENCE):  # type: ignore
