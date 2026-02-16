@@ -95,9 +95,15 @@ def test_plot_concepts_classification_local_classwise_labels(tmp_path):
     )
     payload = _extract_payload(html, "ClassificationLocalConceptsVisualization")
 
-    assert {"classes", "sample", "labels", "labels_by_class", "activations", "activations_by_class", "importances"} <= set(
-        payload.keys()
-    )
+    assert {
+        "classes",
+        "sample",
+        "labels",
+        "labels_by_class",
+        "activations",
+        "activations_by_class",
+        "importances",
+    } <= set(payload.keys())
     assert payload["sample"] == sample
     assert [entry["name"] for entry in payload["classes"]] == ["Neg", "Pos"]
     assert payload["labels_by_class"]["0"][0] == "Neg sentiment"
