@@ -56,8 +56,6 @@ class ModelTask(Enum):
     Enum to represent the model task type.
     """
 
-    SINGLE_CLASS_CLASSIFICATION = "single-class classification"
-    MULTI_CLASS_CLASSIFICATION = "multi-class classification"
     CLASSIFICATION = "classification"
     GENERATION = "generation"
 

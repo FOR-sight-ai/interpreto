@@ -105,11 +105,7 @@ def plot_attributions(
         )
         return
 
-    if attribution_output.model_task in (
-        ModelTask.CLASSIFICATION,  # type: ignore
-        ModelTask.SINGLE_CLASS_CLASSIFICATION,  # deprecated
-        ModelTask.MULTI_CLASS_CLASSIFICATION,  # deprecated
-    ):
+    if attribution_output.model_task is ModelTask.CLASSIFICATION:
         _display_classification_attributions(
             attribution_output,
             positive_color=positive_color,
