@@ -4,17 +4,18 @@
   <img src="docs/assets/img/interpreto_banner_dark.png" alt="Interpreto: Interpretability Toolkit for LLMs" />
 </picture>
 
-[![Build status](https://img.shields.io/github/actions/workflow/status/FOR-sight-ai/interpreto/build.yml?branch=main)](https://github.com/FOR-sight-ai/interpreto/actions?query=workflow%3Abuild)
-[![Version](https://img.shields.io/pypi/v/interpreto?color=blue)](https://pypi.org/project/interpreto/)
-[![Python Version](https://img.shields.io/pypi/pyversions/interpreto.svg?color=blue)](https://pypi.org/project/interpreto/)
-[![Downloads](https://static.pepy.tech/badge/interpreto)](https://pepy.tech/project/interpreto)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/FOR-sight-ai/interpreto/blob/main/LICENSE)
+<p align="center">
+  <a href="https://github.com/FOR-sight-ai/interpreto/actions?query=workflow%3Abuild"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/FOR-sight-ai/interpreto/build.yml?branch=main" /></a>
+  <a href="https://pypi.org/project/interpreto/"><img alt="Version" src="https://img.shields.io/pypi/v/interpreto?color=blue" /></a>
+  <a href="https://pypi.org/project/interpreto/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/interpreto.svg?color=blue" /></a>
+  <a href="https://pepy.tech/project/interpreto"><img alt="Downloads" src="https://static.pepy.tech/badge/interpreto" /></a>
+  <a href="https://github.com/FOR-sight-ai/interpreto/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" /></a>
+</p>
 
-  <!-- Link to the documentation -->
-  <a href="https://for-sight-ai.github.io/interpreto/"><strong>Explore Interpreto docs »</strong></a>
-  <br>
-
-</div>
+<p align="center">
+  <a href="https://for-sight-ai.github.io/interpreto/"><strong>📚 Explore Interpreto docs &gt;&gt;</strong></a><br />
+  <a href="https://for-sight-ai.github.io/interpreto-demo/"><strong>🖼️ Checkout our explanation gallery &gt;&gt;</strong></a>
+</p>
 
 ## 🚀 Quick Start
 

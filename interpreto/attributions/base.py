@@ -56,8 +56,7 @@ class ModelTask(Enum):
     Enum to represent the model task type.
     """
 
-    SINGLE_CLASS_CLASSIFICATION = "single-class classification"
-    MULTI_CLASS_CLASSIFICATION = "multi-class classification"
+    CLASSIFICATION = "classification"
     GENERATION = "generation"
 
 
@@ -106,7 +105,7 @@ class AttributionOutput:
             The target classes or tokens.
 
         model_task (ModelTask):
-            An enum representing the task of the model explained, such as SINGLE_CLASS_CLASSIFICATION, MULTI_CLASS_CLASSIFICATION, or GENERATION.
+            An enum representing the task of the model explained: CLASSIFICATION or GENERATION.
 
         classes (torch.Tensor | None):
             Optional tensor of class labels.
@@ -435,10 +434,7 @@ class AttributionExplainer:
                 classes = None
             elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
                 classes = target
-                if contribution.shape[0] == 1:
-                    model_task = ModelTask.SINGLE_CLASS_CLASSIFICATION
-                else:
-                    model_task = ModelTask.MULTI_CLASS_CLASSIFICATION
+                model_task = ModelTask.CLASSIFICATION
             else:
                 raise NotImplementedError(
                     f"Model type {self.inference_wrapper.model.__class__.__name__} not supported for AttributionExplainer."
