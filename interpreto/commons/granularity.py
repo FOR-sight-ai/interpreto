@@ -454,7 +454,8 @@ class Granularity(Enum):
                 continue
 
             # IMPORTANT: accept tokens like "Ġ!!", "...", "Ġ?", etc.
-            if not tok_str.endswith(END_SENTENCE):  # type: ignore[arg-type]
+            if not any(p in tok_str for p in END_SENTENCE):  # type: ignore
+                # if not tok_str.endswith(END_SENTENCE):  # type: ignore[arg-type]
                 continue
 
             # Exception guard (only relevant for '.' abbreviations)
@@ -511,7 +512,7 @@ class Granularity(Enum):
             current_sentence.append(i)
 
             # Fallback rule: split on end-of-sentence (".", "?", "!") punctuation suffix.
-            if not tok_str.endswith(END_SENTENCE):  # type: ignore
+            if not any(p in tok_str for p in END_SENTENCE):  # type: ignore
                 continue
 
             # Exception guard (prevents splitting inside 'U.S.' etc.)
