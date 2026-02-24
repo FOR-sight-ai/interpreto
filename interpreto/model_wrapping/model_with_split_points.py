@@ -484,7 +484,7 @@ class ModelWithSplitPoints(LanguageModel):
     @jaxtyped(typechecker=beartype)
     def _apply_selection_strategy(
         self,
-        activations: Float[torch.Tensor, "n l d"],
+        activations: Float[torch.Tensor, "n l d"] | Float[torch.Tensor, "n d"],
         granularity_indices: list[list[list[int]]],
         activation_granularity: ActivationGranularity,
         aggregation_strategy: GranularityAggregationStrategy | None,
@@ -543,6 +543,9 @@ class ModelWithSplitPoints(LanguageModel):
                     "This should never happen as we apply `_get_granularity_indices` prior. "
                     "granularity_indices cannot be None when activation_granularity is TOKEN, SAMPLE, WORD or SENTENCE."
                 )
+
+        if activations.ndim == 2:
+            return list(activations.unsqueeze(1))
 
         # Apply selection rule
         match activation_granularity:
@@ -613,12 +616,12 @@ class ModelWithSplitPoints(LanguageModel):
     @jaxtyped(typechecker=beartype)
     def _reintegrate_selected_activations(
         self,
-        initial_activations: Float[torch.Tensor, "n l d"],
+        initial_activations: Float[torch.Tensor, "n l d"] | Float[torch.Tensor, "n d"],
         new_activations: Float[torch.Tensor, "n l d"] | Float[torch.Tensor, "ng d"],
         activation_granularity: ActivationGranularity,
         aggregation_strategy: GranularityAggregationStrategy | None,
         granularity_indices: list[list[list[int]]],
-    ) -> Float[torch.Tensor, "n l d"]:
+    ) -> Float[torch.Tensor, "n l d"] | Float[torch.Tensor, "n d"]:
         """
         Reintegrates the selected activations into the initial activations.
 
@@ -641,6 +644,9 @@ class ModelWithSplitPoints(LanguageModel):
         Returns:
             Float[torch.Tensor, "n l d"]: The reintegrated activations tensor.
         """
+        if initial_activations.ndim == 2:
+            return new_activations
+
         match activation_granularity:
             case AG.CLS_TOKEN:
                 # reintegrate the reconstructed CLS token activations into the initial activations
@@ -723,13 +729,6 @@ class ModelWithSplitPoints(LanguageModel):
             RuntimeError: If the activations are a tuple, but we were not able to determine which element is the hidden state.
         """
         if isinstance(activations, torch.Tensor):
-            if activations.dim() != 3:
-                raise ValueError(
-                    f"Invalid activations for split point '{split_point}'. "
-                    f"Expected a 3D tensor of shape (n, l, d), "
-                    f"got a tensor of shape {activations.shape}. "
-                    "It is recommended to look for another split point."
-                )
             return activations
 
         if not isinstance(activations, tuple):
@@ -781,6 +780,8 @@ class ModelWithSplitPoints(LanguageModel):
                 This parameters specifies which elements of these tensors are selected.
                 If the granularity is larger then tokens, i.e. words and sentences, the activations are aggregated.
                 The parameter `aggregation_strategy` specifies how the activations are aggregated.
+
+                It is ignored for 2D activations of shape (n, d).
 
                 **It is highly recommended to use `CLS_TOKEN` for classification tasks and `TOKEN` for other tasks.**
 
@@ -1220,10 +1221,14 @@ class ModelWithSplitPoints(LanguageModel):
 
                     # get activations
                     layer_outputs = getattr(curr_module, module_out_name)
-                    raw_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
-                        layer_outputs, local_split_point
+                    raw_activations: Float[torch.Tensor, "n l d"] | Float[torch.Tensor, "n d"] = (
+                        self._manage_output_tuple(layer_outputs, local_split_point)
                     )
-                    n, l, d = raw_activations.shape  # number of samples, sequence length, and model dimension
+                    if raw_activations.ndim == 2:
+                        n, d = raw_activations.shape  # number of samples and model dimension
+                        l = 1
+                    else:
+                        n, l, d = raw_activations.shape  # number of samples, sequence length, and model dimension
                     ng = sum([len(indices) for indices in granularity_indices])  # number of granularity elements
 
                     # apply selection strategy
@@ -1246,12 +1251,14 @@ class ModelWithSplitPoints(LanguageModel):
                     decoded_activations: Float[torch.Tensor, ng, d] = decode_concepts(concept_activations)
 
                     # reintegrate decoded activations into the original activations
-                    reconstructed_activations: Float[torch.Tensor, n, l, d] = self._reintegrate_selected_activations(
-                        initial_activations=raw_activations,
-                        new_activations=decoded_activations,
-                        granularity_indices=granularity_indices,
-                        activation_granularity=activation_granularity,
-                        aggregation_strategy=aggregation_strategy,
+                    reconstructed_activations: Float[torch.Tensor, n, l, d] | Float[torch.Tensor, n, d] = (
+                        self._reintegrate_selected_activations(
+                            initial_activations=raw_activations,
+                            new_activations=decoded_activations,
+                            granularity_indices=granularity_indices,
+                            activation_granularity=activation_granularity,
+                            aggregation_strategy=aggregation_strategy,
+                        )
                     )
                     del decoded_activations, raw_activations
 
