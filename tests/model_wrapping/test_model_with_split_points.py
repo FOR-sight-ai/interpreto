@@ -258,11 +258,15 @@ def test_activation_selection_and_reintegration_with_bert(bert_model, bert_token
     activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
 
 
+def test_activation_selection_and_reintegration_2D_activations(bert_model, bert_tokenizer, sentences):
+    activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.pooler", sentences, is2D=True)
+
+
 def test_activation_selection_and_reintegration_with_gpt2(gpt2_model, gpt2_tokenizer, sentences):
     activation_selection_and_reintegration(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
 
 
-def activation_selection_and_reintegration(model, tokenizer, split_point, sentences):
+def activation_selection_and_reintegration(model, tokenizer, split_point, sentences, is2D=False):
     """
     Test that the selection then reintegration of raw activations are coherent.
 
@@ -302,8 +306,6 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
     activations = acts_dict[split_point]
     assert activations is not None, "Activations at split are None"
 
-    activations = torch.stack(activations)
-
     # -----------------------------------------------------------
     # Define expected shapes for the different granularity levels
     batch, seq_len = tokens["input_ids"].shape
@@ -311,9 +313,17 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
     total_token_len = sum(len(idx) for idx in Granularity.TOKEN.get_indices(tokens, tokenizer))
     total_word_len = sum(len(idx) for idx in Granularity.WORD.get_indices(tokens, tokenizer))
 
-    assert activations.shape == (batch, seq_len, hidden), (
-        f"Activations shape mismatch: got {activations.shape}, expected {(batch, seq_len, hidden)}"
-    )
+    activations = torch.stack(activations)
+
+    if is2D:
+        assert activations.shape == (batch, 1, hidden), (
+            f"Activations shape mismatch: got {activations.shape}, expected {(batch, 1, hidden)}"
+        )
+        activations = activations.squeeze(1)
+    else:
+        assert activations.shape == (batch, seq_len, hidden), (
+            f"Activations shape mismatch: got {activations.shape}, expected {(batch, seq_len, hidden)}"
+        )
 
     expected = {
         ActivationGranularity.CLS_TOKEN: (batch, hidden),
@@ -361,11 +371,17 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
         selected_activations = torch.cat(selected_activations)
 
         # ensure that the shape of the selected activations matches the expected shape
-        if granularity != ActivationGranularity.ALL_TOKENS:
+        if granularity != ActivationGranularity.ALL_TOKENS and not is2D:
             # the ALL_TOKENS granularity shape depends on the batch size and cannot be tested
             assert selected_activations.shape == expected[granularity], (  # type: ignore
                 f"Selected shape mismatch for {granularity}: got {tuple(selected_activations.shape)}, "  # type: ignore
                 f"expected {expected[granularity]}"
+            )
+
+        if is2D:
+            assert selected_activations.shape == (batch, hidden), (  # type: ignore
+                f"Selected shape mismatch for {granularity}: got {tuple(selected_activations.shape)}, "  # type: ignore
+                f"expected {(batch, hidden)}"
             )
 
         # -----------------------
@@ -760,13 +776,14 @@ if __name__ == "__main__":
     gpt2_model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
     gpt2_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
 
-    test_order_split_points(multi_split_model)
-    test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer)
-    test_activation_equivalence_batched_text_token_inputs(multi_split_model)
-    test_batching(splitted_encoder_ml, sentences * 10, AG.CLS_TOKEN)
-    evaluate_activations_and_gradients("hf-internal-testing/tiny-random-t5", sentences * 100)
-    get_activation_and_gradient(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
-    get_activation_and_gradient(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
-    activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
-    activation_selection_and_reintegration(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
-    test_index_by_layer_idx(multi_split_model)
+    test_activation_selection_and_reintegration_2D_activations(bert_model, bert_tokenizer, sentences)
+    # test_order_split_points(multi_split_model)
+    # test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer)
+    # test_activation_equivalence_batched_text_token_inputs(multi_split_model)
+    # test_batching(splitted_encoder_ml, sentences * 10, AG.CLS_TOKEN)
+    # evaluate_activations_and_gradients("hf-internal-testing/tiny-random-t5", sentences * 100)
+    # get_activation_and_gradient(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
+    # get_activation_and_gradient(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
+    # activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
+    # activation_selection_and_reintegration(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
+    # test_index_by_layer_idx(multi_split_model)
