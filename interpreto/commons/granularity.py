@@ -472,7 +472,7 @@ class Granularity(Enum):
                 continue
 
             # Exception guard (only relevant for '.' abbreviations)
-            if tok_str.endswith(".") and Granularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
+            if ("." in tok_str) and Granularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
                 continue
 
             curr_end = offsets[i][1]
