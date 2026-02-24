@@ -38,6 +38,7 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 # TODO I dont know where to put this...
 END_SENTENCE = (".", "?", "!")
+END_PART_SENTENCE = (",", ";", ":", ".", "!", "?")
 SENTENCE_SPLIT_EXCEPTIONS = (
     "Mr.",
     "Mrs.",
@@ -161,6 +162,7 @@ class Granularity(Enum):
     TOKEN = "token"  # Strictly tokens of the input
     WORD = "word"  # Words of the input
     SENTENCE = "sentence"  # Sentences of the input
+    PART_SENTENCE = "part_sentence"  # Part of sentences, split on ",", ";", ":", ".", "!", "?"
     # PARAGRAPH = "paragraph"  # Not supported yet, the "\n\n" characters are replaced by spaces in many tokenizers.
     DEFAULT = ALL_TOKENS
 
@@ -191,6 +193,8 @@ class Granularity(Enum):
             - ``TOKEN``: Strictly tokens of the input.
 
             - ``WORD``: Tokens are grouped by word.
+
+            - ``PART_SENTENCE``: Tokens are grouped by part of sentence, split on ",", ";", ":", ".", "!", "?".
 
             - ``SENTENCE``: Tokens are grouped by sentence.
 
@@ -260,10 +264,14 @@ class Granularity(Enum):
                     for i in range(n_inputs)
                 ]
 
-            case Granularity.SENTENCE:
+            case Granularity.PART_SENTENCE | Granularity.SENTENCE:
+                if self is Granularity.PART_SENTENCE:
+                    split = END_PART_SENTENCE
+                else:
+                    split = END_SENTENCE
                 if tokenizer is None:
                     raise ValueError(
-                        "Cannot get indices without a tokenizer if granularity is SENTENCE."
+                        "Cannot get indices without a tokenizer if granularity is PART_SENTENCE."
                         + "Please provide a tokenizer or set granularity to ALL_TOKENS."
                     )
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
@@ -273,12 +281,16 @@ class Granularity(Enum):
                             inputs["input_ids"][i],  # type: ignore
                             inputs.encodings[i].offsets,  # type: ignore[attr-defined]
                             tokenizer,
+                            split,  # type: ignore
                         )
                         for i in range(n_inputs)
                     ]
-
                 return [
-                    Granularity.__sentence_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
+                    Granularity.__sentence_get_indices_from_input_ids(
+                        inputs["input_ids"][i],  # type: ignore
+                        tokenizer,
+                        split,  # type: ignore
+                    )
                     for i in range(n_inputs)
                 ]
 
@@ -426,6 +438,7 @@ class Granularity(Enum):
         input_ids: torch.Tensor,
         offsets: list[tuple[int, int]],
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+        split: list[str],
     ) -> list[list[int]]:
         """
         Split ONLY when there is an end-of-sentence punctuation (., ?, !) followed by whitespace
@@ -454,8 +467,8 @@ class Granularity(Enum):
                 continue
 
             # IMPORTANT: accept tokens like "Ġ!!", "...", "Ġ?", etc.
-            if not any(p in tok_str for p in END_SENTENCE):  # type: ignore
-                # if not tok_str.endswith(END_SENTENCE):  # type: ignore[arg-type]
+            if not any(p in tok_str for p in split):  # type: ignore
+                # if not tok_str.endswith(split):  # type: ignore[arg-type]
                 continue
 
             # Exception guard (only relevant for '.' abbreviations)
@@ -486,6 +499,7 @@ class Granularity(Enum):
     def __sentence_get_indices_from_input_ids(
         input_ids: list[int] | torch.Tensor,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+        split: list[str],
     ) -> list[list[int]]:
         """
         Basic tokenizers (no offsets): simple split when we see ".", "?" or "!".
@@ -512,7 +526,7 @@ class Granularity(Enum):
             current_sentence.append(i)
 
             # Fallback rule: split on end-of-sentence (".", "?", "!") punctuation suffix.
-            if not any(p in tok_str for p in END_SENTENCE):  # type: ignore
+            if not any(p in tok_str for p in split):  # type: ignore
                 continue
 
             # Exception guard (prevents splitting inside 'U.S.' etc.)
@@ -753,7 +767,7 @@ class Granularity(Enum):
                     # convert contribution to tensor for faster indexing
                     indices = torch.tensor(sample_indices).squeeze(1)
                     contribution = contribution[:, indices]
-                case Granularity.WORD | Granularity.SENTENCE:
+                case Granularity.WORD | Granularity.PART_SENTENCE | Granularity.SENTENCE:
                     # verify aggregation strategy is not None:
                     if granularity_aggregation_strategy is None:
                         raise ValueError(
@@ -823,7 +837,7 @@ class Granularity(Enum):
                         # convert contribution to tensor for faster indexing
                         indices = torch.tensor(target_indices).squeeze(1)
                         contribution = contribution[indices, :]
-                case Granularity.WORD | Granularity.SENTENCE:
+                case Granularity.WORD | Granularity.PART_SENTENCE | Granularity.SENTENCE:
                     # verify aggregation strategy is not None:
                     if granularity_aggregation_strategy is None:
                         raise ValueError(
