@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 
 import pytest
@@ -327,6 +328,89 @@ def test_sentence_granularities_indices_part_sentence(complex_text, real_bert_to
     part_sent_idx = Granularity.PART_SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
 
     assert len(part_sent_idx) == 7, f"Expected 7 part-sentences, got {len(part_sent_idx)}"
+
+
+def test_sentence_part_sentence_granularity_with_different_tokenizers():
+    def assert_segment_matches(repo_id: str, segment: str, ref: str):
+        seg = segment.lower()
+
+        # Allow an optional leading newline for the "This is the end..." sentence
+        if ref == "this is the end of the test!!!":
+            seg = seg.lstrip("\n")
+            assert ref in seg, f"Expected '{ref}' in segment '{segment}' for tokenizer {repo_id}"
+
+        # Allow "url.com" OR "url. com" (optional space after the dot) for the URL sentence
+        elif ref == "this url.com is?":
+            assert re.search(r"this url\. ?com is\?", seg), (
+                f"Expected '{ref}' (or 'this url. com is?') in segment '{segment}' for tokenizer {repo_id}"
+            )
+
+        # Default strict containment check for other sentences
+        else:
+            assert ref in seg, f"Expected '{ref}' in segment '{segment}' for tokenizer {repo_id}"
+
+    for repo_id in [
+        "hf-internal-testing/tiny-random-bert",
+        "hf-internal-testing/tiny-random-gpt2",
+        "hf-internal-testing/tiny-random-roberta",
+        "hf-internal-testing/tiny-random-t5",
+        "hf-internal-testing/tiny-random-MistralForCausalLM",
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+    ]:
+        tokenizer = AutoTokenizer.from_pretrained(repo_id)
+        text = "This is : a test. Mr. is this a test?\nThis is the end of the test!!! Or, is it?! This url.com is?"
+
+        tokens = tokenizer(text, return_tensors="pt", return_offsets_mapping=True)
+
+        # --- SENTENCE granularity ---
+        sent_idx = Granularity.SENTENCE.get_indices(tokens, tokenizer)[0]
+        sent_text = Granularity.SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
+
+        assert len(sent_idx) == 5, (
+            f"[SENTENCE] Expected 5 sentences, got {len(sent_idx)} for tokenizer {repo_id}",
+            f"{sent_text}",
+        )
+
+        expected_sent = [
+            "this is : a test.",
+            "mr. is this a test?",
+            "this is the end of the test!!!",
+            "or, is it?!",
+            "this url.com is?",
+        ]
+
+        for segment, ref in zip(sent_text, expected_sent, strict=True):
+            assert_segment_matches(repo_id, segment, ref)
+
+        # --- PART_SENTENCE granularity (also splits on ',' and ':') ---
+        part_idx = Granularity.PART_SENTENCE.get_indices(tokens, tokenizer)[0]
+        part_text = Granularity.PART_SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
+
+        # We expect extra splits due to ',' and ':' :
+        assert len(part_idx) == 7, (
+            f"[PART_SENTENCE] Expected 7 segments, got {len(part_idx)} for tokenizer {repo_id}",
+            f"{part_text}",
+        )
+
+        expected_part = [
+            "this is :",
+            "a test.",
+            "mr. is this a test?",
+            "this is the end of the test!!!",
+            "or,",
+            "is it?!",
+            "this url.com is?",
+        ]
+
+        for segment, ref in zip(part_text, expected_part, strict=True):
+            seg = segment.lower()
+
+            # Allow an optional leading newline on the first chunk after the line break
+            if ref == "this is the end of the test!!!":
+                seg = seg.lstrip("\n")
+                assert ref in seg, f"Expected '{ref}' in segment '{segment}' for tokenizer {repo_id}"
+            else:
+                assert_segment_matches(repo_id, segment, ref)
 
 
 def test_sentence_granularities_matrices_and_decomposition(complex_text, real_bert_tokenizer):
