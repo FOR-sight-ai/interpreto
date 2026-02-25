@@ -66,7 +66,7 @@ def simple_text():
 @pytest.fixture(scope="module")
 def complex_text():
     """5 sentences and 7 part‑sentences, with various punctuation and spacing."""
-    return "Although it was raining, we went for a walk. Mr. Smith was with us... We took umbrellas? This is url.com and I love, this !?! Ahah!"
+    return "Although it was raining, we went for a walk. Mr. Smith was with us... We took umbrellas?\nThis is url.com and I love, this !?! Ahah!"
 
 
 # ----------------------------------------

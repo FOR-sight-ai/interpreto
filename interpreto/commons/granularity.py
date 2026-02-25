@@ -362,6 +362,16 @@ class Granularity(Enum):
         return None
 
     @staticmethod
+    def __starts_with_space_marker(token: str) -> bool:
+        """
+        Detect "whitespace is part of the next token" across common tokenization schemes:
+          - SentencePiece: '▁'
+          - GPT2 BPE: 'Ġ'
+          - Literal leading space: ' '
+        """
+        return token.startswith(("▁", "Ġ", " "))
+
+    @staticmethod
     def __decode_one(tokenizer: PreTrainedTokenizer, tok_id: int) -> str:
         """
         Decode a single token id without normalizing spaces, to reliably detect leading whitespace/newlines.
@@ -478,14 +488,19 @@ class Granularity(Enum):
             curr_end = offsets[i][1]
             next_start = offsets[j][0]
 
-            # Primary rule (BERT-like tokenizers): real gap means whitespace between spans
+            # 1) Offsets-based whitespace (works well for BERT-like tokenizers)
             has_whitespace_after = (next_start - curr_end) >= 1
 
-            # GPT2-like tokenizers: whitespace may be inside the next token, so gap can be 0.
+            # 2) Decode-based whitespace (works well for GPT2-like tokenizers and newline tokens)
             if not has_whitespace_after:
-                next_piece = Granularity.__decode_one(tokenizer, ids[j])
+                next_piece = Granularity.__decode_one(tokenizer, ids[j])  # type: ignore
                 has_whitespace_after = bool(next_piece) and next_piece[0].isspace()
 
+            # 3) Token-string space marker (fixes SentencePiece/LLaMA/Mistral: tokens like "▁Is")
+            if not has_whitespace_after:
+                has_whitespace_after = Granularity.__starts_with_space_marker(tokens[j])
+
+            # If punctuation is followed by whitespace, start a new group
             if has_whitespace_after:
                 indices.append(current_sentence)
                 current_sentence = []
@@ -535,8 +550,13 @@ class Granularity(Enum):
 
             # Avoid splitting 3 times for "..." when it is tokenized as ".", ".", "."
             j = Granularity.__next_non_special(i + 1, ids, special_ids)
-            if j is not None and tokens[j].startswith("."):
-                continue  # still in a run of dots
+            # if j is not None and tokens[j].startswith("."):
+            #    continue  # still in a run of dots
+            if j is not None:
+                last_char = tok_str[-1]
+                next_tok = tokens[j].lstrip("▁Ġ ")
+                if next_tok.startswith(last_char):
+                    continue
 
             indices.append(current_sentence)
             current_sentence = []
