@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -3356,7 +3356,8 @@ get the word activations for the tenth layer, skip special tokens, and aggregate
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>interpreto/model_wrapping/model_with_split_points.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-266">266</a></span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-265">265</a></span>
+<span class="normal"><a href="#__codelineno-0-266">266</a></span>
 <span class="normal"><a href="#__codelineno-0-267">267</a></span>
 <span class="normal"><a href="#__codelineno-0-268">268</a></span>
 <span class="normal"><a href="#__codelineno-0-269">269</a></span>
@@ -3432,85 +3433,84 @@ get the word activations for the tenth layer, skip special tokens, and aggregate
 <span class="normal"><a href="#__codelineno-0-339">339</a></span>
 <span class="normal"><a href="#__codelineno-0-340">340</a></span>
 <span class="normal"><a href="#__codelineno-0-341">341</a></span>
-<span class="normal"><a href="#__codelineno-0-342">342</a></span>
-<span class="normal"><a href="#__codelineno-0-343">343</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="n">model_or_repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">PreTrainedModel</span><span class="p">,</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="n">split_points</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="n">automodel</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">AutoModel</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a>    <span class="n">tokenizer</span><span class="p">:</span> <span class="n">PreTrainedTokenizer</span> <span class="o">|</span> <span class="n">PreTrainedTokenizerFast</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a>    <span class="n">config</span><span class="p">:</span> <span class="n">PretrainedConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="n">device_map</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="n">output_tuple_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a>    <span class="c1"># For parameters list, see class docstring. It was moved to change the order in the documentation.</span>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize a ModelWithSplitPoints object.</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">    Most of the work is forwarded to the `LanguageModel` class initialization from NNsight.</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">        InitializationError (ValueError): If the model cannot be loaded, because of a missing `tokenizer` or `automodel`.</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">        ValueError: If the `device_map` is set to &#39;auto&#39; and the model is not a generation model.</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">        TypeError: If the `model_or_repo_id` is not a `str` or a `transformers.PreTrainedModel`.</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">,</span> <span class="n">PreTrainedModel</span><span class="p">):</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a>        <span class="k">if</span> <span class="n">tokenizer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a>            <span class="k">raise</span> <span class="n">InitializationError</span><span class="p">(</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a>                <span class="s2">&quot;Tokenizer is not set. When providing a model instance, the tokenizer must be set.&quot;</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>            <span class="p">)</span>
-<a id="__codelineno-0-294" name="__codelineno-0-294"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># Repository ID</span>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a>        <span class="k">if</span> <span class="n">automodel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a>            <span class="k">raise</span> <span class="n">InitializationError</span><span class="p">(</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>                <span class="s2">&quot;Model autoclass not found.</span><span class="se">\n</span><span class="s2">&quot;</span>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a>                <span class="s2">&quot;The model class can be omitted if a pre-loaded model is passed to `model_or_repo_id` &quot;</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a>                <span class="s2">&quot;param.</span><span class="se">\n</span><span class="s2">If an HF Hub ID is used, the corresponding autoclass must be specified in `automodel`.</span><span class="se">\n</span><span class="s2">&quot;</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a>                <span class="s2">&quot;Example: ModelWithSplitPoints(&#39;bert-base-uncased&#39;, automodel=AutoModelForMaskedLM, ...)&quot;</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>            <span class="p">)</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a>            <span class="sa">f</span><span class="s2">&quot;Invalid model_or_repo_id type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>            <span class="s2">&quot;Expected `str` or `transformers.PreTrainedModel`.&quot;</span>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a>        <span class="p">)</span>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="c1"># Handles model loading through nnsight.LanguageModel._load</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a>        <span class="n">model_or_repo_id</span><span class="p">,</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="o">*</span><span class="n">args</span><span class="p">,</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a>        <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span>  <span class="c1"># type: ignore (under specification from NNsight)</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a>        <span class="n">automodel</span><span class="o">=</span><span class="n">automodel</span><span class="p">,</span>  <span class="c1"># type: ignore (under specification from NNsight)</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a>        <span class="n">device_map</span><span class="o">=</span><span class="n">device_map</span><span class="p">,</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a>        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a>    <span class="p">)</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a>    <span class="c1"># set split points</span>
-<a id="__codelineno-0-320" name="__codelineno-0-320"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_model_paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">walk_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">))</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span> <span class="o">=</span> <span class="n">split_points</span>  <span class="c1"># this uses the setter which handles validation</span>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">:</span> <span class="n">PreTrainedModel</span>  <span class="c1"># specify type of `_model` attribute from NNsight</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">repo_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">repo_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name_or_path</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>        <span class="c1"># `device_map` is ignored by `nnsight` in this case, hence we manage it manually</span>
-<a id="__codelineno-0-329" name="__codelineno-0-329"></a>        <span class="k">if</span> <span class="n">device_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a>            <span class="k">if</span> <span class="n">device_map</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a>                    <span class="s2">&quot;&#39;auto&#39; device_map is only supported when loading a generation model from a repository id. &quot;</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>                    <span class="s2">&quot;Please specify a device_map, e.g. &#39;cuda&#39; or &#39;cpu&#39;.&quot;</span>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a>                <span class="p">)</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a>                <span class="c1"># pass the provided model to the specified device</span>
-<a id="__codelineno-0-336" name="__codelineno-0-336"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device_map</span><span class="p">)</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a>            <span class="c1"># we leave the model on its device</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a>            <span class="k">pass</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>
-<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Tokenizer is not set. When providing a model instance, the tokenizer must be set.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">output_tuple_index</span> <span class="o">=</span> <span class="n">output_tuple_index</span>
+<span class="normal"><a href="#__codelineno-0-342">342</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="n">model_or_repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">PreTrainedModel</span><span class="p">,</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="n">split_points</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="n">automodel</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">AutoModel</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="n">tokenizer</span><span class="p">:</span> <span class="n">PreTrainedTokenizer</span> <span class="o">|</span> <span class="n">PreTrainedTokenizerFast</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a>    <span class="n">config</span><span class="p">:</span> <span class="n">PretrainedConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="n">device_map</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="n">output_tuple_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a>    <span class="c1"># For parameters list, see class docstring. It was moved to change the order in the documentation.</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize a ModelWithSplitPoints object.</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">    Most of the work is forwarded to the `LanguageModel` class initialization from NNsight.</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">        InitializationError (ValueError): If the model cannot be loaded, because of a missing `tokenizer` or `automodel`.</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a><span class="sd">        ValueError: If the `device_map` is set to &#39;auto&#39; and the model is not a generation model.</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">        TypeError: If the `model_or_repo_id` is not a `str` or a `transformers.PreTrainedModel`.</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">,</span> <span class="n">PreTrainedModel</span><span class="p">):</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a>        <span class="k">if</span> <span class="n">tokenizer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a>            <span class="k">raise</span> <span class="n">InitializationError</span><span class="p">(</span>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a>                <span class="s2">&quot;Tokenizer is not set. When providing a model instance, the tokenizer must be set.&quot;</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a>            <span class="p">)</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># Repository ID</span>
+<a id="__codelineno-0-294" name="__codelineno-0-294"></a>        <span class="k">if</span> <span class="n">automodel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a>            <span class="k">raise</span> <span class="n">InitializationError</span><span class="p">(</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a>                <span class="s2">&quot;Model autoclass not found.</span><span class="se">\n</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-297" name="__codelineno-0-297"></a>                <span class="s2">&quot;The model class can be omitted if a pre-loaded model is passed to `model_or_repo_id` &quot;</span>
+<a id="__codelineno-0-298" name="__codelineno-0-298"></a>                <span class="s2">&quot;param.</span><span class="se">\n</span><span class="s2">If an HF Hub ID is used, the corresponding autoclass must be specified in `automodel`.</span><span class="se">\n</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>                <span class="s2">&quot;Example: ModelWithSplitPoints(&#39;bert-base-uncased&#39;, automodel=AutoModelForMaskedLM, ...)&quot;</span>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a>            <span class="p">)</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>            <span class="sa">f</span><span class="s2">&quot;Invalid model_or_repo_id type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">)</span><span class="si">}</span><span class="s2">. &quot;</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a>            <span class="s2">&quot;Expected `str` or `transformers.PreTrainedModel`.&quot;</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>        <span class="p">)</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a>    <span class="c1"># Handles model loading through nnsight.LanguageModel._load</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a>        <span class="n">model_or_repo_id</span><span class="p">,</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a>        <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>        <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span>  <span class="c1"># type: ignore (under specification from NNsight)</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="n">automodel</span><span class="o">=</span><span class="n">automodel</span><span class="p">,</span>  <span class="c1"># type: ignore (under specification from NNsight)</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>        <span class="n">device_map</span><span class="o">=</span><span class="n">device_map</span><span class="p">,</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>    <span class="p">)</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>    <span class="c1"># set split points</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_model_paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">walk_modules</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">))</span>
+<a id="__codelineno-0-320" name="__codelineno-0-320"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span> <span class="o">=</span> <span class="n">split_points</span>  <span class="c1"># this uses the setter which handles validation</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">:</span> <span class="n">PreTrainedModel</span>  <span class="c1"># specify type of `_model` attribute from NNsight</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">repo_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">repo_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">name_or_path</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>        <span class="c1"># `device_map` is ignored by `nnsight` in this case, hence we manage it manually</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>        <span class="k">if</span> <span class="n">device_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>            <span class="k">if</span> <span class="n">device_map</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>                    <span class="s2">&quot;&#39;auto&#39; device_map is only supported when loading a generation model from a repository id. &quot;</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>                    <span class="s2">&quot;Please specify a device_map, e.g. &#39;cuda&#39; or &#39;cpu&#39;.&quot;</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>                <span class="p">)</span>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>                <span class="c1"># pass the provided model to the specified device</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device_map</span><span class="p">)</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>            <span class="c1"># we leave the model on its device</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>            <span class="k">pass</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Tokenizer is not set. When providing a model instance, the tokenizer must be set.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">output_tuple_index</span> <span class="o">=</span> <span class="n">output_tuple_index</span>
 </code></pre></div></td></tr></table></div>
                   </details>
 
@@ -3660,8 +3660,7 @@ The parameter <code>aggregation_strategy</code> specifies how the activations ar
     special tokens are removed and the remaining ones are aggregate by sentences.
     Then the activations are flattened.
     <code>(n x g, d)</code> where <code>g</code> is the number of sentences in the input.
-    The split is defined by <code>interpreto.commons.granularity.Granularity.SENTENCE</code>.
-    Requires <code>spacy</code> to be installed.</p>
+    The split is defined by <code>interpreto.commons.granularity.Granularity.SENTENCE</code>.</p>
 </li>
 <li>
 <p><code>ModelWithSplitPoints.activation_granularities.TOKEN</code>:
@@ -3850,7 +3849,8 @@ for the given <code>inputs</code>.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/model_wrapping/model_with_split_points.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-756"> 756</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-755"> 755</a></span>
+<span class="normal"><a href="#__codelineno-0-756"> 756</a></span>
 <span class="normal"><a href="#__codelineno-0-757"> 757</a></span>
 <span class="normal"><a href="#__codelineno-0-758"> 758</a></span>
 <span class="normal"><a href="#__codelineno-0-759"> 759</a></span>
@@ -4130,291 +4130,288 @@ for the given <code>inputs</code>.</p>
 <span class="normal"><a href="#__codelineno-0-1033">1033</a></span>
 <span class="normal"><a href="#__codelineno-0-1034">1034</a></span>
 <span class="normal"><a href="#__codelineno-0-1035">1035</a></span>
-<span class="normal"><a href="#__codelineno-0-1036">1036</a></span>
-<span class="normal"><a href="#__codelineno-0-1037">1037</a></span>
-<span class="normal"><a href="#__codelineno-0-1038">1038</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-756" name="__codelineno-0-756"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_activations</span><span class="p">(</span>  <span class="c1"># noqa: PLR0912  # ignore too many branches  # too many special cases</span>
-<a id="__codelineno-0-757" name="__codelineno-0-757"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-758" name="__codelineno-0-758"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="n">BatchEncoding</span><span class="p">,</span>
-<a id="__codelineno-0-759" name="__codelineno-0-759"></a>    <span class="n">activation_granularity</span><span class="p">:</span> <span class="n">ActivationGranularity</span><span class="p">,</span>
-<a id="__codelineno-0-760" name="__codelineno-0-760"></a>    <span class="n">aggregation_strategy</span><span class="p">:</span> <span class="n">GranularityAggregationStrategy</span> <span class="o">=</span> <span class="n">GranularityAggregationStrategy</span><span class="o">.</span><span class="n">MEAN</span><span class="p">,</span>
-<a id="__codelineno-0-761" name="__codelineno-0-761"></a>    <span class="n">pad_side</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-762" name="__codelineno-0-762"></a>    <span class="n">tqdm_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-763" name="__codelineno-0-763"></a>    <span class="n">include_predicted_classes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-764" name="__codelineno-0-764"></a>    <span class="n">flatten_activations</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-765" name="__codelineno-0-765"></a>    <span class="n">model_forward_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span>
-<a id="__codelineno-0-766" name="__codelineno-0-766"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LatentActivations</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">LatentActivations</span><span class="p">]]:</span>
-<a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-768" name="__codelineno-0-768"></a>
-<a id="__codelineno-0-769" name="__codelineno-0-769"></a><span class="sd">    Get intermediate activations for all model split points on the given `inputs`.</span>
-<a id="__codelineno-0-770" name="__codelineno-0-770"></a>
-<a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">    Also include the model predictions in the returned activations dictionary.</span>
-<a id="__codelineno-0-772" name="__codelineno-0-772"></a>
-<a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">        inputs list[str] | torch.Tensor | BatchEncoding:</span>
-<a id="__codelineno-0-775" name="__codelineno-0-775"></a><span class="sd">            Inputs to the model forward pass before or after tokenization.</span>
-<a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">            In the case of a `torch.Tensor`, we assume a batch dimension and token ids.</span>
-<a id="__codelineno-0-777" name="__codelineno-0-777"></a>
-<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">        activation_granularity (ActivationGranularity):</span>
-<a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">            Selection strategy for activations.</span>
-<a id="__codelineno-0-780" name="__codelineno-0-780"></a><span class="sd">            In the model, activations have the shape `(n, l, d)`, where `d` is the model dimension.</span>
-<a id="__codelineno-0-781" name="__codelineno-0-781"></a><span class="sd">            This parameters specifies which elements of these tensors are selected.</span>
-<a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="sd">            If the granularity is larger then tokens, i.e. words and sentences, the activations are aggregated.</span>
-<a id="__codelineno-0-783" name="__codelineno-0-783"></a><span class="sd">            The parameter `aggregation_strategy` specifies how the activations are aggregated.</span>
-<a id="__codelineno-0-784" name="__codelineno-0-784"></a>
-<a id="__codelineno-0-785" name="__codelineno-0-785"></a><span class="sd">            **It is highly recommended to use `CLS_TOKEN` for classification tasks and `TOKEN` for other tasks.**</span>
-<a id="__codelineno-0-786" name="__codelineno-0-786"></a>
-<a id="__codelineno-0-787" name="__codelineno-0-787"></a><span class="sd">            Available options are:</span>
-<a id="__codelineno-0-788" name="__codelineno-0-788"></a>
-<a id="__codelineno-0-789" name="__codelineno-0-789"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:</span>
-<a id="__codelineno-0-790" name="__codelineno-0-790"></a><span class="sd">                the raw activations are flattened ``(n x l, d)``.</span>
-<a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">                Hence, each token activation is now considered as a separate element.</span>
-<a id="__codelineno-0-792" name="__codelineno-0-792"></a><span class="sd">                This includes special tokens such as [CLS], [SEP], [EOS], [PAD], etc.</span>
-<a id="__codelineno-0-793" name="__codelineno-0-793"></a>
-<a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:</span>
-<a id="__codelineno-0-795" name="__codelineno-0-795"></a><span class="sd">                for each sample, only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.</span>
-<a id="__codelineno-0-796" name="__codelineno-0-796"></a><span class="sd">                This will raise an error if the model is not `ForSequenceClassification`.</span>
-<a id="__codelineno-0-797" name="__codelineno-0-797"></a>
-<a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.SAMPLE``:</span>
-<a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">                special tokens are removed and the remaining ones are aggregated on the whole sample ``(n, d)``.</span>
-<a id="__codelineno-0-800" name="__codelineno-0-800"></a>
-<a id="__codelineno-0-801" name="__codelineno-0-801"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:</span>
-<a id="__codelineno-0-802" name="__codelineno-0-802"></a><span class="sd">                special tokens are removed and the remaining ones are aggregate by sentences.</span>
-<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">                Then the activations are flattened.</span>
-<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">                ``(n x g, d)`` where `g` is the number of sentences in the input.</span>
-<a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="sd">                The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.</span>
-<a id="__codelineno-0-806" name="__codelineno-0-806"></a><span class="sd">                Requires `spacy` to be installed.</span>
-<a id="__codelineno-0-807" name="__codelineno-0-807"></a>
-<a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.TOKEN``:</span>
-<a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="sd">                the raw activations are flattened, but the special tokens are removed.</span>
-<a id="__codelineno-0-810" name="__codelineno-0-810"></a><span class="sd">                ``(n x g, d)`` where `g` is the number of non-special tokens in the input.</span>
-<a id="__codelineno-0-811" name="__codelineno-0-811"></a><span class="sd">                This is the default granularity.</span>
-<a id="__codelineno-0-812" name="__codelineno-0-812"></a>
-<a id="__codelineno-0-813" name="__codelineno-0-813"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.WORD``:</span>
-<a id="__codelineno-0-814" name="__codelineno-0-814"></a><span class="sd">                the special tokens are removed and the remaining ones are aggregate by words.</span>
-<a id="__codelineno-0-815" name="__codelineno-0-815"></a><span class="sd">                Then the activations are flattened.</span>
-<a id="__codelineno-0-816" name="__codelineno-0-816"></a><span class="sd">                ``(n x g, d)`` where `g` is the number of words in the input.</span>
-<a id="__codelineno-0-817" name="__codelineno-0-817"></a><span class="sd">                The split is defined by `interpreto.commons.granularity.Granularity.WORD`.</span>
-<a id="__codelineno-0-818" name="__codelineno-0-818"></a>
-<a id="__codelineno-0-819" name="__codelineno-0-819"></a><span class="sd">        aggregation_strategy (GranularityAggregationStrategy):</span>
-<a id="__codelineno-0-820" name="__codelineno-0-820"></a><span class="sd">            Strategy to aggregate token activations into larger inputs granularities.</span>
-<a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="sd">            Applied for `WORD`, `SENTENCE` and `SAMPLE` activation strategies.</span>
-<a id="__codelineno-0-822" name="__codelineno-0-822"></a><span class="sd">            Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.</span>
-<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">            The concatenated into (ng, d) tensors.</span>
+<span class="normal"><a href="#__codelineno-0-1036">1036</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-755" name="__codelineno-0-755"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_activations</span><span class="p">(</span>  <span class="c1"># noqa: PLR0912  # ignore too many branches  # too many special cases</span>
+<a id="__codelineno-0-756" name="__codelineno-0-756"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-757" name="__codelineno-0-757"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="n">BatchEncoding</span><span class="p">,</span>
+<a id="__codelineno-0-758" name="__codelineno-0-758"></a>    <span class="n">activation_granularity</span><span class="p">:</span> <span class="n">ActivationGranularity</span><span class="p">,</span>
+<a id="__codelineno-0-759" name="__codelineno-0-759"></a>    <span class="n">aggregation_strategy</span><span class="p">:</span> <span class="n">GranularityAggregationStrategy</span> <span class="o">=</span> <span class="n">GranularityAggregationStrategy</span><span class="o">.</span><span class="n">MEAN</span><span class="p">,</span>
+<a id="__codelineno-0-760" name="__codelineno-0-760"></a>    <span class="n">pad_side</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-761" name="__codelineno-0-761"></a>    <span class="n">tqdm_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-762" name="__codelineno-0-762"></a>    <span class="n">include_predicted_classes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-763" name="__codelineno-0-763"></a>    <span class="n">flatten_activations</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-764" name="__codelineno-0-764"></a>    <span class="n">model_forward_kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{},</span>
+<a id="__codelineno-0-765" name="__codelineno-0-765"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LatentActivations</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">LatentActivations</span><span class="p">]]:</span>
+<a id="__codelineno-0-766" name="__codelineno-0-766"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-767" name="__codelineno-0-767"></a>
+<a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">    Get intermediate activations for all model split points on the given `inputs`.</span>
+<a id="__codelineno-0-769" name="__codelineno-0-769"></a>
+<a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">    Also include the model predictions in the returned activations dictionary.</span>
+<a id="__codelineno-0-771" name="__codelineno-0-771"></a>
+<a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">        inputs list[str] | torch.Tensor | BatchEncoding:</span>
+<a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">            Inputs to the model forward pass before or after tokenization.</span>
+<a id="__codelineno-0-775" name="__codelineno-0-775"></a><span class="sd">            In the case of a `torch.Tensor`, we assume a batch dimension and token ids.</span>
+<a id="__codelineno-0-776" name="__codelineno-0-776"></a>
+<a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="sd">        activation_granularity (ActivationGranularity):</span>
+<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="sd">            Selection strategy for activations.</span>
+<a id="__codelineno-0-779" name="__codelineno-0-779"></a><span class="sd">            In the model, activations have the shape `(n, l, d)`, where `d` is the model dimension.</span>
+<a id="__codelineno-0-780" name="__codelineno-0-780"></a><span class="sd">            This parameters specifies which elements of these tensors are selected.</span>
+<a id="__codelineno-0-781" name="__codelineno-0-781"></a><span class="sd">            If the granularity is larger then tokens, i.e. words and sentences, the activations are aggregated.</span>
+<a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="sd">            The parameter `aggregation_strategy` specifies how the activations are aggregated.</span>
+<a id="__codelineno-0-783" name="__codelineno-0-783"></a>
+<a id="__codelineno-0-784" name="__codelineno-0-784"></a><span class="sd">            **It is highly recommended to use `CLS_TOKEN` for classification tasks and `TOKEN` for other tasks.**</span>
+<a id="__codelineno-0-785" name="__codelineno-0-785"></a>
+<a id="__codelineno-0-786" name="__codelineno-0-786"></a><span class="sd">            Available options are:</span>
+<a id="__codelineno-0-787" name="__codelineno-0-787"></a>
+<a id="__codelineno-0-788" name="__codelineno-0-788"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:</span>
+<a id="__codelineno-0-789" name="__codelineno-0-789"></a><span class="sd">                the raw activations are flattened ``(n x l, d)``.</span>
+<a id="__codelineno-0-790" name="__codelineno-0-790"></a><span class="sd">                Hence, each token activation is now considered as a separate element.</span>
+<a id="__codelineno-0-791" name="__codelineno-0-791"></a><span class="sd">                This includes special tokens such as [CLS], [SEP], [EOS], [PAD], etc.</span>
+<a id="__codelineno-0-792" name="__codelineno-0-792"></a>
+<a id="__codelineno-0-793" name="__codelineno-0-793"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:</span>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a><span class="sd">                for each sample, only the first token (e.g. ``[CLS]``) activation is returned ``(n, d)``.</span>
+<a id="__codelineno-0-795" name="__codelineno-0-795"></a><span class="sd">                This will raise an error if the model is not `ForSequenceClassification`.</span>
+<a id="__codelineno-0-796" name="__codelineno-0-796"></a>
+<a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.SAMPLE``:</span>
+<a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="sd">                special tokens are removed and the remaining ones are aggregated on the whole sample ``(n, d)``.</span>
+<a id="__codelineno-0-799" name="__codelineno-0-799"></a>
+<a id="__codelineno-0-800" name="__codelineno-0-800"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:</span>
+<a id="__codelineno-0-801" name="__codelineno-0-801"></a><span class="sd">                special tokens are removed and the remaining ones are aggregate by sentences.</span>
+<a id="__codelineno-0-802" name="__codelineno-0-802"></a><span class="sd">                Then the activations are flattened.</span>
+<a id="__codelineno-0-803" name="__codelineno-0-803"></a><span class="sd">                ``(n x g, d)`` where `g` is the number of sentences in the input.</span>
+<a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="sd">                The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.</span>
+<a id="__codelineno-0-805" name="__codelineno-0-805"></a>
+<a id="__codelineno-0-806" name="__codelineno-0-806"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.TOKEN``:</span>
+<a id="__codelineno-0-807" name="__codelineno-0-807"></a><span class="sd">                the raw activations are flattened, but the special tokens are removed.</span>
+<a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">                ``(n x g, d)`` where `g` is the number of non-special tokens in the input.</span>
+<a id="__codelineno-0-809" name="__codelineno-0-809"></a><span class="sd">                This is the default granularity.</span>
+<a id="__codelineno-0-810" name="__codelineno-0-810"></a>
+<a id="__codelineno-0-811" name="__codelineno-0-811"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.WORD``:</span>
+<a id="__codelineno-0-812" name="__codelineno-0-812"></a><span class="sd">                the special tokens are removed and the remaining ones are aggregate by words.</span>
+<a id="__codelineno-0-813" name="__codelineno-0-813"></a><span class="sd">                Then the activations are flattened.</span>
+<a id="__codelineno-0-814" name="__codelineno-0-814"></a><span class="sd">                ``(n x g, d)`` where `g` is the number of words in the input.</span>
+<a id="__codelineno-0-815" name="__codelineno-0-815"></a><span class="sd">                The split is defined by `interpreto.commons.granularity.Granularity.WORD`.</span>
+<a id="__codelineno-0-816" name="__codelineno-0-816"></a>
+<a id="__codelineno-0-817" name="__codelineno-0-817"></a><span class="sd">        aggregation_strategy (GranularityAggregationStrategy):</span>
+<a id="__codelineno-0-818" name="__codelineno-0-818"></a><span class="sd">            Strategy to aggregate token activations into larger inputs granularities.</span>
+<a id="__codelineno-0-819" name="__codelineno-0-819"></a><span class="sd">            Applied for `WORD`, `SENTENCE` and `SAMPLE` activation strategies.</span>
+<a id="__codelineno-0-820" name="__codelineno-0-820"></a><span class="sd">            Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.</span>
+<a id="__codelineno-0-821" name="__codelineno-0-821"></a><span class="sd">            The concatenated into (ng, d) tensors.</span>
+<a id="__codelineno-0-822" name="__codelineno-0-822"></a>
+<a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="sd">            Existing strategies are:</span>
 <a id="__codelineno-0-824" name="__codelineno-0-824"></a>
-<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">            Existing strategies are:</span>
-<a id="__codelineno-0-826" name="__codelineno-0-826"></a>
-<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SUM``:</span>
-<a id="__codelineno-0-828" name="__codelineno-0-828"></a><span class="sd">                Tokens activations are summed along the sequence length dimension.</span>
-<a id="__codelineno-0-829" name="__codelineno-0-829"></a>
-<a id="__codelineno-0-830" name="__codelineno-0-830"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:</span>
-<a id="__codelineno-0-831" name="__codelineno-0-831"></a><span class="sd">                Tokens activations are averaged along the sequence length dimension.</span>
-<a id="__codelineno-0-832" name="__codelineno-0-832"></a>
-<a id="__codelineno-0-833" name="__codelineno-0-833"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MAX``:</span>
-<a id="__codelineno-0-834" name="__codelineno-0-834"></a><span class="sd">                The maximum of the token activations along the sequence length dimension is selected.</span>
-<a id="__codelineno-0-835" name="__codelineno-0-835"></a>
-<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:</span>
-<a id="__codelineno-0-837" name="__codelineno-0-837"></a><span class="sd">                The maximum of the absolute value of the activations multiplied by its initial sign.</span>
-<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="sd">                signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]</span>
-<a id="__codelineno-0-839" name="__codelineno-0-839"></a>
-<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">        pad_side (str | None):</span>
-<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">            &#39;left&#39; or &#39;right&#39; — side on which to apply padding along dim=1 only for ALL strategy.</span>
-<a id="__codelineno-0-842" name="__codelineno-0-842"></a><span class="sd">            Forced right for classification models and left for causal LMs.</span>
-<a id="__codelineno-0-843" name="__codelineno-0-843"></a>
-<a id="__codelineno-0-844" name="__codelineno-0-844"></a><span class="sd">        tqdm_bar (bool):</span>
-<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">            Whether to display a progress bar.</span>
-<a id="__codelineno-0-846" name="__codelineno-0-846"></a>
-<a id="__codelineno-0-847" name="__codelineno-0-847"></a><span class="sd">        include_predicted_classes (bool):</span>
-<a id="__codelineno-0-848" name="__codelineno-0-848"></a><span class="sd">            Whether to include the predicted classes in the output dictionary.</span>
-<a id="__codelineno-0-849" name="__codelineno-0-849"></a><span class="sd">            Only applicable for classification models.</span>
-<a id="__codelineno-0-850" name="__codelineno-0-850"></a>
-<a id="__codelineno-0-851" name="__codelineno-0-851"></a><span class="sd">        flatten_activations (bool):</span>
-<a id="__codelineno-0-852" name="__codelineno-0-852"></a><span class="sd">            Whether to flatten the activations tensors.</span>
-<a id="__codelineno-0-853" name="__codelineno-0-853"></a>
-<a id="__codelineno-0-854" name="__codelineno-0-854"></a><span class="sd">            - If True, the activations will be flattened from (n, l, d) to (n x l, d).</span>
-<a id="__codelineno-0-855" name="__codelineno-0-855"></a><span class="sd">                It allows stocking the activations for a given layer in a single tensor.</span>
+<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SUM``:</span>
+<a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">                Tokens activations are summed along the sequence length dimension.</span>
+<a id="__codelineno-0-827" name="__codelineno-0-827"></a>
+<a id="__codelineno-0-828" name="__codelineno-0-828"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:</span>
+<a id="__codelineno-0-829" name="__codelineno-0-829"></a><span class="sd">                Tokens activations are averaged along the sequence length dimension.</span>
+<a id="__codelineno-0-830" name="__codelineno-0-830"></a>
+<a id="__codelineno-0-831" name="__codelineno-0-831"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MAX``:</span>
+<a id="__codelineno-0-832" name="__codelineno-0-832"></a><span class="sd">                The maximum of the token activations along the sequence length dimension is selected.</span>
+<a id="__codelineno-0-833" name="__codelineno-0-833"></a>
+<a id="__codelineno-0-834" name="__codelineno-0-834"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:</span>
+<a id="__codelineno-0-835" name="__codelineno-0-835"></a><span class="sd">                The maximum of the absolute value of the activations multiplied by its initial sign.</span>
+<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="sd">                signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]</span>
+<a id="__codelineno-0-837" name="__codelineno-0-837"></a>
+<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="sd">        pad_side (str | None):</span>
+<a id="__codelineno-0-839" name="__codelineno-0-839"></a><span class="sd">            &#39;left&#39; or &#39;right&#39; — side on which to apply padding along dim=1 only for ALL strategy.</span>
+<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">            Forced right for classification models and left for causal LMs.</span>
+<a id="__codelineno-0-841" name="__codelineno-0-841"></a>
+<a id="__codelineno-0-842" name="__codelineno-0-842"></a><span class="sd">        tqdm_bar (bool):</span>
+<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">            Whether to display a progress bar.</span>
+<a id="__codelineno-0-844" name="__codelineno-0-844"></a>
+<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">        include_predicted_classes (bool):</span>
+<a id="__codelineno-0-846" name="__codelineno-0-846"></a><span class="sd">            Whether to include the predicted classes in the output dictionary.</span>
+<a id="__codelineno-0-847" name="__codelineno-0-847"></a><span class="sd">            Only applicable for classification models.</span>
+<a id="__codelineno-0-848" name="__codelineno-0-848"></a>
+<a id="__codelineno-0-849" name="__codelineno-0-849"></a><span class="sd">        flatten_activations (bool):</span>
+<a id="__codelineno-0-850" name="__codelineno-0-850"></a><span class="sd">            Whether to flatten the activations tensors.</span>
+<a id="__codelineno-0-851" name="__codelineno-0-851"></a>
+<a id="__codelineno-0-852" name="__codelineno-0-852"></a><span class="sd">            - If True, the activations will be flattened from (n, l, d) to (n x l, d).</span>
+<a id="__codelineno-0-853" name="__codelineno-0-853"></a><span class="sd">                It allows stocking the activations for a given layer in a single tensor.</span>
+<a id="__codelineno-0-854" name="__codelineno-0-854"></a>
+<a id="__codelineno-0-855" name="__codelineno-0-855"></a><span class="sd">            - If False, for each layer, a list of sample-wise activations will be returned.</span>
 <a id="__codelineno-0-856" name="__codelineno-0-856"></a>
-<a id="__codelineno-0-857" name="__codelineno-0-857"></a><span class="sd">            - If False, for each layer, a list of sample-wise activations will be returned.</span>
-<a id="__codelineno-0-858" name="__codelineno-0-858"></a>
-<a id="__codelineno-0-859" name="__codelineno-0-859"></a><span class="sd">        model_forward_kwargs (dict):</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a><span class="sd">            Additional keyword arguments passed to the model forward pass.</span>
-<a id="__codelineno-0-861" name="__codelineno-0-861"></a>
-<a id="__codelineno-0-862" name="__codelineno-0-862"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-863" name="__codelineno-0-863"></a><span class="sd">        (dict[str, LatentActivations]) Dictionary having one key, value pair for each split point defined for the model. Keys correspond to split</span>
-<a id="__codelineno-0-864" name="__codelineno-0-864"></a><span class="sd">            names in `self.split_points`, while values correspond to the extracted activations for the split point</span>
-<a id="__codelineno-0-865" name="__codelineno-0-865"></a><span class="sd">            for the given `inputs`.</span>
-<a id="__codelineno-0-866" name="__codelineno-0-866"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-867" name="__codelineno-0-867"></a>    <span class="c1"># set default pad side value and catch unsupported cases</span>
-<a id="__codelineno-0-868" name="__codelineno-0-868"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;ForSequenceClassification&quot;</span><span class="p">):</span>
-<a id="__codelineno-0-869" name="__codelineno-0-869"></a>        <span class="n">pad_side</span> <span class="o">=</span> <span class="s2">&quot;right&quot;</span>
-<a id="__codelineno-0-870" name="__codelineno-0-870"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-871" name="__codelineno-0-871"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;ForCausalLM&quot;</span><span class="p">):</span>
-<a id="__codelineno-0-872" name="__codelineno-0-872"></a>            <span class="n">pad_side</span> <span class="o">=</span> <span class="s2">&quot;left&quot;</span>
-<a id="__codelineno-0-873" name="__codelineno-0-873"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-874" name="__codelineno-0-874"></a>            <span class="n">pad_side</span> <span class="o">=</span> <span class="n">pad_side</span> <span class="ow">or</span> <span class="s2">&quot;left&quot;</span>
-<a id="__codelineno-0-875" name="__codelineno-0-875"></a>        <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
-<a id="__codelineno-0-876" name="__codelineno-0-876"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-877" name="__codelineno-0-877"></a>                <span class="s2">&quot;`include_predicted_classes` is only supported for classification models. &quot;</span>
-<a id="__codelineno-0-878" name="__codelineno-0-878"></a>                <span class="sa">f</span><span class="s2">&quot;Provided model is a </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
-<a id="__codelineno-0-879" name="__codelineno-0-879"></a>            <span class="p">)</span>
-<a id="__codelineno-0-880" name="__codelineno-0-880"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">padding_side</span> <span class="o">=</span> <span class="n">pad_side</span>
-<a id="__codelineno-0-881" name="__codelineno-0-881"></a>
-<a id="__codelineno-0-882" name="__codelineno-0-882"></a>    <span class="c1"># add padding token to vocabulary if not present (model and tokenizer)</span>
-<a id="__codelineno-0-883" name="__codelineno-0-883"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">,</span> <span class="s2">&quot;pad_token&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-884" name="__codelineno-0-884"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">add_special_tokens</span><span class="p">({</span><span class="s2">&quot;pad_token&quot;</span><span class="p">:</span> <span class="s2">&quot;[PAD]&quot;</span><span class="p">})</span>
-<a id="__codelineno-0-885" name="__codelineno-0-885"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">resize_token_embeddings</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">))</span>  <span class="c1"># type: ignore  # weird huggingface typing</span>
-<a id="__codelineno-0-886" name="__codelineno-0-886"></a>
-<a id="__codelineno-0-887" name="__codelineno-0-887"></a>    <span class="c1"># batch inputs</span>
-<a id="__codelineno-0-888" name="__codelineno-0-888"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">BatchEncoding</span><span class="p">):</span>
-<a id="__codelineno-0-889" name="__codelineno-0-889"></a>        <span class="n">batch_generator</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-0-890" name="__codelineno-0-890"></a>        <span class="c1"># manage key by key batching for BatchEncoding</span>
-<a id="__codelineno-0-891" name="__codelineno-0-891"></a>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">):</span>
-<a id="__codelineno-0-892" name="__codelineno-0-892"></a>            <span class="n">end_idx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">))</span>
-<a id="__codelineno-0-893" name="__codelineno-0-893"></a>            <span class="n">batch_generator</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">end_idx</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">inputs</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
-<a id="__codelineno-0-894" name="__codelineno-0-894"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="nb">list</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
-<a id="__codelineno-0-895" name="__codelineno-0-895"></a>        <span class="c1"># create a generator for iterable of inputs and tensors</span>
-<a id="__codelineno-0-896" name="__codelineno-0-896"></a>        <span class="n">batch_generator</span> <span class="o">=</span> <span class="p">(</span>
-<a id="__codelineno-0-897" name="__codelineno-0-897"></a>            <span class="n">inputs</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">))]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)</span>
-<a id="__codelineno-0-898" name="__codelineno-0-898"></a>        <span class="p">)</span>
-<a id="__codelineno-0-899" name="__codelineno-0-899"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-900" name="__codelineno-0-900"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-<a id="__codelineno-0-901" name="__codelineno-0-901"></a>            <span class="sa">f</span><span class="s2">&quot;Invalid inputs type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span><span class="si">}</span><span class="s2">. Expected: list[str] | torch.Tensor | BatchEncoding.&quot;</span>
-<a id="__codelineno-0-902" name="__codelineno-0-902"></a>        <span class="p">)</span>
-<a id="__codelineno-0-903" name="__codelineno-0-903"></a>
-<a id="__codelineno-0-904" name="__codelineno-0-904"></a>    <span class="c1"># wrap generator in tqdm for progress bar</span>
-<a id="__codelineno-0-905" name="__codelineno-0-905"></a>    <span class="n">tqdm_wrapped_batch_generator</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span>
-<a id="__codelineno-0-906" name="__codelineno-0-906"></a>        <span class="n">batch_generator</span><span class="p">,</span>
-<a id="__codelineno-0-907" name="__codelineno-0-907"></a>        <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Computing activations&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-908" name="__codelineno-0-908"></a>        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;batch&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-909" name="__codelineno-0-909"></a>        <span class="n">total</span><span class="o">=</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">),</span>
-<a id="__codelineno-0-910" name="__codelineno-0-910"></a>        <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">tqdm_bar</span><span class="p">,</span>
-<a id="__codelineno-0-911" name="__codelineno-0-911"></a>    <span class="p">)</span>
-<a id="__codelineno-0-912" name="__codelineno-0-912"></a>
-<a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="c1"># initialize activations dictionary</span>
-<a id="__codelineno-0-914" name="__codelineno-0-914"></a>    <span class="n">activations</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-915" name="__codelineno-0-915"></a>    <span class="k">for</span> <span class="n">split_point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]:</span>
-<a id="__codelineno-0-916" name="__codelineno-0-916"></a>        <span class="n">activations</span><span class="p">[</span><span class="n">split_point</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-0-917" name="__codelineno-0-917"></a>
-<a id="__codelineno-0-918" name="__codelineno-0-918"></a>    <span class="c1"># iterate over batch of inputs</span>
-<a id="__codelineno-0-919" name="__codelineno-0-919"></a>    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
-<a id="__codelineno-0-920" name="__codelineno-0-920"></a>        <span class="c1"># several call of the same model should be grouped in an nnsight session</span>
-<a id="__codelineno-0-921" name="__codelineno-0-921"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">():</span>
-<a id="__codelineno-0-922" name="__codelineno-0-922"></a>            <span class="k">for</span> <span class="n">batch_inputs</span> <span class="ow">in</span> <span class="n">tqdm_wrapped_batch_generator</span><span class="p">:</span>
-<a id="__codelineno-0-923" name="__codelineno-0-923"></a>                <span class="c1"># ------------------------------------------------------------------------------</span>
-<a id="__codelineno-0-924" name="__codelineno-0-924"></a>                <span class="c1"># prepare inputs and compute granular indices</span>
-<a id="__codelineno-0-925" name="__codelineno-0-925"></a>                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_inputs</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-<a id="__codelineno-0-926" name="__codelineno-0-926"></a>                    <span class="c1"># tokenize text inputs for granularity selection</span>
-<a id="__codelineno-0-927" name="__codelineno-0-927"></a>                    <span class="c1"># include &quot;offsets_mapping&quot; for sentence selection strategy</span>
-<a id="__codelineno-0-928" name="__codelineno-0-928"></a>                    <span class="n">tokenized_inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">(</span>
-<a id="__codelineno-0-929" name="__codelineno-0-929"></a>                        <span class="n">batch_inputs</span><span class="p">,</span>
-<a id="__codelineno-0-930" name="__codelineno-0-930"></a>                        <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-931" name="__codelineno-0-931"></a>                        <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-932" name="__codelineno-0-932"></a>                        <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-933" name="__codelineno-0-933"></a>                        <span class="n">return_offsets_mapping</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-934" name="__codelineno-0-934"></a>                    <span class="p">)</span>
-<a id="__codelineno-0-935" name="__codelineno-0-935"></a>
-<a id="__codelineno-0-936" name="__codelineno-0-936"></a>                    <span class="c1"># special case for T5 in a generation setting</span>
-<a id="__codelineno-0-937" name="__codelineno-0-937"></a>                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">T5ForConditionalGeneration</span><span class="p">):</span>
-<a id="__codelineno-0-938" name="__codelineno-0-938"></a>                        <span class="c1"># TODO: find a way for this not to be necessary</span>
-<a id="__codelineno-0-939" name="__codelineno-0-939"></a>                        <span class="n">tokenized_inputs</span><span class="p">[</span><span class="s2">&quot;decoder_input_ids&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tokenized_inputs</span><span class="p">[</span><span class="s2">&quot;input_ids&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-940" name="__codelineno-0-940"></a>                <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-941" name="__codelineno-0-941"></a>                    <span class="c1"># the input was already tokenized</span>
-<a id="__codelineno-0-942" name="__codelineno-0-942"></a>                    <span class="n">tokenized_inputs</span> <span class="o">=</span> <span class="n">batch_inputs</span>
-<a id="__codelineno-0-943" name="__codelineno-0-943"></a>
-<a id="__codelineno-0-944" name="__codelineno-0-944"></a>                <span class="c1"># get granularity indices</span>
-<a id="__codelineno-0-945" name="__codelineno-0-945"></a>                <span class="n">granularity_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_granularity_indices</span><span class="p">(</span>
-<a id="__codelineno-0-946" name="__codelineno-0-946"></a>                    <span class="n">tokenized_inputs</span><span class="p">,</span> <span class="n">activation_granularity</span>
-<a id="__codelineno-0-947" name="__codelineno-0-947"></a>                <span class="p">)</span>
-<a id="__codelineno-0-948" name="__codelineno-0-948"></a>
-<a id="__codelineno-0-949" name="__codelineno-0-949"></a>                <span class="c1"># extract offset mapping not supported by forward but was necessary for sentence selection strategy</span>
-<a id="__codelineno-0-950" name="__codelineno-0-950"></a>                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tokenized_inputs</span><span class="p">,</span> <span class="p">(</span><span class="n">BatchEncoding</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)):</span>  <span class="c1"># noqa: UP038</span>
-<a id="__codelineno-0-951" name="__codelineno-0-951"></a>                    <span class="n">tokenized_inputs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;offset_mapping&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-<a id="__codelineno-0-952" name="__codelineno-0-952"></a>
-<a id="__codelineno-0-953" name="__codelineno-0-953"></a>                <span class="c1"># ------------------------------------------------------------------------------</span>
-<a id="__codelineno-0-954" name="__codelineno-0-954"></a>                <span class="c1"># model forward pass with nnsight to extract activations and predictions</span>
-<a id="__codelineno-0-955" name="__codelineno-0-955"></a>
-<a id="__codelineno-0-956" name="__codelineno-0-956"></a>                <span class="c1"># all model calls use trace with nnsight</span>
-<a id="__codelineno-0-957" name="__codelineno-0-957"></a>                <span class="c1"># call model forward pass and save split point outputs</span>
-<a id="__codelineno-0-958" name="__codelineno-0-958"></a>                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">tokenized_inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">model_forward_kwargs</span><span class="p">)</span> <span class="k">as</span> <span class="n">tracer</span><span class="p">:</span>
-<a id="__codelineno-0-959" name="__codelineno-0-959"></a>                    <span class="c1"># nnsight quick way to obtain the activations for all split points</span>
-<a id="__codelineno-0-960" name="__codelineno-0-960"></a>                    <span class="n">batch_activations</span> <span class="o">=</span> <span class="n">tracer</span><span class="o">.</span><span class="n">cache</span><span class="p">(</span><span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">])</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
-<a id="__codelineno-0-961" name="__codelineno-0-961"></a>
-<a id="__codelineno-0-962" name="__codelineno-0-962"></a>                    <span class="c1"># for classification optionally compute and save the predictions</span>
-<a id="__codelineno-0-963" name="__codelineno-0-963"></a>                    <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
-<a id="__codelineno-0-964" name="__codelineno-0-964"></a>                        <span class="n">batch_predictions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-<a id="__codelineno-0-965" name="__codelineno-0-965"></a>                            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">logits</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
-<a id="__codelineno-0-966" name="__codelineno-0-966"></a>                        <span class="p">)</span>
-<a id="__codelineno-0-967" name="__codelineno-0-967"></a>
-<a id="__codelineno-0-968" name="__codelineno-0-968"></a>                <span class="c1"># free memory after each batch, necessary with nnsight, overwise, memory piles up</span>
-<a id="__codelineno-0-969" name="__codelineno-0-969"></a>                <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
-<a id="__codelineno-0-970" name="__codelineno-0-970"></a>
-<a id="__codelineno-0-971" name="__codelineno-0-971"></a>                <span class="c1"># ------------------------------------------------------------------------------</span>
-<a id="__codelineno-0-972" name="__codelineno-0-972"></a>                <span class="c1"># apply granularity selection and aggregation of activations and predictions</span>
-<a id="__codelineno-0-973" name="__codelineno-0-973"></a>                <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">:</span>
-<a id="__codelineno-0-974" name="__codelineno-0-974"></a>                    <span class="c1"># extracting the activations for the current split point</span>
-<a id="__codelineno-0-975" name="__codelineno-0-975"></a>                    <span class="n">sp_module</span> <span class="o">=</span> <span class="n">batch_activations</span><span class="p">[</span><span class="s2">&quot;model.&quot;</span> <span class="o">+</span> <span class="n">sp</span><span class="p">]</span>
-<a id="__codelineno-0-976" name="__codelineno-0-976"></a>                    <span class="n">output_name</span> <span class="o">=</span> <span class="s2">&quot;nns_output&quot;</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sp_module</span><span class="p">,</span> <span class="s2">&quot;nns_output&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;output&quot;</span>
-<a id="__codelineno-0-977" name="__codelineno-0-977"></a>                    <span class="n">batch_outputs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">sp_module</span><span class="p">,</span> <span class="n">output_name</span><span class="p">)</span>
-<a id="__codelineno-0-978" name="__codelineno-0-978"></a>
-<a id="__codelineno-0-979" name="__codelineno-0-979"></a>                    <span class="c1"># manage the output tuple and extract the (n, l, d) activations from it</span>
-<a id="__codelineno-0-980" name="__codelineno-0-980"></a>                    <span class="n">batch_sp_activations</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n l d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manage_output_tuple</span><span class="p">(</span>
-<a id="__codelineno-0-981" name="__codelineno-0-981"></a>                        <span class="n">batch_outputs</span><span class="p">,</span> <span class="n">sp</span>
-<a id="__codelineno-0-982" name="__codelineno-0-982"></a>                    <span class="p">)</span>
-<a id="__codelineno-0-983" name="__codelineno-0-983"></a>
-<a id="__codelineno-0-984" name="__codelineno-0-984"></a>                    <span class="c1"># select relevant activations with respect to the granularity strategy</span>
-<a id="__codelineno-0-985" name="__codelineno-0-985"></a>                    <span class="c1"># potentially aggregate activations over the granularity elements</span>
-<a id="__codelineno-0-986" name="__codelineno-0-986"></a>                    <span class="c1"># this merges the `n` and `g` dimensions with `g` a subset of `n`</span>
-<a id="__codelineno-0-987" name="__codelineno-0-987"></a>                    <span class="c1"># shape (n, l, d) only for `ALL` granularity, thus raw activations</span>
-<a id="__codelineno-0-988" name="__codelineno-0-988"></a>                    <span class="n">granular_activations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;g d&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_selection_strategy</span><span class="p">(</span>
-<a id="__codelineno-0-989" name="__codelineno-0-989"></a>                        <span class="n">activations</span><span class="o">=</span><span class="n">batch_sp_activations</span><span class="p">,</span>
-<a id="__codelineno-0-990" name="__codelineno-0-990"></a>                        <span class="n">granularity_indices</span><span class="o">=</span><span class="n">granularity_indices</span><span class="p">,</span>
-<a id="__codelineno-0-991" name="__codelineno-0-991"></a>                        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
-<a id="__codelineno-0-992" name="__codelineno-0-992"></a>                        <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">aggregation_strategy</span><span class="p">,</span>
-<a id="__codelineno-0-993" name="__codelineno-0-993"></a>                    <span class="p">)</span>
+<a id="__codelineno-0-857" name="__codelineno-0-857"></a><span class="sd">        model_forward_kwargs (dict):</span>
+<a id="__codelineno-0-858" name="__codelineno-0-858"></a><span class="sd">            Additional keyword arguments passed to the model forward pass.</span>
+<a id="__codelineno-0-859" name="__codelineno-0-859"></a>
+<a id="__codelineno-0-860" name="__codelineno-0-860"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-861" name="__codelineno-0-861"></a><span class="sd">        (dict[str, LatentActivations]) Dictionary having one key, value pair for each split point defined for the model. Keys correspond to split</span>
+<a id="__codelineno-0-862" name="__codelineno-0-862"></a><span class="sd">            names in `self.split_points`, while values correspond to the extracted activations for the split point</span>
+<a id="__codelineno-0-863" name="__codelineno-0-863"></a><span class="sd">            for the given `inputs`.</span>
+<a id="__codelineno-0-864" name="__codelineno-0-864"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-865" name="__codelineno-0-865"></a>    <span class="c1"># set default pad side value and catch unsupported cases</span>
+<a id="__codelineno-0-866" name="__codelineno-0-866"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;ForSequenceClassification&quot;</span><span class="p">):</span>
+<a id="__codelineno-0-867" name="__codelineno-0-867"></a>        <span class="n">pad_side</span> <span class="o">=</span> <span class="s2">&quot;right&quot;</span>
+<a id="__codelineno-0-868" name="__codelineno-0-868"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-869" name="__codelineno-0-869"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;ForCausalLM&quot;</span><span class="p">):</span>
+<a id="__codelineno-0-870" name="__codelineno-0-870"></a>            <span class="n">pad_side</span> <span class="o">=</span> <span class="s2">&quot;left&quot;</span>
+<a id="__codelineno-0-871" name="__codelineno-0-871"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-872" name="__codelineno-0-872"></a>            <span class="n">pad_side</span> <span class="o">=</span> <span class="n">pad_side</span> <span class="ow">or</span> <span class="s2">&quot;left&quot;</span>
+<a id="__codelineno-0-873" name="__codelineno-0-873"></a>        <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
+<a id="__codelineno-0-874" name="__codelineno-0-874"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-875" name="__codelineno-0-875"></a>                <span class="s2">&quot;`include_predicted_classes` is only supported for classification models. &quot;</span>
+<a id="__codelineno-0-876" name="__codelineno-0-876"></a>                <span class="sa">f</span><span class="s2">&quot;Provided model is a </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-877" name="__codelineno-0-877"></a>            <span class="p">)</span>
+<a id="__codelineno-0-878" name="__codelineno-0-878"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">padding_side</span> <span class="o">=</span> <span class="n">pad_side</span>
+<a id="__codelineno-0-879" name="__codelineno-0-879"></a>
+<a id="__codelineno-0-880" name="__codelineno-0-880"></a>    <span class="c1"># add padding token to vocabulary if not present (model and tokenizer)</span>
+<a id="__codelineno-0-881" name="__codelineno-0-881"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">,</span> <span class="s2">&quot;pad_token&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-882" name="__codelineno-0-882"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">add_special_tokens</span><span class="p">({</span><span class="s2">&quot;pad_token&quot;</span><span class="p">:</span> <span class="s2">&quot;[PAD]&quot;</span><span class="p">})</span>
+<a id="__codelineno-0-883" name="__codelineno-0-883"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">resize_token_embeddings</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">))</span>  <span class="c1"># type: ignore  # weird huggingface typing</span>
+<a id="__codelineno-0-884" name="__codelineno-0-884"></a>
+<a id="__codelineno-0-885" name="__codelineno-0-885"></a>    <span class="c1"># batch inputs</span>
+<a id="__codelineno-0-886" name="__codelineno-0-886"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">BatchEncoding</span><span class="p">):</span>
+<a id="__codelineno-0-887" name="__codelineno-0-887"></a>        <span class="n">batch_generator</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-0-888" name="__codelineno-0-888"></a>        <span class="c1"># manage key by key batching for BatchEncoding</span>
+<a id="__codelineno-0-889" name="__codelineno-0-889"></a>        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">):</span>
+<a id="__codelineno-0-890" name="__codelineno-0-890"></a>            <span class="n">end_idx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">))</span>
+<a id="__codelineno-0-891" name="__codelineno-0-891"></a>            <span class="n">batch_generator</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">end_idx</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">inputs</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+<a id="__codelineno-0-892" name="__codelineno-0-892"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="nb">list</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+<a id="__codelineno-0-893" name="__codelineno-0-893"></a>        <span class="c1"># create a generator for iterable of inputs and tensors</span>
+<a id="__codelineno-0-894" name="__codelineno-0-894"></a>        <span class="n">batch_generator</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-0-895" name="__codelineno-0-895"></a>            <span class="n">inputs</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">))]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">)</span>
+<a id="__codelineno-0-896" name="__codelineno-0-896"></a>        <span class="p">)</span>
+<a id="__codelineno-0-897" name="__codelineno-0-897"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-898" name="__codelineno-0-898"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+<a id="__codelineno-0-899" name="__codelineno-0-899"></a>            <span class="sa">f</span><span class="s2">&quot;Invalid inputs type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span><span class="si">}</span><span class="s2">. Expected: list[str] | torch.Tensor | BatchEncoding.&quot;</span>
+<a id="__codelineno-0-900" name="__codelineno-0-900"></a>        <span class="p">)</span>
+<a id="__codelineno-0-901" name="__codelineno-0-901"></a>
+<a id="__codelineno-0-902" name="__codelineno-0-902"></a>    <span class="c1"># wrap generator in tqdm for progress bar</span>
+<a id="__codelineno-0-903" name="__codelineno-0-903"></a>    <span class="n">tqdm_wrapped_batch_generator</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span>
+<a id="__codelineno-0-904" name="__codelineno-0-904"></a>        <span class="n">batch_generator</span><span class="p">,</span>
+<a id="__codelineno-0-905" name="__codelineno-0-905"></a>        <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Computing activations&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-906" name="__codelineno-0-906"></a>        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;batch&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-907" name="__codelineno-0-907"></a>        <span class="n">total</span><span class="o">=</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">),</span>
+<a id="__codelineno-0-908" name="__codelineno-0-908"></a>        <span class="n">disable</span><span class="o">=</span><span class="ow">not</span> <span class="n">tqdm_bar</span><span class="p">,</span>
+<a id="__codelineno-0-909" name="__codelineno-0-909"></a>    <span class="p">)</span>
+<a id="__codelineno-0-910" name="__codelineno-0-910"></a>
+<a id="__codelineno-0-911" name="__codelineno-0-911"></a>    <span class="c1"># initialize activations dictionary</span>
+<a id="__codelineno-0-912" name="__codelineno-0-912"></a>    <span class="n">activations</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-913" name="__codelineno-0-913"></a>    <span class="k">for</span> <span class="n">split_point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]:</span>
+<a id="__codelineno-0-914" name="__codelineno-0-914"></a>        <span class="n">activations</span><span class="p">[</span><span class="n">split_point</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-0-915" name="__codelineno-0-915"></a>
+<a id="__codelineno-0-916" name="__codelineno-0-916"></a>    <span class="c1"># iterate over batch of inputs</span>
+<a id="__codelineno-0-917" name="__codelineno-0-917"></a>    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+<a id="__codelineno-0-918" name="__codelineno-0-918"></a>        <span class="c1"># several call of the same model should be grouped in an nnsight session</span>
+<a id="__codelineno-0-919" name="__codelineno-0-919"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">():</span>
+<a id="__codelineno-0-920" name="__codelineno-0-920"></a>            <span class="k">for</span> <span class="n">batch_inputs</span> <span class="ow">in</span> <span class="n">tqdm_wrapped_batch_generator</span><span class="p">:</span>
+<a id="__codelineno-0-921" name="__codelineno-0-921"></a>                <span class="c1"># ------------------------------------------------------------------------------</span>
+<a id="__codelineno-0-922" name="__codelineno-0-922"></a>                <span class="c1"># prepare inputs and compute granular indices</span>
+<a id="__codelineno-0-923" name="__codelineno-0-923"></a>                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_inputs</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+<a id="__codelineno-0-924" name="__codelineno-0-924"></a>                    <span class="c1"># tokenize text inputs for granularity selection</span>
+<a id="__codelineno-0-925" name="__codelineno-0-925"></a>                    <span class="c1"># include &quot;offsets_mapping&quot; for sentence selection strategy</span>
+<a id="__codelineno-0-926" name="__codelineno-0-926"></a>                    <span class="n">tokenized_inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">(</span>
+<a id="__codelineno-0-927" name="__codelineno-0-927"></a>                        <span class="n">batch_inputs</span><span class="p">,</span>
+<a id="__codelineno-0-928" name="__codelineno-0-928"></a>                        <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-929" name="__codelineno-0-929"></a>                        <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-930" name="__codelineno-0-930"></a>                        <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-931" name="__codelineno-0-931"></a>                        <span class="n">return_offsets_mapping</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-932" name="__codelineno-0-932"></a>                    <span class="p">)</span>
+<a id="__codelineno-0-933" name="__codelineno-0-933"></a>
+<a id="__codelineno-0-934" name="__codelineno-0-934"></a>                    <span class="c1"># special case for T5 in a generation setting</span>
+<a id="__codelineno-0-935" name="__codelineno-0-935"></a>                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">T5ForConditionalGeneration</span><span class="p">):</span>
+<a id="__codelineno-0-936" name="__codelineno-0-936"></a>                        <span class="c1"># TODO: find a way for this not to be necessary</span>
+<a id="__codelineno-0-937" name="__codelineno-0-937"></a>                        <span class="n">tokenized_inputs</span><span class="p">[</span><span class="s2">&quot;decoder_input_ids&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tokenized_inputs</span><span class="p">[</span><span class="s2">&quot;input_ids&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-938" name="__codelineno-0-938"></a>                <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-939" name="__codelineno-0-939"></a>                    <span class="c1"># the input was already tokenized</span>
+<a id="__codelineno-0-940" name="__codelineno-0-940"></a>                    <span class="n">tokenized_inputs</span> <span class="o">=</span> <span class="n">batch_inputs</span>
+<a id="__codelineno-0-941" name="__codelineno-0-941"></a>
+<a id="__codelineno-0-942" name="__codelineno-0-942"></a>                <span class="c1"># get granularity indices</span>
+<a id="__codelineno-0-943" name="__codelineno-0-943"></a>                <span class="n">granularity_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_granularity_indices</span><span class="p">(</span>
+<a id="__codelineno-0-944" name="__codelineno-0-944"></a>                    <span class="n">tokenized_inputs</span><span class="p">,</span> <span class="n">activation_granularity</span>
+<a id="__codelineno-0-945" name="__codelineno-0-945"></a>                <span class="p">)</span>
+<a id="__codelineno-0-946" name="__codelineno-0-946"></a>
+<a id="__codelineno-0-947" name="__codelineno-0-947"></a>                <span class="c1"># extract offset mapping not supported by forward but was necessary for sentence selection strategy</span>
+<a id="__codelineno-0-948" name="__codelineno-0-948"></a>                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tokenized_inputs</span><span class="p">,</span> <span class="p">(</span><span class="n">BatchEncoding</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)):</span>  <span class="c1"># noqa: UP038</span>
+<a id="__codelineno-0-949" name="__codelineno-0-949"></a>                    <span class="n">tokenized_inputs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;offset_mapping&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<a id="__codelineno-0-950" name="__codelineno-0-950"></a>
+<a id="__codelineno-0-951" name="__codelineno-0-951"></a>                <span class="c1"># ------------------------------------------------------------------------------</span>
+<a id="__codelineno-0-952" name="__codelineno-0-952"></a>                <span class="c1"># model forward pass with nnsight to extract activations and predictions</span>
+<a id="__codelineno-0-953" name="__codelineno-0-953"></a>
+<a id="__codelineno-0-954" name="__codelineno-0-954"></a>                <span class="c1"># all model calls use trace with nnsight</span>
+<a id="__codelineno-0-955" name="__codelineno-0-955"></a>                <span class="c1"># call model forward pass and save split point outputs</span>
+<a id="__codelineno-0-956" name="__codelineno-0-956"></a>                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">tokenized_inputs</span><span class="p">,</span> <span class="o">**</span><span class="n">model_forward_kwargs</span><span class="p">)</span> <span class="k">as</span> <span class="n">tracer</span><span class="p">:</span>
+<a id="__codelineno-0-957" name="__codelineno-0-957"></a>                    <span class="c1"># nnsight quick way to obtain the activations for all split points</span>
+<a id="__codelineno-0-958" name="__codelineno-0-958"></a>                    <span class="n">batch_activations</span> <span class="o">=</span> <span class="n">tracer</span><span class="o">.</span><span class="n">cache</span><span class="p">(</span><span class="n">modules</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">])</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
+<a id="__codelineno-0-959" name="__codelineno-0-959"></a>
+<a id="__codelineno-0-960" name="__codelineno-0-960"></a>                    <span class="c1"># for classification optionally compute and save the predictions</span>
+<a id="__codelineno-0-961" name="__codelineno-0-961"></a>                    <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
+<a id="__codelineno-0-962" name="__codelineno-0-962"></a>                        <span class="n">batch_predictions</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-0-963" name="__codelineno-0-963"></a>                            <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">logits</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>  <span class="c1"># type: ignore  (under specification from NNsight)</span>
+<a id="__codelineno-0-964" name="__codelineno-0-964"></a>                        <span class="p">)</span>
+<a id="__codelineno-0-965" name="__codelineno-0-965"></a>
+<a id="__codelineno-0-966" name="__codelineno-0-966"></a>                <span class="c1"># free memory after each batch, necessary with nnsight, overwise, memory piles up</span>
+<a id="__codelineno-0-967" name="__codelineno-0-967"></a>                <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">empty_cache</span><span class="p">()</span>
+<a id="__codelineno-0-968" name="__codelineno-0-968"></a>
+<a id="__codelineno-0-969" name="__codelineno-0-969"></a>                <span class="c1"># ------------------------------------------------------------------------------</span>
+<a id="__codelineno-0-970" name="__codelineno-0-970"></a>                <span class="c1"># apply granularity selection and aggregation of activations and predictions</span>
+<a id="__codelineno-0-971" name="__codelineno-0-971"></a>                <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">:</span>
+<a id="__codelineno-0-972" name="__codelineno-0-972"></a>                    <span class="c1"># extracting the activations for the current split point</span>
+<a id="__codelineno-0-973" name="__codelineno-0-973"></a>                    <span class="n">sp_module</span> <span class="o">=</span> <span class="n">batch_activations</span><span class="p">[</span><span class="s2">&quot;model.&quot;</span> <span class="o">+</span> <span class="n">sp</span><span class="p">]</span>
+<a id="__codelineno-0-974" name="__codelineno-0-974"></a>                    <span class="n">output_name</span> <span class="o">=</span> <span class="s2">&quot;nns_output&quot;</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sp_module</span><span class="p">,</span> <span class="s2">&quot;nns_output&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;output&quot;</span>
+<a id="__codelineno-0-975" name="__codelineno-0-975"></a>                    <span class="n">batch_outputs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">sp_module</span><span class="p">,</span> <span class="n">output_name</span><span class="p">)</span>
+<a id="__codelineno-0-976" name="__codelineno-0-976"></a>
+<a id="__codelineno-0-977" name="__codelineno-0-977"></a>                    <span class="c1"># manage the output tuple and extract the (n, l, d) activations from it</span>
+<a id="__codelineno-0-978" name="__codelineno-0-978"></a>                    <span class="n">batch_sp_activations</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n l d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manage_output_tuple</span><span class="p">(</span>
+<a id="__codelineno-0-979" name="__codelineno-0-979"></a>                        <span class="n">batch_outputs</span><span class="p">,</span> <span class="n">sp</span>
+<a id="__codelineno-0-980" name="__codelineno-0-980"></a>                    <span class="p">)</span>
+<a id="__codelineno-0-981" name="__codelineno-0-981"></a>
+<a id="__codelineno-0-982" name="__codelineno-0-982"></a>                    <span class="c1"># select relevant activations with respect to the granularity strategy</span>
+<a id="__codelineno-0-983" name="__codelineno-0-983"></a>                    <span class="c1"># potentially aggregate activations over the granularity elements</span>
+<a id="__codelineno-0-984" name="__codelineno-0-984"></a>                    <span class="c1"># this merges the `n` and `g` dimensions with `g` a subset of `n`</span>
+<a id="__codelineno-0-985" name="__codelineno-0-985"></a>                    <span class="c1"># shape (n, l, d) only for `ALL` granularity, thus raw activations</span>
+<a id="__codelineno-0-986" name="__codelineno-0-986"></a>                    <span class="n">granular_activations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;g d&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_selection_strategy</span><span class="p">(</span>
+<a id="__codelineno-0-987" name="__codelineno-0-987"></a>                        <span class="n">activations</span><span class="o">=</span><span class="n">batch_sp_activations</span><span class="p">,</span>
+<a id="__codelineno-0-988" name="__codelineno-0-988"></a>                        <span class="n">granularity_indices</span><span class="o">=</span><span class="n">granularity_indices</span><span class="p">,</span>
+<a id="__codelineno-0-989" name="__codelineno-0-989"></a>                        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
+<a id="__codelineno-0-990" name="__codelineno-0-990"></a>                        <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">aggregation_strategy</span><span class="p">,</span>
+<a id="__codelineno-0-991" name="__codelineno-0-991"></a>                    <span class="p">)</span>
+<a id="__codelineno-0-992" name="__codelineno-0-992"></a>
+<a id="__codelineno-0-993" name="__codelineno-0-993"></a>                    <span class="n">activations</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">granular_activations</span><span class="p">)</span>
 <a id="__codelineno-0-994" name="__codelineno-0-994"></a>
-<a id="__codelineno-0-995" name="__codelineno-0-995"></a>                    <span class="n">activations</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">granular_activations</span><span class="p">)</span>
-<a id="__codelineno-0-996" name="__codelineno-0-996"></a>
-<a id="__codelineno-0-997" name="__codelineno-0-997"></a>                <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
-<a id="__codelineno-0-998" name="__codelineno-0-998"></a>                    <span class="k">if</span> <span class="ow">not</span> <span class="n">flatten_activations</span><span class="p">:</span>
-<a id="__codelineno-0-999" name="__codelineno-0-999"></a>                        <span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
-<a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>                            <span class="nb">list</span><span class="p">(</span><span class="n">batch_predictions</span><span class="p">)</span>  <span class="c1"># type: ignore  (ignore possibly unbound)</span>
-<a id="__codelineno-0-1001" name="__codelineno-0-1001"></a>                        <span class="p">)</span>
-<a id="__codelineno-0-1002" name="__codelineno-0-1002"></a>                    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1003" name="__codelineno-0-1003"></a>                        <span class="c1"># adapt predictions to match the granularity indices</span>
-<a id="__codelineno-0-1004" name="__codelineno-0-1004"></a>                        <span class="n">repeats</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;ng&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-<a id="__codelineno-0-1005" name="__codelineno-0-1005"></a>                            <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="k">for</span> <span class="n">indices</span> <span class="ow">in</span> <span class="n">granularity_indices</span><span class="p">]</span>
-<a id="__codelineno-0-1006" name="__codelineno-0-1006"></a>                        <span class="p">)</span>
-<a id="__codelineno-0-1007" name="__codelineno-0-1007"></a>
-<a id="__codelineno-0-1008" name="__codelineno-0-1008"></a>                        <span class="c1"># predictions have a shape (n,), which we convert to (ng,)</span>
-<a id="__codelineno-0-1009" name="__codelineno-0-1009"></a>                        <span class="c1"># by repeating each predicted class as many times as the number of granularity elements in a sample</span>
-<a id="__codelineno-0-1010" name="__codelineno-0-1010"></a>                        <span class="n">repeated_predictions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">repeat_interleave</span><span class="p">(</span>
-<a id="__codelineno-0-1011" name="__codelineno-0-1011"></a>                            <span class="n">batch_predictions</span><span class="p">,</span>  <span class="c1"># type: ignore  (ignore possibly unbound)</span>
-<a id="__codelineno-0-1012" name="__codelineno-0-1012"></a>                            <span class="n">repeats</span><span class="p">,</span>
-<a id="__codelineno-0-1013" name="__codelineno-0-1013"></a>                            <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-<a id="__codelineno-0-1014" name="__codelineno-0-1014"></a>                        <span class="p">)</span>
-<a id="__codelineno-0-1015" name="__codelineno-0-1015"></a>                        <span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">repeated_predictions</span><span class="p">)</span>
-<a id="__codelineno-0-1016" name="__codelineno-0-1016"></a>
-<a id="__codelineno-0-1017" name="__codelineno-0-1017"></a>    <span class="c1"># ------------------------------------------------------------------------------------------</span>
-<a id="__codelineno-0-1018" name="__codelineno-0-1018"></a>    <span class="c1"># concat activation batches and validate that activations have the expected type</span>
-<a id="__codelineno-0-1019" name="__codelineno-0-1019"></a>    <span class="k">for</span> <span class="n">split_point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">:</span>
-<a id="__codelineno-0-1020" name="__codelineno-0-1020"></a>        <span class="k">if</span> <span class="n">flatten_activations</span><span class="p">:</span>
-<a id="__codelineno-0-1021" name="__codelineno-0-1021"></a>            <span class="c1"># two dimensional tensor (n*g, d)</span>
-<a id="__codelineno-0-1022" name="__codelineno-0-1022"></a>            <span class="n">activations</span><span class="p">[</span><span class="n">split_point</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">split_point</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-1023" name="__codelineno-0-1023"></a>
-<a id="__codelineno-0-1024" name="__codelineno-0-1024"></a>    <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
-<a id="__codelineno-0-1025" name="__codelineno-0-1025"></a>        <span class="k">if</span> <span class="n">flatten_activations</span><span class="p">:</span>
-<a id="__codelineno-0-1026" name="__codelineno-0-1026"></a>            <span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-1027" name="__codelineno-0-1027"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1028" name="__codelineno-0-1028"></a>        <span class="n">activations</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;predictions&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-<a id="__codelineno-0-1029" name="__codelineno-0-1029"></a>
-<a id="__codelineno-0-1030" name="__codelineno-0-1030"></a>    <span class="c1"># validate that activations have the expected type</span>
-<a id="__codelineno-0-1031" name="__codelineno-0-1031"></a>    <span class="k">for</span> <span class="n">layer</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">activations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-<a id="__codelineno-0-1032" name="__codelineno-0-1032"></a>        <span class="n">act_is_tensor</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
-<a id="__codelineno-0-1033" name="__codelineno-0-1033"></a>        <span class="n">act_is_list_of_tensors</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">act</span><span class="p">)</span>
-<a id="__codelineno-0-1034" name="__codelineno-0-1034"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">act_is_tensor</span> <span class="ow">or</span> <span class="n">act_is_list_of_tensors</span><span class="p">):</span>
-<a id="__codelineno-0-1035" name="__codelineno-0-1035"></a>            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
-<a id="__codelineno-0-1036" name="__codelineno-0-1036"></a>                <span class="sa">f</span><span class="s2">&quot;Invalid output for layer &#39;</span><span class="si">{</span><span class="n">layer</span><span class="si">}</span><span class="s2">&#39;. Expected torch.Tensor activation, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">act</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">act</span><span class="si">}</span><span class="s2">&quot;</span>
-<a id="__codelineno-0-1037" name="__codelineno-0-1037"></a>            <span class="p">)</span>
-<a id="__codelineno-0-1038" name="__codelineno-0-1038"></a>    <span class="k">return</span> <span class="n">activations</span>  <span class="c1"># type: ignore</span>
+<a id="__codelineno-0-995" name="__codelineno-0-995"></a>                <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
+<a id="__codelineno-0-996" name="__codelineno-0-996"></a>                    <span class="k">if</span> <span class="ow">not</span> <span class="n">flatten_activations</span><span class="p">:</span>
+<a id="__codelineno-0-997" name="__codelineno-0-997"></a>                        <span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+<a id="__codelineno-0-998" name="__codelineno-0-998"></a>                            <span class="nb">list</span><span class="p">(</span><span class="n">batch_predictions</span><span class="p">)</span>  <span class="c1"># type: ignore  (ignore possibly unbound)</span>
+<a id="__codelineno-0-999" name="__codelineno-0-999"></a>                        <span class="p">)</span>
+<a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>                    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1001" name="__codelineno-0-1001"></a>                        <span class="c1"># adapt predictions to match the granularity indices</span>
+<a id="__codelineno-0-1002" name="__codelineno-0-1002"></a>                        <span class="n">repeats</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;ng&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+<a id="__codelineno-0-1003" name="__codelineno-0-1003"></a>                            <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="k">for</span> <span class="n">indices</span> <span class="ow">in</span> <span class="n">granularity_indices</span><span class="p">]</span>
+<a id="__codelineno-0-1004" name="__codelineno-0-1004"></a>                        <span class="p">)</span>
+<a id="__codelineno-0-1005" name="__codelineno-0-1005"></a>
+<a id="__codelineno-0-1006" name="__codelineno-0-1006"></a>                        <span class="c1"># predictions have a shape (n,), which we convert to (ng,)</span>
+<a id="__codelineno-0-1007" name="__codelineno-0-1007"></a>                        <span class="c1"># by repeating each predicted class as many times as the number of granularity elements in a sample</span>
+<a id="__codelineno-0-1008" name="__codelineno-0-1008"></a>                        <span class="n">repeated_predictions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">repeat_interleave</span><span class="p">(</span>
+<a id="__codelineno-0-1009" name="__codelineno-0-1009"></a>                            <span class="n">batch_predictions</span><span class="p">,</span>  <span class="c1"># type: ignore  (ignore possibly unbound)</span>
+<a id="__codelineno-0-1010" name="__codelineno-0-1010"></a>                            <span class="n">repeats</span><span class="p">,</span>
+<a id="__codelineno-0-1011" name="__codelineno-0-1011"></a>                            <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-1012" name="__codelineno-0-1012"></a>                        <span class="p">)</span>
+<a id="__codelineno-0-1013" name="__codelineno-0-1013"></a>                        <span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">repeated_predictions</span><span class="p">)</span>
+<a id="__codelineno-0-1014" name="__codelineno-0-1014"></a>
+<a id="__codelineno-0-1015" name="__codelineno-0-1015"></a>    <span class="c1"># ------------------------------------------------------------------------------------------</span>
+<a id="__codelineno-0-1016" name="__codelineno-0-1016"></a>    <span class="c1"># concat activation batches and validate that activations have the expected type</span>
+<a id="__codelineno-0-1017" name="__codelineno-0-1017"></a>    <span class="k">for</span> <span class="n">split_point</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">:</span>
+<a id="__codelineno-0-1018" name="__codelineno-0-1018"></a>        <span class="k">if</span> <span class="n">flatten_activations</span><span class="p">:</span>
+<a id="__codelineno-0-1019" name="__codelineno-0-1019"></a>            <span class="c1"># two dimensional tensor (n*g, d)</span>
+<a id="__codelineno-0-1020" name="__codelineno-0-1020"></a>            <span class="n">activations</span><span class="p">[</span><span class="n">split_point</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="n">split_point</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-1021" name="__codelineno-0-1021"></a>
+<a id="__codelineno-0-1022" name="__codelineno-0-1022"></a>    <span class="k">if</span> <span class="n">include_predicted_classes</span><span class="p">:</span>
+<a id="__codelineno-0-1023" name="__codelineno-0-1023"></a>        <span class="k">if</span> <span class="n">flatten_activations</span><span class="p">:</span>
+<a id="__codelineno-0-1024" name="__codelineno-0-1024"></a>            <span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">activations</span><span class="p">[</span><span class="s2">&quot;predictions&quot;</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-1025" name="__codelineno-0-1025"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1026" name="__codelineno-0-1026"></a>        <span class="n">activations</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;predictions&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+<a id="__codelineno-0-1027" name="__codelineno-0-1027"></a>
+<a id="__codelineno-0-1028" name="__codelineno-0-1028"></a>    <span class="c1"># validate that activations have the expected type</span>
+<a id="__codelineno-0-1029" name="__codelineno-0-1029"></a>    <span class="k">for</span> <span class="n">layer</span><span class="p">,</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">activations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-1030" name="__codelineno-0-1030"></a>        <span class="n">act_is_tensor</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
+<a id="__codelineno-0-1031" name="__codelineno-0-1031"></a>        <span class="n">act_is_list_of_tensors</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">act</span><span class="p">)</span>
+<a id="__codelineno-0-1032" name="__codelineno-0-1032"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">act_is_tensor</span> <span class="ow">or</span> <span class="n">act_is_list_of_tensors</span><span class="p">):</span>
+<a id="__codelineno-0-1033" name="__codelineno-0-1033"></a>            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+<a id="__codelineno-0-1034" name="__codelineno-0-1034"></a>                <span class="sa">f</span><span class="s2">&quot;Invalid output for layer &#39;</span><span class="si">{</span><span class="n">layer</span><span class="si">}</span><span class="s2">&#39;. Expected torch.Tensor activation, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">act</span><span class="p">)</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">act</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-1035" name="__codelineno-0-1035"></a>            <span class="p">)</span>
+<a id="__codelineno-0-1036" name="__codelineno-0-1036"></a>    <span class="k">return</span> <span class="n">activations</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4574,7 +4571,10 @@ If None, the <code>split_point</code> of the explainer is used.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/model_wrapping/model_with_split_points.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1338">1338</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1335">1335</a></span>
+<span class="normal"><a href="#__codelineno-0-1336">1336</a></span>
+<span class="normal"><a href="#__codelineno-0-1337">1337</a></span>
+<span class="normal"><a href="#__codelineno-0-1338">1338</a></span>
 <span class="normal"><a href="#__codelineno-0-1339">1339</a></span>
 <span class="normal"><a href="#__codelineno-0-1340">1340</a></span>
 <span class="normal"><a href="#__codelineno-0-1341">1341</a></span>
@@ -4642,81 +4642,78 @@ If None, the <code>split_point</code> of the explainer is used.</p>
 <span class="normal"><a href="#__codelineno-0-1403">1403</a></span>
 <span class="normal"><a href="#__codelineno-0-1404">1404</a></span>
 <span class="normal"><a href="#__codelineno-0-1405">1405</a></span>
-<span class="normal"><a href="#__codelineno-0-1406">1406</a></span>
-<span class="normal"><a href="#__codelineno-0-1407">1407</a></span>
-<span class="normal"><a href="#__codelineno-0-1408">1408</a></span>
-<span class="normal"><a href="#__codelineno-0-1409">1409</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1338" name="__codelineno-0-1338"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_split_activations</span><span class="p">(</span>
-<a id="__codelineno-0-1339" name="__codelineno-0-1339"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-1340" name="__codelineno-0-1340"></a>    <span class="n">activations</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LatentActivations</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">LatentActivations</span><span class="p">]],</span>
-<a id="__codelineno-0-1341" name="__codelineno-0-1341"></a>    <span class="n">split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-1342" name="__codelineno-0-1342"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">LatentActivations</span><span class="p">]:</span>
-<a id="__codelineno-0-1343" name="__codelineno-0-1343"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-1344" name="__codelineno-0-1344"></a><span class="sd">    Extract activations for the specified split point.</span>
-<a id="__codelineno-0-1345" name="__codelineno-0-1345"></a><span class="sd">    If no split point is specified, it works if and only if the `model_with_split_points` has only one split point.</span>
-<a id="__codelineno-0-1346" name="__codelineno-0-1346"></a><span class="sd">    Verify that the given activations are valid for the `model_with_split_points` and `split_point`.</span>
-<a id="__codelineno-0-1347" name="__codelineno-0-1347"></a><span class="sd">    Cases in which the activations are not valid include:</span>
+<span class="normal"><a href="#__codelineno-0-1406">1406</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1335" name="__codelineno-0-1335"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_split_activations</span><span class="p">(</span>
+<a id="__codelineno-0-1336" name="__codelineno-0-1336"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-1337" name="__codelineno-0-1337"></a>    <span class="n">activations</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">LatentActivations</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">LatentActivations</span><span class="p">]],</span>
+<a id="__codelineno-0-1338" name="__codelineno-0-1338"></a>    <span class="n">split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-1339" name="__codelineno-0-1339"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LatentActivations</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">LatentActivations</span><span class="p">]:</span>
+<a id="__codelineno-0-1340" name="__codelineno-0-1340"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1341" name="__codelineno-0-1341"></a><span class="sd">    Extract activations for the specified split point.</span>
+<a id="__codelineno-0-1342" name="__codelineno-0-1342"></a><span class="sd">    If no split point is specified, it works if and only if the `model_with_split_points` has only one split point.</span>
+<a id="__codelineno-0-1343" name="__codelineno-0-1343"></a><span class="sd">    Verify that the given activations are valid for the `model_with_split_points` and `split_point`.</span>
+<a id="__codelineno-0-1344" name="__codelineno-0-1344"></a><span class="sd">    Cases in which the activations are not valid include:</span>
+<a id="__codelineno-0-1345" name="__codelineno-0-1345"></a>
+<a id="__codelineno-0-1346" name="__codelineno-0-1346"></a><span class="sd">    * Activations are not a valid dictionary.</span>
+<a id="__codelineno-0-1347" name="__codelineno-0-1347"></a><span class="sd">    * Specified split point does not exist in the activations.</span>
 <a id="__codelineno-0-1348" name="__codelineno-0-1348"></a>
-<a id="__codelineno-0-1349" name="__codelineno-0-1349"></a><span class="sd">    * Activations are not a valid dictionary.</span>
-<a id="__codelineno-0-1350" name="__codelineno-0-1350"></a><span class="sd">    * Specified split point does not exist in the activations.</span>
-<a id="__codelineno-0-1351" name="__codelineno-0-1351"></a>
-<a id="__codelineno-0-1352" name="__codelineno-0-1352"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-1353" name="__codelineno-0-1353"></a><span class="sd">        activations (dict[str, LatentActivations]): A dictionary with model paths as keys and the corresponding</span>
-<a id="__codelineno-0-1354" name="__codelineno-0-1354"></a><span class="sd">            tensors as values.</span>
-<a id="__codelineno-0-1355" name="__codelineno-0-1355"></a><span class="sd">        split_point (str | None): The split point to extract activations from.</span>
-<a id="__codelineno-0-1356" name="__codelineno-0-1356"></a><span class="sd">            If None, the `split_point` of the explainer is used.</span>
+<a id="__codelineno-0-1349" name="__codelineno-0-1349"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-1350" name="__codelineno-0-1350"></a><span class="sd">        activations (dict[str, LatentActivations]): A dictionary with model paths as keys and the corresponding</span>
+<a id="__codelineno-0-1351" name="__codelineno-0-1351"></a><span class="sd">            tensors as values.</span>
+<a id="__codelineno-0-1352" name="__codelineno-0-1352"></a><span class="sd">        split_point (str | None): The split point to extract activations from.</span>
+<a id="__codelineno-0-1353" name="__codelineno-0-1353"></a><span class="sd">            If None, the `split_point` of the explainer is used.</span>
+<a id="__codelineno-0-1354" name="__codelineno-0-1354"></a>
+<a id="__codelineno-0-1355" name="__codelineno-0-1355"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-1356" name="__codelineno-0-1356"></a><span class="sd">        (LatentActivations): The activations for the explainer split point.</span>
 <a id="__codelineno-0-1357" name="__codelineno-0-1357"></a>
-<a id="__codelineno-0-1358" name="__codelineno-0-1358"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-1359" name="__codelineno-0-1359"></a><span class="sd">        (LatentActivations): The activations for the explainer split point.</span>
-<a id="__codelineno-0-1360" name="__codelineno-0-1360"></a>
-<a id="__codelineno-0-1361" name="__codelineno-0-1361"></a><span class="sd">    Examples:</span>
-<a id="__codelineno-0-1362" name="__codelineno-0-1362"></a><span class="sd">        &gt;&gt;&gt; from interpreto import ModelWithSplitPoints as MWSP</span>
-<a id="__codelineno-0-1363" name="__codelineno-0-1363"></a><span class="sd">        &gt;&gt;&gt; model = ModelWithSplitPoints(&quot;bert-base-uncased&quot;, split_points=4,</span>
-<a id="__codelineno-0-1364" name="__codelineno-0-1364"></a><span class="sd">        &gt;&gt;&gt;                              automodel=AutoModelForSequenceClassification)</span>
-<a id="__codelineno-0-1365" name="__codelineno-0-1365"></a><span class="sd">        &gt;&gt;&gt; activations_dict: dict[str, LatentActivations] = model.get_activations(</span>
-<a id="__codelineno-0-1366" name="__codelineno-0-1366"></a><span class="sd">        ...     &quot;interpreto is magic&quot;,</span>
-<a id="__codelineno-0-1367" name="__codelineno-0-1367"></a><span class="sd">        ... )</span>
-<a id="__codelineno-0-1368" name="__codelineno-0-1368"></a><span class="sd">        &gt;&gt;&gt; activations: LatentActivations = model.get_split_activations(activations_dict)</span>
-<a id="__codelineno-0-1369" name="__codelineno-0-1369"></a><span class="sd">        &gt;&gt;&gt; activations.shape</span>
-<a id="__codelineno-0-1370" name="__codelineno-0-1370"></a><span class="sd">        torch.Size([1, 12, 768])</span>
-<a id="__codelineno-0-1371" name="__codelineno-0-1371"></a>
-<a id="__codelineno-0-1372" name="__codelineno-0-1372"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-1373" name="__codelineno-0-1373"></a><span class="sd">        ValueError: If not split point is specified and the `model_with_split_points` has more than one split point.</span>
-<a id="__codelineno-0-1374" name="__codelineno-0-1374"></a><span class="sd">        TypeError: If the activations are not a valid dictionary.</span>
-<a id="__codelineno-0-1375" name="__codelineno-0-1375"></a><span class="sd">        ValueError: If the specified split point is not found in the activations.</span>
-<a id="__codelineno-0-1376" name="__codelineno-0-1376"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-1377" name="__codelineno-0-1377"></a>    <span class="k">if</span> <span class="n">split_point</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-1378" name="__codelineno-0-1378"></a>        <span class="n">local_split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">split_point</span>
-<a id="__codelineno-0-1379" name="__codelineno-0-1379"></a>    <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">:</span>
-<a id="__codelineno-0-1380" name="__codelineno-0-1380"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-1381" name="__codelineno-0-1381"></a>            <span class="s2">&quot;The activations cannot correspond to `model_with_split_points` model. &quot;</span>
-<a id="__codelineno-0-1382" name="__codelineno-0-1382"></a>            <span class="s2">&quot;The `model_with_split_points` model do not have `split_point` defined. &quot;</span>
-<a id="__codelineno-0-1383" name="__codelineno-0-1383"></a>        <span class="p">)</span>
-<a id="__codelineno-0-1384" name="__codelineno-0-1384"></a>    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-<a id="__codelineno-0-1385" name="__codelineno-0-1385"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot determine the split point with multiple `model_with_split_points` split points. &quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1386" name="__codelineno-0-1386"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1387" name="__codelineno-0-1387"></a>        <span class="n">local_split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-0-1388" name="__codelineno-0-1388"></a>
-<a id="__codelineno-0-1389" name="__codelineno-0-1389"></a>    <span class="n">act_is_dict_of_tensors</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
-<a id="__codelineno-0-1390" name="__codelineno-0-1390"></a>        <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">activations</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+<a id="__codelineno-0-1358" name="__codelineno-0-1358"></a><span class="sd">    Examples:</span>
+<a id="__codelineno-0-1359" name="__codelineno-0-1359"></a><span class="sd">        &gt;&gt;&gt; from interpreto import ModelWithSplitPoints as MWSP</span>
+<a id="__codelineno-0-1360" name="__codelineno-0-1360"></a><span class="sd">        &gt;&gt;&gt; model = ModelWithSplitPoints(&quot;bert-base-uncased&quot;, split_points=4,</span>
+<a id="__codelineno-0-1361" name="__codelineno-0-1361"></a><span class="sd">        &gt;&gt;&gt;                              automodel=AutoModelForSequenceClassification)</span>
+<a id="__codelineno-0-1362" name="__codelineno-0-1362"></a><span class="sd">        &gt;&gt;&gt; activations_dict: dict[str, LatentActivations] = model.get_activations(</span>
+<a id="__codelineno-0-1363" name="__codelineno-0-1363"></a><span class="sd">        ...     &quot;interpreto is magic&quot;,</span>
+<a id="__codelineno-0-1364" name="__codelineno-0-1364"></a><span class="sd">        ... )</span>
+<a id="__codelineno-0-1365" name="__codelineno-0-1365"></a><span class="sd">        &gt;&gt;&gt; activations: LatentActivations = model.get_split_activations(activations_dict)</span>
+<a id="__codelineno-0-1366" name="__codelineno-0-1366"></a><span class="sd">        &gt;&gt;&gt; activations.shape</span>
+<a id="__codelineno-0-1367" name="__codelineno-0-1367"></a><span class="sd">        torch.Size([1, 12, 768])</span>
+<a id="__codelineno-0-1368" name="__codelineno-0-1368"></a>
+<a id="__codelineno-0-1369" name="__codelineno-0-1369"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-1370" name="__codelineno-0-1370"></a><span class="sd">        ValueError: If not split point is specified and the `model_with_split_points` has more than one split point.</span>
+<a id="__codelineno-0-1371" name="__codelineno-0-1371"></a><span class="sd">        TypeError: If the activations are not a valid dictionary.</span>
+<a id="__codelineno-0-1372" name="__codelineno-0-1372"></a><span class="sd">        ValueError: If the specified split point is not found in the activations.</span>
+<a id="__codelineno-0-1373" name="__codelineno-0-1373"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1374" name="__codelineno-0-1374"></a>    <span class="k">if</span> <span class="n">split_point</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-1375" name="__codelineno-0-1375"></a>        <span class="n">local_split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">split_point</span>
+<a id="__codelineno-0-1376" name="__codelineno-0-1376"></a>    <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">:</span>
+<a id="__codelineno-0-1377" name="__codelineno-0-1377"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-1378" name="__codelineno-0-1378"></a>            <span class="s2">&quot;The activations cannot correspond to `model_with_split_points` model. &quot;</span>
+<a id="__codelineno-0-1379" name="__codelineno-0-1379"></a>            <span class="s2">&quot;The `model_with_split_points` model do not have `split_point` defined. &quot;</span>
+<a id="__codelineno-0-1380" name="__codelineno-0-1380"></a>        <span class="p">)</span>
+<a id="__codelineno-0-1381" name="__codelineno-0-1381"></a>    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+<a id="__codelineno-0-1382" name="__codelineno-0-1382"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot determine the split point with multiple `model_with_split_points` split points. &quot;</span><span class="p">)</span>
+<a id="__codelineno-0-1383" name="__codelineno-0-1383"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1384" name="__codelineno-0-1384"></a>        <span class="n">local_split_point</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-1385" name="__codelineno-0-1385"></a>
+<a id="__codelineno-0-1386" name="__codelineno-0-1386"></a>    <span class="n">act_is_dict_of_tensors</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+<a id="__codelineno-0-1387" name="__codelineno-0-1387"></a>        <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">activations</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+<a id="__codelineno-0-1388" name="__codelineno-0-1388"></a>    <span class="p">)</span>
+<a id="__codelineno-0-1389" name="__codelineno-0-1389"></a>    <span class="n">act_is_dict_of_list_of_tensors</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+<a id="__codelineno-0-1390" name="__codelineno-0-1390"></a>        <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">act</span><span class="p">)</span> <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">activations</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
 <a id="__codelineno-0-1391" name="__codelineno-0-1391"></a>    <span class="p">)</span>
-<a id="__codelineno-0-1392" name="__codelineno-0-1392"></a>    <span class="n">act_is_dict_of_list_of_tensors</span> <span class="o">=</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
-<a id="__codelineno-0-1393" name="__codelineno-0-1393"></a>        <span class="nb">isinstance</span><span class="p">(</span><span class="n">act</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">act</span><span class="p">)</span> <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="n">activations</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
-<a id="__codelineno-0-1394" name="__codelineno-0-1394"></a>    <span class="p">)</span>
-<a id="__codelineno-0-1395" name="__codelineno-0-1395"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">act_is_dict_of_tensors</span> <span class="ow">or</span> <span class="n">act_is_dict_of_list_of_tensors</span><span class="p">):</span>
-<a id="__codelineno-0-1396" name="__codelineno-0-1396"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-<a id="__codelineno-0-1397" name="__codelineno-0-1397"></a>            <span class="s2">&quot;Invalid activations for the concept explainer. &quot;</span>
-<a id="__codelineno-0-1398" name="__codelineno-0-1398"></a>            <span class="s2">&quot;Activations should be a dictionary of model paths and torch.Tensor activations, &quot;</span>
-<a id="__codelineno-0-1399" name="__codelineno-0-1399"></a>            <span class="s2">&quot;or a dictionary of model paths and list of torch.Tensor activations. &quot;</span>
-<a id="__codelineno-0-1400" name="__codelineno-0-1400"></a>            <span class="sa">f</span><span class="s2">&quot;Got: &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-<a id="__codelineno-0-1401" name="__codelineno-0-1401"></a>        <span class="p">)</span>
-<a id="__codelineno-0-1402" name="__codelineno-0-1402"></a>    <span class="n">activations_split_points</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>  <span class="c1"># type: ignore</span>
-<a id="__codelineno-0-1403" name="__codelineno-0-1403"></a>    <span class="k">if</span> <span class="n">local_split_point</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">activations_split_points</span><span class="p">:</span>
-<a id="__codelineno-0-1404" name="__codelineno-0-1404"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-1405" name="__codelineno-0-1405"></a>            <span class="sa">f</span><span class="s2">&quot;Fitted split point &#39;</span><span class="si">{</span><span class="n">local_split_point</span><span class="si">}</span><span class="s2">&#39; not found in activations.</span><span class="se">\n</span><span class="s2">&quot;</span>
-<a id="__codelineno-0-1406" name="__codelineno-0-1406"></a>            <span class="sa">f</span><span class="s2">&quot;Available split_points: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">activations_split_points</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
-<a id="__codelineno-0-1407" name="__codelineno-0-1407"></a>        <span class="p">)</span>
-<a id="__codelineno-0-1408" name="__codelineno-0-1408"></a>
-<a id="__codelineno-0-1409" name="__codelineno-0-1409"></a>    <span class="k">return</span> <span class="n">activations</span><span class="p">[</span><span class="n">local_split_point</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
+<a id="__codelineno-0-1392" name="__codelineno-0-1392"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">act_is_dict_of_tensors</span> <span class="ow">or</span> <span class="n">act_is_dict_of_list_of_tensors</span><span class="p">):</span>
+<a id="__codelineno-0-1393" name="__codelineno-0-1393"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+<a id="__codelineno-0-1394" name="__codelineno-0-1394"></a>            <span class="s2">&quot;Invalid activations for the concept explainer. &quot;</span>
+<a id="__codelineno-0-1395" name="__codelineno-0-1395"></a>            <span class="s2">&quot;Activations should be a dictionary of model paths and torch.Tensor activations, &quot;</span>
+<a id="__codelineno-0-1396" name="__codelineno-0-1396"></a>            <span class="s2">&quot;or a dictionary of model paths and list of torch.Tensor activations. &quot;</span>
+<a id="__codelineno-0-1397" name="__codelineno-0-1397"></a>            <span class="sa">f</span><span class="s2">&quot;Got: &#39;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+<a id="__codelineno-0-1398" name="__codelineno-0-1398"></a>        <span class="p">)</span>
+<a id="__codelineno-0-1399" name="__codelineno-0-1399"></a>    <span class="n">activations_split_points</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>  <span class="c1"># type: ignore</span>
+<a id="__codelineno-0-1400" name="__codelineno-0-1400"></a>    <span class="k">if</span> <span class="n">local_split_point</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">activations_split_points</span><span class="p">:</span>
+<a id="__codelineno-0-1401" name="__codelineno-0-1401"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-1402" name="__codelineno-0-1402"></a>            <span class="sa">f</span><span class="s2">&quot;Fitted split point &#39;</span><span class="si">{</span><span class="n">local_split_point</span><span class="si">}</span><span class="s2">&#39; not found in activations.</span><span class="se">\n</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-1403" name="__codelineno-0-1403"></a>            <span class="sa">f</span><span class="s2">&quot;Available split_points: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">activations_split_points</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-1404" name="__codelineno-0-1404"></a>        <span class="p">)</span>
+<a id="__codelineno-0-1405" name="__codelineno-0-1405"></a>
+<a id="__codelineno-0-1406" name="__codelineno-0-1406"></a>    <span class="k">return</span> <span class="n">activations</span><span class="p">[</span><span class="n">local_split_point</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4770,8 +4767,7 @@ If None, the <code>split_point</code> of the explainer is used.</p>
     special tokens are removed and the remaining ones are aggregate by sentences.
     Then the activations are flattened.
     <code>(n x g, d)</code> where <code>g</code> is the number of sentences in the input.
-    The split is defined by <code>interpreto.commons.granularity.Granularity.SENTENCE</code>.
-    Requires <code>spacy</code> to be installed.</p>
+    The split is defined by <code>interpreto.commons.granularity.Granularity.SENTENCE</code>.</p>
 </li>
 <li>
 <p><code>TOKEN</code>:

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -3459,8 +3459,7 @@ Possibles values are:</p>
 <li>
 <p><code>ModelWithSplitPoints.activation_granularities.SENTENCE</code>:
     aggregate by sentences following the split defined by
-    :class:<code>~interpreto.commons.granularity.Granularity.SENTENCE</code>.
-    Requires <code>spacy</code> to be installed.</p>
+    :class:<code>~interpreto.commons.granularity.Granularity.SENTENCE</code>.</p>
 </li>
 </ul>
               </div>
@@ -3764,8 +3763,7 @@ List length: correspond to the number of inputs.
 <span class="normal"><a href="#__codelineno-0-521">521</a></span>
 <span class="normal"><a href="#__codelineno-0-522">522</a></span>
 <span class="normal"><a href="#__codelineno-0-523">523</a></span>
-<span class="normal"><a href="#__codelineno-0-524">524</a></span>
-<span class="normal"><a href="#__codelineno-0-525">525</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-385" name="__codelineno-0-385"></a><span class="nd">@check_fitted</span>
+<span class="normal"><a href="#__codelineno-0-524">524</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-385" name="__codelineno-0-385"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-386" name="__codelineno-0-386"></a><span class="k">def</span><span class="w"> </span><span class="nf">concept_output_gradient</span><span class="p">(</span>
 <a id="__codelineno-0-387" name="__codelineno-0-387"></a>    <span class="bp">self</span><span class="p">,</span>
 <a id="__codelineno-0-388" name="__codelineno-0-388"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="n">BatchEncoding</span><span class="p">,</span>
@@ -3830,82 +3828,81 @@ List length: correspond to the number of inputs.
 <a id="__codelineno-0-447" name="__codelineno-0-447"></a><span class="sd">            - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:</span>
 <a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="sd">                aggregate by sentences following the split defined by</span>
 <a id="__codelineno-0-449" name="__codelineno-0-449"></a><span class="sd">                :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.</span>
-<a id="__codelineno-0-450" name="__codelineno-0-450"></a><span class="sd">                Requires `spacy` to be installed.</span>
-<a id="__codelineno-0-451" name="__codelineno-0-451"></a>
-<a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="sd">        aggregation_strategy:</span>
-<a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="sd">            Strategy to aggregate token activations into larger inputs granularities.</span>
-<a id="__codelineno-0-454" name="__codelineno-0-454"></a><span class="sd">            Applied for `WORD` and `SENTENCE` activation strategies.</span>
-<a id="__codelineno-0-455" name="__codelineno-0-455"></a><span class="sd">            Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.</span>
-<a id="__codelineno-0-456" name="__codelineno-0-456"></a><span class="sd">            The concatenated into (ng, d) tensors.</span>
-<a id="__codelineno-0-457" name="__codelineno-0-457"></a><span class="sd">            Existing strategies are:</span>
-<a id="__codelineno-0-458" name="__codelineno-0-458"></a>
-<a id="__codelineno-0-459" name="__codelineno-0-459"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SUM``:</span>
-<a id="__codelineno-0-460" name="__codelineno-0-460"></a><span class="sd">                Tokens activations are summed along the sequence length dimension.</span>
-<a id="__codelineno-0-461" name="__codelineno-0-461"></a>
-<a id="__codelineno-0-462" name="__codelineno-0-462"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:</span>
-<a id="__codelineno-0-463" name="__codelineno-0-463"></a><span class="sd">                Tokens activations are averaged along the sequence length dimension.</span>
-<a id="__codelineno-0-464" name="__codelineno-0-464"></a>
-<a id="__codelineno-0-465" name="__codelineno-0-465"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MAX``:</span>
-<a id="__codelineno-0-466" name="__codelineno-0-466"></a><span class="sd">                The maximum of the token activations along the sequence length dimension is selected.</span>
-<a id="__codelineno-0-467" name="__codelineno-0-467"></a>
-<a id="__codelineno-0-468" name="__codelineno-0-468"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:</span>
-<a id="__codelineno-0-469" name="__codelineno-0-469"></a><span class="sd">                The maximum of the absolute value of the activations multiplied by its initial sign.</span>
-<a id="__codelineno-0-470" name="__codelineno-0-470"></a><span class="sd">                signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]</span>
-<a id="__codelineno-0-471" name="__codelineno-0-471"></a>
-<a id="__codelineno-0-472" name="__codelineno-0-472"></a><span class="sd">        concepts_x_gradients (bool):</span>
-<a id="__codelineno-0-473" name="__codelineno-0-473"></a><span class="sd">            If the resulting gradients should be multiplied by the concepts activations.</span>
-<a id="__codelineno-0-474" name="__codelineno-0-474"></a><span class="sd">            True by default (similarly to attributions), because of mathematical properties.</span>
-<a id="__codelineno-0-475" name="__codelineno-0-475"></a><span class="sd">            Therefore the out put is $C * \\nabla{f_{co}}(C)$.</span>
-<a id="__codelineno-0-476" name="__codelineno-0-476"></a>
-<a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="sd">        normalization (bool):</span>
-<a id="__codelineno-0-478" name="__codelineno-0-478"></a><span class="sd">            Whether to normalize the gradients.</span>
-<a id="__codelineno-0-479" name="__codelineno-0-479"></a><span class="sd">            Gradients will be normalized on the concept (c) and sequence length (g) dimensions.</span>
-<a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="sd">            Such that for a given sample-target-granular pair,</span>
-<a id="__codelineno-0-481" name="__codelineno-0-481"></a><span class="sd">            the sum of the absolute values of the gradients is equal to 1.</span>
-<a id="__codelineno-0-482" name="__codelineno-0-482"></a><span class="sd">            (The granular elements depend on the :arg:`activation_granularity`).</span>
-<a id="__codelineno-0-483" name="__codelineno-0-483"></a>
-<a id="__codelineno-0-484" name="__codelineno-0-484"></a><span class="sd">        tqdm_bar (bool):</span>
-<a id="__codelineno-0-485" name="__codelineno-0-485"></a><span class="sd">            Whether to display a progress bar.</span>
-<a id="__codelineno-0-486" name="__codelineno-0-486"></a>
-<a id="__codelineno-0-487" name="__codelineno-0-487"></a><span class="sd">        batch_size (int | None):</span>
-<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">            Batch size for the model.</span>
-<a id="__codelineno-0-489" name="__codelineno-0-489"></a><span class="sd">            It might be different from the one used in `ModelWithSplitPoints.get_activations`</span>
-<a id="__codelineno-0-490" name="__codelineno-0-490"></a><span class="sd">            because gradients have a much larger impact on the memory.</span>
-<a id="__codelineno-0-491" name="__codelineno-0-491"></a>
-<a id="__codelineno-0-492" name="__codelineno-0-492"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">        list[Float[torch.Tensor, &quot;t g c&quot;]]:</span>
-<a id="__codelineno-0-494" name="__codelineno-0-494"></a><span class="sd">            The gradients of the model output with respect to the concept activations.</span>
-<a id="__codelineno-0-495" name="__codelineno-0-495"></a><span class="sd">            List length: correspond to the number of inputs.</span>
-<a id="__codelineno-0-496" name="__codelineno-0-496"></a><span class="sd">                Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of</span>
-<a id="__codelineno-0-497" name="__codelineno-0-497"></a><span class="sd">                concepts.</span>
-<a id="__codelineno-0-498" name="__codelineno-0-498"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-499" name="__codelineno-0-499"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_differentiable_concept_decoder</span><span class="p">:</span>
-<a id="__codelineno-0-500" name="__codelineno-0-500"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-501" name="__codelineno-0-501"></a>            <span class="s2">&quot;The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. &quot;</span>
-<a id="__codelineno-0-502" name="__codelineno-0-502"></a>            <span class="sa">f</span><span class="s2">&quot;Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
-<a id="__codelineno-0-503" name="__codelineno-0-503"></a>        <span class="p">)</span>
-<a id="__codelineno-0-504" name="__codelineno-0-504"></a>
-<a id="__codelineno-0-505" name="__codelineno-0-505"></a>    <span class="c1"># put everything on device</span>
-<a id="__codelineno-0-506" name="__codelineno-0-506"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-<a id="__codelineno-0-507" name="__codelineno-0-507"></a>
-<a id="__codelineno-0-508" name="__codelineno-0-508"></a>    <span class="c1"># forward all computations to</span>
-<a id="__codelineno-0-509" name="__codelineno-0-509"></a>    <span class="n">gradients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">_get_concept_output_gradients</span><span class="p">(</span>
-<a id="__codelineno-0-510" name="__codelineno-0-510"></a>        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
-<a id="__codelineno-0-511" name="__codelineno-0-511"></a>        <span class="n">targets</span><span class="o">=</span><span class="n">targets</span><span class="p">,</span>
-<a id="__codelineno-0-512" name="__codelineno-0-512"></a>        <span class="n">encode_activations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encode_activations</span><span class="p">,</span>
-<a id="__codelineno-0-513" name="__codelineno-0-513"></a>        <span class="n">decode_concepts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">decode_concepts</span><span class="p">,</span>
-<a id="__codelineno-0-514" name="__codelineno-0-514"></a>        <span class="n">split_point</span><span class="o">=</span><span class="n">split_point</span><span class="p">,</span>
-<a id="__codelineno-0-515" name="__codelineno-0-515"></a>        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
-<a id="__codelineno-0-516" name="__codelineno-0-516"></a>        <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">aggregation_strategy</span><span class="p">,</span>
-<a id="__codelineno-0-517" name="__codelineno-0-517"></a>        <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="n">concepts_x_gradients</span><span class="p">,</span>
-<a id="__codelineno-0-518" name="__codelineno-0-518"></a>        <span class="n">tqdm_bar</span><span class="o">=</span><span class="n">tqdm_bar</span><span class="p">,</span>
-<a id="__codelineno-0-519" name="__codelineno-0-519"></a>        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
-<a id="__codelineno-0-520" name="__codelineno-0-520"></a>    <span class="p">)</span>
-<a id="__codelineno-0-521" name="__codelineno-0-521"></a>
-<a id="__codelineno-0-522" name="__codelineno-0-522"></a>    <span class="c1"># normalize the gradients if required</span>
-<a id="__codelineno-0-523" name="__codelineno-0-523"></a>    <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
-<a id="__codelineno-0-524" name="__codelineno-0-524"></a>        <span class="n">gradients</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__normalize_gradients</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">gradients</span><span class="p">]</span>
-<a id="__codelineno-0-525" name="__codelineno-0-525"></a>    <span class="k">return</span> <span class="n">gradients</span>
+<a id="__codelineno-0-450" name="__codelineno-0-450"></a>
+<a id="__codelineno-0-451" name="__codelineno-0-451"></a><span class="sd">        aggregation_strategy:</span>
+<a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="sd">            Strategy to aggregate token activations into larger inputs granularities.</span>
+<a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="sd">            Applied for `WORD` and `SENTENCE` activation strategies.</span>
+<a id="__codelineno-0-454" name="__codelineno-0-454"></a><span class="sd">            Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.</span>
+<a id="__codelineno-0-455" name="__codelineno-0-455"></a><span class="sd">            The concatenated into (ng, d) tensors.</span>
+<a id="__codelineno-0-456" name="__codelineno-0-456"></a><span class="sd">            Existing strategies are:</span>
+<a id="__codelineno-0-457" name="__codelineno-0-457"></a>
+<a id="__codelineno-0-458" name="__codelineno-0-458"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SUM``:</span>
+<a id="__codelineno-0-459" name="__codelineno-0-459"></a><span class="sd">                Tokens activations are summed along the sequence length dimension.</span>
+<a id="__codelineno-0-460" name="__codelineno-0-460"></a>
+<a id="__codelineno-0-461" name="__codelineno-0-461"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:</span>
+<a id="__codelineno-0-462" name="__codelineno-0-462"></a><span class="sd">                Tokens activations are averaged along the sequence length dimension.</span>
+<a id="__codelineno-0-463" name="__codelineno-0-463"></a>
+<a id="__codelineno-0-464" name="__codelineno-0-464"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.MAX``:</span>
+<a id="__codelineno-0-465" name="__codelineno-0-465"></a><span class="sd">                The maximum of the token activations along the sequence length dimension is selected.</span>
+<a id="__codelineno-0-466" name="__codelineno-0-466"></a>
+<a id="__codelineno-0-467" name="__codelineno-0-467"></a><span class="sd">            - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:</span>
+<a id="__codelineno-0-468" name="__codelineno-0-468"></a><span class="sd">                The maximum of the absolute value of the activations multiplied by its initial sign.</span>
+<a id="__codelineno-0-469" name="__codelineno-0-469"></a><span class="sd">                signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]</span>
+<a id="__codelineno-0-470" name="__codelineno-0-470"></a>
+<a id="__codelineno-0-471" name="__codelineno-0-471"></a><span class="sd">        concepts_x_gradients (bool):</span>
+<a id="__codelineno-0-472" name="__codelineno-0-472"></a><span class="sd">            If the resulting gradients should be multiplied by the concepts activations.</span>
+<a id="__codelineno-0-473" name="__codelineno-0-473"></a><span class="sd">            True by default (similarly to attributions), because of mathematical properties.</span>
+<a id="__codelineno-0-474" name="__codelineno-0-474"></a><span class="sd">            Therefore the out put is $C * \\nabla{f_{co}}(C)$.</span>
+<a id="__codelineno-0-475" name="__codelineno-0-475"></a>
+<a id="__codelineno-0-476" name="__codelineno-0-476"></a><span class="sd">        normalization (bool):</span>
+<a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="sd">            Whether to normalize the gradients.</span>
+<a id="__codelineno-0-478" name="__codelineno-0-478"></a><span class="sd">            Gradients will be normalized on the concept (c) and sequence length (g) dimensions.</span>
+<a id="__codelineno-0-479" name="__codelineno-0-479"></a><span class="sd">            Such that for a given sample-target-granular pair,</span>
+<a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="sd">            the sum of the absolute values of the gradients is equal to 1.</span>
+<a id="__codelineno-0-481" name="__codelineno-0-481"></a><span class="sd">            (The granular elements depend on the :arg:`activation_granularity`).</span>
+<a id="__codelineno-0-482" name="__codelineno-0-482"></a>
+<a id="__codelineno-0-483" name="__codelineno-0-483"></a><span class="sd">        tqdm_bar (bool):</span>
+<a id="__codelineno-0-484" name="__codelineno-0-484"></a><span class="sd">            Whether to display a progress bar.</span>
+<a id="__codelineno-0-485" name="__codelineno-0-485"></a>
+<a id="__codelineno-0-486" name="__codelineno-0-486"></a><span class="sd">        batch_size (int | None):</span>
+<a id="__codelineno-0-487" name="__codelineno-0-487"></a><span class="sd">            Batch size for the model.</span>
+<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">            It might be different from the one used in `ModelWithSplitPoints.get_activations`</span>
+<a id="__codelineno-0-489" name="__codelineno-0-489"></a><span class="sd">            because gradients have a much larger impact on the memory.</span>
+<a id="__codelineno-0-490" name="__codelineno-0-490"></a>
+<a id="__codelineno-0-491" name="__codelineno-0-491"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-492" name="__codelineno-0-492"></a><span class="sd">        list[Float[torch.Tensor, &quot;t g c&quot;]]:</span>
+<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">            The gradients of the model output with respect to the concept activations.</span>
+<a id="__codelineno-0-494" name="__codelineno-0-494"></a><span class="sd">            List length: correspond to the number of inputs.</span>
+<a id="__codelineno-0-495" name="__codelineno-0-495"></a><span class="sd">                Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of</span>
+<a id="__codelineno-0-496" name="__codelineno-0-496"></a><span class="sd">                concepts.</span>
+<a id="__codelineno-0-497" name="__codelineno-0-497"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-498" name="__codelineno-0-498"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_differentiable_concept_decoder</span><span class="p">:</span>
+<a id="__codelineno-0-499" name="__codelineno-0-499"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-500" name="__codelineno-0-500"></a>            <span class="s2">&quot;The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. &quot;</span>
+<a id="__codelineno-0-501" name="__codelineno-0-501"></a>            <span class="sa">f</span><span class="s2">&quot;Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-502" name="__codelineno-0-502"></a>        <span class="p">)</span>
+<a id="__codelineno-0-503" name="__codelineno-0-503"></a>
+<a id="__codelineno-0-504" name="__codelineno-0-504"></a>    <span class="c1"># put everything on device</span>
+<a id="__codelineno-0-505" name="__codelineno-0-505"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+<a id="__codelineno-0-506" name="__codelineno-0-506"></a>
+<a id="__codelineno-0-507" name="__codelineno-0-507"></a>    <span class="c1"># forward all computations to</span>
+<a id="__codelineno-0-508" name="__codelineno-0-508"></a>    <span class="n">gradients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_with_split_points</span><span class="o">.</span><span class="n">_get_concept_output_gradients</span><span class="p">(</span>
+<a id="__codelineno-0-509" name="__codelineno-0-509"></a>        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+<a id="__codelineno-0-510" name="__codelineno-0-510"></a>        <span class="n">targets</span><span class="o">=</span><span class="n">targets</span><span class="p">,</span>
+<a id="__codelineno-0-511" name="__codelineno-0-511"></a>        <span class="n">encode_activations</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">encode_activations</span><span class="p">,</span>
+<a id="__codelineno-0-512" name="__codelineno-0-512"></a>        <span class="n">decode_concepts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">decode_concepts</span><span class="p">,</span>
+<a id="__codelineno-0-513" name="__codelineno-0-513"></a>        <span class="n">split_point</span><span class="o">=</span><span class="n">split_point</span><span class="p">,</span>
+<a id="__codelineno-0-514" name="__codelineno-0-514"></a>        <span class="n">activation_granularity</span><span class="o">=</span><span class="n">activation_granularity</span><span class="p">,</span>
+<a id="__codelineno-0-515" name="__codelineno-0-515"></a>        <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">aggregation_strategy</span><span class="p">,</span>
+<a id="__codelineno-0-516" name="__codelineno-0-516"></a>        <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="n">concepts_x_gradients</span><span class="p">,</span>
+<a id="__codelineno-0-517" name="__codelineno-0-517"></a>        <span class="n">tqdm_bar</span><span class="o">=</span><span class="n">tqdm_bar</span><span class="p">,</span>
+<a id="__codelineno-0-518" name="__codelineno-0-518"></a>        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+<a id="__codelineno-0-519" name="__codelineno-0-519"></a>    <span class="p">)</span>
+<a id="__codelineno-0-520" name="__codelineno-0-520"></a>
+<a id="__codelineno-0-521" name="__codelineno-0-521"></a>    <span class="c1"># normalize the gradients if required</span>
+<a id="__codelineno-0-522" name="__codelineno-0-522"></a>    <span class="k">if</span> <span class="n">normalization</span><span class="p">:</span>
+<a id="__codelineno-0-523" name="__codelineno-0-523"></a>        <span class="n">gradients</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__normalize_gradients</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">gradients</span><span class="p">]</span>
+<a id="__codelineno-0-524" name="__codelineno-0-524"></a>    <span class="k">return</span> <span class="n">gradients</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
