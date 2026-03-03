@@ -49,7 +49,7 @@ from interpreto.attributions import (
     VarGrad,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.commons.granularity import _HAS_SPACY, Granularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
 
@@ -150,8 +150,6 @@ def test_attribution_methods_with_text_long(model_name, attribution_explainer):
     "granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE]
 )
 def test_attribution_methods_granularity(model_name, attribution_explainer, granularity):
-    if not _HAS_SPACY and granularity == Granularity.SENTENCE:
-        pytest.skip("spaCy not available – skipping SENTENCE granularity")
     evaluate_attribution_methods_with_text(
         model_name=model_name,
         attribution_explainer=attribution_explainer,
@@ -177,8 +175,6 @@ def test_attribution_methods_granularity(model_name, attribution_explainer, gran
 def test_attribution_methods_granularity_aggregation_strategy(
     model_name, attribution_explainer, granularity, aggregation_strategy
 ):
-    if not _HAS_SPACY and granularity == Granularity.SENTENCE:
-        pytest.skip("spaCy not available – skipping SENTENCE granularity")
     evaluate_attribution_methods_with_text(
         model_name=model_name,
         attribution_explainer=attribution_explainer,
