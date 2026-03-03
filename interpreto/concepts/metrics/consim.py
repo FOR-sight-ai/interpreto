@@ -50,18 +50,72 @@ class PromptSetting(NamedTuple):
 
     # initial phase
     concepts_global_importances: bool = False
+    global_contrastive_importances: bool = False
 
     # learning phase
     lp_samples: bool = False
     lp_concepts_local_contributions: bool = False
+    lp_local_contrastive_importance: bool = False
     lp_labels: bool = False
 
     # evaluation phase
     ep_samples: bool = True
     ep_concepts_local_contributions: bool = False
 
+    # anonymization
+    anonymize_classes: bool = False
+
     # prediction
     # pred_concepts: bool = False
+
+    def validate(
+        self,
+        *,
+        concepts_interpretation: dict[int, str] | None,
+        gold_labels: torch.Tensor | list[int] | None,
+    ) -> None:
+        """
+        Validate the prompt setting against required inputs and incompatible options.
+        """
+        if self.concepts_global_importances and self.global_contrastive_importances:
+            raise ValueError(
+                "PromptSetting.concepts_global_importances and PromptSetting.global_contrastive_importances are mutually exclusive."
+            )
+
+        if self.lp_concepts_local_contributions and self.lp_local_contrastive_importance:
+            raise ValueError(
+                "PromptSetting.lp_concepts_local_contributions and PromptSetting.lp_local_contrastive_importance are mutually exclusive."
+            )
+
+        if self.global_contrastive_importances and concepts_interpretation is None:
+            raise ValueError(
+                "PromptSetting.global_contrastive_importances=True requires `concepts_interpretation` to be provided to ConSim.evaluate()."
+            )
+
+        if self.lp_local_contrastive_importance and concepts_interpretation is None:
+            raise ValueError(
+                "PromptSetting.lp_local_contrastive_importance=True requires `concepts_interpretation` to be provided to ConSim.evaluate()."
+            )
+
+        if self.lp_local_contrastive_importance and gold_labels is None:
+            raise ValueError(
+                "PromptSetting.lp_local_contrastive_importance=True requires `gold_labels` to be provided to ConSim.evaluate()."
+            )
+
+        if (
+            not self.concepts_interpretation
+            and (
+                self.concepts_global_importances
+                or self.global_contrastive_importances
+                or self.lp_concepts_local_contributions
+                or self.lp_local_contrastive_importance
+                or self.ep_concepts_local_contributions
+            )
+            and concepts_interpretation is None
+        ):
+            raise ValueError(
+                "PromptSetting.concepts_interpretation=False with concept explanations requires `concepts_interpretation` to be provided to ConSim.evaluate()."
+            )
 
 
 class PromptTypes(Enum):
@@ -117,6 +171,35 @@ class PromptTypes(Enum):
         lp_concepts_local_contributions=True,
         lp_labels=True,
         ep_concepts_local_contributions=True,
+    )
+    C1_contrastive_global_concepts_without_lp = PromptSetting(
+        concepts_interpretation=True,
+        global_contrastive_importances=True,
+    )
+    C2_contrastive_global_concepts_with_lp = PromptSetting(
+        concepts_interpretation=True,
+        global_contrastive_importances=True,
+        lp_samples=True,
+        lp_labels=True,
+    )
+    C3_contrastive_global_and_local_concepts_with_lp = PromptSetting(
+        concepts_interpretation=True,
+        global_contrastive_importances=True,
+        lp_samples=True,
+        lp_local_contrastive_importance=True,
+        lp_labels=True,
+    )
+    C4_contrastive_local_concepts = PromptSetting(
+        concepts_interpretation=True,
+        concepts_global_importances=True,
+        lp_samples=True,
+        lp_local_contrastive_importance=True,
+        lp_labels=True,
+    )
+    C5_contrastive_local_only = PromptSetting(
+        lp_samples=True,
+        lp_local_contrastive_importance=True,
+        lp_labels=True,
     )
 
 
@@ -556,141 +639,94 @@ class ConSim:
         return None
 
     @staticmethod
-    def _filter_and_quantize_concepts_importances(
-        concepts_interpretation: dict[int, str],
-        global_importances: dict[str, dict[int, float]],
-        local_importances: torch.Tensor | None,
-        importance_threshold: float = 0.05,
-    ) -> tuple[dict[int, str], dict[str, dict[int, str]], list[dict[int, str]] | None]:
+    def _resolve_prompt_setting(prompt_type: PromptTypes | PromptSetting) -> PromptSetting:
         """
-        Filter the concepts importance and quantize the values.
-
-        The concepts with normalized global importances under the threshold are removed.
-        Similarly, the concepts with normalized local importances under the threshold are removed.
-
-        Only the intersection between the two are kept.
-
-        The concepts importance are quantized to literals.
-        The corresponding literals and ranges (values for the default threshold value of 0.05) are:
-
-        - "++" for values above 0.3
-
-        - "+" for values between 0.05 and 0.3
-
-        - "-" for values between -0.05 and -0.3
-
-        - "--" for values below -0.3
-
-        Note that this values correspond to the normalized importance of the concepts.
-        The normalization is done by dividing the importances by the sum of the absolute values of the importances.
-
-        Arguments:
-            concepts_interpretation: dict[int, str]
-                The words that activate the concepts the most and the least.
-                A dictionary with the concepts as keys and another dictionary as values.
-                The inner dictionary has the words as keys and the activations as values.
-            global_importances: dict[str, str]
-                The importance of the concepts for each class.
-                A dictionary with the classes as keys and another dictionary as values.
-                The inner dictionary has the concepts as keys and the importance as values.
-            local_importances: torch.Tensor | None
-                Matrix of concept importances for each sentence. Shape (n_sentences, n_concepts)
-            importance_threshold: float
-                The threshold to select the most important concepts for each class.
-                The threshold correspond to the cumulative importance of the concepts to keep.
-
-        Returns:
-            concepts_interpretation: dict[int, str]
-                The words that activate the concepts the most and the least.
-                A dictionary with the concepts as keys and another dictionary as values.
-                The inner dictionary has the words as keys and the activations as values.
-                Filtered to keep only the important concepts.
-            filtered_global_importances: dict[str, dict[int, float]]
-                The importance of the concepts for each class.
-                A dictionary with the classes as keys and another dictionary as values.
-                The inner dictionary has the concepts as keys and the importance as values.
-                Filtered to keep only the important concepts.
-            filtered_local_importances: list[dict[int, str]] | None
-                The importance of concepts for each sentence.
-                A list with each element corresponding to one sentence.
-                Each element of the list if a dictionary with an importance associated to a concept id.
-                Filtered to keep only the important concepts.
+        Resolve a PromptSetting from either a PromptTypes enum or a direct PromptSetting.
         """
-        # ------------------------------------------------------------------------------------------
-        # filter concepts which are important for at least one class
-        concepts_to_keep = []
-        while len(concepts_to_keep) == 0:
-            for concepts_importance in global_importances.values():
-                if len(concepts_importance) == 0:
-                    continue
+        if isinstance(prompt_type, PromptTypes):
+            return prompt_type.value
+        return prompt_type
 
-                # normalize the importances
-                importances = torch.abs(torch.Tensor(list(concepts_importance.values())))
-                normalized_importances = importances / importances.sum()
+    @staticmethod
+    def _concept_descriptor(
+        concept_id: int,
+        concepts_interpretation: dict[int, str] | None,
+        include_label: bool,
+    ) -> str:
+        """
+        Produce a display string for a concept id, optionally including its label.
+        """
+        if not include_label:
+            return f"C{concept_id}"
 
-                # select the important concepts
-                added_concepts = torch.where(normalized_importances > importance_threshold)[0]
-                concepts_to_keep.extend(added_concepts)
-            if len(concepts_to_keep) == 0:
-                importance_threshold /= 2
+        if concepts_interpretation is None:
+            raise ValueError("`concepts_interpretation` must be provided to display concept labels.")
 
-        concepts_to_show = torch.unique(torch.stack(concepts_to_keep)).tolist()
-        interpretation_concepts_ids = list(concepts_interpretation.keys())
-        concepts_to_show = [cpt for cpt in concepts_to_show if cpt in interpretation_concepts_ids]
+        if concept_id not in concepts_interpretation:
+            raise ValueError(f"Missing label for concept id {concept_id} in `concepts_interpretation`.")
 
-        # ------------------------------------------------------------------------------------------
-        # filter the concepts activating words
-        concepts_interpretation = {c: concepts_interpretation[c] for c in concepts_to_show}  # type: ignore
+        return f"C{concept_id} ({concepts_interpretation[concept_id]})"
 
-        # ------------------------------------------------------------------------------------------
-        # filter the concepts importance
-        quantized_global_importances: dict[str, dict[int, str]] = {}
-        # iterate over classes
-        for class_name, concepts_importance in global_importances.items():
-            quantized_global_importances[class_name] = {}
-            # iterate over concepts
-            for c, importance in concepts_importance.items():
-                # quantize the importance and pass it to string
-                quantized_importance: str | None = ConSim._quantize_importances(importance, importance_threshold)
-                # keep only the concepts that should be shown and are important enough
-                if c in list(concepts_to_show) and quantized_importance is not None:
-                    quantized_global_importances[class_name][c] = quantized_importance
+    @staticmethod
+    def _concepts_to_string(
+        importances: torch.Tensor,
+        concepts_interpretation: dict[int, str] | None = None,
+        top_k: int = 5,
+        include_labels: bool | None = None,
+        threshold: float = 0.05,
+    ) -> str:
+        """
+        Format the top-k concepts into a printable string.
+        Concepts are sorted by absolute importance.
+        Importances are assumed to be normalized.
+        For contrastive settings, provide `foil_importances` to compute fact - foil.
+        """
+        if not isinstance(importances, torch.Tensor) or importances.ndim != 1:
+            raise ValueError("`importances` must be a 1D torch.Tensor of concept importances.")
 
-        if local_importances is None:
-            return concepts_interpretation, quantized_global_importances, None
+        if top_k <= 0:
+            raise ValueError("top_k must be a positive integer.")
 
-        # normalize sentences concepts importances
-        local_importances = local_importances / local_importances.abs().sum(dim=1, keepdim=True)
+        if include_labels is None and concepts_interpretation is None:
+            raise ValueError("`concepts_interpretation` must be provided to include labels.")
 
-        # ------------------------------------------------------------------------------------------
-        # clean elements to leave only the important concepts and quantize values to literals
-        filtered_local_importances: list[dict[int, str]] = []
-        # iterate over sentences
-        for sentence_concepts_importances in local_importances:
-            filtered_sentence_importances: dict[int, str] = {}
-            # iterate over concepts
-            for cpt, importance in enumerate(sentence_concepts_importances):
-                # quantize the importance and pass it to string
-                quantized_importance: str | None = ConSim._quantize_importances(
-                    importance.item(), importance_threshold
-                )
-                # keep only the concepts that should be shown and are important enough
-                if cpt in concepts_to_show and quantized_importance is not None:
-                    filtered_sentence_importances[cpt] = quantized_importance
-            filtered_local_importances.append(filtered_sentence_importances)
+        include_labels = concepts_interpretation is not None if include_labels is None else include_labels
 
-        return concepts_interpretation, quantized_global_importances, filtered_local_importances
+        k = min(top_k, importances.numel())
+        top_indices = torch.topk(importances.abs(), k=k).indices.tolist()
+
+        concepts_key_value = [
+            (
+                ConSim._concept_descriptor(concept_id, concepts_interpretation, include_labels),
+                ConSim._quantize_importances(importances[concept_id].item(), threshold=threshold),
+            )
+            for concept_id in top_indices
+        ]
+
+        return (
+            "{"
+            + ", ".join(
+                [
+                    f"{concept_interpretation}: {concept_importance}"
+                    for concept_interpretation, concept_importance in concepts_key_value
+                    if concept_importance is not None
+                ]
+            )
+            + "}"
+        )
 
     @staticmethod
     def _setting_to_prompt(  # noqa: PLR0912  # ignore too many branches  # too many special cases
         setting: PromptSetting,
-        anonymize_classes: bool,
         sentences: list[str],
         predictions: torch.Tensor,
         classes: list[str],
         concepts_interpretation: dict[int, str] | None,
-        global_importances: dict[str, dict[int, str]] | None,
-        local_importances: list[dict[int, str]] | None,
+        global_importances: torch.Tensor | None,
+        local_importances: list[torch.Tensor] | None,
+        gold_labels: list[int] | None,
+        top_k: int = 5,
+        importance_threshold: float = 0.05,
     ) -> tuple[str, str, list[str]]:
         """
         Create a prompt for the LLM model by integrating the different elements.
@@ -701,26 +737,26 @@ class ConSim:
         Arguments:
             setting: PromptSetting
                 Configuration, it says which elements should be included in the prompt.
-            anonymize_classes: bool
-                Whether to anonymize the classes.
             sentences: list[str]
                 The sentences, the first half serve as examples and the second half is to be classified.
             predictions: torch.Tensor
                 The predictions of the model on the sentences.
             classes: list[str]
                 The classes of the dataset.
-            concepts_interpretation: dict[str, str]
+            concepts_interpretation: dict[int, str] | None
                 The words that activate the concepts the most and the least.
                 A dictionary with the concepts as keys and another dictionary as values.
                 The inner dictionary has the words as keys and the activations as values.
-            global_importances: dict[str, dict[str, str]]
+            global_importances: torch.Tensor | None
                 The importance of the concepts for each class.
                 A dictionary with the classes as keys and another dictionary as values.
                 The inner dictionary has the concepts as keys and the importance as values.
-            local_importances: list[dict[str, str]]
+            local_importances: list[dict[int, str]] | None
                 The importance of concepts for each sentence.
                 A list with each element corresponding to one sentence.
                 Each element of the list if a dictionary with an importance associated to a concept id.
+            gold_labels: list[int] | None
+                Gold labels for samples, required when contrastive local explanations are enabled.
 
         Returns:
             system_prompt: str
@@ -737,13 +773,17 @@ class ConSim:
         # task description
 
         task_description_prompt = "You are a classifier. For each sample, you have to predict the class. "
-        if setting.concepts_interpretation or setting.concepts_global_importances:
+        if setting.global_contrastive_importances:
+            task_description_prompt += "To complete the task, you will be given the concepts and their contrastive importance for each class. "
+        elif setting.concepts_interpretation or setting.concepts_global_importances:
             task_description_prompt += (
                 "To complete the task, you will be given the concepts and their importance for each class. "
             )
         if setting.lp_samples and setting.lp_labels:
             if setting.lp_concepts_local_contributions:
                 task_description_prompt += "You will have examples of samples, labels, and concepts contributions to labels as reference for the task. "
+            elif setting.lp_local_contrastive_importance:
+                task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions as reference for the task. "
             else:
                 task_description_prompt += "You will have examples of samples and labels as reference for the task. "
         if setting.ep_concepts_local_contributions:
@@ -760,24 +800,23 @@ class ConSim:
         # if setting.pred_concepts:
         #     # show the concepts that could be predicted
         #     classes_prompt = f"The concepts are: [{', '.join(concepts_interpretation.keys())}]"
-        if anonymize_classes:
-            # show the classes without their names
+        if setting.anonymize_classes:
             anonym_classes = {class_name: f"Class_{i}" for i, class_name in enumerate(classes)}
             classes_prompt = f"The classes are: [{', '.join(anonym_classes.values())}]"
         else:
-            # show the classes
-            anonym_classes = {class_name: class_name for class_name in classes}  # placeholder for type checker
+            anonym_classes = {class_name: class_name for class_name in classes}
             classes_prompt = f"The classes are: [{', '.join(classes)}]"
         system_prompt_parts.append(classes_prompt)
+
+        def _class_name_from_index(class_index: int | torch.Tensor) -> str:
+            return anonym_classes[classes[int(class_index)]]
 
         # -------------------------
         # concepts activating words
         if setting.concepts_interpretation:
             if concepts_interpretation is None:
                 raise ValueError(
-                    "Concepts interpretation must be provided if prompt_type is not a baseline."
-                    "`concepts_interpretation` is an argument of the `ConSim.evaluate()` method, but it is None."
-                    "It can be computed via `TopKInputs(concept_explainer).interpret`."
+                    "PromptSetting.concepts_interpretation=True requires `concepts_interpretation` to be provided to ConSim.evaluate()."
                 )
 
             # for each concept, show 10 words, 5 that aligns the most and 5 that are the most opposed
@@ -785,8 +824,8 @@ class ConSim:
                 "For each concept, the most aligned words or descriptions are:\n"
                 + "\n".join(
                     [
-                        f"{concept_id}: {interpretation}"
-                        for concept_id, interpretation in concepts_interpretation.items()
+                        ConSim._concept_descriptor(concept_id, concepts_interpretation, True)
+                        for concept_id in concepts_interpretation.keys()
                     ]
                 )
             )
@@ -797,29 +836,71 @@ class ConSim:
         if setting.concepts_global_importances:
             if global_importances is None:
                 raise ValueError(
-                    "Global concepts importances must be provided if prompt_type is not a baseline."
-                    "`global_importances` is an argument of the `ConSim.evaluate()` method, but it is None."
-                    "It can be computed via `concept_explainer.concept_output_gradient` then averaging for each class."
+                    "PromptSetting.concepts_global_importances=True requires `global_importances` to be provided to ConSim.evaluate()."
                 )
 
-            # show the importance of the concepts for each class
-            if anonymize_classes:
-                classes_concepts_prompt = (
-                    "The most important concepts and their importance for each class are:\n"
-                    + "\n".join(
-                        [f"{anonym_classes[class_name]}: {value}" for class_name, value in global_importances.items()]
-                    )
+            # for each anonymized class, show the top k concepts
+            classes_concepts_prompt = (
+                "The most important concepts and their importance for each class are:\n"
+                + "\n".join(
+                    [
+                        f"{anonym_classes[class_name]}: {
+                            ConSim._concepts_to_string(
+                                global_importances[class_index],
+                                concepts_interpretation,
+                                top_k=top_k,
+                                include_labels=True,
+                                threshold=importance_threshold,
+                            )
+                        }"
+                        for class_index, class_name in enumerate(classes)
+                    ]
                 )
-            else:
-                classes_concepts_prompt = (
-                    "The most important concepts and their importance for each class are:\n"
-                    + "\n".join([f"{key}: {value}" for key, value in global_importances.items()])
-                )
+            )
             system_prompt_parts.append(classes_concepts_prompt)
+
+        if setting.global_contrastive_importances:
+            raise NotImplementedError
+            # if global_importances is None:
+            #     raise ValueError(
+            #         "PromptSetting.global_contrastive_importances=True requires `global_importances` to be provided to ConSim.evaluate()."
+            #     )
+
+            # rendered_global_contrastive_importances = {
+            #     class_name: ConSim._render_concept_importances(importances, concepts_interpretation, True)
+            #     for class_name, importances in global_importances.items()
+            # }
+
+            # # TODO: make the value contrastive
+            # classes_concepts_prompt = (
+            #     "The most important contrastive concepts for each class (vs others) are:\n"
+            #     + "\n".join(
+            #         [
+            #             f"{anonym_classes[class_name]} (vs others): {value}"
+            #             for class_name, value in rendered_global_contrastive_importances.items()
+            #         ]
+            #     )
+            # )
+            # system_prompt_parts.append(classes_concepts_prompt)
 
         # ==============================================================================================
         # Learning phase
         mid_index = len(sentences) // 2
+        rendered_local_importances: list[str] = []
+        if local_importances is not None:
+            # for each sample, show the concepts contributions corresponding to the predicted class
+            for i in range(len(local_importances)):
+                pred = predictions[i].to(torch.int32).item()
+                rendered_local_importances.append(
+                    ConSim._concepts_to_string(
+                        local_importances[i][pred],  # type: ignore
+                        concepts_interpretation,
+                        top_k=top_k,
+                        include_labels=True,
+                        threshold=importance_threshold,
+                    )
+                )
+
         # -------
         # samples
         if setting.lp_samples:
@@ -832,27 +913,63 @@ class ConSim:
         if setting.lp_concepts_local_contributions:
             if local_importances is None:
                 raise ValueError(
-                    "Local concepts importances must be provided if prompt_type is E3 or U1. "
-                    "`local_importances` are computed via `concept_explainer.concept_output_gradient`. "
-                    "Consider using the `ConSim.evaluate()` method, it includes the computation of the local importances."
+                    "PromptSetting.lp_concepts_local_contributions=True requires `local_importances` to be provided to ConSim.evaluate()."
                 )
 
             # show the concepts contributions to the samples
             lp_concepts_local_contributions_prompt = "\n".join(
-                [f"Concepts contributions for Sample_{i}: {local_importances[i]}" for i in range(mid_index)]
+                [
+                    f"Concepts contributions for Sample_{i}: {rendered_local_importances[i]}"  # type: ignore
+                    for i in range(mid_index)
+                ]
             )
             system_prompt_parts.append(lp_concepts_local_contributions_prompt)
 
+        if setting.lp_local_contrastive_importance:
+            if local_importances is None:
+                raise ValueError(
+                    "PromptSetting.lp_local_contrastive_importance requires `local_importances` to be provided to ConSim.evaluate()."
+                )
+            if gold_labels is None:
+                raise ValueError(
+                    "PromptSetting.lp_local_contrastive_importance requires `gold_labels` to be provided to ConSim.evaluate()."
+                )
+
+            lp_contrastive_lines = []
+            for i in range(mid_index):
+                pred_index = int(predictions[i].item())
+                gold_index = gold_labels[i]
+
+                if pred_index == gold_index:
+                    text = f"Concepts contributions for Sample_{i}"
+                    importances = local_importances[i][pred_index]
+                else:
+                    text = (
+                        f"Contrastive concepts contributions for Sample_{i} "
+                        + f"(support prediction {_class_name_from_index(pred_index)} rather than true label{_class_name_from_index(gold_index)})"
+                    )
+                    importances = local_importances[i][pred_index] - local_importances[i][gold_index]
+
+                lp_contrastive_lines.append(
+                    f"{text}: {
+                        ConSim._concepts_to_string(
+                            importances,
+                            concepts_interpretation,
+                            top_k=top_k,
+                            include_labels=True,
+                            threshold=importance_threshold,
+                        )
+                    }"
+                )
+            system_prompt_parts.append("\n".join(lp_contrastive_lines))
+
         # ------
         # labels
-        if setting.lp_labels:
+        if setting.lp_labels:  # these correspond to the evaluated model predictions
             # show the labels
-            if anonymize_classes:
-                lp_labels_prompt = "\n".join(
-                    [f"Sample_{i}: {anonym_classes[classes[predictions[i]]]}" for i in range(mid_index)]
-                )
-            else:
-                lp_labels_prompt = "\n".join([f"Sample_{i}: {classes[predictions[i]]}" for i in range(mid_index)])
+            lp_labels_prompt = "\n".join(
+                [f"Sample_{i}: {_class_name_from_index(predictions[i])}" for i in range(mid_index)]
+            )
             system_prompt_parts.append(lp_labels_prompt)
 
         # ==============================================================================================
@@ -869,15 +986,13 @@ class ConSim:
         if setting.ep_concepts_local_contributions:
             if local_importances is None:
                 raise ValueError(
-                    "Local concepts importances must be provided if prompt_type is U1. "
-                    "`local_importances` are computed via `concept_explainer.concept_output_gradient`. "
-                    "Consider using the `ConSim.evaluate()` method, it includes the computation of the local importances."
+                    "PromptSetting.ep_concepts_local_contributions=True requires `local_importances` to be provided to ConSim.evaluate()."
                 )
 
             # show the concepts contributions to the samples
             ep_concepts_local_contributions_prompt = "\n".join(
                 [
-                    f"Concepts contributions for Sample_{i}: {local_importances[i]}"
+                    f"Concepts contributions for Sample_{i}: {rendered_local_importances[i]}"  # type: ignore
                     for i in range(mid_index, 2 * mid_index)
                 ]
             )
@@ -885,9 +1000,7 @@ class ConSim:
 
         # -----------------
         # model predictions (not included in the prompt, but returned to compute accuracy)
-        literal_model_predictions = [classes[predictions[i]] for i in range(mid_index)]
-        if anonymize_classes:
-            literal_model_predictions = [anonym_classes[class_name] for class_name in literal_model_predictions]
+        literal_model_predictions = [_class_name_from_index(predictions[i]) for i in range(mid_index)]
 
         # concatenate prompts parts
         system_prompt = "\n\n".join(system_prompt_parts)
@@ -896,17 +1009,15 @@ class ConSim:
         return system_prompt, user_prompt, literal_model_predictions
 
     @staticmethod
-    def _generate_prompt(
+    def _check_input_settings_correspondence(
         sentences: list[str],
-        predictions: torch.Tensor,
-        classes: list[str] | None,
+        classes: list[str],
         concepts_interpretation: dict[int, str] | None,
-        global_importances: dict[str, dict[int, float]] | None,
-        local_importances: torch.Tensor | None,
-        prompt_type: PromptTypes = PromptTypes.E3_global_and_local_concepts_with_lp,
-        anonymize_classes: bool = False,
-        importance_threshold: float = 0.05,
-    ) -> tuple[list[tuple[Role, str]], list[str]]:
+        global_importances: torch.Tensor | None,
+        local_importances: list[torch.Tensor] | None,
+        gold_labels: list[int] | None,
+        prompt_type: PromptTypes | PromptSetting = PromptTypes.E3_global_and_local_concepts_with_lp,
+    ):
         """
         Create prompts for the user-llm or meta-predictor.
 
@@ -916,21 +1027,22 @@ class ConSim:
         Arguments:
             sentences: list[str]
                 The sentences, the first half serve as examples and the second half is to be classified.
-            predictions: list[float]
+            predictions: torch.Tensor
                 The predictions of the model on the sentences.
-            classes: list[str] | None
+            classes: list[str]
                 The classes of the dataset.
-            concepts_interpretation: dict[str, str] | None
+            concepts_interpretation: dict[int, str] | None
                 The interpretation of the concepts, concepts are the keys.
                 For example, an interpretation could be the topk words that activates the most a given concepts.
-            global_importances: dict[str, dict[str, float]] | None
+            global_importances: torch.Tensor | None
                 The importance of the concepts for each class.
-                A dictionary with the classes as keys and another dictionary as values.
-                The inner dictionary has the concepts as keys and the importance as values.
-            local_importances: torch.Tensor | None
+                Shape must be (nb_classes, nb_concepts).
+            local_importances: list[torch.Tensor] | None
                 Local concepts importances for each sentence.
-                A list of tensors with shape (n_concepts,).
-            prompt_type: PromptTypes
+                Each element must have shape (nb_classes, nb_concepts).
+            gold_labels: list[int] | None
+                Gold labels for learning phase samples, required when contrastive local explanations are enabled.
+            prompt_type: PromptTypes | PromptSetting
                 The type of prompt to use. Possible values are:
 
                 - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
@@ -945,12 +1057,8 @@ class ConSim:
 
                 - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
 
-            anonymize_classes: bool
-                Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.
-                It prevents the user-llm to solve the task by simply guessing the class.
             importance_threshold: float
-                The threshold to select the most important concepts for each class.
-                The threshold correspond to the cumulative importance of the concepts to keep.
+                The threshold to quantize concept importances.
 
         Returns:
             prompt: list[tuple[Role, str]]
@@ -958,81 +1066,91 @@ class ConSim:
             literal_model_predictions: list[str]
                 The model predictions as a list of strings, it allows easier comparison with the `user_llm` answers.
         """
-        if classes is None and anonymize_classes is False:
+        setting = ConSim._resolve_prompt_setting(prompt_type)
+        setting.validate(concepts_interpretation=concepts_interpretation, gold_labels=gold_labels)
+
+        mid_index = len(sentences) // 2
+
+        # ==========================================================================================
+        # Extensive checks
+        if setting.concepts_interpretation and concepts_interpretation is None:
             raise ValueError(
-                "Classes must be provided if anonymize_classes is False."
-                "`classes` is an attribute of the `ConSim` class, but it is None."
-                "It can be set a initialization or with `consim_metric.classes = ['cat', 'dog', 'frog']`."
+                "PromptSetting.concepts_interpretation=True requires `concepts_interpretation` to be provided to ConSim.evaluate()."
             )
 
-        # guessing the classes if not provided
-        if classes is None:
-            classes = ["Class_" + str(i) for i in range(int(predictions.max().item()) + 1)]
-
-        # Catch non provided but required elements
-        if prompt_type.value.concepts_interpretation and concepts_interpretation is None:
+        if setting.concepts_global_importances and global_importances is None:
             raise ValueError(
-                "Concepts interpretation must be provided if prompt_type is not a baseline."
-                "`concepts_interpretation` is an argument of the `ConSim.evaluate()` method, but it is None."
-                "It can be computed via `TopKInputs(concept_explainer).interpret`."
+                "PromptSetting.concepts_global_importances=True requires `global_importances` to be provided to ConSim.evaluate()."
             )
 
-        if prompt_type.value.concepts_global_importances and global_importances is None:
+        if setting.global_contrastive_importances and global_importances is None:
             raise ValueError(
-                "Global concepts importances must be provided if prompt_type is not a baseline."
-                "`global_importances` is an argument of the `ConSim.evaluate()` method, but it is None."
-                "It can be computed via `concept_explainer.concept_output_gradient` then averaging for each class."
+                "PromptSetting.global_contrastive_importances=True requires `global_importances` to be provided to ConSim.evaluate()."
             )
 
-        if prompt_type.value.lp_concepts_local_contributions and local_importances is None:
+        if (
+            setting.lp_concepts_local_contributions
+            or setting.ep_concepts_local_contributions
+            or setting.lp_local_contrastive_importance
+        ) and local_importances is None:
             raise ValueError(
-                "Local concepts importances must be provided if prompt_type is E3 or U1. "
-                "`local_importances` are computed via `concept_explainer.concept_output_gradient`. "
-                "Consider using the `ConSim.evaluate()` method, it includes the computation of the local importances."
+                "PromptSetting.lp_concepts_local_contributions or PromptSetting.ep_concepts_local_contributions "
+                "or PromptSetting.lp_local_contrastive_importance requires `local_importances` to be provided to ConSim.evaluate()."
             )
 
-        if prompt_type.value.ep_concepts_local_contributions and local_importances is None:
-            raise ValueError(
-                "Local concepts importances must be provided if prompt_type is U1. "
-                "`local_importances` are computed via `concept_explainer.concept_output_gradient`. "
-                "Consider using the `ConSim.evaluate()` method, it includes the computation of the local importances."
-            )
-
-        # filter and quantize the concepts importances
-        if prompt_type in [PromptTypes.L1_baseline_without_lp, PromptTypes.L2_baseline_with_lp]:
-            concepts_interpretation = None
-            processed_global_importances = None
-            processed_local_importances = None
-        else:
-            concepts_interpretation, processed_global_importances, processed_local_importances = (
-                ConSim._filter_and_quantize_concepts_importances(
-                    concepts_interpretation=concepts_interpretation,  # type: ignore
-                    global_importances=global_importances,  # type: ignore
-                    local_importances=local_importances,  # type: ignore
-                    importance_threshold=importance_threshold,
+        if global_importances is not None:
+            if not isinstance(global_importances, torch.Tensor) or global_importances.ndim != 2:
+                raise ValueError("`global_importances` must be a torch.Tensor with shape (nb_classes, nb_concepts).")
+            if global_importances.shape[0] != len(classes):
+                raise ValueError(
+                    "`global_importances` must have shape (nb_classes, nb_concepts) with nb_classes matching `classes`."
                 )
-            )
 
-        # integrate the different elements into a prompt
-        system_prompt, user_prompt, literal_model_predictions = ConSim._setting_to_prompt(
-            setting=prompt_type.value,
-            anonymize_classes=anonymize_classes,
-            sentences=sentences,
-            predictions=predictions,
-            classes=classes,
-            concepts_interpretation=concepts_interpretation,
-            global_importances=processed_global_importances,
-            local_importances=processed_local_importances,
-        )
+        if local_importances is not None:
+            if not isinstance(local_importances, list) or not local_importances:
+                raise ValueError(
+                    "`local_importances` must be a non-empty list of torch.Tensor with shape (nb_classes, nb_concepts)."
+                )
+            for sample_importances in local_importances:
+                if not isinstance(sample_importances, torch.Tensor) or sample_importances.ndim != 2:
+                    raise ValueError(
+                        "`local_importances` must be a list of torch.Tensor with shape (nb_classes, nb_concepts)."
+                    )
+                if sample_importances.shape[0] != len(classes):
+                    raise ValueError(
+                        "`local_importances` entries must have shape (nb_classes, nb_concepts) with nb_classes matching `classes`."
+                    )
+            local_importances_count = len(local_importances)
+            if setting.ep_concepts_local_contributions:
+                if local_importances_count != len(sentences):
+                    raise ValueError(
+                        "`local_importances` must have nb_samples entries matching the number of sentences "
+                        "when PromptSetting.ep_concepts_local_contributions is True. "
+                        f"Got nb_samples={local_importances_count} and nb_sentences={len(sentences)}."
+                    )
+            elif local_importances_count not in {mid_index, len(sentences)}:
+                raise ValueError(
+                    "`local_importances` must have nb_samples entries matching the learning phase size "
+                    "or the full number of sentences. "
+                    f"Got nb_samples={local_importances_count} and nb_sentences={len(sentences)}."
+                )
 
-        # convert the prompt to match the `LLMInterface` API
-        prompt: list[tuple[Role, str]] = [
-            (Role.SYSTEM, system_prompt),
-            (Role.USER, user_prompt),
-            (Role.ASSISTANT, ""),
-        ]
-
-        return prompt, literal_model_predictions
+        if (
+            setting.lp_concepts_local_contributions
+            or setting.ep_concepts_local_contributions
+            or setting.lp_local_contrastive_importance
+        ):
+            if local_importances is None:
+                raise ValueError(
+                    "PromptSetting.lp_concepts_local_contributions or PromptSetting.ep_concepts_local_contributions "
+                    "or PromptSetting.lp_local_contrastive_importance requires `local_importances` to be provided to ConSim.evaluate()."
+                )
+            if setting.lp_local_contrastive_importance:
+                if gold_labels is None or len(gold_labels) < mid_index:
+                    raise ValueError(
+                        "PromptSetting.lp_local_contrastive_importance=True requires `gold_labels` "
+                        "to be provided for the learning phase samples."
+                    )
 
     @staticmethod
     def _extract_predictions_from_response(response: str | None, expected_length: int) -> list[str] | None:
@@ -1175,10 +1293,13 @@ class ConSim:
         predictions: torch.Tensor,
         concept_explainer: ConceptAutoEncoderExplainer | None = None,
         concepts_interpretation: dict[int, str] | None = None,
-        global_importances: dict[str, dict[int, float]] | None = None,
-        prompt_type: PromptTypes = PromptTypes.E3_global_and_local_concepts_with_lp,
-        anonymize_classes: bool = False,
+        global_importances: torch.Tensor | None = None,
+        prompt_type: PromptTypes | PromptSetting = PromptTypes.E3_global_and_local_concepts_with_lp,
+        anonymize_classes: bool | None = None,
+        top_k: int = 5,
         importance_threshold: float = 0.05,
+        *,
+        gold_labels: list[int] | None = None,
     ) -> float | None | tuple[list[tuple[Role, str]], list[str]]:
         """
         Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.
@@ -1219,13 +1340,12 @@ class ConSim:
                 The inner dictionary has the words as keys and the activations as values.
                 Can be None for the baseline.
 
-            global_importances: dict[str, dict[int, float]] | None
+            global_importances: torch.Tensor | None
                 The importance of the concepts for each class.
-                A dictionary with the classes as keys and another dictionary as values.
-                The inner dictionary has the concepts as keys and the importance as values.
+                Shape must be (nb_classes, nb_concepts).
                 Can be None for the baseline.
 
-            prompt_type: PromptTypes
+            prompt_type: PromptTypes | PromptSetting
                 The type of prompt to use. Possible values are:
 
                 - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
@@ -1240,13 +1360,20 @@ class ConSim:
 
                 - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
 
-            anonymize_classes: bool
-                Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.
+            anonymize_classes: bool | None
+                Optional override for `PromptSetting.anonymize_classes`.
+                Class names will be replaced by "Class_i" where i is the index of the class.
                 It prevents the user-llm to solve the task by simply guessing the class.
 
+            top_k: int
+                The number of top concepts to show for each class / sample.
+
             importance_threshold: float
-                The threshold to select the most important concepts for each class.
-                The threshold correspond to the cumulative importance of the concepts to keep.
+                The threshold to quantize concept importances.
+
+            gold_labels: torch.Tensor | None
+                Gold labels for learning phase samples, required when contrastive local explanations are enabled.
+
 
         Returns:
             score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]
@@ -1270,8 +1397,29 @@ class ConSim:
             Warnings
                 If the user-llm response is empty or the format is not respected.
         """
-        local_importances: torch.Tensor | None = None
-        if concept_explainer is not None:
+        setting = ConSim._resolve_prompt_setting(prompt_type)
+        if anonymize_classes is not None:
+            setting = setting._replace(anonymize_classes=anonymize_classes)
+            if self.classes is None:
+                raise ValueError(
+                    "Classes must be provided if PromptSetting.anonymize_classes is False."
+                    "`classes` is an attribute of the `ConSim` class, but it is None."
+                    "It can be set a initialization or with `consim_metric.classes = ['cat', 'dog', 'frog']`."
+                )
+
+        # guessing the classes if not provided
+        if self.classes is None:
+            classes = ["Class_" + str(i) for i in range(int(predictions.max().item()) + 1)]
+        else:
+            classes = self.classes
+
+        local_importances: list[torch.Tensor] | None = None
+        needs_local_importances = (
+            setting.lp_concepts_local_contributions
+            or setting.ep_concepts_local_contributions
+            or setting.lp_local_contrastive_importance
+        )
+        if concept_explainer is not None and needs_local_importances:
             # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
             if concept_explainer.split_point not in self.model_with_split_points.split_points:
                 raise ValueError(
@@ -1292,35 +1440,51 @@ class ConSim:
             # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
             # For now we force gradient-input
             # TODO: precise shapes with jaxtyping
-            if prompt_type in [
-                PromptTypes.E3_global_and_local_concepts_with_lp,
-                PromptTypes.U1_upper_bound_concepts_at_ep,
-            ]:
-                if prompt_type is PromptTypes.E3_global_and_local_concepts_with_lp:
-                    samples_to_explain = interesting_samples[: len(interesting_samples) // 2]
-                else:
-                    samples_to_explain = interesting_samples
-                local_importances_list = concept_explainer.concept_output_gradient(
-                    inputs=samples_to_explain,
-                    split_point=self.split_point,
-                    activation_granularity=self.activation_granularity,
-                    concepts_x_gradients=True,
-                    tqdm_bar=False,
-                )
-                local_importances = torch.stack(local_importances_list)
+            if setting.ep_concepts_local_contributions:
+                samples_to_explain = interesting_samples
+            else:
+                samples_to_explain = interesting_samples[: len(interesting_samples) // 2]
 
-        # generate the prompt
-        prompts, literal_model_predictions = ConSim._generate_prompt(
+            local_importances = concept_explainer.concept_output_gradient(
+                inputs=samples_to_explain,
+                split_point=self.split_point,
+                activation_granularity=self.activation_granularity,
+                concepts_x_gradients=True,
+                tqdm_bar=False,
+            )
+            local_importances = [sample_importance.squeeze(1) for sample_importance in local_importances]
+
+        # check inputs with respect to setting
+        ConSim._check_input_settings_correspondence(
             sentences=interesting_samples,
-            predictions=predictions,
-            classes=self.classes,
+            classes=classes,
             concepts_interpretation=concepts_interpretation,
             global_importances=global_importances,
             local_importances=local_importances,
-            prompt_type=prompt_type,
-            anonymize_classes=anonymize_classes,
+            gold_labels=gold_labels,
+            prompt_type=setting,
+        )
+
+        # integrate the different elements into a prompt
+        system_prompt, user_prompt, literal_model_predictions = ConSim._setting_to_prompt(
+            setting=setting,
+            sentences=interesting_samples,
+            predictions=predictions,
+            classes=classes,
+            concepts_interpretation=concepts_interpretation,
+            global_importances=global_importances,
+            local_importances=local_importances,
+            gold_labels=gold_labels,
+            top_k=top_k,
             importance_threshold=importance_threshold,
         )
+
+        # convert the prompt to match the `LLMInterface` API
+        prompts: list[tuple[Role, str]] = [
+            (Role.SYSTEM, system_prompt),
+            (Role.USER, user_prompt),
+            (Role.ASSISTANT, ""),
+        ]
 
         # if no user_llm is provided, we return the prompts and the model predictions
         if self.user_llm is None:
