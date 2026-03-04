@@ -24,7 +24,6 @@
 
 from __future__ import annotations
 
-import numbers
 import warnings
 from enum import Enum
 from typing import NamedTuple
@@ -54,10 +53,8 @@ class PromptSetting(NamedTuple):
     lp_samples: bool = False
     lp_concepts_local_contributions: bool = False
     lp_local_contrastive_importance: bool = False
-    lp_labels: bool = False
 
     # evaluation phase
-    ep_samples: bool = True
     ep_concepts_local_contributions: bool = False
 
     # anonymization
@@ -127,19 +124,17 @@ class PromptTypes(Enum):
 
     L1_baseline_without_lp = PromptSetting()
     E1_global_concepts_without_lp = PromptSetting(concepts_global_importances=True)
-    L2_baseline_with_lp = PromptSetting(lp_samples=True, lp_labels=True)
-    E2_global_concepts_with_lp = PromptSetting(concepts_global_importances=True, lp_samples=True, lp_labels=True)
+    L2_baseline_with_lp = PromptSetting(lp_samples=True)
+    E2_global_concepts_with_lp = PromptSetting(concepts_global_importances=True, lp_samples=True)
     E3_global_and_local_concepts_with_lp = PromptSetting(
         concepts_global_importances=True,
         lp_samples=True,
         lp_concepts_local_contributions=True,
-        lp_labels=True,
     )
     U1_upper_bound_concepts_at_ep = PromptSetting(
         concepts_global_importances=True,
         lp_samples=True,
         lp_concepts_local_contributions=True,
-        lp_labels=True,
         ep_concepts_local_contributions=True,
     )
     C1_contrastive_global_concepts_without_lp = PromptSetting(
@@ -148,24 +143,20 @@ class PromptTypes(Enum):
     C2_contrastive_global_concepts_with_lp = PromptSetting(
         global_contrastive_importances=True,
         lp_samples=True,
-        lp_labels=True,
     )
     C3_contrastive_global_and_local_concepts_with_lp = PromptSetting(
         global_contrastive_importances=True,
         lp_samples=True,
         lp_local_contrastive_importance=True,
-        lp_labels=True,
     )
     C4_contrastive_local_concepts = PromptSetting(
         concepts_global_importances=True,
         lp_samples=True,
         lp_local_contrastive_importance=True,
-        lp_labels=True,
     )
     C5_contrastive_local_only = PromptSetting(
         lp_samples=True,
         lp_local_contrastive_importance=True,
-        lp_labels=True,
     )
 
 
@@ -770,6 +761,7 @@ class ConSim:
         gold_labels: list[int] | None,
         top_k: int = 5,
         importance_threshold: float = 0.05,
+        contrastive_pairs: list[tuple[int, int]] | None = None,
     ) -> tuple[str, str, list[str]]:
         """
         Create a prompt for the LLM model by integrating the different elements.
@@ -797,6 +789,8 @@ class ConSim:
                 Each element of the list if a dictionary with an importance associated to a concept id.
             gold_labels: list[int] | None
                 Gold labels for samples, required when contrastive local explanations are enabled.
+            contrastive_pairs: list[tuple[int, int]] | None
+                Contrastive pairs of classes, required when contrastive global explanations are enabled.
 
         Returns:
             system_prompt: str
@@ -819,11 +813,11 @@ class ConSim:
             task_description_prompt += (
                 "To complete the task, you will be given the most important concepts for each class. "
             )
-        if setting.lp_samples and setting.lp_labels:
+        if setting.lp_samples:
             if setting.lp_concepts_local_contributions:
                 task_description_prompt += "You will have examples of samples, labels, and concepts contributions to labels as reference for the task. "
             elif setting.lp_local_contrastive_importance:
-                task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions as reference for the task. "
+                task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions (why predict the fact and not the foil) as reference for the task. "
             else:
                 task_description_prompt += "You will have examples of samples and labels as reference for the task. "
         if setting.ep_concepts_local_contributions:
@@ -873,24 +867,29 @@ class ConSim:
             )
             system_prompt_parts.append(classes_concepts_prompt)
 
+        # global contrastive explanation
         if setting.global_contrastive_importances:
-            raise NotImplementedError
-            # rendered_global_contrastive_importances = {
-            #     class_name: ConSim._render_concept_importances(importances, concepts_interpretation, True)
-            #     for class_name, importances in global_importances.items()
-            # }
+            if contrastive_pairs is None:
+                raise ValueError(
+                    "PromptSetting.global_contrastive_importances=True requires `contrastive_pairs` to be provided to ConSim.evaluate()."
+                )
 
-            # # TODO: make the value contrastive
-            # classes_concepts_prompt = (
-            #     "The most important contrastive concepts for each class (vs others) are:\n"
-            #     + "\n".join(
-            #         [
-            #             f"{anonym_classes[class_name]} (vs others): {value}"
-            #             for class_name, value in rendered_global_contrastive_importances.items()
-            #         ]
-            #     )
-            # )
-            # system_prompt_parts.append(classes_concepts_prompt)
+            contrastive_prompt_parts = []
+            # for each contrastive pair, show the concept for fact - foil
+            for pair in contrastive_pairs:
+                contrastive_importance = global_importances[pair[0]] - global_importances[pair[1]]
+                str_concept = ConSim._concepts_to_string(
+                    contrastive_importance, concepts_interpretation, top_k=top_k, threshold=importance_threshold
+                )
+                fact = anonym_classes[classes[pair[0]]]
+                foil = anonym_classes[classes[pair[1]]]
+                contrastive_prompt_parts.append(f"Fact {fact}, foil {foil}: {str_concept}")
+
+            contrastive_global_prompt = (
+                "The contrastively important concepts to prefer fact over foil are:\n"
+                + "\n".join(contrastive_prompt_parts)
+            )
+            system_prompt_parts.append(contrastive_global_prompt)
 
         # ==============================================================================================
         # Learning phase
@@ -954,7 +953,7 @@ class ConSim:
                 else:
                     text = (
                         f"Contrastive concepts contributions for Sample_{i} "
-                        + f"(support prediction {_class_name_from_index(pred_index)} rather than true label{_class_name_from_index(gold_index)})"
+                        + f"(supports prediction {_class_name_from_index(pred_index)} rather than true label {_class_name_from_index(gold_index)})"
                     )
                     importances = local_importances[i][pred_index] - local_importances[i][gold_index]
 
@@ -972,7 +971,7 @@ class ConSim:
 
         # ------
         # labels
-        if setting.lp_labels:  # these correspond to the evaluated model predictions
+        if setting.lp_samples:  # these correspond to the evaluated model predictions
             # show the labels
             lp_labels_prompt = "\n".join(
                 [f"Sample_{i}: {_class_name_from_index(predictions[i])}" for i in range(mid_index)]
@@ -982,11 +981,9 @@ class ConSim:
         # ==============================================================================================
         # Inference
         # -------
-        # samples
-        if setting.ep_samples:
-            # show the samples
-            ep_local_prompt = "\n".join([f"Sample_{i}: {sentences[i]}" for i in range(mid_index, 2 * mid_index)])
-            user_prompt_parts.append(ep_local_prompt)
+        # show the samples
+        ep_local_prompt = "\n".join([f"Sample_{i}: {sentences[i]}" for i in range(mid_index, 2 * mid_index)])
+        user_prompt_parts.append(ep_local_prompt)
 
         # ----------------------------
         # concepts local contributions
@@ -1286,11 +1283,12 @@ class ConSim:
         *,
         concepts_interpretation: dict[int, str],
         global_importances: torch.Tensor,
+        local_importances: list[torch.Tensor] | None = None,
         prompt_type: PromptTypes | PromptSetting = PromptTypes.E3_global_and_local_concepts_with_lp,
-        anonymize_classes: bool | None = None,
         top_k: int = 5,
         importance_threshold: float = 0.05,
         gold_labels: list[int] | None = None,
+        contrastive_pairs: list[tuple[int, int]] | None = None,
     ) -> float | None | tuple[list[tuple[Role, str]], list[str]]:
         """
         Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.
@@ -1332,6 +1330,11 @@ class ConSim:
                 The importance of the concepts for each class.
                 Shape must be (nb_classes, nb_concepts).
 
+            local_importances: list[torch.Tensor] | None
+                The importance of concepts for each sentence.
+                Each element must have shape (nb_classes, nb_concepts).
+                This is computed automatically if not provided.
+
             prompt_type: PromptTypes | PromptSetting
                 The type of prompt to use. Possible values are:
 
@@ -1347,11 +1350,6 @@ class ConSim:
 
                 - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
 
-            anonymize_classes: bool | None
-                Optional override for `PromptSetting.anonymize_classes`.
-                Class names will be replaced by "Class_i" where i is the index of the class.
-                It prevents the user-llm to solve the task by simply guessing the class.
-
             top_k: int
                 The number of top concepts to show for each class / sample.
 
@@ -1360,6 +1358,9 @@ class ConSim:
 
             gold_labels: list[int] | None
                 Gold labels for learning phase samples, required when contrastive local explanations are enabled.
+
+            contrastive_pairs: list[tuple[int, int]] | None
+                Contrastive pairs of classes, required when contrastive global explanations are enabled.
 
 
         Returns:
@@ -1385,22 +1386,13 @@ class ConSim:
                 If the user-llm response is empty or the format is not respected.
         """
         setting = ConSim._resolve_prompt_setting(prompt_type)
-        if anonymize_classes is not None:
-            setting = setting._replace(anonymize_classes=anonymize_classes)
-            if self.classes is None:
-                raise ValueError(
-                    "Classes must be provided if PromptSetting.anonymize_classes is False."
-                    "`classes` is an attribute of the `ConSim` class, but it is None."
-                    "It can be set a initialization or with `consim_metric.classes = ['cat', 'dog', 'frog']`."
-                )
 
-        local_importances: list[torch.Tensor] | None = None
         needs_local_importances = (
             setting.lp_concepts_local_contributions
             or setting.ep_concepts_local_contributions
             or setting.lp_local_contrastive_importance
         )
-        if concept_explainer is not None and needs_local_importances:
+        if local_importances is None and concept_explainer is not None and needs_local_importances:
             # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
             if concept_explainer.split_point not in self.model_with_split_points.split_points:
                 raise ValueError(
@@ -1450,8 +1442,12 @@ class ConSim:
         classes_ids = sorted(set(predictions.tolist()) | set(gold_labels or []))
         classes = [self.classes[class_id] for class_id in classes_ids]
 
-        # filter global concept importances
+        # filter based on classes subset
         global_importances_dict = {class_id: global_importances[class_id] for class_id in classes_ids}
+        if contrastive_pairs is not None:
+            contrastive_pairs = [
+                pair for pair in contrastive_pairs if (pair[0] in classes_ids and pair[1] in classes_ids)
+            ]  # type: ignore
 
         # integrate the different elements into a prompt
         system_prompt, user_prompt, literal_model_predictions = ConSim._setting_to_prompt(
@@ -1465,6 +1461,7 @@ class ConSim:
             gold_labels=gold_labels,
             top_k=top_k,
             importance_threshold=importance_threshold,
+            contrastive_pairs=contrastive_pairs,
         )
 
         # convert the prompt to match the `LLMInterface` API
