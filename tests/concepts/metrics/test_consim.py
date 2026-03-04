@@ -169,7 +169,7 @@ def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `_get_predictions` method of the ConSim metric.
     """
     # Initialize the ConSim metric
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN)
+    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=["A", "B"])
 
     inputs = ["This is a first sentence", "Another sentence"]
 
@@ -281,6 +281,43 @@ def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
     assert torch.sum(predictions == 0) == 2, "exactly half of the predictions should be of each class"
 
 
+def test_consim_select_examples_subset_classes(splitted_encoder_ml: ModelWithSplitPoints):
+    """
+    Test the `select_examples` method with a subset of classes.
+    """
+    classes_names = ["A", "B", "C"]
+    classes_subset = [0, 2]
+    consim = ConSim(splitted_encoder_ml, None, AG.TOKEN, classes=classes_names)
+
+    inputs = [f"sample {i}" for i in range(9)]
+    labels = torch.tensor([0, 1, 2, 0, 1, 2, 0, 1, 2])
+    predictions = torch.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+
+    def fake_get_preds(x, **kwargs):
+        assert x == inputs, "consim did not pass the correct inputs to _get_predictions"
+        return predictions
+
+    consim._get_predictions = fake_get_preds  # type: ignore
+
+    samples, selected_labels, selected_predictions = consim.select_examples(
+        inputs,
+        labels,
+        nb_lp_samples=2,
+        nb_ep_samples=2,
+        seed=0,
+        classes_subset=classes_subset,
+    )
+
+    assert len(samples) == 4, "number of samples should match nb_lp_samples + nb_ep_samples"
+    assert selected_labels.shape == (4,), "number of labels should match nb_lp_samples + nb_ep_samples"
+    assert selected_predictions.shape == (4,), "number of predictions should match nb_lp_samples + nb_ep_samples"
+
+    assert all(int(label) in classes_subset for label in selected_labels), "labels should be restricted to the subset"
+    assert all(int(pred) in classes_subset for pred in selected_predictions), (
+        "predictions should be restricted to the subset"
+    )
+
+
 def test_consim_quantize_importances():
     """
     Test the `quantize_importances` method of the ConSim metric.
@@ -352,7 +389,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     prompt_type_name = str(prompt_type)
     assert prompt_settings.ep_samples
     if "baseline" in prompt_type_name:
-        assert prompt_settings.concepts_interpretation is False, "wrong prompt settings for baseline"
         assert prompt_settings.concepts_global_importances is False, "wrong prompt settings for baseline"
         assert prompt_settings.lp_concepts_local_contributions is False, "wrong prompt settings for baseline"
         assert prompt_settings.ep_concepts_local_contributions is False, "wrong prompt settings for baseline"
@@ -364,7 +400,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         assert prompt_settings.lp_samples, "wrong prompt settings for with_lp"
         assert prompt_settings.lp_labels, "wrong prompt settings for with_lp"
     if "global" in prompt_type_name and "contrastive" not in prompt_type_name:
-        assert prompt_settings.concepts_interpretation, "wrong prompt settings for global"
         assert prompt_settings.concepts_global_importances, "wrong prompt settings for global"
         assert prompt_settings.ep_concepts_local_contributions is False, "wrong prompt settings for global"
     if "local" in prompt_type_name and "contrastive" not in prompt_type_name:
@@ -373,7 +408,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     elif "upper_bound" not in prompt_type_name:
         assert prompt_settings.lp_concepts_local_contributions is False, "wrong prompt settings for non local"
     if "upper_bound" in prompt_type_name:
-        assert prompt_settings.concepts_interpretation, "wrong prompt settings for non local"
         assert prompt_settings.concepts_global_importances, "wrong prompt settings for non local"
         assert prompt_settings.lp_samples, "wrong prompt settings for non local"
         assert prompt_settings.lp_labels, "wrong prompt settings for non local"
@@ -381,7 +415,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         assert prompt_settings.ep_concepts_local_contributions, "wrong prompt settings for non local"
     if "contrastive" in prompt_type_name:
         if "global" in prompt_type_name:
-            assert prompt_settings.concepts_interpretation, "wrong prompt settings for contrastive global"
             assert prompt_settings.global_contrastive_importances, "wrong prompt settings for contrastive global"
         if "local" in prompt_type_name:
             assert prompt_settings.lp_samples, "wrong prompt settings for contrastive local"
@@ -396,7 +429,7 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         gold_labels=gold_labels,
         classes=classes,
         concepts_interpretation=interp,
-        global_importances=glob,
+        global_importances=dict(enumerate(glob)),
         local_importances=loc,
     )
 
@@ -414,10 +447,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         assert "The classes are: [A, B]" in system, "system prompt should contain the classes"
 
     # global concepts explanation
-    #     concepts interpretation
-    if prompt_settings.concepts_interpretation:
-        assert "C0 (word)" in system, "system prompt should contain the concepts interpretation"
-    #     global concepts importance
     if prompt_settings.concepts_global_importances:
         if anonymize_classes:
             assert "Class_0: {C0 (word): ++}" in system, (
@@ -481,7 +510,7 @@ def test_consim_generate_prompt():
         predictions=preds,
         classes=classes,
         concepts_interpretation=interp,
-        global_importances=glob,
+        global_importances=dict(enumerate(glob)),
         local_importances=loc,
         gold_labels=None,
     )
@@ -543,7 +572,7 @@ def test_consim_setting_to_prompt_contrastive():
     preds = torch.tensor([0, 1, 0, 1])
     classes = ["A", "B"]
     concepts_interpretation = {0: "topic"}
-    global_importances = {"A": {0: "++"}, "B": {0: "--"}}
+    global_importances = torch.tensor([[0.6], [-0.2]])
     local_importances = [torch.tensor([[0.2], [-0.1], [0.1], [0.2]])]  # [{0: "+"}, {0: "-"}, {0: "+"}, {0: "+"}]
     gold_labels = [0, 0]
 
@@ -562,7 +591,7 @@ def test_consim_setting_to_prompt_contrastive():
         predictions=preds,
         classes=classes,
         concepts_interpretation=concepts_interpretation,
-        global_importances=global_importances,
+        global_importances=dict(enumerate(global_importances)),
         local_importances=local_importances,
         gold_labels=gold_labels,
     )
@@ -785,7 +814,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
 
     nb_samples = 40
     samples = [f"s{i}" for i in range(nb_samples)]
-    preds = torch.tensor([isprime(i) for i in range(nb_samples)])
+    preds = torch.tensor([int(isprime(i)) for i in range(nb_samples)])
 
     # shuffle the samples and predictions
     # this simulates the output of ConSim.select_examples
