@@ -58,7 +58,7 @@ import torch
 
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.concepts.metrics.consim import ConSim, PromptSetting, PromptTypes
+from interpreto.concepts.metrics.consim import ConSim, PromptTypes
 from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 
 AG = ModelWithSplitPoints.activation_granularities
@@ -363,7 +363,7 @@ def test_consim_quantize_concepts_importances():
 
 @pytest.mark.parametrize("prompt_type", PROMPT_TYPES)
 @pytest.mark.parametrize("anonymize_classes", [False, True])
-def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: bool):
+def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: bool):  # noqa: PLR0912  # ignore too many branches  # too many special cases
     """
     Test the `_setting_to_prompt` method of the ConSim metric.
     """
@@ -380,6 +380,7 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         torch.tensor([[-0.1], [0.2]]),
         torch.tensor([[-0.05], [0.1]]),
     ]
+    contrastive_pairs = [(1, 0)]
 
     # convert the prompt type to settings
     prompt_settings = prompt_type.value._replace(anonymize_classes=anonymize_classes)
@@ -387,18 +388,15 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # ==============================================================================================
     # Verify the settings based on the prompt type
     prompt_type_name = str(prompt_type)
-    assert prompt_settings.ep_samples
     if "baseline" in prompt_type_name:
         assert prompt_settings.concepts_global_importances is False, "wrong prompt settings for baseline"
         assert prompt_settings.lp_concepts_local_contributions is False, "wrong prompt settings for baseline"
         assert prompt_settings.ep_concepts_local_contributions is False, "wrong prompt settings for baseline"
     if "without_lp" in prompt_type_name:
         assert prompt_settings.lp_samples is False, "wrong prompt settings for without_lp"
-        assert prompt_settings.lp_labels is False, "wrong prompt settings for without_lp"
         assert prompt_settings.lp_concepts_local_contributions is False, "wrong prompt settings for without_lp"
     if "with_lp" in prompt_type_name:
         assert prompt_settings.lp_samples, "wrong prompt settings for with_lp"
-        assert prompt_settings.lp_labels, "wrong prompt settings for with_lp"
     if "global" in prompt_type_name and "contrastive" not in prompt_type_name:
         assert prompt_settings.concepts_global_importances, "wrong prompt settings for global"
         assert prompt_settings.ep_concepts_local_contributions is False, "wrong prompt settings for global"
@@ -410,7 +408,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     if "upper_bound" in prompt_type_name:
         assert prompt_settings.concepts_global_importances, "wrong prompt settings for non local"
         assert prompt_settings.lp_samples, "wrong prompt settings for non local"
-        assert prompt_settings.lp_labels, "wrong prompt settings for non local"
         assert prompt_settings.lp_concepts_local_contributions, "wrong prompt settings for non local"
         assert prompt_settings.ep_concepts_local_contributions, "wrong prompt settings for non local"
     if "contrastive" in prompt_type_name:
@@ -418,7 +415,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
             assert prompt_settings.global_contrastive_importances, "wrong prompt settings for contrastive global"
         if "local" in prompt_type_name:
             assert prompt_settings.lp_samples, "wrong prompt settings for contrastive local"
-            assert prompt_settings.lp_labels, "wrong prompt settings for contrastive local"
             assert prompt_settings.lp_local_contrastive_importance, "wrong prompt settings for contrastive local"
 
     # convert the settings to prompt
@@ -431,6 +427,7 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         concepts_interpretation=interp,
         global_importances=dict(enumerate(glob)),
         local_importances=loc,
+        contrastive_pairs=contrastive_pairs,
     )
 
     # ==============================================================================================
@@ -453,8 +450,17 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
                 "system prompt should contain the anonymized global concepts importance"
             )
         else:
-            assert "B: {C0 (word): -}" in system, (
-                "system prompt should contain the anonymized global concepts importance"
+            assert "B: {C0 (word): -}" in system, "system prompt should contain the global concepts importance"
+
+    # contrastive global explanation
+    if prompt_settings.global_contrastive_importances:
+        if anonymize_classes:
+            assert "Fact Class_1, foil Class_0: {C0 (word): --}" in system, (
+                "system prompt should contain the anonymized global contrastive concepts importance"
+            )
+        else:
+            assert "Fact B, foil A: {C0 (word): --}" in system, (
+                "system prompt should contain the global contrastive concepts importance"
             )
 
     # --------------
@@ -477,6 +483,19 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         assert "Sample_0: {C0 (word): +}" in system, "system prompt should contain the lp concepts contributions"
         assert "Sample_1: {C0 (word): -}" in system, "system prompt should contain the lp concepts contributions"
 
+    # contrastive local explanation
+    if prompt_settings.lp_local_contrastive_importance:
+        assert "Sample_0: {C0 (word): +}" in system, "system prompt should contain the lp concepts contributions"
+        if anonymize_classes:
+            assert (
+                "Contrastive concepts contributions for Sample_1 (supports prediction Class_1 rather than true label Class_0): {C0 (word): --}"
+                in system
+            ), "system prompt should contain the anonymized contrastive local concepts importance"
+        else:
+            assert (
+                "Contrastive concepts contributions for Sample_1 (supports prediction B rather than true label A): {C0 (word): --}"
+                in system
+            ), "system prompt should contain the anonymized contrastive local concepts importance"
     # ----------------
     # Evaluation Phase
     # samples, only the 2 last samples for ep
@@ -564,60 +583,6 @@ def test_consim_generate_prompt():
     )  # E3 does not include the concepts contributions in the user prompt
 
 
-def test_consim_setting_to_prompt_contrastive():
-    """
-    Test the `_setting_to_prompt` method with contrastive settings.
-    """
-    sentences = ["s0", "s1", "s2", "s3"]
-    preds = torch.tensor([0, 1, 0, 1])
-    classes = ["A", "B"]
-    concepts_interpretation = {0: "topic"}
-    global_importances = torch.tensor([[0.6], [-0.2]])
-    local_importances = [torch.tensor([[0.2], [-0.1], [0.1], [0.2]])]  # [{0: "+"}, {0: "-"}, {0: "+"}, {0: "+"}]
-    gold_labels = [0, 0]
-
-    prompt_settings = PromptSetting(
-        concepts_interpretation=False,
-        global_contrastive_importances=True,
-        lp_samples=True,
-        lp_local_contrastive_importance=True,
-        lp_labels=True,
-        anonymize_classes=True,
-    )
-
-    system, user, literal = ConSim._setting_to_prompt(
-        setting=prompt_settings,
-        sentences=sentences,
-        predictions=preds,
-        classes=classes,
-        concepts_interpretation=concepts_interpretation,
-        global_importances=dict(enumerate(global_importances)),
-        local_importances=local_importances,
-        gold_labels=gold_labels,
-    )
-
-    assert "The classes are: [Class_0, Class_1]" in system, "system prompt should contain the anonymized classes"
-    assert "The most important contrastive concepts for each class (vs others) are:" in system, (
-        "system prompt should contain the contrastive global header"
-    )
-    assert "Class_0 (vs others): {C0 (topic): ++}" in system, (
-        "system prompt should contain the contrastive global importances"
-    )
-    assert "Class_1 (vs others): {C0 (topic): --}" in system, (
-        "system prompt should contain the contrastive global importances"
-    )
-    assert "Sample_0: s0\nSample_1: s1" in system, "system prompt should contain the lp samples"
-    assert "Sample_0: Class_0\nSample_1: Class_1" in system, "system prompt should contain the lp labels"
-    assert "Concepts contributions for Sample_0: {C0 (topic): +}" in system, (
-        "system prompt should contain non-contrastive local contributions for correct predictions"
-    )
-    assert "Concepts contributions for Sample_1 (supports Class_1 rather than Class_0): {C0 (topic): -}" in system, (
-        "system prompt should contain contrastive local contributions for incorrect predictions"
-    )
-    assert "Sample_2: s2\nSample_3: s3" in user, "user prompt should contain the ep samples"
-    assert literal == ["Class_0", "Class_1"], "literal predictions should respect anonymization"
-
-
 def test_consim_extract_predictions_from_response():
     """
     Test the `_extract_predictions_from_response` method of the ConSim metric.
@@ -687,6 +652,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     samples = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]
     preds = torch.tensor([0, 1, 2, 3, 0, 1, 2, 3, 0, 1])
     gold_labels = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3]
+    contrastive_pairs = [(0, 1), (2, 3)]
 
     # creating a dummy explainer that will return a gradient of ones
     class DummyExplainer(ConceptAutoEncoderExplainer):
@@ -737,6 +703,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         concepts_interpretation={0: "word"},
         global_importances=torch.ones(len(classes), 1),
         prompt_type=prompt_type,
+        contrastive_pairs=contrastive_pairs,
     )
 
     # None is allowed in the typing, but it should not happen in this case
@@ -757,6 +724,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         concepts_interpretation={0: "word"},
         global_importances=torch.ones(len(classes), 1),
         prompt_type=prompt_type,
+        contrastive_pairs=contrastive_pairs,
     )
     assert score is None, "consim should return None on empty llm response"
 
@@ -770,6 +738,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         concepts_interpretation={0: "word"},
         global_importances=torch.ones(len(classes), 1),
         prompt_type=prompt_type,
+        contrastive_pairs=contrastive_pairs,
     )
     assert score is None, "consim should return None on wrong format llm response"
 
@@ -783,6 +752,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         concepts_interpretation={0: "word"},
         global_importances=torch.ones(len(classes), 1),
         prompt_type=prompt_type,
+        contrastive_pairs=contrastive_pairs,
     )
     assert score is None, "consim should return None on wrong number of answers in llm response"
 
@@ -867,7 +837,6 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
         concepts_interpretation=concepts_interpretation,
         global_importances=global_importances,
         prompt_type=PromptTypes.E3_global_and_local_concepts_with_lp,
-        anonymize_classes=True,
     )
 
     assert score is None or 0.0 <= score <= 1.0, (
@@ -906,13 +875,10 @@ if __name__ == "__main__":
     test_consim_generate_prompt()
     test_consim_extract_predictions_from_response()
     test_consim_predictions_accuracy()
+    test_consim_setting_to_prompt_contrastive()
     for prompt_type in [
         PromptTypes.E2_global_concepts_with_lp,
-        PromptTypes.C1_contrastive_global_concepts_without_lp,
-        PromptTypes.C2_contrastive_global_concepts_with_lp,
         PromptTypes.C3_contrastive_global_and_local_concepts_with_lp,
-        PromptTypes.C4_contrastive_local_concepts,
-        PromptTypes.C5_contrastive_local_only,
     ]:
         try:
             test_consim_setting_to_prompt(prompt_type=prompt_type, anonymize_classes=True)
