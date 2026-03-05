@@ -759,7 +759,7 @@ class ConSim:
         setting: PromptSetting,
         sentences: list[str],
         predictions: torch.Tensor,
-        classes: list[str],
+        classes: dict[int, str],
         concepts_interpretation: dict[int, str],
         global_importances: dict[int, torch.Tensor],
         local_importances: list[torch.Tensor] | None,
@@ -840,15 +840,8 @@ class ConSim:
         #     # show the concepts that could be predicted
         #     classes_prompt = f"The concepts are: [{', '.join(concepts_interpretation.keys())}]"
         if setting.anonymize_classes:
-            anonym_classes = {class_name: f"Class_{i}" for i, class_name in enumerate(classes)}
-            classes_prompt = f"The classes are: [{', '.join(anonym_classes.values())}]"
-        else:
-            anonym_classes = {class_name: class_name for class_name in classes}
-            classes_prompt = f"The classes are: [{', '.join(classes)}]"
-        system_prompt_parts.append(classes_prompt)
-
-        def _class_name_from_index(class_index: int | torch.Tensor) -> str:
-            return anonym_classes[classes[int(class_index)]]
+            classes = {i: f"Class_{i}" for i in classes.keys()}
+        system_prompt_parts.append(f"The classes are: [{', '.join(list(classes.values()))}]")
 
         # ---------------------------
         # classes concepts importance
@@ -858,7 +851,7 @@ class ConSim:
                 "The most important concepts and their importance for each class are:\n"
                 + "\n".join(
                     [
-                        f"{anonym_classes[class_name]}: {
+                        f"{class_name}: {
                             ConSim._concepts_to_string(
                                 global_importances[class_index],
                                 concepts_interpretation,
@@ -866,7 +859,7 @@ class ConSim:
                                 threshold=importance_threshold,
                             )
                         }"
-                        for class_index, class_name in enumerate(classes)
+                        for class_index, class_name in classes.items()
                     ]
                 )
             )
@@ -886,9 +879,7 @@ class ConSim:
                 str_concept = ConSim._concepts_to_string(
                     contrastive_importance, concepts_interpretation, top_k=top_k, threshold=importance_threshold
                 )
-                fact = anonym_classes[classes[pair[0]]]
-                foil = anonym_classes[classes[pair[1]]]
-                contrastive_prompt_parts.append(f"Fact {fact}, foil {foil}: {str_concept}")
+                contrastive_prompt_parts.append(f"Fact {classes[pair[0]]}, foil {classes[pair[1]]}: {str_concept}")
 
             contrastive_global_prompt = (
                 "The contrastively important concepts to prefer fact over foil are:\n"
@@ -959,7 +950,7 @@ class ConSim:
                 else:
                     text = (
                         f"Contrastive concepts contributions for Sample_{i} "
-                        + f"(supports prediction {_class_name_from_index(pred_index)} rather than true label {_class_name_from_index(gold_index)})"
+                        + f"(supports prediction {classes[pred_index]} rather than true label {classes[gold_index]})"
                     )
                     importances = local_importances[i][pred_index] - local_importances[i][gold_index]
 
@@ -979,9 +970,7 @@ class ConSim:
         # labels
         if setting.lp_samples:  # these correspond to the evaluated model predictions
             # show the labels
-            lp_labels_prompt = "\n".join(
-                [f"Sample_{i}: {_class_name_from_index(predictions[i])}" for i in range(mid_index)]
-            )
+            lp_labels_prompt = "\n".join([f"Sample_{i}: {classes[int(predictions[i])]}" for i in range(mid_index)])
             system_prompt_parts.append(lp_labels_prompt)
 
         # ==============================================================================================
@@ -1010,7 +999,7 @@ class ConSim:
 
         # -----------------
         # model predictions (not included in the prompt, but returned to compute accuracy)
-        literal_model_predictions = [_class_name_from_index(predictions[i]) for i in range(mid_index)]
+        literal_model_predictions = [classes[int(predictions[i])] for i in range(mid_index)]
 
         # concatenate prompts parts
         system_prompt = "\n\n".join(system_prompt_parts)
@@ -1446,7 +1435,7 @@ class ConSim:
 
         # extract the classes present in the predictions or the gold labels
         classes_ids = sorted(set(predictions.tolist()) | set(gold_labels or []))
-        classes = [self.classes[class_id] for class_id in classes_ids]
+        classes = {class_id: self.classes[class_id] for class_id in classes_ids}
 
         # filter based on classes subset
         global_importances_dict = {class_id: global_importances[class_id] for class_id in classes_ids}
