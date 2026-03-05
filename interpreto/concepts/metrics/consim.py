@@ -322,9 +322,9 @@ class ConSim:
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
-        user_llm: LLMInterface | None,
         activation_granularity: ActivationGranularity,
         classes: list[str],
+        user_llm: LLMInterface | None = None,
         split_point: str | None = None,
     ):
         """
