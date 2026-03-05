@@ -371,6 +371,11 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the inputs.
         """
+        if getattr(self.model_with_split_points, "dispatched", True) is False:
+            # ConSim forwards through self.model_with_split_points._model directly, so ensure weights are loaded.
+            # This is not what NNsight expects, but we do not want to load it a second time nor look into now.
+            self.model_with_split_points.dispatch()
+
         device = device if device is not None else self.model_with_split_points.device
         all_predictions = []
         for batch_index in tqdm(
@@ -894,19 +899,20 @@ class ConSim:
         # ==============================================================================================
         # Learning phase
         mid_index = len(sentences) // 2
-        rendered_local_importances: list[str] = []
-        if local_importances is not None:
-            # for each sample, show the concepts contributions corresponding to the predicted class
-            for i in range(len(local_importances)):
-                pred = predictions[i].to(torch.int32).item()
-                rendered_local_importances.append(
-                    ConSim._concepts_to_string(
-                        local_importances[i][pred],  # type: ignore
-                        concepts_interpretation,
-                        top_k=top_k,
-                        threshold=importance_threshold,
+        if setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance:
+            rendered_local_importances: list[str] = []
+            if local_importances is not None:
+                # for each sample, show the concepts contributions corresponding to the predicted class
+                for i in range(len(local_importances)):
+                    pred = predictions[i].to(torch.int32).item()
+                    rendered_local_importances.append(
+                        ConSim._concepts_to_string(
+                            local_importances[i][pred],  # type: ignore
+                            concepts_interpretation,
+                            top_k=top_k,
+                            threshold=importance_threshold,
+                        )
                     )
-                )
 
         # -------
         # samples
