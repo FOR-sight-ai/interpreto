@@ -322,7 +322,8 @@ class Granularity(Enum):
 
     @staticmethod
     def _starts_word(token: str) -> bool:
-        return token.startswith((" ", "Ġ", "__"))
+        # return token.startswith((" ", "Ġ", "__"))
+        return token.startswith((" ", "Ġ", "▁", "__"))
 
     @staticmethod
     def __word_get_indices_from_input_ids(input_ids: list[int], tokenizer: PreTrainedTokenizer) -> list[list[int]]:
@@ -699,6 +700,26 @@ class Granularity(Enum):
 
         return all_decompositions
 
+    @staticmethod
+    def split_indices_on_generation_boundary(
+        sample_indices: list[list[int]], first_target_index: int
+    ) -> list[list[int]]:
+        """Split granularity buckets crossing the prompt/target boundary."""
+        split_indices: list[list[int]] = []
+        for token_indices in sample_indices:
+            left_part = [index for index in token_indices if index < first_target_index]
+            right_part = [index for index in token_indices if index >= first_target_index]
+
+            if left_part and right_part:
+                split_indices.append(left_part)
+                split_indices.append(right_part)
+            elif left_part:
+                split_indices.append(left_part)
+            elif right_part:
+                split_indices.append(right_part)
+
+        return split_indices
+
     def granularity_score_aggregation(  # noqa: PLR0912  # ignore too many branches
         self,
         contribution: torch.Tensor,
@@ -780,6 +801,36 @@ class Granularity(Enum):
             )
         sample_indices: list[list[int]] = indices_list[0]
 
+        if aggregate_targets:
+            # Ensure a granularity boundary exists between prompt tokens and generated target tokens.
+            # Some tokenizers/granularity modes may produce a group crossing that boundary; if so,
+            # split it to avoid mixing input and target contributions into the same aggregated bucket.
+            t = contribution.shape[0]
+            l = inputs["input_ids"].shape[1]  # type: ignore
+
+            if t >= l:
+                raise ValueError(
+                    "Cannot aggregate targets if the number of targets is greater than the number of inputs."
+                    "The input_ids should include the generated tokens."
+                    f"Got {t} targets and {l} inputs."
+                )
+
+            first_target_index = l - t
+            split_indices: list[list[int]] = []
+            for token_indices in sample_indices:
+                left_part = [index for index in token_indices if index < first_target_index]
+                right_part = [index for index in token_indices if index >= first_target_index]
+
+                if left_part and right_part:
+                    split_indices.append(left_part)
+                    split_indices.append(right_part)
+                elif left_part:
+                    split_indices.append(left_part)
+                elif right_part:
+                    split_indices.append(right_part)
+
+            sample_indices = split_indices
+
         if aggregate_inputs:
             # Gradient-based methods
             match self:
@@ -795,7 +846,10 @@ class Granularity(Enum):
                         )
                     # iterate over granularity elements
                     aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
-                        (contribution.shape[0], len(sample_indices))
+                        # (contribution.shape[0], len(sample_indices))
+                        (contribution.shape[0], len(sample_indices)),
+                        dtype=contribution.dtype,
+                        device=contribution.device,
                     )
                     for aggregation_index, token_indices in enumerate(sample_indices):
                         # extract token contribution for each word/sentence
@@ -820,12 +874,12 @@ class Granularity(Enum):
             t = contribution.shape[0]
             l = inputs["input_ids"].shape[1]  # type: ignore
 
-            if t >= l:
-                raise ValueError(
-                    "Cannot aggregate targets if the number of targets is greater than the number of inputs."
-                    "The input_ids should include the generated tokens."
-                    f"Got {t} targets and {l} inputs."
-                )
+            # if t >= l:
+            #    raise ValueError(
+            #        "Cannot aggregate targets if the number of targets is greater than the number of inputs."
+            #        "The input_ids should include the generated tokens."
+            #        f"Got {t} targets and {l} inputs."
+            #    )
 
             first_target_index = l - t
             first_target_granular_index = None
@@ -865,7 +919,10 @@ class Granularity(Enum):
                         )
                     # iterate over granularity elements
                     aggregated_contribution: Float[torch.Tensor, "g lg"] = torch.zeros(
-                        (len(target_indices), contribution.shape[1])
+                        # (len(target_indices), contribution.shape[1])
+                        (len(target_indices), contribution.shape[1]),
+                        dtype=contribution.dtype,
+                        device=contribution.device,
                     )
                     for aggregation_index, token_indices in enumerate(target_indices):
                         # extract token contribution for each word/sentence

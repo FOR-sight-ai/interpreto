@@ -403,23 +403,56 @@ class AttributionExplainer:
         # Aggregate the score with respect to the granularity level
         # - Aggregate over the inputs for gradient-based methods: (t, l) -> (t, lg)
         # - Aggregate over the targets if the model is a generation model: (t, l) -> (tg, l)
-        granular_contributions = (
-            self.granularity.granularity_score_aggregation(
-                contribution=contribution.cpu(),
-                granularity_aggregation_strategy=self.granularity_aggregation_strategy,
-                inputs=inputs,  # type: ignore
-                tokenizer=self.tokenizer,
-                aggregate_inputs=self.use_gradient,  # Gradient-based methods
-                aggregate_targets=isinstance(self.inference_wrapper, GenerationInferenceWrapper),  # Generation models
-            )
-            for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
-        )
+        # granular_contributions = (
+        #     self.granularity.granularity_score_aggregation(
+        #         contribution=contribution.cpu(),
+        #         granularity_aggregation_strategy=self.granularity_aggregation_strategy,
+        #         inputs=inputs,  # type: ignore
+        #         tokenizer=self.tokenizer,
+        #         aggregate_inputs=self.use_gradient,  # Gradient-based methods
+        #         aggregate_targets=isinstance(self.inference_wrapper, GenerationInferenceWrapper),  # Generation models
+        #     )
+        #     for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
+        # )
 
         # Decompose each input for the desired granularity level (tokens, words, sentences...)
-        granular_inputs_texts: list[list[str]] = [
-            self.granularity.get_decomposition(inputs, self.tokenizer, return_text=True)[0]  # type: ignore
-            for inputs in model_inputs_to_explain
-        ]
+        # granular_inputs_texts: list[list[str]] = [
+        #     self.granularity.get_decomposition(inputs, self.tokenizer, return_text=True)[0]  # type: ignore
+        #     for inputs in model_inputs_to_explain
+        # ]
+        is_generation = isinstance(self.inference_wrapper, GenerationInferenceWrapper)
+        model_inputs_to_explain = list(model_inputs_to_explain)
+
+        granular_contributions: list[torch.Tensor] = []
+        granular_inputs_texts: list[list[str]] = []
+        for contribution, inputs, target in zip(
+            contributions, model_inputs_to_explain, sanitized_targets, strict=True
+        ):
+            indices_list = self.granularity.get_indices(inputs, self.tokenizer)  # type: ignore
+
+            if is_generation:
+                sample_indices = indices_list[0]
+                first_target_index = inputs["input_ids"].shape[1] - target.shape[-1]  # type: ignore
+                indices_list = [
+                    self.granularity.split_indices_on_generation_boundary(sample_indices, first_target_index)
+                ]
+
+            granular_contributions.append(
+                self.granularity.granularity_score_aggregation(
+                    contribution=contribution.cpu(),
+                    granularity_aggregation_strategy=self.granularity_aggregation_strategy,
+                    inputs=inputs,  # type: ignore
+                    tokenizer=self.tokenizer,
+                    aggregate_inputs=self.use_gradient,  # Gradient-based methods
+                    aggregate_targets=is_generation,  # Generation models
+                    indices_list=indices_list,
+                )
+            )
+            granular_inputs_texts.append(
+                self.granularity.get_decomposition(
+                    inputs, self.tokenizer, return_text=True, indices_list=indices_list
+                )[0]  # type: ignore
+            )
 
         # Create and return AttributionOutput objects with the contributions and decoded token sequences:
         results = []
