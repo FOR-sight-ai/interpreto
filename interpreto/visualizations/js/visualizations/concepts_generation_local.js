@@ -91,37 +91,21 @@
         _renderConcepts() {
             const wrapper = document.getElementById(this.uniqueIdConceptsWrapper);
             const container = document.getElementById(this.uniqueIdConcepts);
-            if (!wrapper || !container) return;
-
-            container.innerHTML = "";
-
-            if (!this.topConcepts.length) {
-                wrapper.classList.add("is-hidden");
+            if (!wrapper || !container) {
                 this.conceptElements = [];
                 return;
             }
 
-            wrapper.classList.remove("is-hidden");
-
-            const concepts = this.topConcepts.map((concept) => ({
-                label: concept.label,
-                id: concept.id,
-                color: concept.color,
-            }));
-            const { conceptElements } = DOMRenderer.renderConcepts(container, concepts);
-            this.conceptElements = conceptElements;
-
-            for (let i = 0; i < conceptElements.length; i++) {
-                const element = conceptElements[i];
-                element.classList.add("reactive-word-style");
-                element.dataset.conceptIndex = i.toString();
-                element.addEventListener("click", (e) => {
-                    e.preventDefault();
-                    this._onConceptClick(i);
-                });
-                element.addEventListener("mouseover", () => this._onConceptMouseOver(i));
-                element.addEventListener("mouseout", () => this._onConceptMouseOut(i));
-            }
+            this.conceptElements = ConceptsLocalUtils.renderConceptList(
+                wrapper,
+                container,
+                this.topConcepts,
+                {
+                    onClick: (index) => this._onConceptClick(index),
+                    onMouseOver: (index) => this._onConceptMouseOver(index),
+                    onMouseOut: (index) => this._onConceptMouseOut(index),
+                }
+            );
         }
 
         /**
@@ -224,6 +208,8 @@
                         onClickColorMap: this.onClickColorMap,
                         enableHighlight: true,
                         showDefaultBackground,
+                        showBackgroundForSelected: true,
+                        useOnClickColorMap: false,
                     }
                 );
                 element.classList.toggle("is-emphasized", isActive || isSelected);
@@ -240,95 +226,29 @@
          */
         _refreshTokens() {
             if (!this.topConcepts.length) {
-                this._clearTokenStyles(this.sampleElements);
+                ConceptsLocalUtils.clearTokenStyles(this.sampleElements);
                 return;
             }
 
             if (this.state.activatedClassId === null) {
-                this._updateTokensDefault(this.sampleElements, this.activations);
+                ConceptsLocalUtils.updateTokensDefault(
+                    this.sampleElements,
+                    this.activations,
+                    this.topConcepts,
+                    this.backgroundColor
+                );
             } else {
                 const concept = this.topConcepts[this.state.activatedClassId];
                 if (!concept) {
-                    this._clearTokenStyles(this.sampleElements);
+                    ConceptsLocalUtils.clearTokenStyles(this.sampleElements);
                     return;
                 }
-                this._updateTokensForConcept(
+                ConceptsLocalUtils.updateTokensForConcept(
                     this.sampleElements,
                     this.activations,
-                    concept
-                );
-            }
-        }
-
-        _updateTokensDefault(elements, activations) {
-            for (let tokenIndex = 0; tokenIndex < elements.length; tokenIndex++) {
-                const element = elements[tokenIndex];
-                const row = activations[tokenIndex] || [];
-
-                let bestConceptIndex = null;
-                let bestValue = 0;
-                let bestRawValue = 0;
-
-                for (let i = 0; i < this.topConcepts.length; i++) {
-                    const concept = this.topConcepts[i];
-                    const rawValue = typeof row[concept.id] === "number" ? row[concept.id] : 0;
-                    const absValue = Math.abs(rawValue);
-                    if (absValue > bestValue) {
-                        bestValue = absValue;
-                        bestRawValue = rawValue;
-                        bestConceptIndex = i;
-                    }
-                }
-
-                if (bestConceptIndex === null || bestValue === 0) {
-                    element.style = "";
-                    DOMRenderer.setTooltip(element, null);
-                    continue;
-                }
-
-                const concept = this.topConcepts[bestConceptIndex];
-                const style = StyleComputer.computeConceptStyle(
-                    bestValue,
-                    concept.maxAbs,
-                    concept.color,
+                    concept,
                     this.backgroundColor
                 );
-                element.style = style;
-                DOMRenderer.setTooltip(
-                    element,
-                    StyleComputer.formatTooltip(bestRawValue)
-                );
-            }
-        }
-
-        _updateTokensForConcept(elements, activations, concept) {
-            for (let tokenIndex = 0; tokenIndex < elements.length; tokenIndex++) {
-                const element = elements[tokenIndex];
-                const row = activations[tokenIndex] || [];
-                const rawValue = typeof row[concept.id] === "number" ? row[concept.id] : 0;
-                const absValue = Math.abs(rawValue);
-
-                if (absValue === 0) {
-                    element.style = "";
-                    DOMRenderer.setTooltip(element, null);
-                    continue;
-                }
-
-                const style = StyleComputer.computeConceptStyle(
-                    absValue,
-                    concept.maxAbs,
-                    concept.color,
-                    this.backgroundColor
-                );
-                element.style = style;
-                DOMRenderer.setTooltip(element, StyleComputer.formatTooltip(rawValue));
-            }
-        }
-
-        _clearTokenStyles(elements) {
-            for (const element of elements) {
-                element.style = "";
-                DOMRenderer.setTooltip(element, null);
             }
         }
 
@@ -371,50 +291,26 @@
         }
 
         _buildTopConcepts(scores) {
-            const entries = [];
-            for (let conceptId = 0; conceptId < scores.length; conceptId++) {
-                const rawValue = typeof scores[conceptId] === "number" ? scores[conceptId] : 0;
-                const value = Math.abs(rawValue);
-                if (value === 0) {
-                    continue;
-                }
-                entries.push({ id: conceptId, score: value });
-            }
-
-            entries.sort((a, b) => b.score - a.score);
+            const entries = ConceptsLocalUtils.buildRankedEntries(scores);
             const limit = Math.min(this.topK, entries.length);
             const selected = entries.slice(0, limit);
 
             return selected.map((entry) => {
                 const label = this.labels[entry.id] || `Concept #${entry.id}`;
-                const maxAbs = this._getMaxAbsForConcept(entry.id);
-                const color = this._getConceptColor(entry.id);
+                const maxAbs = ConceptsLocalUtils.getMaxAbsForConcept(entry.id, this.activations);
+                const color = ConceptsLocalUtils.getConceptColor(
+                    entry.id,
+                    this.defaultColormap,
+                    this.conceptColor
+                );
                 return {
                     id: entry.id,
                     label,
-                    score: entry.score,
+                    score: entry.absValue,
                     maxAbs,
                     color,
                 };
             });
-        }
-
-        _getMaxAbsForConcept(conceptId) {
-            let maxValue = 0;
-            for (let tokenIndex = 0; tokenIndex < this.activations.length; tokenIndex++) {
-                const row = this.activations[tokenIndex] || [];
-                const rawValue = typeof row[conceptId] === "number" ? row[conceptId] : 0;
-                const absValue = Math.abs(rawValue);
-                if (absValue > maxValue) {
-                    maxValue = absValue;
-                }
-            }
-            return maxValue;
-        }
-
-        _getConceptColor(conceptId) {
-            const mapped = StyleComputer.getColorFromMap(this.defaultColormap, conceptId);
-            return mapped || this.conceptColor;
         }
 
     };
