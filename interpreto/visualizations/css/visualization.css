@@ -275,14 +275,34 @@
   height: 0.75em;
   border-radius: 0;
   background-color: rgba(127, 127, 127, 0.2);
-  overflow: visible;
+  overflow: hidden;
   cursor: pointer;
 }
 
+.concept-barplot-bar-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: currentColor;
+  opacity: 0.35;
+  z-index: 1;
+  pointer-events: none;
+}
+
 .concept-barplot-bar-fill {
-  height: 100%;
+  position: absolute;
+  top: 0;
+  bottom: 0;
   border-radius: 0;
-  transition: width 0.2s ease-out;
+  transition: width 0.2s ease-out, left 0.2s ease-out, right 0.2s ease-out;
+  z-index: 2;
+}
+
+.concept-barplot-bar-fill.is-negative {
+  opacity: 0.75;
 }
 
 .concept-barplot-scale {
@@ -309,6 +329,10 @@
   flex-direction: column;
   align-items: center;
   font-size: 0.85em;
+}
+
+.concept-barplot-scale-tick.is-zero .concept-barplot-scale-mark {
+  opacity: 0.9;
 }
 
 .concept-barplot-scale-mark {

@@ -533,7 +533,7 @@ def plot_classification_global_concepts(
     Args:
         classes_names: Display names for classes.
         concepts_labels: Either {concept_id: label} or {class_id/class_name: {concept_id: label}}.
-        concepts_importances: {class_name: [scores]} with scores in [0, 1] or a tensor.
+        concepts_importances: {class_name: [scores]} (can include positive and negative values) or a tensor.
         top_k: Number of concepts shown per class.
         default_colormap: Optional {id: color} override for class colors.
         onclick_colormap: (selected_color, hover_color) for active labels.
@@ -607,7 +607,7 @@ def plot_classification_global_concepts(
                 }
             )
 
-        concepts.sort(key=lambda item: item["importance"], reverse=True)
+        concepts.sort(key=lambda item: abs(item["importance"]), reverse=True)
         if top_k:
             concepts = concepts[:top_k]
         concepts_by_class.append(concepts)

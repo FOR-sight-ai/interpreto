@@ -202,13 +202,23 @@
                     const classMeta = this.data.classes[value.classId] || {};
                     const classColor = classMeta.color || this.conceptColor;
                     const ratio = globalMax > 0 ? value.absValue / globalMax : 0;
+                    const widthPercent = Math.max(0, Math.min(ratio, 1)) * 50;
 
                     const track = document.createElement("div");
                     track.classList.add("concept-barplot-bar-track", "highlighted-word-style");
 
                     const fill = document.createElement("div");
                     fill.classList.add("concept-barplot-bar-fill");
-                    fill.style.width = `${Math.max(0, Math.min(ratio, 1)) * 100}%`;
+                    fill.style.width = `${widthPercent}%`;
+                    if (value.rawValue < 0) {
+                        fill.classList.add("is-negative");
+                        fill.style.right = "50%";
+                        fill.style.left = "auto";
+                    } else {
+                        fill.classList.add("is-positive");
+                        fill.style.left = "50%";
+                        fill.style.right = "auto";
+                    }
                     fill.style.backgroundColor = classColor;
                     if (ratio > 0) {
                         fill.style.minWidth = "2px";
@@ -346,11 +356,20 @@
 
             const { step, decimals } = this._getScaleStep(maxValue);
             if (step > 0) {
-                for (let value = step; value <= maxValue + step * 0.5; value += step) {
-                    const ratio = value / maxValue;
+                const tickValues = new Set([-maxValue, 0, maxValue]);
+                for (let value = step; value < maxValue; value += step) {
+                    tickValues.add(value);
+                    tickValues.add(-value);
+                }
+
+                const sortedTickValues = Array.from(tickValues).sort((a, b) => a - b);
+                for (const value of sortedTickValues) {
                     const tick = document.createElement("div");
                     tick.classList.add("concept-barplot-scale-tick");
-                    tick.style.left = `${Math.max(0, Math.min(ratio, 1)) * 100}%`;
+                    if (Math.abs(value) < 1e-12) {
+                        tick.classList.add("is-zero");
+                    }
+                    tick.style.left = `${this._toScalePercent(value, maxValue)}%`;
 
                     const mark = document.createElement("div");
                     mark.classList.add("concept-barplot-scale-mark");
@@ -373,8 +392,8 @@
             let step = steps[0];
 
             for (const candidate of steps) {
-                const tickCount = Math.floor(maxValue / candidate);
-                if (tickCount >= 3 && tickCount <= 6) {
+                const tickCountPerSide = Math.floor(maxValue / candidate);
+                if (tickCountPerSide >= 2 && tickCountPerSide <= 4) {
                     step = candidate;
                     break;
                 }
@@ -385,12 +404,39 @@
                 step = maxValue;
             }
 
-            let decimals = 0;
-            if (step < 1) {
-                decimals = step < 0.01 ? 3 : step < 0.1 ? 2 : 1;
-            }
+            const decimals = Math.min(
+                4,
+                Math.max(this._countDecimals(step), this._countDecimals(maxValue))
+            );
 
             return { step, decimals };
+        }
+
+        _countDecimals(value) {
+            if (!Number.isFinite(value)) {
+                return 0;
+            }
+
+            const text = value.toString().toLowerCase();
+            if (text.includes("e-")) {
+                const [base, exponentText] = text.split("e-");
+                const exponent = parseInt(exponentText, 10);
+                const fraction = base.includes(".") ? base.split(".")[1].length : 0;
+                return exponent + fraction;
+            }
+
+            if (!text.includes(".")) {
+                return 0;
+            }
+            return text.split(".")[1].length;
+        }
+
+        _toScalePercent(value, maxValue) {
+            if (!Number.isFinite(maxValue) || maxValue <= 0) {
+                return 50;
+            }
+            const ratio = (value + maxValue) / (2 * maxValue);
+            return Math.max(0, Math.min(ratio, 1)) * 100;
         }
 
         _formatTickValue(value, decimals) {
@@ -398,7 +444,8 @@
                 return "";
             }
             const fixed = value.toFixed(decimals);
-            return fixed.replace(/\.?0+$/, "");
+            const normalized = fixed.replace(/\.?0+$/, "");
+            return normalized === "-0" ? "0" : normalized;
         }
 
         _formatLabel(label, conceptId) {
