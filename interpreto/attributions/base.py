@@ -285,7 +285,11 @@ class AttributionExplainer:
             ValueError: If the type of model_inputs is not supported.
         """
         if isinstance(model_inputs, str):
-            return [self.tokenizer(model_inputs, return_tensors="pt", return_offsets_mapping=True, truncation=True)]
+            return [
+                self.tokenizer(
+                    model_inputs.rstrip(), return_tensors="pt", return_offsets_mapping=True, truncation=True
+                )
+            ]
         if isinstance(
             model_inputs, BatchEncoding
         ):  # we cant use TensorMapping in the isinstance so we use MutableMapping.
@@ -334,6 +338,32 @@ class AttributionExplainer:
         raise NotImplementedError(
             "Specific task subclasses must implement the 'process_inputs_to_explain_and_targets' method "
             "to correctly process inputs and targets for explanations."
+        )
+
+    @abstractmethod
+    def granularity_score_aggregation_bytask(self, contributions, model_inputs_to_explain, sanitized_targets):
+        """
+        Aggregates scores at the specified granularity level, with task-specific handling.
+
+        This method must be implemented by subclasses to handle the specific requirements of different tasks
+        (e.g., classification vs. generation) when aggregating scores based on the defined granularity.
+
+        Args:
+            contributions (Iterable[torch.Tensor]): The raw contribution scores to be aggregated.
+            model_inputs_to_explain (Iterable[TensorMapping]): The model inputs for which explanations are being generated.
+            sanitized_targets (Iterable[torch.Tensor]): The processed targets corresponding to the inputs.
+
+        Returns:
+            tuple: A tuple containing:
+                - granular_contributions: The contributions aggregated at the specified granularity level.
+                - granular_inputs_texts: The corresponding input texts decomposed according to the granularity.
+
+        Raises:
+            NotImplementedError: Always raised. Subclasses must implement this method.
+        """
+        raise NotImplementedError(
+            "Specific task subclasses must implement the 'granularity_score_aggregation_bytask' method "
+            "to correctly aggregate scores at the specified granularity level for their respective tasks."
         )
 
     def explain(
@@ -400,59 +430,9 @@ class AttributionExplainer:
             for score, mask in zip(scores, mask_generator, strict=True)
         )
 
-        # Aggregate the score with respect to the granularity level
-        # - Aggregate over the inputs for gradient-based methods: (t, l) -> (t, lg)
-        # - Aggregate over the targets if the model is a generation model: (t, l) -> (tg, l)
-        # granular_contributions = (
-        #     self.granularity.granularity_score_aggregation(
-        #         contribution=contribution.cpu(),
-        #         granularity_aggregation_strategy=self.granularity_aggregation_strategy,
-        #         inputs=inputs,  # type: ignore
-        #         tokenizer=self.tokenizer,
-        #         aggregate_inputs=self.use_gradient,  # Gradient-based methods
-        #         aggregate_targets=isinstance(self.inference_wrapper, GenerationInferenceWrapper),  # Generation models
-        #     )
-        #     for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
-        # )
-
-        # Decompose each input for the desired granularity level (tokens, words, sentences...)
-        # granular_inputs_texts: list[list[str]] = [
-        #     self.granularity.get_decomposition(inputs, self.tokenizer, return_text=True)[0]  # type: ignore
-        #     for inputs in model_inputs_to_explain
-        # ]
-        is_generation = isinstance(self.inference_wrapper, GenerationInferenceWrapper)
-        model_inputs_to_explain = list(model_inputs_to_explain)
-
-        granular_contributions: list[torch.Tensor] = []
-        granular_inputs_texts: list[list[str]] = []
-        for contribution, inputs, target in zip(
-            contributions, model_inputs_to_explain, sanitized_targets, strict=True
-        ):
-            indices_list = self.granularity.get_indices(inputs, self.tokenizer)  # type: ignore
-
-            if is_generation:
-                sample_indices = indices_list[0]
-                first_target_index = inputs["input_ids"].shape[1] - target.shape[-1]  # type: ignore
-                indices_list = [
-                    self.granularity.split_indices_on_generation_boundary(sample_indices, first_target_index)
-                ]
-
-            granular_contributions.append(
-                self.granularity.granularity_score_aggregation(
-                    contribution=contribution.cpu(),
-                    granularity_aggregation_strategy=self.granularity_aggregation_strategy,
-                    inputs=inputs,  # type: ignore
-                    tokenizer=self.tokenizer,
-                    aggregate_inputs=self.use_gradient,  # Gradient-based methods
-                    aggregate_targets=is_generation,  # Generation models
-                    indices_list=indices_list,
-                )
-            )
-            granular_inputs_texts.append(
-                self.granularity.get_decomposition(
-                    inputs, self.tokenizer, return_text=True, indices_list=indices_list
-                )[0]  # type: ignore
-            )
+        granular_contributions, granular_inputs_texts = self.granularity_score_aggregation_bytask(
+            contributions, model_inputs_to_explain, sanitized_targets
+        )  # type: ignore
 
         # Create and return AttributionOutput objects with the contributions and decoded token sequences:
         results = []
@@ -601,6 +581,26 @@ class ClassificationAttributionExplainer(AttributionExplainer):
 
         raise TypeError(f"Target type {type(targets)} not supported.")
 
+    def granularity_score_aggregation_bytask(self, contributions, model_inputs_to_explain, sanitized_targets):
+        granular_contributions = (
+            self.granularity.granularity_score_aggregation(
+                contribution=contribution.cpu(),
+                granularity_aggregation_strategy=self.granularity_aggregation_strategy,
+                inputs=inputs,  # type: ignore
+                tokenizer=self.tokenizer,
+                aggregate_inputs=self.use_gradient,  # Gradient-based methods
+                aggregate_targets=isinstance(self.inference_wrapper, GenerationInferenceWrapper),  # Generation models
+            )
+            for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
+        )
+
+        # Decompose each input for the desired granularity level (tokens, words, sentences...)
+        granular_inputs_texts: list[list[str]] = [
+            self.granularity.get_decomposition(inputs, self.tokenizer, return_text=True)[0]  # type: ignore
+            for inputs in model_inputs_to_explain
+        ]
+        return granular_contributions, granular_inputs_texts
+
     @jaxtyped(typechecker=beartype)
     def process_inputs_to_explain_and_targets(
         self,
@@ -694,6 +694,41 @@ class GenerationAttributionExplainer(AttributionExplainer):
         raise ValueError(
             f"type {type(targets)} not supported for method process_targets in class {self.__class__.__name__}"
         )
+
+    def granularity_score_aggregation_bytask(self, contributions, model_inputs_to_explain, sanitized_targets):
+        model_inputs_to_explain = list(model_inputs_to_explain)
+
+        granular_contributions: list[torch.Tensor] = []
+        granular_inputs_texts: list[list[str]] = []
+        for contribution, inputs, target in zip(
+            contributions, model_inputs_to_explain, sanitized_targets, strict=True
+        ):
+            indices_list = self.granularity.get_indices(inputs, self.tokenizer)  # type: ignore
+
+            # If it's a generation task, we need our method to split between the input and the generated part
+            # (because depending on the granularity, for example a sentence, we could have a bad cut if we
+            # keep the whole sentence in one block but part of it has been generated).
+            sample_indices = indices_list[0]
+            first_target_index = inputs["input_ids"].shape[1] - target.shape[-1]  # type: ignore
+            indices_list = [self.granularity.split_indices_on_generation_boundary(sample_indices, first_target_index)]
+
+            granular_contributions.append(
+                self.granularity.granularity_score_aggregation(
+                    contribution=contribution.cpu(),
+                    granularity_aggregation_strategy=self.granularity_aggregation_strategy,
+                    inputs=inputs,  # type: ignore
+                    tokenizer=self.tokenizer,
+                    aggregate_inputs=self.use_gradient,
+                    aggregate_targets=True,
+                    indices_list=indices_list,
+                )
+            )
+            granular_inputs_texts.append(
+                self.granularity.get_decomposition(
+                    inputs, self.tokenizer, return_text=True, indices_list=indices_list
+                )[0]  # type: ignore
+            )
+        return granular_contributions, granular_inputs_texts
 
     @jaxtyped(typechecker=beartype)
     def process_inputs_to_explain_and_targets(
