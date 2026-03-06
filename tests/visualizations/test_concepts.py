@@ -59,7 +59,7 @@ def test_plot_concepts_classification_global_payload_keys(tmp_path):
         concepts_labels=concepts_labels,
         classes_names=classes_names,
     )
-    payload = _extract_payload(html, "ClassificationConceptsVisualization")
+    payload = _extract_payload(html, "ClassificationConceptsBarPlotVisualization")
 
     assert {"classes", "concepts", "concept_color", "onclick_colormap"} <= set(payload.keys())
     assert [entry["name"] for entry in payload["classes"]] == ["A", "B"]

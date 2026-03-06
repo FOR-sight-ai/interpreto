@@ -10,13 +10,15 @@ What lives where
 - `js/core/dom_renderer.js`: Pure DOM rendering helpers (classes, inputs, outputs, concepts, tooltips).
 - `js/core/state_manager.js`: Selection/hover state machine.
 - `js/core/style_computer.js`: Styling helpers (color rules, label styles, tooltip formatting).
+- `js/core/concepts_local_utils.js`: Shared helpers for local concept visualizations (ranking, token styling, list rendering).
 - `js/core/view_updater.js`: Applies styles to DOM elements based on state.
 - `js/visualizations/attribution_classification.js`: Attribution visualization for classification.
 - `js/visualizations/attribution_generation.js`: Attribution visualization for generation.
-- `js/visualizations/concepts_classification_global.js`: Global concept visualization for classification.
+- `js/visualizations/concepts_classification_global_barplot.js`: Global concept visualization for classification (bar plot).
+- `js/visualizations/concepts_classification_global.js`: Legacy global concepts view (not loaded by default).
 - `js/visualizations/concepts_generation_local.js`: Local concept visualization for generation.
 - `js/visualizations/concepts_classification_local.js`: Local concept visualization for classification.
-- `test.ipynb`: Scratch notebook; ignore when editing production logic.
+- `tests/visualizations/test_visualizations.ipynb`: Scratch notebook; ignore when editing production logic.
 
 Interaction rules (must hold everywhere)
 - Single selection only: only one element (class/concept/output) can be selected at a time.

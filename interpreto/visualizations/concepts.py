@@ -619,6 +619,7 @@ def plot_classification_global_concepts(
         "concept_color": concept_color,
         "default_colormap": {},
         "onclick_colormap": on_click_colors,
+        "concepts_are_classwise": classwise,
     }
 
     json_data = json.dumps(data, ensure_ascii=True, indent=2)
@@ -628,16 +629,20 @@ def plot_classification_global_concepts(
         f"<h3>Classes</h3>"
         f"<div class='line-style'><div id='classes-{unique_id}'></div></div>\n"
         f"<div id='concepts-wrapper-{unique_id}' class='is-hidden'>"
+        f"<div class='concepts-header'>"
         f"<h3>Concepts</h3>"
+        f"<div id='concepts-scale-{unique_id}' class='concepts-scale'></div>"
+        f"</div>"
         f"<div id='concepts-{unique_id}'></div>"
         f"</div>\n"
     )
     body += f"""
     <script>
-        var viz = new ClassificationConceptsVisualization(
+        var viz = new ClassificationConceptsBarPlotVisualization(
             'classes-{unique_id}',
             'concepts-{unique_id}',
             'concepts-wrapper-{unique_id}',
+            'concepts-scale-{unique_id}',
             {json.dumps(json_data)}
         );
         window.viz = viz;
