@@ -137,6 +137,8 @@
                     highlightActiveText: true,
                     useSelectedStyle: false,
                     onClickColorMap: this.onClickColorMap,
+                    showBackgroundForSelected: true,
+                    useOnClickColorMap: false,
                 });
             }
         }

@@ -14,6 +14,8 @@
                 highlightActiveText = false,
                 useSelectedStyle = true,
                 onClickColorMap = null,
+                showBackgroundForSelected = false,
+                useOnClickColorMap = true,
             } = options;
             const hasActiveClass = state.activatedClassId !== null;
             const showDefaultBackground = showClassColorsWhenInactive && !hasActiveClass;
@@ -40,6 +42,8 @@
                         onClickColorMap,
                         enableHighlight: highlightActiveText,
                         showDefaultBackground,
+                        showBackgroundForSelected,
+                        useOnClickColorMap,
                     }
                 );
                 element.style.cssText = style;

@@ -171,17 +171,22 @@
                 enableHighlight = true,
                 showDefaultBackground = true,
                 backgroundRgb = null,
+                showBackgroundForSelected = false,
+                useOnClickColorMap = true,
             } = options;
 
             const shouldHighlight = enableHighlight && (isActive || isSelected);
-            const showBackground = showDefaultBackground && baseColor && !shouldHighlight;
+            const showSelectedBackground = showBackgroundForSelected && isSelected && baseColor;
+            const showBackground = (showDefaultBackground && baseColor && !shouldHighlight) || showSelectedBackground;
 
             let outlineColor = "transparent";
-            if (shouldHighlight) {
-                if (Array.isArray(onClickColorMap) && onClickColorMap.length >= 2) {
+            if (shouldHighlight && !showSelectedBackground) {
+                if (useOnClickColorMap && Array.isArray(onClickColorMap) && onClickColorMap.length >= 2) {
                     outlineColor = isSelected ? onClickColorMap[0] : onClickColorMap[1];
                 } else if (baseColor) {
                     outlineColor = baseColor;
+                } else {
+                    outlineColor = "currentColor";
                 }
             }
 
