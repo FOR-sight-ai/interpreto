@@ -52,8 +52,6 @@ tokens_perturbators = [
     SobolTokenPerturbator,
 ]
 
-DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-
 
 @pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
 def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
@@ -64,11 +62,9 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
     inputs_embedder = bert_model.get_input_embeddings()
 
     perturbator = perturbator_class(inputs_embedder=inputs_embedder, n_perturbations=p)
-    perturbator.to(DEVICE)
 
     for sent in sentences:
         elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
-        elem.to(DEVICE)
         assert isinstance(elem, MutableMapping)
         l = elem["input_ids"].shape[1]
 
@@ -114,11 +110,9 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
             replace_token_id=replace_token_id,
             n_perturbations=p,
         )
-    perturbator.to(DEVICE)
 
     for sent in sentences:
         elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
-        elem.to(DEVICE)
         assert isinstance(elem, MutableMapping)
         l = elem["input_ids"].shape[1]
 

@@ -198,7 +198,6 @@ class AttributionExplainer:
             model, batch_size=batch_size, device=device, mode=inference_mode
         )  # type: ignore
         self.perturbator = perturbator or Perturbator()
-        self.perturbator.to(self.device)
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.granularity_aggregation_strategy = granularity_aggregation_strategy

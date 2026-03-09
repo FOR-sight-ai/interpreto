@@ -192,7 +192,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
 
     model_loader = ALL_MODEL_LOADERS[model_name]
 
-    model = model_loader.from_pretrained(model_name).to(DEVICE)
+    model = model_loader.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     assert model is not None, f"Model loading failed {model_name}"
@@ -217,9 +217,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
     list_input_text_onlytext = [text, text, list_text, list_text]
 
     list_input_text_onlytokenized = [
-        tokenizer(
-            input_text_onlytext, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-        ).to(DEVICE)
+        tokenizer(input_text_onlytext, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
         for input_text_onlytext in [text, list_text]
     ]
 

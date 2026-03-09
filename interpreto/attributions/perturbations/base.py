@@ -46,28 +46,6 @@ class Perturbator:
     Perturbator may be subclassed to define custom perturbations, we recommend to use either IdsPerturbator or EmbeddingsPerturbator as base classes
     """
 
-    __slots__ = ("_device",)
-
-    @property
-    def device(self) -> torch.device:
-        """
-        Get the device of the perturbator
-        """
-        return self._device if hasattr(self, "_device") else torch.device("cpu")
-
-    @device.setter
-    def device(self, device: torch.device):
-        """
-        Set the device of the perturbator
-        """
-        self._device = device
-
-    def to(self, device: torch.device):
-        """
-        Set the device of the perturbator
-        """
-        self._device = device
-
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         """
         Method called when we ask the perturbator to perturb a mapping of tensors, generally the output of a tokenizer
@@ -110,30 +88,6 @@ class EmbeddingsPerturbator(Perturbator):
         """
         # Embedders is optional
         self.inputs_embedder = inputs_embedder
-
-    @property
-    def device(self) -> torch.device:
-        """
-        Get the device of the inputs embedder
-        """
-        if self.inputs_embedder is not None:
-            return self.inputs_embedder.weight.device  # type: ignore
-        return self._device
-
-    @device.setter
-    def device(self, device: torch.device):
-        """
-        Set the device of the inputs embedder
-        """
-        if self.inputs_embedder is not None:
-            self.inputs_embedder.to(device)
-        self._device = device
-
-    def to(self, device: torch.device):
-        """
-        Set the device of the inputs embedder
-        """
-        self.device = device
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         embeddings = self._embed(model_inputs)
@@ -276,21 +230,22 @@ class IdsPerturbator(Perturbator):
             )
 
         # compute association matrix between the granularity level and ALL_TOKENS
-        association_matrix: Int[torch.Tensor, "g l"] = (
-            self.granularity.get_association_matrix(model_inputs, self.tokenizer)[0].float().to(self.device)  # type: ignore
-        )
+        association_matrix: Int[torch.Tensor, "g l"] = self.granularity.get_association_matrix(
+            model_inputs,  # type: ignore
+            self.tokenizer,
+        )[0].float()
 
         # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)
-        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0]).to(self.device)
+        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0])
 
         # compute real perturbation mask
         real_mask: Float[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, association_matrix)
 
         model_inputs["input_ids"] = (
             self.apply_mask(
-                inputs=model_inputs["input_ids"].T.to(self.device),
+                inputs=model_inputs["input_ids"].T,
                 mask=real_mask,
-                mask_value=torch.Tensor([self.replace_token_id]).to(self.device),
+                mask_value=torch.Tensor([self.replace_token_id]),
             )
             .squeeze(-1)
             .to(torch.int)

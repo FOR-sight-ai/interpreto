@@ -111,7 +111,6 @@ class InsertionDeletionBase:
             model, batch_size=batch_size, device=device, mode=InferenceModes.SOFTMAX
         )  # type: ignore
         self.inference_wrapper.pad_token_id = self.tokenizer.pad_token_id
-        self.perturbator.to(self.device)
 
     def _set_tokenizer(self, model, tokenizer) -> tuple[PreTrainedModel, int]:
         self.tokenizer = tokenizer
