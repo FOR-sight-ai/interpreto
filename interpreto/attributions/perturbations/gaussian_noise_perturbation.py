@@ -41,7 +41,7 @@ class GaussianNoisePerturbator(EmbeddingsPerturbator):
 
     def __init__(
         self,
-        inputs_embedder: torch.nn.Module | None = None,
+        inputs_embedder: torch.nn.Module,
         n_perturbations: int = 10,
         *,
         std: float = 0.1,
@@ -49,7 +49,7 @@ class GaussianNoisePerturbator(EmbeddingsPerturbator):
         """Instantiate the perturbator.
 
         Args:
-            inputs_embedder (torch.nn.Module | None): Optional embedder used to obtain input embeddings from input IDs.
+            inputs_embedder (torch.nn.Module): Embedder used to obtain input embeddings from input IDs.
             n_perturbations (int): Number of noisy samples to generate.
             std (float): Standard deviation of the Gaussian noise.
         """

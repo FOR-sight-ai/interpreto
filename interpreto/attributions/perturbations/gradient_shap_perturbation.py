@@ -50,7 +50,7 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
         Initializes the GradientShapPerturbator.
 
         Args:
-            inputs_embedder (torch.nn.Module, optional): Optional module to transform inputs into embeddings. Defaults to None.
+            inputs_embedder (torch.nn.Module): Module to transform inputs into embeddings. Defaults to None.
             baseline (TensorBaseline, optional): The reference embedding (can be a tensor, float, int, or None). Defaults to None.
             n_perturbations (int, optional): Number of random samples for interpolation. Defaults to 10.
             std (float, optional): Standard deviation of the Gaussian noise added to the baseline. Defaults to 0.1.

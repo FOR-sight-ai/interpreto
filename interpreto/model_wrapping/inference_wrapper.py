@@ -213,33 +213,7 @@ class InferenceWrapper(ABC):
 
     @dtype.setter
     def dtype(self, dtype: torch.dtype):
-        self.model.to(dtype=dtype)
-
-    def embed(self, model_inputs: TensorMapping) -> TensorMapping:
-        """
-        Embed the inputs using the model's input embeddings.
-
-        Args:
-            model_inputs (TensorMapping): input mapping containing either "input_ids" or "inputs_embeds".
-
-        Raises:
-            ValueError: If neither "input_ids" nor "inputs_embeds" are present in the input mapping.
-
-        Returns:
-            TensorMapping: The input mapping with "inputs_embeds" added.
-        """
-        # If input embeds are already present, return the unmodified model inputs
-        if "inputs_embeds" in model_inputs:
-            return model_inputs
-        # If input ids are present, get the embeddings and add them to the model inputs
-        if "input_ids" in model_inputs:
-            base_shape = model_inputs["input_ids"].shape
-            input_ids = model_inputs["input_ids"].flatten(0, -2).to(self.device)
-            flatten_embeds = self.model.get_input_embeddings()(input_ids)
-            model_inputs["inputs_embeds"] = flatten_embeds.view(*base_shape, flatten_embeds.shape[-1])
-            return model_inputs
-        # If neither input ids nor input embeds are present, raise an error
-        raise ValueError("model_inputs should contain either 'input_ids' or 'inputs_embeds'")
+        self.model.to(dtype=dtype)  # type: ignore
 
     def call_model(
         self,
@@ -261,20 +235,6 @@ class InferenceWrapper(ABC):
         Note:
             If the batch size of the input embeddings exceeds the wrapper's batch size, a warning is issued.
         """
-        if inputs_embeds is None and input_ids is None:
-            raise ValueError("Either inputs_embeds or input_ids must be provided.")
-
-        # Check that batch size of inputs_embeds is not greater than the wrapper's batch size
-        if input_ids is not None and input_ids.shape[0] > self.batch_size:
-            raise ValueError(
-                f"Batch size of {input_ids.shape[0]} is greater than the wrapper's batch size of {self.batch_size}. "
-                f"Consider adjust the batch size or the wrapper of split your data.",
-            )
-        if inputs_embeds is not None and inputs_embeds.shape[0] > self.batch_size:
-            raise ValueError(
-                f"Batch size of {inputs_embeds.shape[0]} is greater than the wrapper's batch size of {self.batch_size}. "
-                f"Consider adjust the batch size or the wrapper of split your data.",
-            )
         # Check sequence length
         if (
             input_ids is not None
@@ -286,21 +246,23 @@ class InferenceWrapper(ABC):
                 f"input length ({self.model.config.max_position_embeddings}). Please truncate your inputs by specifying 'truncation=True' or 'max_length={self.model.config.max_position_embeddings}' to the tokenizer call or change the model."
             )
 
-        # send input to device
-        if input_ids is not None:
-            input_ids = input_ids.to(self.device)
-        if inputs_embeds is not None:
-            inputs_embeds = inputs_embeds.to(self.device, self.dtype)
+        # send attention_mask to device
         if attention_mask is not None:
             attention_mask = attention_mask.to(self.device)
 
         # Call wrapped model
         if inputs_embeds is not None:
             try:
+                inputs_embeds = inputs_embeds.to(self.device, self.dtype)
                 return self.model(inputs_embeds=inputs_embeds, attention_mask=attention_mask)
             except NotImplementedError as e:
                 raise IncompatibilityError from e
-        return self.model(input_ids=input_ids, attention_mask=attention_mask)
+
+        if input_ids is not None:
+            input_ids = input_ids.to(self.device)
+            return self.model(input_ids=input_ids, attention_mask=attention_mask)
+
+        raise ValueError("Either inputs_embeds or input_ids must be provided.")
 
     @overload
     def get_logits(self, model_inputs: TensorMapping) -> torch.Tensor: ...
@@ -647,7 +609,6 @@ class InferenceWrapper(ABC):
         targets: torch.Tensor,  # (n, t) | (1, t) | (t,)
         input_x_gradient: bool = False,
     ) -> torch.Tensor:
-        model_inputs = self.embed(model_inputs)
         inputs_embeds = model_inputs["inputs_embeds"].detach().requires_grad_(True)  # (n,l,d)
         attention_mask = model_inputs["attention_mask"]  # (n, l)
 
@@ -693,5 +654,7 @@ class InferenceWrapper(ABC):
     ) -> Iterable[torch.Tensor]:
         for model_input, target in zip(model_inputs, targets, strict=True):
             # check that the model input and target have the same batch size
-            result = self._get_gradients_from_mapping(model_input, target, input_x_gradient=input_x_gradient)
+            result = self._get_gradients_from_mapping(
+                model_input, target.to(model_input["inputs_embeds"].device), input_x_gradient=input_x_gradient
+            )
             yield result

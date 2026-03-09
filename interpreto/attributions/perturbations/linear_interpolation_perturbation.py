@@ -40,7 +40,7 @@ class LinearInterpolationPerturbator(EmbeddingsPerturbator):
 
     def __init__(
         self,
-        inputs_embedder: torch.nn.Module | None = None,
+        inputs_embedder: torch.nn.Module,
         baseline: TensorBaseline = None,
         n_perturbations: int = 10,
     ):
@@ -48,7 +48,7 @@ class LinearInterpolationPerturbator(EmbeddingsPerturbator):
         Initializes the LinearInterpolationPerturbation instance.
 
         Args:
-            inputs_embedder (torch.nn.Module, optional): Optional module to transform inputs into embeddings. Defaults to None.
+            inputs_embedder (torch.nn.Module): Module to transform inputs into embeddings. Defaults to None.
             baseline (TensorBaseline, optional): The baseline value for the perturbation.
                 It can be a torch.Tensor, int, float, or None. Defaults to None.
             n_perturbations (int, optional): Number of interpolation steps between baseline and input. Defaults to 10.

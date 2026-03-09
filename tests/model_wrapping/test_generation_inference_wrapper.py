@@ -101,6 +101,8 @@ def test_generation_inference_wrapper_single_sentence(model_name, sentences):
         "For a single sentence, the targeted logits shape is incorrect."
     )
 
+    full_model_inputs["inputs_embeds"] = model.get_input_embeddings()(full_model_inputs["input_ids"])
+
     grad_matrix = inference_wrapper.get_gradients(full_model_inputs, target)
     # Check that the gradient matrix shape is correct.
     assert isinstance(grad_matrix, torch.Tensor)
@@ -158,6 +160,8 @@ def test_generation_inference_wrapper_multiple_sentences(model_name, sentences, 
     assert logits.shape == (n_sentences, full_shape, model.config.vocab_size), (
         "For multiple sentences, the logits shape is incorrect."
     )
+
+    full_model_inputs["inputs_embeds"] = model.get_input_embeddings()(full_model_inputs["input_ids"])
 
     targeted_logits = inference_wrapper.get_targeted_logits(full_model_inputs, target)
     # Check that the targeted logits shape is correct.
@@ -258,6 +262,9 @@ def test_generation_inference_wrapper_multiple_mappings(model_name, sentences):
         "Targeted logits shape for mapping 1 is incorrect."
     )
 
+    for i in range(len(full_model_inputs)):
+        full_model_inputs[i]["inputs_embeds"] = model.get_input_embeddings()(full_model_inputs[i]["input_ids"])
+
     grad_matrix = iter(inference_wrapper.get_gradients(full_model_inputs, target))
     # check that the grad matrix shape is correct:
     assert next(grad_matrix).shape == (nb_split, target_length1, full_shape1), (
@@ -265,4 +272,10 @@ def test_generation_inference_wrapper_multiple_mappings(model_name, sentences):
     )
     assert next(grad_matrix).shape == (n_sentences - nb_split, target_length2, full_shape2), (
         "Gradient matrix shape for mapping 1 is incorrect."
+    )
+
+
+if __name__ == "__main__":
+    test_generation_inference_wrapper_multiple_mappings(
+        "gpt2", ["first sentence", "second sentence", "third sentence"]
     )

@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .base import IdsPerturbator
+from .base import EmbeddingsPerturbator, IdsPerturbator, Perturbator
 from .gaussian_noise_perturbation import GaussianNoisePerturbator
 from .gradient_shap_perturbation import GradientShapPerturbator
 from .insertion_deletion_perturbation import DeletionPerturbator, InsertionPerturbator
@@ -31,3 +31,18 @@ from .occlusion_perturbation import OcclusionPerturbator
 from .random_perturbation import RandomMaskedTokenPerturbator
 from .shap_perturbation import ShapTokenPerturbator
 from .sobol_perturbation import SobolTokenPerturbator
+
+__all__ = [
+    "EmbeddingsPerturbator",
+    "IdsPerturbator",
+    "Perturbator",
+    "GaussianNoisePerturbator",
+    "GradientShapPerturbator",
+    "InsertionPerturbator",
+    "DeletionPerturbator",
+    "LinearInterpolationPerturbator",
+    "OcclusionPerturbator",
+    "RandomMaskedTokenPerturbator",
+    "ShapTokenPerturbator",
+    "SobolTokenPerturbator",
+]

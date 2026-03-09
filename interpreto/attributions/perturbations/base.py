@@ -73,18 +73,20 @@ class Perturbator:
 
 class EmbeddingsPerturbator(Perturbator):
     """
-    Specific abstract class for perturbators working on input embeddings
+    Specific class for perturbators working on input embeddings
     All perturbators working on input embeddings only should inherit from this class
+
+    By default, it only convert input IDs to embeddings using the model's input embedder.
     """
 
     __slots__ = ("inputs_embedder",)
 
-    def __init__(self, inputs_embedder: torch.nn.Module | None = None):
-        """Create a perturbator.
+    def __init__(self, inputs_embedder: torch.nn.Module):
+        """
+        Create a perturbator.
 
         Args:
-            inputs_embedder: Optional module used to embed input IDs when only
-                ``input_ids`` are provided.
+            inputs_embedder: Model's module to convert input IDs to embeddings.
         """
         # Embedders is optional
         self.inputs_embedder = inputs_embedder
@@ -93,46 +95,42 @@ class EmbeddingsPerturbator(Perturbator):
         embeddings = self._embed(model_inputs)
         return self.perturb_embeds(embeddings)
 
-    @abstractmethod
     def perturb_embeds(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         """
         Perturb the input of the model, given as embeddings
 
         Args:
-            model_inputs (MutableMapping): Mapping given by the tokenizer, should contain "inputs_embeds", otherwise, the given inputs_embedder will be used to compute them from "input_ids"
+            model_inputs (TensorMapping): Mapping given by the tokenizer, should contain "inputs_embeds", otherwise, the given inputs_embedder will be used to compute them from "input_ids"
         Returns:
             TensorMapping: Perturbed mapping
             torch.Tensor | None: Perturbation mask, if applicable
         """
+        return model_inputs, None
 
-    # TODO : this function is replicated in the inference wrapper, eventually merge them
     def _embed(self, model_inputs: TensorMapping) -> TensorMapping:
         """
         Embed the inputs using the inputs_embedder
 
         Args:
-            model_inputs (TensorMapping): input mapping containing either "input_ids" or "inputs_embeds".
+            model_inputs (TensorMapping): input mapping containing "input_ids".
 
         Raises:
-            ValueError: If neither "input_ids" nor "inputs_embeds" are present in the input mapping.
+            ValueError: If "input_ids" is not present in the input mapping.
 
         Returns:
             TensorMapping: The input mapping with "inputs_embeds" added.
         """
-        # If input embeds are already present, return the unmodified model inputs
-        if "inputs_embeds" in model_inputs:
-            return model_inputs
-        # If no inputs embedder is provided, raise an error
-        if self.inputs_embedder is None:
-            raise ValueError("Cannot call _embed method from a Perturbator without an inputs embedder")
         # If input ids are present, get the embeddings and add them to the model inputs
-        if "input_ids" in model_inputs:
-            base_shape = model_inputs["input_ids"].shape
-            flatten_embeds = self.inputs_embedder(model_inputs["input_ids"].flatten(0, -2).to(self.device))
-            model_inputs["inputs_embeds"] = flatten_embeds.view(*base_shape, flatten_embeds.shape[-1])
-            return model_inputs
-        # If neither input ids nor input embeds are present, raise an error
-        raise ValueError("model_inputs should contain either 'input_ids' or 'inputs_embeds'")
+        if "input_ids" not in model_inputs:
+            raise ValueError("model_inputs should contain either 'input_ids' or 'inputs_embeds'")
+
+        # extract input ids: (1, l)
+        input_ids = model_inputs["input_ids"].to(self.inputs_embedder.weight.device)  # type: ignore
+
+        # convert input ids to embeddings: (1, l, d)
+        model_inputs["inputs_embeds"] = self.inputs_embedder(input_ids)
+
+        return model_inputs
 
 
 class IdsPerturbator(Perturbator):
