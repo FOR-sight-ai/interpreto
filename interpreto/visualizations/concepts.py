@@ -608,8 +608,6 @@ def plot_classification_global_concepts(
             )
 
         concepts.sort(key=lambda item: abs(item["importance"]), reverse=True)
-        if top_k:
-            concepts = concepts[:top_k]
         concepts_by_class.append(concepts)
 
     data = {

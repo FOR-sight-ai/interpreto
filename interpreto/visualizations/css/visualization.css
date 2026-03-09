@@ -213,6 +213,7 @@
 
 .concepts-header h3 {
   margin: 0;
+  margin-left: calc(-1 * var(--concept-barplot-padding));
 }
 
 .concepts-scale {
@@ -282,7 +283,7 @@
 .concept-barplot-bar-track::before {
   content: "";
   position: absolute;
-  left: 50%;
+  left: var(--concept-barplot-zero-percent, 50%);
   top: 0;
   bottom: 0;
   width: 1px;

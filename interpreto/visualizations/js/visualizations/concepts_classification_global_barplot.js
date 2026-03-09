@@ -39,6 +39,7 @@
                     ? this.data.onclick_colormap
                     : null;
             this.conceptsAreClasswise = !!this.data.concepts_are_classwise;
+            this.topK = Math.max(0, parseInt(this.data.top_k || 0, 10));
 
             // Create DOM
             this._createClasses();
@@ -154,7 +155,7 @@
                 wrapper.classList.add("is-hidden");
                 container.innerHTML = "";
                 this.currentDisplayKey = null;
-                this._renderScale(0);
+                this._renderScale(0, 0);
                 return;
             }
 
@@ -174,16 +175,25 @@
             plot.classList.add("concept-barplot");
             container.appendChild(plot);
 
-            let globalMax = 0;
+            let globalMin = Number.POSITIVE_INFINITY;
+            let globalMax = Number.NEGATIVE_INFINITY;
             for (const group of groups) {
                 for (const value of group.values) {
-                    if (value.absValue > globalMax) {
-                        globalMax = value.absValue;
+                    if (value.rawValue < globalMin) {
+                        globalMin = value.rawValue;
+                    }
+                    if (value.rawValue > globalMax) {
+                        globalMax = value.rawValue;
                     }
                 }
             }
 
-            this._renderScale(globalMax);
+            if (!Number.isFinite(globalMin) || !Number.isFinite(globalMax)) {
+                globalMin = 0;
+                globalMax = 0;
+            }
+
+            this._renderScale(globalMin, globalMax);
 
             for (const group of groups) {
                 const groupElement = document.createElement("div");
@@ -201,26 +211,27 @@
                 for (const value of group.values) {
                     const classMeta = this.data.classes[value.classId] || {};
                     const classColor = classMeta.color || this.conceptColor;
-                    const ratio = globalMax > 0 ? value.absValue / globalMax : 0;
-                    const widthPercent = Math.max(0, Math.min(ratio, 1)) * 50;
+                    const zeroPercent = this._toScalePercent(0, globalMin, globalMax);
+                    const valuePercent = this._toScalePercent(value.rawValue, globalMin, globalMax);
+                    const leftPercent = Math.min(zeroPercent, valuePercent);
+                    const widthPercent = Math.abs(valuePercent - zeroPercent);
 
                     const track = document.createElement("div");
                     track.classList.add("concept-barplot-bar-track", "highlighted-word-style");
+                    track.style.setProperty("--concept-barplot-zero-percent", `${zeroPercent}%`);
 
                     const fill = document.createElement("div");
                     fill.classList.add("concept-barplot-bar-fill");
+                    fill.style.left = `${leftPercent}%`;
                     fill.style.width = `${widthPercent}%`;
                     if (value.rawValue < 0) {
                         fill.classList.add("is-negative");
-                        fill.style.right = "50%";
-                        fill.style.left = "auto";
                     } else {
                         fill.classList.add("is-positive");
-                        fill.style.left = "50%";
-                        fill.style.right = "auto";
                     }
+                    fill.style.right = "auto";
                     fill.style.backgroundColor = classColor;
-                    if (ratio > 0) {
+                    if (widthPercent > 0) {
                         fill.style.minWidth = "2px";
                     }
 
@@ -241,16 +252,7 @@
 
         _getDisplayedClassIds() {
             if (this.selectedClassIds.size) {
-                const ordered = [];
-                const classCount = Array.isArray(this.data.classes)
-                    ? this.data.classes.length
-                    : 0;
-                for (let i = 0; i < classCount; i++) {
-                    if (this.selectedClassIds.has(i)) {
-                        ordered.push(i);
-                    }
-                }
-                return ordered;
+                return Array.from(this.selectedClassIds);
             }
             if (this.hoveredClassId !== null) {
                 return [this.hoveredClassId];
@@ -259,91 +261,121 @@
         }
 
         _buildConceptGroups(classIds) {
-            const map = new Map();
+            const candidateKeys = new Set();
+            const conceptMeta = new Map();
+            const conceptValuesByClass = new Map();
+            const firstClassOrder = new Map();
+            const firstClassId = classIds[0];
 
             for (const classId of classIds) {
                 const concepts = Array.isArray(this.data.concepts)
                     ? this.data.concepts[classId] || []
                     : [];
+                const values = new Map();
+                const topLimit = this.topK > 0
+                    ? Math.min(this.topK, concepts.length)
+                    : concepts.length;
+
                 for (let i = 0; i < concepts.length; i++) {
                     const concept = concepts[i] || {};
-                    const rawValue = typeof concept.importance === "number"
-                        ? concept.importance
-                        : 0;
                     const conceptId = concept.id !== undefined && concept.id !== null
                         ? concept.id
                         : `${classId}-${i}`;
                     const key = this.conceptsAreClasswise
                         ? `${classId}:${conceptId}`
                         : String(conceptId);
-                    let entry = map.get(key);
-                    if (!entry) {
-                        entry = {
+                    const rawValue = typeof concept.importance === "number"
+                        ? concept.importance
+                        : 0;
+
+                    values.set(key, rawValue);
+                    if (!conceptMeta.has(key)) {
+                        conceptMeta.set(key, {
                             id: conceptId,
                             label: concept.label,
-                            values: new Map(),
-                            maxAbs: 0,
-                        };
-                        map.set(key, entry);
+                        });
                     }
-                    if (entry.label === undefined || entry.label === null) {
-                        entry.label = concept.label;
+
+                    if (classId === firstClassId && !firstClassOrder.has(key)) {
+                        firstClassOrder.set(key, i);
                     }
-                    entry.values.set(classId, rawValue);
-                    const absValue = Math.abs(rawValue);
-                    if (absValue > entry.maxAbs) {
-                        entry.maxAbs = absValue;
+
+                    if (i < topLimit) {
+                        candidateKeys.add(key);
                     }
                 }
+
+                conceptValuesByClass.set(classId, values);
             }
 
             const groups = [];
-            map.forEach((entry) => {
+            for (const key of candidateKeys) {
+                const meta = conceptMeta.get(key);
+                if (!meta) {
+                    continue;
+                }
+
                 const values = [];
                 let totalAbs = 0;
+                let maxAbs = 0;
+
                 for (const classId of classIds) {
-                    if (!entry.values.has(classId)) {
-                        if (this.conceptsAreClasswise) {
-                            continue;
-                        }
-                        values.push({
-                            classId,
-                            rawValue: 0,
-                            absValue: 0,
-                        });
+                    const classValues = conceptValuesByClass.get(classId);
+                    const hasValue = classValues ? classValues.has(key) : false;
+
+                    if (!hasValue && this.conceptsAreClasswise) {
                         continue;
                     }
-                    const rawValue = entry.values.get(classId);
+
+                    const rawValue = hasValue
+                        ? classValues.get(key)
+                        : 0;
                     const absValue = Math.abs(rawValue);
                     totalAbs += absValue;
+                    if (absValue > maxAbs) {
+                        maxAbs = absValue;
+                    }
                     values.push({
                         classId,
                         rawValue,
                         absValue,
                     });
                 }
-                if (!values.length) {
-                    return;
-                }
-                groups.push({
-                    id: entry.id,
-                    label: entry.label,
-                    values,
-                    maxAbs: entry.maxAbs,
-                    totalAbs,
-                });
-            });
 
-            groups.sort((a, b) => b.totalAbs - a.totalAbs);
+                if (!values.length) {
+                    continue;
+                }
+
+                groups.push({
+                    id: meta.id,
+                    label: meta.label,
+                    values,
+                    maxAbs,
+                    totalAbs,
+                    firstClassRank: firstClassOrder.has(key)
+                        ? firstClassOrder.get(key)
+                        : Number.POSITIVE_INFINITY,
+                });
+            }
+
+            groups.sort((a, b) => {
+                if (a.firstClassRank !== b.firstClassRank) {
+                    return a.firstClassRank - b.firstClassRank;
+                }
+                if (b.totalAbs !== a.totalAbs) {
+                    return b.totalAbs - a.totalAbs;
+                }
+                return String(a.id).localeCompare(String(b.id));
+            });
             return groups;
         }
 
-        _renderScale(maxValue) {
+        _renderScale(minValue, maxValue) {
             const scaleContainer = document.getElementById(this.uniqueIdConceptsScale);
             if (!scaleContainer) return;
 
             scaleContainer.innerHTML = "";
-            if (!Number.isFinite(maxValue) || maxValue <= 0) {
+            if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
                 return;
             }
 
@@ -354,12 +386,23 @@
             line.classList.add("concept-barplot-scale-line");
             scale.appendChild(line);
 
-            const { step, decimals } = this._getScaleStep(maxValue);
+            const { step, decimals } = this._getScaleStep(minValue, maxValue);
             if (step > 0) {
-                const tickValues = new Set([-maxValue, 0, maxValue]);
-                for (let value = step; value < maxValue; value += step) {
-                    tickValues.add(value);
-                    tickValues.add(-value);
+                const tickValues = new Set();
+                const epsilon = step / 1000;
+                const start = Math.ceil(minValue / step) * step;
+                const end = maxValue - epsilon;
+
+                for (let value = start; value <= end; value += step) {
+                    const roundedValue = Number(value.toFixed(Math.max(6, decimals + 2)));
+                    if (roundedValue <= minValue + epsilon || roundedValue >= maxValue - epsilon) {
+                        continue;
+                    }
+                    tickValues.add(roundedValue);
+                }
+
+                if (minValue < 0 && maxValue > 0) {
+                    tickValues.add(0);
                 }
 
                 const sortedTickValues = Array.from(tickValues).sort((a, b) => a - b);
@@ -369,7 +412,7 @@
                     if (Math.abs(value) < 1e-12) {
                         tick.classList.add("is-zero");
                     }
-                    tick.style.left = `${this._toScalePercent(value, maxValue)}%`;
+                    tick.style.left = `${this._toScalePercent(value, minValue, maxValue)}%`;
 
                     const mark = document.createElement("div");
                     mark.classList.add("concept-barplot-scale-mark");
@@ -387,26 +430,34 @@
             scaleContainer.appendChild(scale);
         }
 
-        _getScaleStep(maxValue) {
+        _getScaleStep(minValue, maxValue) {
             const steps = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10];
-            let step = steps[0];
+            const span = maxValue - minValue;
+            if (!Number.isFinite(span) || span <= 0) {
+                return { step: 0, decimals: 0 };
+            }
+
+            let step = steps[steps.length - 1];
 
             for (const candidate of steps) {
-                const tickCountPerSide = Math.floor(maxValue / candidate);
-                if (tickCountPerSide >= 2 && tickCountPerSide <= 4) {
+                const tickCount = span / candidate;
+                if (tickCount <= 8) {
                     step = candidate;
                     break;
                 }
-                step = candidate;
             }
 
-            if (maxValue < step) {
-                step = maxValue;
+            if (span < step) {
+                step = span;
             }
 
             const decimals = Math.min(
                 4,
-                Math.max(this._countDecimals(step), this._countDecimals(maxValue))
+                Math.max(
+                    this._countDecimals(step),
+                    this._countDecimals(minValue),
+                    this._countDecimals(maxValue)
+                )
             );
 
             return { step, decimals };
@@ -431,11 +482,22 @@
             return text.split(".")[1].length;
         }
 
-        _toScalePercent(value, maxValue) {
-            if (!Number.isFinite(maxValue) || maxValue <= 0) {
+        _toScalePercent(value, minValue, maxValue) {
+            if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
                 return 50;
             }
-            const ratio = (value + maxValue) / (2 * maxValue);
+
+            if (maxValue <= minValue) {
+                if (maxValue <= 0) {
+                    return 100;
+                }
+                if (minValue >= 0) {
+                    return 0;
+                }
+                return 50;
+            }
+
+            const ratio = (value - minValue) / (maxValue - minValue);
             return Math.max(0, Math.min(ratio, 1)) * 100;
         }
 
