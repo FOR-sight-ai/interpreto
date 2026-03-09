@@ -335,6 +335,76 @@ def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sente
         )
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
+def test_attribution_methods_memory_management_classification(attribution_explainer):
+    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    model = AutoModelForSequenceClassification.from_pretrained(
+        "hf-internal-testing/tiny-random-bert",
+        num_labels=2048,
+        ignore_mismatched_sizes=True,
+    )
+    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
+    explainer = attribution_explainer(
+        model,
+        tokenizer=tokenizer,
+        batch_size=16,
+        device=DEVICE,
+        granularity=Granularity.ALL_TOKENS,
+        **explainer_kwargs,
+    )
+
+    samples = [f"token {i % 11} token {i % 7} token {i % 5}" for i in range(2048)]
+    targets = [1] * len(samples)
+
+    try:
+        # Warm-up pass: if this fails, batch size/model sizes should be adjusted.
+        explainer.explain(samples, targets=targets)
+    except IncompatibilityError:
+        pytest.skip(f"{attribution_explainer.__name__} is incompatible with this classification model.")
+
+    try:
+        explainer.explain(samples, targets=targets)
+    except RuntimeError as exc:
+        message = str(exc).lower()
+        if "out of memory" in message or "can't allocate memory" in message:
+            pytest.fail(f"OOM during classification stress test: {exc}")
+        raise
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
+def test_attribution_methods_memory_management_generation(attribution_explainer):
+    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+    model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
+    explainer = attribution_explainer(
+        model,
+        tokenizer=tokenizer,
+        batch_size=16,
+        device=DEVICE,
+        granularity=Granularity.ALL_TOKENS,
+        **explainer_kwargs,
+    )
+
+    samples = [f"token {i % 11} token {i % 7} token {i % 5}" for i in range(2048)]
+    targets = ["token token"] * len(samples)
+
+    try:
+        # Warm-up pass: if this fails, batch size/model sizes should be adjusted.
+        explainer.explain(samples, targets=targets)
+    except IncompatibilityError:
+        pytest.skip(f"{attribution_explainer.__name__} is incompatible with this generation model.")
+
+    try:
+        explainer.explain(samples, targets=targets)
+    except RuntimeError as exc:
+        message = str(exc).lower()
+        if "out of memory" in message or "can't allocate memory" in message:
+            pytest.fail(f"OOM during generation stress test: {exc}")
+        raise
+
+
 # TODO: test that targets are correctly processed
 
 # TODO: add qualitative testing:
@@ -371,13 +441,14 @@ if __name__ == "__main__":
     #     granularity=Granularity.WORD,
     #     aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
     # )
-
-    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
-    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
-    sentences = [
-        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
-        "Interpreto is magical",
-        "Testing interpreto",
-    ]
-    test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
-    test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
+    # bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    # bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    # sentences = [
+    #     "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
+    #     "Interpreto is magical",
+    #     "Testing interpreto",
+    # ]
+    # test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
+    # test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
+    test_attribution_methods_memory_management_classification(IntegratedGradients)
+    test_attribution_methods_memory_management_generation(SmoothGrad)
