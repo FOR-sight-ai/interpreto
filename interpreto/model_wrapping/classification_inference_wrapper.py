@@ -222,6 +222,6 @@ class ClassificationInferenceWrapper(InferenceWrapper):
         predictions = self._get_logits_from_iterable(model_inputs)
         for logits, target in zip(predictions, targets, strict=True):
             logits_mode = self.mode(logits)
-            yield logits_mode.gather(-1, self.process_target(target, logits_mode.shape[:-1]))
+            yield logits_mode.gather(-1, self.process_target(target.to(logits_mode.device), logits_mode.shape[:-1]))
         # for index, logits in enumerate(predictions):
         #    yield logits.gather(-1, self.process_target(targets[multiple_index and index], logits.shape[:-1]))

@@ -400,14 +400,12 @@ class AttributionExplainer:
         # Compute the score on perturbed inputs:
         # - If use_gradient is True, compute gradients.
         # - Otherwise, compute targeted logits.
-        scores: Iterable[torch.Tensor] = self.get_scores(
-            pert_generator, (a.to(self.device) for a in sanitized_targets)
-        )
+        scores: Iterable[torch.Tensor] = self.get_scores(pert_generator, (a for a in sanitized_targets))
 
         # Aggregate the scores using the aggregator function and the perturbation masks.
         # Aggregation over perturbations: (p, t), (p, l) -> (t, l)
         contributions = (
-            self.aggregator(score.detach(), mask.to(self.device) if mask is not None else None)
+            self.aggregator(score.detach(), mask.to(score.device) if mask is not None else None)
             for score, mask in zip(scores, mask_generator, strict=True)
         )
 

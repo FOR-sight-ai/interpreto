@@ -383,7 +383,7 @@ class ClassificationInsertionDeletionBase(InsertionDeletionBase):
                 pert = self.perturbator.perturb(
                     all_inputs, attributions=attrib, granularity_indices=granularity_indices
                 )
-                yield i, pert, target.to(self.device)
+                yield i, pert, target
 
 
 class GenerationInsertionDeletionBase(InsertionDeletionBase):
