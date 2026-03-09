@@ -266,6 +266,18 @@ class AttributionExplainer:
         """
         self.inference_wrapper.to(device)
 
+    def cpu(self):
+        """
+        Move the model to the CPU.
+        """
+        self.device = torch.device("cpu")
+
+    def cuda(self):
+        """
+        Move the model to the GPU.
+        """
+        self.device = torch.device("cuda")
+
     def process_model_inputs(self, model_inputs: ModelInputs) -> list[TensorMapping]:
         """
         Processes and standardizes model inputs into a list of dictionaries compatible with the model.

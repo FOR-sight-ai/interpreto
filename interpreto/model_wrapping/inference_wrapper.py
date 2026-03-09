@@ -196,7 +196,7 @@ class InferenceWrapper(ABC):
         Args:
             device (torch.device): wanted device (e.g., "cpu" or "cuda").
         """
-        self.model.to(device)
+        self.model.to(device)  # type: ignore
 
     def to(self, device: torch.device, dtype: torch.dtype | None = None):
         """
@@ -205,19 +205,7 @@ class InferenceWrapper(ABC):
         Args:
             device (torch.device): The device to which the model should be moved.
         """
-        self.model.to(device=device, dtype=dtype)
-
-    def cpu(self):
-        """
-        Move the model to the CPU.
-        """
-        self.device = torch.device("cpu")
-
-    def cuda(self):
-        """
-        Move the model to the GPU.
-        """
-        self.device = torch.device("cuda")
+        self.model.to(device=device, dtype=dtype)  # type: ignore
 
     @property
     def dtype(self):

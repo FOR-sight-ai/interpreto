@@ -156,6 +156,18 @@ class InsertionDeletionBase:
         """
         self.inference_wrapper.to(device)
 
+    def cpu(self):
+        """
+        Move the model to the CPU.
+        """
+        self.device = torch.device("cpu")
+
+    def cuda(self):
+        """
+        Move the model to the GPU.
+        """
+        self.device = torch.device("cuda")
+
     @property
     @abstractmethod
     def _perturbator_class(self) -> type[InsertionDeletionPerturbator]:
