@@ -710,7 +710,10 @@ class GenerationAttributionExplainer(AttributionExplainer):
             # keep the whole sentence in one block but part of it has been generated).
             sample_indices = indices_list[0]
             first_target_index = inputs["input_ids"].shape[1] - target.shape[-1]  # type: ignore
-            indices_list = [self.granularity.split_indices_on_generation_boundary(sample_indices, first_target_index)]
+            if self.use_gradient:
+                indices_list = [
+                    self.granularity.split_indices_on_generation_boundary(sample_indices, first_target_index)
+                ]
 
             granular_contributions.append(
                 self.granularity.granularity_score_aggregation(
