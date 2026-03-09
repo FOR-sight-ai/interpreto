@@ -199,7 +199,7 @@ class ClassificationInferenceWrapper(InferenceWrapper):
         # Apply post-processing mode
         logits = self.mode(logits)
         targets = self.process_target(targets, logits.shape[:-1])
-        return logits.gather(-1, targets)
+        return logits.gather(-1, targets.to(logits.device))
 
     @get_targeted_logits.register(Iterable)
     def _get_targeted_logits_from_iterable(

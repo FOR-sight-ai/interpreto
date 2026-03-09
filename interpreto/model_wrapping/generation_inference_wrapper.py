@@ -170,7 +170,9 @@ class GenerationInferenceWrapper(InferenceWrapper):
             )
 
         # For a batch case, unsqueeze the targets so that they match the logits shape.
-        selected_logits = target_logits.gather(dim=-1, index=extended_targets.unsqueeze(-1)).squeeze(-1)
+        selected_logits = target_logits.gather(
+            dim=-1, index=extended_targets.unsqueeze(-1).to(target_logits.device)
+        ).squeeze(-1)
 
         return selected_logits
 
