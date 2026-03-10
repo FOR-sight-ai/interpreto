@@ -824,35 +824,35 @@ class Granularity(Enum):
             )
         sample_indices: list[list[int]] = indices_list[0]
 
-        if aggregate_targets:
-            # Ensure a granularity boundary exists between prompt tokens and generated target tokens.
-            # Some tokenizers/granularity modes may produce a group crossing that boundary; if so,
-            # split it to avoid mixing input and target contributions into the same aggregated bucket.
-            t = contribution.shape[0]
-            l = inputs["input_ids"].shape[1]  # type: ignore
+        # if aggregate_targets:
+        #     # Ensure a granularity boundary exists between prompt tokens and generated target tokens.
+        #     # Some tokenizers/granularity modes may produce a group crossing that boundary; if so,
+        #     # split it to avoid mixing input and target contributions into the same aggregated bucket.
+        #     t = contribution.shape[0]
+        #     l = inputs["input_ids"].shape[1]  # type: ignore
 
-            if t >= l:
-                raise ValueError(
-                    "Cannot aggregate targets if the number of targets is greater than the number of inputs."
-                    "The input_ids should include the generated tokens."
-                    f"Got {t} targets and {l} inputs."
-                )
+        #     if t >= l:
+        #         raise ValueError(
+        #             "Cannot aggregate targets if the number of targets is greater than the number of inputs."
+        #             "The input_ids should include the generated tokens."
+        #             f"Got {t} targets and {l} inputs."
+        #         )
 
-            first_target_index = l - t
-            split_indices: list[list[int]] = []
-            for token_indices in sample_indices:
-                left_part = [index for index in token_indices if index < first_target_index]
-                right_part = [index for index in token_indices if index >= first_target_index]
+        #     first_target_index = l - t
+        #     split_indices: list[list[int]] = []
+        #     for token_indices in sample_indices:
+        #         left_part = [index for index in token_indices if index < first_target_index]
+        #         right_part = [index for index in token_indices if index >= first_target_index]
 
-                if left_part and right_part:
-                    split_indices.append(left_part)
-                    split_indices.append(right_part)
-                elif left_part:
-                    split_indices.append(left_part)
-                elif right_part:
-                    split_indices.append(right_part)
+        #         if left_part and right_part:
+        #             split_indices.append(left_part)
+        #             split_indices.append(right_part)
+        #         elif left_part:
+        #             split_indices.append(left_part)
+        #         elif right_part:
+        #             split_indices.append(right_part)
 
-            sample_indices = split_indices
+        #     sample_indices = split_indices
 
         if aggregate_inputs:
             # Gradient-based methods
@@ -869,7 +869,6 @@ class Granularity(Enum):
                         )
                     # iterate over granularity elements
                     aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
-                        # (contribution.shape[0], len(sample_indices))
                         (contribution.shape[0], len(sample_indices)),
                         dtype=contribution.dtype,
                         device=contribution.device,
@@ -897,12 +896,12 @@ class Granularity(Enum):
             t = contribution.shape[0]
             l = inputs["input_ids"].shape[1]  # type: ignore
 
-            # if t >= l:
-            #    raise ValueError(
-            #        "Cannot aggregate targets if the number of targets is greater than the number of inputs."
-            #        "The input_ids should include the generated tokens."
-            #        f"Got {t} targets and {l} inputs."
-            #    )
+            if t >= l:
+                raise ValueError(
+                    "Cannot aggregate targets if the number of targets is greater than the number of inputs."
+                    "The input_ids should include the generated tokens."
+                    f"Got {t} targets and {l} inputs."
+                )
 
             first_target_index = l - t
             first_target_granular_index = None
@@ -942,7 +941,6 @@ class Granularity(Enum):
                         )
                     # iterate over granularity elements
                     aggregated_contribution: Float[torch.Tensor, "g lg"] = torch.zeros(
-                        # (len(target_indices), contribution.shape[1])
                         (len(target_indices), contribution.shape[1]),
                         dtype=contribution.dtype,
                         device=contribution.device,

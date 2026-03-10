@@ -219,7 +219,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
     list_input_text_onlytokenized = [
         tokenizer(
             input_text_onlytext, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-        ).to(DEVICE)
+        )  # .to(DEVICE)
         for input_text_onlytext in [text, list_text]
     ]
 
