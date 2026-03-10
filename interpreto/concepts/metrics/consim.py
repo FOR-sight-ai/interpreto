@@ -460,7 +460,7 @@ class ConSim:
             )
 
         # Find the correct and incorrect indices
-        is_prediction_correct = predictions == labels.to(predictions.device)
+        is_prediction_correct = predictions == labels
         correct_indices = torch.nonzero(is_prediction_correct)
         incorrect_indices = torch.nonzero(~is_prediction_correct)
         del is_prediction_correct
@@ -620,7 +620,7 @@ class ConSim:
         return self._extract_interesting_elements(
             inputs=inputs,
             labels=labels,
-            predictions=predictions,
+            predictions=predictions.cpu(),
             nb_lp_samples=nb_lp_samples,
             nb_ep_samples=nb_ep_samples,
             seed=seed,
