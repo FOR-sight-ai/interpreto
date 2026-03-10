@@ -167,6 +167,80 @@ def extract_unique_words(
     return list(words_count.keys())
 
 
+@jaxtyped(typechecker=beartype)
+def extract_ngrams(
+    inputs: list[str],
+    n: int,
+    count_min_threshold: int = 1,
+    return_counts: bool = False,
+    lemmatize: bool = False,
+    words_to_ignore: list[str] | None = None,
+) -> list[str] | Counter[str]:
+    """
+    Extract n-grams (from 1-gram up to n-gram) from a list of texts.
+
+    Similar to `extract_unique_words` but also considers multi-word groups.
+    If n=3, it extracts 1-grams, 2-grams, and 3-grams.
+
+    Args:
+        inputs (list[str]):
+            The texts to extract n-grams from.
+
+        n (int):
+            The maximum n-gram size. All sizes from 1 to n are extracted.
+
+        count_min_threshold (int, optional):
+            The minimum total number of occurrences of an n-gram in the whole `inputs`.
+
+        return_counts (bool, optional):
+            Whether to return the counts of each n-gram.
+            Defaults to False.
+
+        lemmatize (bool, optional):
+            Whether to lemmatize words before counting.
+
+        words_to_ignore (list[str] | None, optional):
+            A list of words to ignore (applied to individual tokens before forming n-grams).
+
+    Returns:
+        list[str] | Counter[str]:
+            The list of unique n-grams or the counts of each n-gram.
+    """
+    _ensure_nltk_resources(lemmatize=lemmatize)
+
+    if lemmatize:
+        lemmatizer = WordNetLemmatizer()
+
+    ngram_counts: Counter[str] = Counter()
+
+    for text in inputs:
+        tokens = word_tokenize(text)
+
+        # preprocess tokens
+        processed = []
+        for word in tokens:
+            if lemmatize:
+                word = lemmatizer.lemmatize(word.lower())  # noqa: PLW2901
+            if words_to_ignore is not None and word in words_to_ignore:
+                continue
+            processed.append(word)
+
+        # extract n-grams of all sizes from 1 to n
+        for size in range(1, n + 1):
+            for i in range(len(processed) - size + 1):
+                ngram = " ".join(processed[i : i + size])
+                ngram_counts[ngram] += 1
+
+    # filter too rare n-grams
+    if count_min_threshold > 1:
+        ngram_counts = Counter({key: count for key, count in ngram_counts.items() if count >= count_min_threshold})
+
+    if return_counts:
+        return ngram_counts
+
+    return list(ngram_counts.keys())
+
+
 def verify_concepts_indices(
     concepts_activations: ConceptsActivations,
     concepts_indices: int | list[int],
@@ -259,7 +333,7 @@ class BaseConceptInterpretationMethod(ABC):
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
-        use_unique_words: bool = False,
+        use_unique_words: int = 0,
         unique_words_kwargs: dict = {},
         concept_model_device: torch.device | str | None = None,
     ):
@@ -283,7 +357,7 @@ class BaseConceptInterpretationMethod(ABC):
         self.aggregation_strategy: GranularityAggregationStrategy = aggregation_strategy
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
-        self.use_unique_words: bool = use_unique_words
+        self.use_unique_words: int = use_unique_words
         self.unique_words_kwargs: dict = unique_words_kwargs
         self.concept_model_device: torch.device | str | None = concept_model_device
 
@@ -568,13 +642,18 @@ class BaseConceptInterpretationMethod(ABC):
             if inputs is None:
                 raise ValueError("Inputs must be provided when `use_vocab` is False.")
 
-            if self.use_unique_words:
+            if self.use_unique_words >= 1:
                 # ----------------------------------------------------------------------------------
-                # Case 2: use_unique_words=True
-                # first list unique words from the inputs and compute the activations from them
-                granular_inputs: list[str] = extract_unique_words(
-                    inputs=inputs, return_counts=False, **self.unique_words_kwargs
-                )  # type: ignore  (sure list[str] with return_counts=False)
+                # Case 2: use_unique_words >= 1
+                # first list unique words/ngrams from the inputs and compute the activations from them
+                if self.use_unique_words == 1:
+                    granular_inputs: list[str] = extract_unique_words(
+                        inputs=inputs, return_counts=False, **self.unique_words_kwargs
+                    )  # type: ignore  (sure list[str] with return_counts=False)
+                else:
+                    granular_inputs: list[str] = extract_ngrams(
+                        inputs=inputs, n=self.use_unique_words, return_counts=False, **self.unique_words_kwargs
+                    )  # type: ignore  (sure list[str] with return_counts=False)
                 if latent_activations is not None and concepts_activations is not None:
                     warnings.warn(
                         "`latent_activations` or `concepts_activations` were provided, "

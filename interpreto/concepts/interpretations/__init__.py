@@ -22,8 +22,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .base import extract_unique_words
+from .base import extract_ngrams, extract_unique_words
 from .llm_labels import LLMLabels
 from .topk_inputs import TopKInputs
 
-__all__ = ["TopKInputs", "LLMLabels", "extract_unique_words"]
+__all__ = ["TopKInputs", "LLMLabels", "extract_unique_words", "extract_ngrams"]
