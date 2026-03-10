@@ -22,8 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# attributions.py
-
 from __future__ import annotations
 
 import json
@@ -249,7 +247,6 @@ def _display_generation_attributions(
     )
 
     if normalize:
-        # attributions_np = attribution_output.attributions.cpu().detach().numpy()
         attributions_np = _to_numpy_for_stats(attribution_output.attributions)
         min_value = np.nanmin([np.nanmin(attributions_np), -np.nanmax(attributions_np)]).item()
         max_value = np.nanmax([np.nanmax(attributions_np), -np.nanmin(attributions_np)]).item()
