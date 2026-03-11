@@ -176,7 +176,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         k_examples: int = 30,
         k_context: int = 0,
         use_vocab: bool = False,
-        use_unique_words: int = 0,
+        use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,

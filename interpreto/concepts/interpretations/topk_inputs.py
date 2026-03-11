@@ -226,7 +226,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
-        use_unique_words: int = 0,
+        use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
         concept_model_device: torch.device | str | None = None,
     ):

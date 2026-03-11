@@ -39,6 +39,7 @@ from interpreto import ModelWithSplitPoints
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations import TopKInputs, extract_unique_words
+from interpreto.concepts.interpretations.base import extract_ngrams
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 
 AG = TopKInputs.activation_granularities
@@ -419,6 +420,66 @@ def test_topk_inputs_from_unique_words(
     # Values should be unique
     assert len(top_k_unique_letters[0].keys()) == len(set(top_k_unique_letters[0].keys()))
 
+
+@pytest.mark.parametrize("activation_granularity", [AG.CLS_TOKEN, AG.WORD])
+@pytest.mark.parametrize("n", [2, 3]) # test ngram=2 et ngram=3
+def test_topk_inputs_from_ngrams(
+    splitted_encoder_ml: ModelWithSplitPoints, activation_granularity: ActivationGranularity, n: int
+):
+    """
+    Test that topk inputs can be obtained from ngram words
+    """
+    k = 2
+    data = ["A B C D E F A B C D E F A B C D E F", "A B C D E F A B C D E F", "A B C D E F", "A B C"]
+
+    split = "bert.encoder.layer.1.output"
+    splitted_encoder_ml.split_points = split
+    concept_model = ConceptModelCounter()
+    concept_explainer = DummyConceptExplainer(
+        model_with_split_points=splitted_encoder_ml,
+        concept_model=concept_model,
+        split_point=split,
+    )
+    concept_explainer._ConceptEncoderExplainer__is_fitted = True
+    assert concept_model.count == 0
+
+    # instantiate the interpreter
+    topk_inputs = TopKInputs(
+        concept_explainer=concept_explainer,
+        activation_granularity=activation_granularity,
+        use_unique_words=n,
+        k=k,
+        concept_encoding_batch_size=1,  # one call for each input
+    )
+
+    # compute expected ngrams
+    all_ngrams = extract_ngrams(data, n=n)
+
+    # getting the top k ngram words
+    top_k_ngram_letters = topk_inputs.interpret(
+        concepts_indices=0,
+        inputs=data,
+    )
+
+    # Dummy concept model should have been called once per ngram
+    assert concept_model.count == len(all_ngrams)
+
+    # Output should be a dict with only one key: `0`
+    assert isinstance(top_k_ngram_letters, dict) and len(top_k_ngram_letters) == 1
+    assert 0 in top_k_ngram_letters
+
+    # There should be k elements in the first key
+    assert len(top_k_ngram_letters[0]) == k
+
+    # The values should be ngrams from the expected set
+    assert all(isinstance(c, str) for c in top_k_ngram_letters[0].keys())
+    assert all(ngram in all_ngrams for ngram in top_k_ngram_letters[0].keys())
+
+    # Each result should have between 1 and n words
+    assert all(1 <= len(ngram.split()) <= n for ngram in top_k_ngram_letters[0].keys())
+
+    # Values should be unique
+    assert len(top_k_ngram_letters[0].keys()) == len(set(top_k_ngram_letters[0].keys()))
 
 def test_topk_inputs_error_raising(
     splitted_encoder_ml: ModelWithSplitPoints, activations_dict: dict[str, torch.Tensor]

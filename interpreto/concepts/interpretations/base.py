@@ -224,17 +224,18 @@ def extract_ngrams(
             if words_to_ignore is not None and word in words_to_ignore:
                 continue
             processed.append(word)
+            ngram_counts[(word,)] += 1  # unigram tuple
 
-        # extract n-grams of all sizes from 1 to n
-        for size in range(1, n + 1):
+        for size in range(2, n + 1):  # skips size 1 as covered over
             for i in range(len(processed) - size + 1):
-                ngram = " ".join(processed[i : i + size])
-                ngram_counts[ngram] += 1
-
-    # filter too rare n-grams
-    if count_min_threshold > 1:
-        ngram_counts = Counter({key: count for key, count in ngram_counts.items() if count >= count_min_threshold})
-
+                ngram_counts[tuple(processed[i : i + size])] += 1 # >1-gram tuples
+    
+    ngram_counts = Counter({
+            " ".join(key): count  # convert ngram tuples to strings
+            for key, count in ngram_counts.items()
+            if count >= count_min_threshold # filter too rare n-grams
+        })
+    
     if return_counts:
         return ngram_counts
 
@@ -333,7 +334,7 @@ class BaseConceptInterpretationMethod(ABC):
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
-        use_unique_words: int = 0,
+        use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
         concept_model_device: torch.device | str | None = None,
     ):
@@ -357,7 +358,7 @@ class BaseConceptInterpretationMethod(ABC):
         self.aggregation_strategy: GranularityAggregationStrategy = aggregation_strategy
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
-        self.use_unique_words: int = use_unique_words
+        self.use_unique_words: int = int(use_unique_words)
         self.unique_words_kwargs: dict = unique_words_kwargs
         self.concept_model_device: torch.device | str | None = concept_model_device
 
@@ -646,14 +647,9 @@ class BaseConceptInterpretationMethod(ABC):
                 # ----------------------------------------------------------------------------------
                 # Case 2: use_unique_words >= 1
                 # first list unique words/ngrams from the inputs and compute the activations from them
-                if self.use_unique_words == 1:
-                    granular_inputs: list[str] = extract_unique_words(
-                        inputs=inputs, return_counts=False, **self.unique_words_kwargs
-                    )  # type: ignore  (sure list[str] with return_counts=False)
-                else:
-                    granular_inputs: list[str] = extract_ngrams(
-                        inputs=inputs, n=self.use_unique_words, return_counts=False, **self.unique_words_kwargs
-                    )  # type: ignore  (sure list[str] with return_counts=False)
+                granular_inputs: list[str] = extract_ngrams(
+                    inputs=inputs, n=self.use_unique_words, return_counts=False, **self.unique_words_kwargs
+                )  # type: ignore  (sure list[str] with return_counts=False)
                 if latent_activations is not None and concepts_activations is not None:
                     warnings.warn(
                         "`latent_activations` or `concepts_activations` were provided, "
