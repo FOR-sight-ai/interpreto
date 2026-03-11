@@ -54,9 +54,6 @@ class PromptSetting(NamedTuple):
     lp_concepts_local_contributions: bool = False
     lp_local_contrastive_importance: bool = False
 
-    # evaluation phase
-    ep_concepts_local_contributions: bool = False
-
     # anonymization
     anonymize_classes: bool = False
 
@@ -113,13 +110,6 @@ class PromptTypes(Enum):
         `E3_global_and_local_concepts_with_lp`:
             IP.1, IP.2, LP.1, LP.2, and EP.1 are included in the prompt.
             Task description, learning phase, and both global and local concepts explanation.
-
-        `U1_upper_bound_concepts_at_ep`:
-            IP.1, IP.2, LP.1, LP.2, EP.1, and EP.2 are included in the prompt.
-            Same as `E3_global_and_local_concepts_with_lp`, but local explanations are also given at evaluation phase.
-            This has a very high probability to leak the initial model predictions via EP local explanations.
-            Warning, this should not be considered as a ConSim score.
-            But it gives an upper bound to the ConSim scores.
     """
 
     L1_baseline_without_lp = PromptSetting()
@@ -130,12 +120,6 @@ class PromptTypes(Enum):
         concepts_global_importances=True,
         lp_samples=True,
         lp_concepts_local_contributions=True,
-    )
-    U1_upper_bound_concepts_at_ep = PromptSetting(
-        concepts_global_importances=True,
-        lp_samples=True,
-        lp_concepts_local_contributions=True,
-        ep_concepts_local_contributions=True,
     )
     C1_contrastive_global_concepts_without_lp = PromptSetting(
         global_contrastive_importances=True,
@@ -811,7 +795,6 @@ class ConSim:
                 The user prompt for the LLM. The examples on with the user-llm should predict, thus the evaluation phase.
         """
         system_prompt_parts = []
-        user_prompt_parts = []
 
         # ==============================================================================================
         # Global
@@ -829,15 +812,11 @@ class ConSim:
             if setting.lp_concepts_local_contributions:
                 task_description_prompt += "You will have examples of samples, labels, and concepts contributions to labels as reference for the task. "
             elif setting.lp_local_contrastive_importance:
-                task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions (why predict the fact and not the foil) as reference for the task. "
+                task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions (why predict this class and not the other) as reference for the task. "
             else:
                 task_description_prompt += "You will have examples of samples and labels as reference for the task. "
-        if setting.ep_concepts_local_contributions:
-            task_description_prompt += "At inference time, you will have concepts contributions to labels. "
-        task_description_prompt += (
-            "Each sample class prediction should be in the format: 'Sample_{i}: {predicted_class}'."
-        )
-
+        task_description_prompt += "Each sample class prediction should be in the format: ```\nSample_0: {label_0}\nSample_1: {label_1}\n...\n``` with {label_i} being the class associated to the sample."
+        # TODO: for concepts say how to interpret the values ++ + - --... what is negative and positive
         assert len(task_description_prompt) > 0
         system_prompt_parts.append(task_description_prompt)
 
@@ -858,7 +837,7 @@ class ConSim:
                 "The most important concepts and their importance for each class are:\n"
                 + "\n".join(
                     [
-                        f"{class_name}: {
+                        f"\t{class_name}: {
                             ConSim._concepts_to_string(
                                 global_importances[class_index],
                                 concepts_interpretation,
@@ -886,10 +865,10 @@ class ConSim:
                 str_concept = ConSim._concepts_to_string(
                     contrastive_importance, concepts_interpretation, top_k=top_k, threshold=importance_threshold
                 )
-                contrastive_prompt_parts.append(f"Fact {classes[pair[0]]}, foil {classes[pair[1]]}: {str_concept}")
+                contrastive_prompt_parts.append(f"\tfact: {classes[pair[0]]}, foil: {classes[pair[1]]}: {str_concept}")
 
             contrastive_global_prompt = (
-                "The contrastively important concepts to prefer fact over foil are:\n"
+                "The contrastively important concepts to choose fact over foil are:\n"
                 + "\n".join(contrastive_prompt_parts)
             )
             system_prompt_parts.append(contrastive_global_prompt)
@@ -897,112 +876,55 @@ class ConSim:
         # ==============================================================================================
         # Learning phase
         mid_index = len(sentences) // 2
-        if setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance:
-            rendered_local_importances: list[str] = []
-            if local_importances is not None:
-                # for each sample, show the concepts contributions corresponding to the predicted class
-                for i in range(len(local_importances)):
-                    pred = predictions[i].to(torch.int32).item()
-                    rendered_local_importances.append(
-                        ConSim._concepts_to_string(
-                            local_importances[i][pred],  # type: ignore
-                            concepts_interpretation,
-                            top_k=top_k,
-                            threshold=importance_threshold,
-                        )
-                    )
-
-        # -------
-        # samples
         if setting.lp_samples:
-            # show the samples
-            lp_local_prompt = "\n".join([f"Sample_{i}: {sentences[i]}" for i in range(mid_index)])
-            system_prompt_parts.append(lp_local_prompt)
-
-        # ----------------------------
-        # concepts local contributions
-        if setting.lp_concepts_local_contributions:
-            if local_importances is None:
-                raise ValueError(
-                    "PromptSetting.lp_concepts_local_contributions=True requires `local_importances` to be provided to ConSim.evaluate()."
-                )
-
-            # show the concepts contributions to the samples
-            lp_concepts_local_contributions_prompt = "\n".join(
-                [
-                    f"Concepts contributions for Sample_{i}: {rendered_local_importances[i]}"  # type: ignore
-                    for i in range(mid_index)
-                ]
-            )
-            system_prompt_parts.append(lp_concepts_local_contributions_prompt)
-
-        if setting.lp_local_contrastive_importance:
-            if local_importances is None:
-                raise ValueError(
-                    "PromptSetting.lp_local_contrastive_importance requires `local_importances` to be provided to ConSim.evaluate()."
-                )
-            if gold_labels is None:
-                raise ValueError(
-                    "PromptSetting.lp_local_contrastive_importance requires `gold_labels` to be provided to ConSim.evaluate()."
-                )
-
-            lp_contrastive_lines = []
+            learning_phase_blocks = []
             for i in range(mid_index):
-                pred_index = int(predictions[i].item())
-                gold_index = gold_labels[i]
+                # ----------------------------------------
+                # samples text and label (predicted class)
+                block = [f"Sample_{i}:", f"\tText: {sentences[i]}", f"\tLabel: {classes[int(predictions[i])]}"]
 
-                if pred_index == gold_index:
-                    text = f"Concepts contributions for Sample_{i}"
-                    importances = local_importances[i][pred_index]
-                else:
-                    text = (
-                        f"Contrastive concepts contributions for Sample_{i} "
-                        + f"(supports prediction {classes[pred_index]} rather than true label {classes[gold_index]})"
+                # ----------------------------
+                # concepts local contributions
+                if setting.lp_concepts_local_contributions:
+                    str_importances = ConSim._concepts_to_string(
+                        local_importances[i][predictions[i].to(torch.int32).item()],  # type: ignore
+                        concepts_interpretation,
+                        top_k=top_k,
+                        threshold=importance_threshold,
                     )
-                    importances = local_importances[i][pred_index] - local_importances[i][gold_index]
+                    block.append(f"\tConcepts contributions: {str_importances}")  # type: ignore
 
-                lp_contrastive_lines.append(
-                    f"{text}: {
-                        ConSim._concepts_to_string(
-                            importances,
-                            concepts_interpretation,
-                            top_k=top_k,
-                            threshold=importance_threshold,
-                        )
-                    }"
-                )
-            system_prompt_parts.append("\n".join(lp_contrastive_lines))
+                # ----------------------------------------
+                # contrastive local concepts contributions
+                if setting.lp_local_contrastive_importance:
+                    pred_index = int(predictions[i].item())
+                    gold_index = gold_labels[i]  # type: ignore
 
-        # ------
-        # labels
-        if setting.lp_samples:  # these correspond to the evaluated model predictions
-            # show the labels
-            lp_labels_prompt = "\n".join([f"Sample_{i}: {classes[int(predictions[i])]}" for i in range(mid_index)])
-            system_prompt_parts.append(lp_labels_prompt)
+                    # show the contrastive only for misclassified samples
+                    if pred_index == gold_index:
+                        text = "Concepts contributions"
+                        importances = local_importances[i][pred_index]  # type: ignore
+                    else:
+                        text = f"Concepts contributions supporting {classes[pred_index]} rather than {classes[gold_index]}"
+                        importances = local_importances[i][pred_index] - local_importances[i][gold_index]  # type: ignore
+
+                    # convert the importances to a string
+                    str_importances = ConSim._concepts_to_string(
+                        importances,
+                        concepts_interpretation,
+                        top_k=top_k,
+                        threshold=importance_threshold,
+                    )
+                    block.append(f"\t{text}: {str_importances}")  # type: ignore
+
+                learning_phase_blocks.append("\n".join(block))
+            system_prompt_parts.append("\n".join(learning_phase_blocks))
 
         # ==============================================================================================
         # Inference
-        # -------
+        # ----------------
         # show the samples
         ep_local_prompt = "\n".join([f"Sample_{i}: {sentences[i]}" for i in range(mid_index, 2 * mid_index)])
-        user_prompt_parts.append(ep_local_prompt)
-
-        # ----------------------------
-        # concepts local contributions
-        if setting.ep_concepts_local_contributions:
-            if local_importances is None:
-                raise ValueError(
-                    "PromptSetting.ep_concepts_local_contributions=True requires `local_importances` to be provided to ConSim.evaluate()."
-                )
-
-            # show the concepts contributions to the samples
-            ep_concepts_local_contributions_prompt = "\n".join(
-                [
-                    f"Concepts contributions for Sample_{i}: {rendered_local_importances[i]}"  # type: ignore
-                    for i in range(mid_index, 2 * mid_index)
-                ]
-            )
-            user_prompt_parts.append(ep_concepts_local_contributions_prompt)
 
         # -----------------
         # model predictions (not included in the prompt, but returned to compute accuracy)
@@ -1010,7 +932,7 @@ class ConSim:
 
         # concatenate prompts parts
         system_prompt = "\n\n".join(system_prompt_parts)
-        user_prompt = "\n\n".join(user_prompt_parts)
+        user_prompt = ep_local_prompt
 
         return system_prompt, user_prompt, literal_model_predictions
 
@@ -1079,16 +1001,6 @@ class ConSim:
 
         # ==========================================================================================
         # Extensive checks
-        if (
-            setting.lp_concepts_local_contributions
-            or setting.ep_concepts_local_contributions
-            or setting.lp_local_contrastive_importance
-        ) and local_importances is None:
-            raise ValueError(
-                "PromptSetting.lp_concepts_local_contributions or PromptSetting.ep_concepts_local_contributions "
-                "or PromptSetting.lp_local_contrastive_importance requires `local_importances` to be provided to ConSim.evaluate()."
-            )
-
         if not isinstance(global_importances, torch.Tensor) or global_importances.ndim != 2:
             raise ValueError("`global_importances` must be a torch.Tensor with shape (nb_classes, nb_concepts).")
         if global_importances.shape[0] != nb_classes:
@@ -1111,29 +1023,18 @@ class ConSim:
                         "`local_importances` entries must have shape (nb_classes, nb_concepts) with nb_classes matching `classes`."
                     )
             local_importances_count = len(local_importances)
-            if setting.ep_concepts_local_contributions:
-                if local_importances_count != len(sentences):
-                    raise ValueError(
-                        "`local_importances` must have nb_samples entries matching the number of sentences "
-                        "when PromptSetting.ep_concepts_local_contributions is True. "
-                        f"Got nb_samples={local_importances_count} and nb_sentences={len(sentences)}."
-                    )
-            elif local_importances_count not in {mid_index, len(sentences)}:
+            if local_importances_count not in {mid_index, len(sentences)}:
                 raise ValueError(
                     "`local_importances` must have nb_samples entries matching the learning phase size "
                     "or the full number of sentences. "
                     f"Got nb_samples={local_importances_count} and nb_sentences={len(sentences)}."
                 )
 
-        if (
-            setting.lp_concepts_local_contributions
-            or setting.ep_concepts_local_contributions
-            or setting.lp_local_contrastive_importance
-        ):
+        if setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance:
             if local_importances is None:
                 raise ValueError(
-                    "PromptSetting.lp_concepts_local_contributions or PromptSetting.ep_concepts_local_contributions "
-                    "or PromptSetting.lp_local_contrastive_importance requires `local_importances` to be provided to ConSim.evaluate()."
+                    "PromptSetting.lp_concepts_local_contributions or PromptSetting.lp_local_contrastive_importance "
+                    "requires `local_importances` to be provided to ConSim.evaluate()."
                 )
             if setting.lp_local_contrastive_importance:
                 if gold_labels is None or len(gold_labels) < mid_index:
@@ -1389,11 +1290,7 @@ class ConSim:
         """
         setting = ConSim._resolve_prompt_setting(prompt_type)
 
-        needs_local_importances = (
-            setting.lp_concepts_local_contributions
-            or setting.ep_concepts_local_contributions
-            or setting.lp_local_contrastive_importance
-        )
+        needs_local_importances = setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance
         if local_importances is None and concept_explainer is not None and needs_local_importances:
             # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
             if concept_explainer.split_point not in self.model_with_split_points.split_points:
@@ -1414,14 +1311,9 @@ class ConSim:
 
             # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
             # For now we force gradient-input
-            # TODO: precise shapes with jaxtyping
-            if setting.ep_concepts_local_contributions:
-                samples_to_explain = interesting_samples
-            else:
-                samples_to_explain = interesting_samples[: len(interesting_samples) // 2]
 
             local_importances = concept_explainer.concept_output_gradient(
-                inputs=samples_to_explain,
+                inputs=interesting_samples[: len(interesting_samples) // 2],
                 split_point=self.split_point,
                 activation_granularity=self.activation_granularity,
                 concepts_x_gradients=True,
