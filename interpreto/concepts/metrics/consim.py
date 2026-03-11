@@ -537,6 +537,7 @@ class ConSim:
         self,
         inputs: list[str],
         labels: torch.Tensor,
+        predictions: torch.Tensor | None = None,
         nb_lp_samples: int = 20,
         nb_ep_samples: int = 20,
         seed: int = 0,
@@ -561,6 +562,9 @@ class ConSim:
                 The inputs to predict.
             labels: torch.Tensor
                 The labels of the inputs.
+            predictions: torch.Tensor | None
+                The predictions of the model on the inputs.
+                If not provided, the predictions are computed by calling `self._get_predictions`.
             nb_lp_samples: int
                 The number of samples to select for the learning phase.
             nb_ep_samples: int
@@ -583,7 +587,9 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the interesting samples.
         """
-        predictions = self._get_predictions(inputs, batch_size=batch_size, device=device)
+        # compute predictions if not provided
+        predictions = predictions or self._get_predictions(inputs, batch_size=batch_size, device=device)
+
         class_ids = None
         if classes_subset is not None:
             if not isinstance(classes_subset, (list, tuple)):
