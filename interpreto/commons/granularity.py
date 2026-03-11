@@ -257,21 +257,11 @@ class Granularity(Enum):
 
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
 
-                if tokenizer.is_fast and isinstance(inputs, BatchEncoding):
-                    # return [Granularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
-                    grouped_indices: list[list[list[int]]] = []
-                    for i in range(n_inputs):
-                        word_ids = inputs.word_ids(i)
-                        if Granularity.__word_ids_are_usable(word_ids):
-                            grouped_indices.append(Granularity.__word_get_indices_from_word_ids(word_ids))
-                        else:
-                            grouped_indices.append(
-                                Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
-                            )
-                    return grouped_indices
+                if Granularity.__word_ids_are_usable(tokenizer, inputs):
+                    return [Granularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
 
                 return [
-                    Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
+                    Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)
                     for i in range(n_inputs)
                 ]
 
@@ -320,14 +310,16 @@ class Granularity(Enum):
         return [[i] for i, tok_id in enumerate(tokens_ids) if tok_id not in special_ids]
 
     @staticmethod
-    def __word_ids_are_usable(word_ids: list[int | None]) -> bool:
-        """Return True when fast-tokenizer word ids provide meaningful word grouping."""
-        non_none = [wid for wid in word_ids if wid is not None]
-        if not non_none:
+    def __word_ids_are_usable(tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast, inputs: BatchEncoding) -> bool:
+        """Return True when we have a fast-tokenizer and word ids provide meaningful word grouping."""
+        if not tokenizer.is_fast:
+            print("Tokenizer is not fast, cannot use word_ids for WORD granularity.")
             return False
-        # Some tokenizers return a single repeated id for full text.
-        # In that case, fallback to token-prefix heuristic grouping.
-        return len(set(non_none)) > 1
+        word_ids = inputs.word_ids(0)
+        is_valid = isinstance(word_ids, list) and any(x is not None for x in word_ids)
+        if is_valid:
+            return True
+        return False
 
     @staticmethod
     def __word_get_indices_from_word_ids(word_ids: list[int | None]) -> list[list[int]]:
