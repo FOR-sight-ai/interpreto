@@ -69,7 +69,6 @@ PROMPT_TYPES = [
     PromptTypes.L2_baseline_with_lp,
     PromptTypes.E2_global_concepts_with_lp,
     PromptTypes.E3_global_and_local_concepts_with_lp,
-    PromptTypes.U1_upper_bound_concepts_at_ep,
     PromptTypes.C1_contrastive_global_concepts_without_lp,
     PromptTypes.C2_contrastive_global_concepts_with_lp,
     PromptTypes.C3_contrastive_global_and_local_concepts_with_lp,
@@ -151,17 +150,23 @@ def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints, multi_split_mode
     classes = [str(i) for i in range(int(splitted_encoder_ml._model.num_labels))]  # type: ignore
 
     # when only one split point is available, it should be chosen automatically
-    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=llm, activation_granularity=AG.TOKEN, classes=classes)
     assert consim.split_point == splitted_encoder_ml.split_points[0], "consim split_point should match the mwsp"
     assert consim.user_llm is llm, "consim llm should correspond to the parameter"
 
     # invalid split point should raise an error
     with pytest.raises(ValueError):
-        ConSim(splitted_encoder_ml, None, AG.TOKEN, classes, split_point="wrong.point")
+        ConSim(
+            splitted_encoder_ml,
+            user_llm=None,
+            activation_granularity=AG.TOKEN,
+            classes=classes,
+            split_point="wrong.point",
+        )
 
     # when multiple split points exist, omitting split_point must fail
     with pytest.raises(ValueError):
-        ConSim(multi_split_model, None, AG.TOKEN, classes)
+        ConSim(multi_split_model, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
 
 
 def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
@@ -246,7 +251,7 @@ def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `select_examples` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, None, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
 
     # prepare fake methods so we only test the logic of select_examples
     inputs = ["a", "b", "c", "d", "e", "f"]
@@ -287,7 +292,7 @@ def test_consim_select_examples_subset_classes(splitted_encoder_ml: ModelWithSpl
     """
     classes_names = ["A", "B", "C"]
     classes_subset = [0, 2]
-    consim = ConSim(splitted_encoder_ml, None, AG.TOKEN, classes=classes_names)
+    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes_names)
 
     inputs = [f"sample {i}" for i in range(9)]
     labels = torch.tensor([0, 1, 2, 0, 1, 2, 0, 1, 2])
@@ -391,7 +396,6 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     if "baseline" in prompt_type_name:
         assert prompt_settings.concepts_global_importances is False, "wrong prompt settings for baseline"
         assert prompt_settings.lp_concepts_local_contributions is False, "wrong prompt settings for baseline"
-        assert prompt_settings.ep_concepts_local_contributions is False, "wrong prompt settings for baseline"
     if "without_lp" in prompt_type_name:
         assert prompt_settings.lp_samples is False, "wrong prompt settings for without_lp"
         assert prompt_settings.lp_concepts_local_contributions is False, "wrong prompt settings for without_lp"
@@ -399,17 +403,8 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
         assert prompt_settings.lp_samples, "wrong prompt settings for with_lp"
     if "global" in prompt_type_name and "contrastive" not in prompt_type_name:
         assert prompt_settings.concepts_global_importances, "wrong prompt settings for global"
-        assert prompt_settings.ep_concepts_local_contributions is False, "wrong prompt settings for global"
     if "local" in prompt_type_name and "contrastive" not in prompt_type_name:
         assert prompt_settings.lp_concepts_local_contributions, "wrong prompt settings for local"
-        assert prompt_settings.ep_concepts_local_contributions is False, "wrong prompt settings for local"
-    elif "upper_bound" not in prompt_type_name:
-        assert prompt_settings.lp_concepts_local_contributions is False, "wrong prompt settings for non local"
-    if "upper_bound" in prompt_type_name:
-        assert prompt_settings.concepts_global_importances, "wrong prompt settings for non local"
-        assert prompt_settings.lp_samples, "wrong prompt settings for non local"
-        assert prompt_settings.lp_concepts_local_contributions, "wrong prompt settings for non local"
-        assert prompt_settings.ep_concepts_local_contributions, "wrong prompt settings for non local"
     if "contrastive" in prompt_type_name:
         if "global" in prompt_type_name:
             assert prompt_settings.global_contrastive_importances, "wrong prompt settings for contrastive global"
@@ -437,7 +432,9 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # Initial Phase
     # task description
     assert "You are a classifier." in system, "system prompt should contain the task description"
-    assert "Sample_{i}: {predicted_class}" in system, "system prompt should contain the expected response format"
+    assert "```\nSample_0: {label_0}\nSample_1: {label_1}\n...\n```" in system, (
+        "system prompt should contain the expected response format"
+    )
     if anonymize_classes:
         assert "The classes are: [Class_0, Class_1]" in system, "system prompt should contain the anonymized classes"
     else:
@@ -455,11 +452,11 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # contrastive global explanation
     if prompt_settings.global_contrastive_importances:
         if anonymize_classes:
-            assert "Fact Class_1, foil Class_0: {C0 (word): --}" in system, (
+            assert "\tfact: Class_1, foil: Class_0: {C0 (word): --}" in system, (
                 "system prompt should contain the anonymized global contrastive concepts importance"
             )
         else:
-            assert "Fact B, foil A: {C0 (word): --}" in system, (
+            assert "\tfact: B, foil: A: {C0 (word): --}" in system, (
                 "system prompt should contain the global contrastive concepts importance"
             )
 
@@ -468,43 +465,45 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # examples
     if prompt_settings.lp_samples:
         # samples, only the 2 first samples for lp
-        assert "Sample_0: s0\nSample_1: s1" in system, "system prompt should contain the lp samples"
+        assert "Sample_0:\n\tText: s0" in system, "system prompt should contain the lp samples"
+        assert "Sample_1:\n\tText: s1" in system, "system prompt should contain the lp samples"
         assert "Sample_2" not in system and "Sample_3" not in system, "system prompt should not contain the ep samples"
         # labels
         if anonymize_classes:
-            assert "Sample_0: Class_0\nSample_1: Class_1" in system, (
-                "system prompt should contain the anonymized predictions"
-            )
+            assert "\n\tLabel: Class_0" in system, "system prompt should contain the anonymized predictions"
+            assert "\n\tLabel: Class_1" in system, "system prompt should contain the anonymized predictions"
         else:
-            assert "Sample_0: A\nSample_1: B" in system, "system prompt should contain the predictions"
+            assert "\n\tLabel: A" in system, "system prompt should contain the anonymized predictions"
+            assert "\n\tLabel: B" in system, "system prompt should contain the anonymized predictions"
 
     # local concepts explanation
     if prompt_settings.lp_concepts_local_contributions:
-        assert "Sample_0: {C0 (word): +}" in system, "system prompt should contain the lp concepts contributions"
-        assert "Sample_1: {C0 (word): -}" in system, "system prompt should contain the lp concepts contributions"
+        assert "\n\tConcepts contributions: {C0 (word): +}" in system, (
+            "system prompt should contain the lp concepts contributions"
+        )
+        assert "\n\tConcepts contributions: {C0 (word): -}" in system, (
+            "system prompt should contain the lp concepts contributions"
+        )
 
     # contrastive local explanation
     if prompt_settings.lp_local_contrastive_importance:
-        assert "Sample_0: {C0 (word): +}" in system, "system prompt should contain the lp concepts contributions"
+        assert "\n\tConcepts contributions: {C0 (word): +}" in system, (
+            "system prompt should contain the lp concepts contributions"
+        )
         if anonymize_classes:
-            assert (
-                "Contrastive concepts contributions for Sample_1 (supports prediction Class_1 rather than true label Class_0): {C0 (word): --}"
-                in system
-            ), "system prompt should contain the anonymized contrastive local concepts importance"
+            assert "\n\tConcepts contributions supporting Class_1 rather than Class_0: {C0 (word): --}" in system, (
+                "system prompt should contain the anonymized contrastive local concepts importance"
+            )
         else:
-            assert (
-                "Contrastive concepts contributions for Sample_1 (supports prediction B rather than true label A): {C0 (word): --}"
-                in system
-            ), "system prompt should contain the anonymized contrastive local concepts importance"
+            assert "\n\tConcepts contributions supporting B rather than A: {C0 (word): --}" in system, (
+                "system prompt should contain the anonymized contrastive local concepts importance"
+            )
     # ----------------
     # Evaluation Phase
     # samples, only the 2 last samples for ep
     assert "Sample_2: s2\nSample_3: s3" in user, "user prompt should contain the ep samples"
     assert "Sample_0" not in user and "Sample_1" not in user, "user prompt should not contain the lp samples"
     # concepts contributions
-    if prompt_settings.ep_concepts_local_contributions:
-        assert "Sample_2: {C0 (word): +}" in user, "user prompt should contain the ep concepts contributions"
-        assert "Sample_3: {C0 (word): -}" in user, "user prompt should contain the ep concepts contributions"
 
 
 def test_consim_generate_prompt():
@@ -567,15 +566,17 @@ def test_consim_generate_prompt():
     assert "B: {C0 (word): --, C1 (test): -}" in system, (
         "high global importance concepts should be in the system prompt"
     )  # E3 includes the global concepts importance
-    assert "Sample_0: s0\nSample_1: s1" in system, "system prompt should contain the lp samples"
+    assert "Sample_0:\n\tText: s0" in system, "system prompt should contain the lp samples"
+    assert "Sample_1:\n\tText: s1" in system, "system prompt should contain the lp samples"
     assert "Sample_2" not in system and "Sample_3" not in system, "system prompt should not contain the ep samples"
-    assert "Sample_0: A\nSample_1: B" in system, "system prompt should contain the predictions"
-    assert "Sample_0: {C0 (word): ++, C1 (test): +}" in system, (
-        "system prompt should contain the local concept importance"
-    )  # E3 includes the local concepts contribution
-    assert "Sample_1: {C0 (word): --, C1 (test): -}" in system, (
-        "system prompt should contain the local concept importance"
-    )  # E3 includes the local concepts contribution
+    assert "\n\tLabel: A" in system, "system prompt should contain the anonymized predictions"
+    assert "\n\tLabel: B" in system, "system prompt should contain the anonymized predictions"
+    assert "\n\tConcepts contributions: {C0 (word): ++, C1 (test): +}" in system, (
+        "system prompt should contain the lp concepts contributions"
+    )
+    assert "\n\tConcepts contributions: {C0 (word): --, C1 (test): -}" in system, (
+        "system prompt should contain the lp concepts contributions"
+    )
     assert "Sample_2: s2\nSample_3: s3" in user, "user prompt should contain the ep samples"
     assert "Sample_0" not in user and "Sample_1" not in user, "user prompt should not contain the lp samples"
     assert "concept" not in user, (
@@ -669,17 +670,12 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
             # Therefore we ensure that it is called only when necessary.
             assert prompt_type in [
                 PromptTypes.E3_global_and_local_concepts_with_lp,
-                PromptTypes.U1_upper_bound_concepts_at_ep,
                 PromptTypes.C3_contrastive_global_and_local_concepts_with_lp,
                 PromptTypes.C4_contrastive_local_concepts,
                 PromptTypes.C5_contrastive_local_only,
             ]
             # Furthermore, we ensure it is called only with the necessary elements.
-            if not prompt_type.value.ep_concepts_local_contributions:
-                # only lp inputs local importances are computed
-                assert inputs == ["s0", "s1", "s2", "s3", "s4"]
-            else:
-                assert inputs == ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]
+            assert inputs == ["s0", "s1", "s2", "s3", "s4"]
 
             return [torch.ones(len(classes), 1, 1)] * len(inputs)
 
@@ -692,7 +688,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     # Test consim with a valid LLM output
 
     llm = LLMInterfacePlaceholder()
-    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=llm, activation_granularity=AG.TOKEN, classes=classes)
 
     # evaluate the ConSim metric
     score: float | None = consim.evaluate(  # type: ignore
@@ -875,7 +871,6 @@ if __name__ == "__main__":
     test_consim_generate_prompt()
     test_consim_extract_predictions_from_response()
     test_consim_predictions_accuracy()
-    test_consim_setting_to_prompt_contrastive()
     for prompt_type in [
         PromptTypes.E2_global_concepts_with_lp,
         PromptTypes.C3_contrastive_global_and_local_concepts_with_lp,
