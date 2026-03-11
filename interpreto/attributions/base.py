@@ -672,7 +672,8 @@ class GenerationAttributionExplainer(AttributionExplainer):
             )["input_ids"].squeeze(dim=0)
             return [targets]  # type: ignore
         if isinstance(targets, MutableMapping):  # TensorMapping cannot be used in isinstance
-            targets = normalize_target_ids_with_leading_space(self.tokenizer, targets["input_ids"])
+            targets = targets["input_ids"]  # type: ignore
+            # targets = normalize_target_ids_with_leading_space(self.tokenizer, targets["input_ids"])
             if targets.dim() == 1:
                 return list(targets)
             if targets.shape[0] > 1:
@@ -681,7 +682,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
             return [targets.squeeze(dim=0)]
         if isinstance(targets, torch.Tensor):
             targets = targets.squeeze(dim=0)  # remove batch dimension if any
-            targets = normalize_target_ids_with_leading_space(self.tokenizer, targets)
+            # targets = normalize_target_ids_with_leading_space(self.tokenizer, targets)
             assert targets.dim() == 1, "Target tensor must be 1-D."
             return [targets]
         if isinstance(targets, Iterable):
@@ -694,7 +695,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
     def process_inputs_to_explain_and_targets(
         self,
         model_inputs: Iterable[TensorMapping],
-        targets: GeneratedTarget | None = None,
+        targets: GeneratedTarget,
         **model_kwargs,
     ) -> tuple[Iterable[BatchEncoding], Iterable[torch.Tensor]]:
         """
@@ -715,12 +716,6 @@ class GenerationAttributionExplainer(AttributionExplainer):
         """
         # TODO: verify that inputs and targets have the same length
         sanitized_targets: list[torch.Tensor]
-        if targets is None:
-            # TODO change directly get_inputs_to_explain_and_targets to verify the " " condition
-            _, targets = self.inference_wrapper.get_inputs_to_explain_and_targets(model_inputs, **model_kwargs)
-            # Remove batch dimension to align with targets in ClassificationExplainer (1-D tensor of shape (t,))
-            # sanitized_targets = [t.squeeze(dim=0) if t.dim() >= 1 else t for t in sanitized_targets]
-
         sanitized_targets = self.process_targets(targets)  # type: ignore
         model_inputs_to_explain = []
         for model_input, target in zip(model_inputs, sanitized_targets, strict=True):
