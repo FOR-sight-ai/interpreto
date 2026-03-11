@@ -588,7 +588,8 @@ class ConSim:
                 The predictions of the model on the interesting samples.
         """
         # compute predictions if not provided
-        predictions = predictions or self._get_predictions(inputs, batch_size=batch_size, device=device)
+        if predictions is None:
+            predictions = self._get_predictions(inputs, batch_size=batch_size, device=device)
 
         class_ids = None
         if classes_subset is not None:
