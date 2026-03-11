@@ -675,16 +675,16 @@ class GenerationAttributionExplainer(AttributionExplainer):
             targets = targets["input_ids"]  # type: ignore
             # targets = normalize_target_ids_with_leading_space(self.tokenizer, targets["input_ids"])
             if targets.dim() == 1:
-                return list(targets)
+                return list(normalize_target_ids_with_leading_space(self.tokenizer, targets))
             if targets.shape[0] > 1:
                 targets = targets.split(1, dim=0)  # If the batch size > 1, we cut into a list of n mappings.
-                return [t.squeeze(dim=0) for t in targets]  # type: ignore
-            return [targets.squeeze(dim=0)]
+                return [normalize_target_ids_with_leading_space(self.tokenizer, t.squeeze(dim=0)) for t in targets]  # type: ignore
+            return [normalize_target_ids_with_leading_space(self.tokenizer, targets.squeeze(dim=0))]
         if isinstance(targets, torch.Tensor):
             targets = targets.squeeze(dim=0)  # remove batch dimension if any
             # targets = normalize_target_ids_with_leading_space(self.tokenizer, targets)
             assert targets.dim() == 1, "Target tensor must be 1-D."
-            return [targets]
+            return [normalize_target_ids_with_leading_space(self.tokenizer, targets)]
         if isinstance(targets, Iterable):
             return list(itertools.chain(*[self.process_targets(item) for item in targets]))
         raise ValueError(
