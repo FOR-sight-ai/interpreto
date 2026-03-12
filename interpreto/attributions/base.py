@@ -722,8 +722,13 @@ class GenerationAttributionExplainer(AttributionExplainer):
             target_2d = target.unsqueeze(dim=0)  # add batch dimension for concatenation with model_input
             model_inputs_to_explain.append(
                 {
-                    "input_ids": torch.cat([model_input["input_ids"], target_2d], dim=1),  # type: ignore
-                    "attention_mask": torch.cat([model_input["attention_mask"], torch.ones_like(target_2d)], dim=1),  # type: ignore
+                    "input_ids": torch.cat(
+                        [model_input["input_ids"].to(self.device), target_2d.to(self.device)], dim=1
+                    ),  # type: ignore
+                    "attention_mask": torch.cat(
+                        [model_input["attention_mask"].to(self.device), torch.ones_like(target_2d).to(self.device)],
+                        dim=1,
+                    ),  # type: ignore
                 }
             )
 
