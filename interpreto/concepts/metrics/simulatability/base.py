@@ -35,12 +35,28 @@ from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 
 class AutomatedSimulatability:
     """
-    ... TODO
+    Base class for prompt-based simulatability metrics.
+
+    An automated simulatability metric turns model decisions and explanation artifacts into
+    prompts for a meta-predictor, typically an LLM, then measures how often that meta-predictor
+    reproduces the original model outputs.
+
+    Architecture:
+        - `select_examples` extracts a balanced subset from precomputed model outputs.
+        - subclasses implement `construct_prompt` to turn those samples and explanations into
+          prompts.
+        - `score_from_prompts` runs the prompts through an `LLMInterface` and computes
+          exact-match accuracy.
     """
 
     def __init__(self, classes: list[str]):
         """
-        ... TODO
+        Store the class names used by the metric.
+
+        Arguments:
+            classes: list[str]
+                Class names indexed by model class id. `classes[i]` is the label expected for
+                prediction `i`.
         """
         self.classes: list[str] = classes
 
@@ -54,34 +70,46 @@ class AutomatedSimulatability:
         classes_subset: list[int] | None = None,
     ) -> tuple[torch.Tensor, list[str], torch.Tensor, torch.Tensor]:
         """
-        Extract interesting elements from the inputs, labels, and predictions.
-        It selects `nb_samples` samples from the inputs.
-        The goal is to select uniformly between each class (with respect to the labels).
-        There should be as many samples where the initial model prediction are good as miss.
-        The samples are then randomly shuffled.
-        Therefore, there is no guarantee on the repartition inside learning and evaluation phase.
+        Select a balanced subset of samples for a simulatability run.
+
+        The method works on already computed `labels` and `predictions`. It tries to keep roughly
+        half correct and half incorrect model predictions, while representing every requested class
+        in both groups. The final subset is shuffled, so callers can later split it into learning
+        and evaluation samples however they want.
+
+        The goal is to find `interesting_samples` for the metric. With this, we over represent
+        misclassifications and some classes. Therefore, the LLM judge used in `score_from_prompts`
+        cannot shortcut the task by predicting real labels, otherwise it would obtain a score of 0.5.
 
         Arguments:
             inputs: list[str]
-                The inputs to predict.
+                Raw inputs, length `all_samples`.
             labels: torch.Tensor
-                The labels of the inputs.
+                Gold labels aligned with `inputs`, shape `(all_samples,)`.
             predictions: torch.Tensor
-                The predictions of the model on the inputs.
-            nb_lp_samples: int
-                The number of samples to select.
+                Model predictions aligned with `inputs`, shape `(all_samples,)`.
+            nb_samples: int
+                Number of samples to keep in the returned subset.
             seed: int
-                The seed to use for the random selection.
+                Seed used for the random sampling and final shuffle.
             classes_subset: list[int] | None
-                Optional subset of class ids to sample from.
+                Optional subset of class ids to select samples from.
+                When provided, only samples with prediction and label in that subset are kept.
 
         Returns:
+            indices: torch.Tensor
+                Indices of the selected samples in the original inputs, shape `(nb_samples,)`.
             interesting_samples: list[str]
-                The interesting samples.
+                Selected inputs, length `nb_samples`.
             labels: torch.Tensor
-                The labels of the interesting samples.
+                Selected labels, shape `(nb_samples,)`.
             predictions: torch.Tensor
-                The predictions of the model on the interesting samples.
+                Selected predictions, shape `(nb_samples,)`.
+
+        Raises:
+            ValueError:
+                If `nb_samples` is too small to cover the requested classes, or if there are not
+                enough correct / incorrect predictions to build the balanced subset.
         """
         # ------------------------------------------------------------------------------------------
         # Compute constants
@@ -177,7 +205,45 @@ class AutomatedSimulatability:
         **kwargs,
     ) -> tuple[str, list[str], list[str]]:
         """
-        ... TODO
+        Build prompts for a concrete simulatability metric.
+
+        This is the customization point for subclasses.
+
+        A typical implementation:
+        - validates metric-specific inputs,
+        - decides which selected samples to use in the learning phase or evaluation phase,
+        - and returns a shared system prompt plus one user prompt per evaluation sample.
+
+        A prompt have:
+        - A task description, adapted to the type of explanations that will be provided.
+        - The classes names list, potentially anonymized.
+        - Optional global concept summaries.
+        - Optional learning-phase examples with their predictions.
+        - One user prompt per evaluation sample.
+
+        Arguments:
+            setting: NamedTuple
+                Metric-specific configuration describing which prompt blocks to include.
+            interesting_samples: list[str]
+                Selected inputs, shape `(n_samples,)`.
+            corresponding_predictions: torch.Tensor
+                Model predictions aligned with `interesting_samples`, shape `(n_samples,)`.
+            corresponding_labels: torch.Tensor
+                Reference labels aligned with `interesting_samples`, shape `(n_samples,)`.
+            **kwargs:
+                Metric-specific explanation artifacts required to render the prompt.
+
+        Returns:
+            system_prompt: str
+                Shared instructions and context reused for every evaluation request.
+            user_prompts: list[str]
+                One prompt per evaluation sample.
+            model_predictions: list[str]
+                Expected class names aligned with `user_prompts`.
+
+        Notes:
+            `score_from_prompts` assumes `len(user_prompts) == len(model_predictions)` and that
+            each response can be compared to a single class label.
         """
         raise NotImplementedError
 
@@ -189,7 +255,32 @@ class AutomatedSimulatability:
         model_predictions: list[str],
     ):
         """
-        ... TODO
+        Score prompts with an LLM interface using exact-match accuracy.
+
+        The same `system_prompt` is paired with each element of `user_prompts`. Each response is
+        compared case-insensitively to the expected class name in `model_predictions`.
+
+        Keeping scoring here lets subclasses focus on prompt construction while users remain free
+        to cache prompts, swap LLM backends, or replace the scorer entirely if they need a more
+        elaborate protocol.
+
+        Arguments:
+            llm_interface: LLMInterface
+                Interface used to generate one response per prompt.
+            system_prompt: str
+                Shared system message.
+            user_prompts: list[str]
+                Evaluation prompts, one per sample.
+            model_predictions: list[str]
+                Expected class names aligned with `user_prompts`.
+
+        Returns:
+            simulatability_score: float
+                Mean exact-match accuracy in `[0, 1]`.
+
+        Raises:
+            ValueError:
+                If `user_prompts` and `model_predictions` do not have the same length.
         """
 
         if len(user_prompts) != len(model_predictions):

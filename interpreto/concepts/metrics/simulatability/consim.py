@@ -34,10 +34,28 @@ from interpreto.concepts.metrics.simulatability.base import AutomatedSimulatabil
 
 class PromptSetting(NamedTuple):
     """
-    Configuration of the ConSim prompts.
-    It says which elements should be included in the prompt.
+    Low-level configuration of a ConSim prompt.
 
-    This is used to define the different `PromptTypes` available.
+    Each flag enables one prompt block. `PromptTypes` exposes the common presets used in papers and
+    tests, while direct `PromptSetting(...)` instances let advanced users define custom ablations.
+
+    Attributes:
+        concepts_global_importances: bool
+            Include per-class concept summaries.
+        global_contrastive_importances: bool
+            Include fact-versus-foil global concept summaries instead of per-class summaries.
+            Incompatible with `concepts_global_importances`.
+        lp_samples: bool
+            Include learning-phase examples in the shared system prompt.
+        lp_concepts_local_contributions: bool
+            Add local concept contributions for each learning-phase example.
+        lp_local_contrastive_importance: bool
+            Add contrastive local contributions for each learning-phase example.
+            Contrastive are shown for errors and classic contributions for correct predictions.
+            Incompatible with `lp_concepts_local_contributions`.
+        anonymize_classes: bool
+            Replace user-facing class names with `Class_i`.
+            Preventing the LLM from using knowledge on classes names.
     """
 
     # initial phase
@@ -59,7 +77,23 @@ class PromptSetting(NamedTuple):
         labels: torch.Tensor | list[int] | None,
     ) -> None:
         """
-        Validate the prompt setting against required inputs and incompatible options.
+        Validate internal consistency for a prompt setting.
+
+        This method only checks setting-level constraints, such as mutually exclusive options or
+        inputs required by a given prompt family. Tensor shape checks are handled separately in
+        `ConSim._check_input_settings_correspondence` so callers fail before any prompt text is
+        rendered.
+
+        Arguments:
+            concepts_interpretation: dict[int, str]
+                Reserved for API symmetry with prompt builders. It is not used yet.
+            labels: torch.Tensor | list[int] | None
+                Gold labels aligned with the selected samples. Required for contrastive local
+                prompts.
+
+        Raises:
+            ValueError:
+                If the setting is inconsistent or requires missing inputs.
         """
         _ = concepts_interpretation
         if self.concepts_global_importances and self.global_contrastive_importances:
@@ -87,28 +121,16 @@ class PromptSetting(NamedTuple):
 
 class PromptTypes(Enum):
     """
-    There are six types of prompts, including two baselines and an upper bond:
+    Named ConSim prompt presets.
 
-    Attributes:
-        `L1_baseline_without_lp`:
-            IP.1 and EP.1 are included in the prompt.
-            Only the task description, but explanations or learning phase.
+    Naming convention:
+        - `L*`: baselines without concept explanations.
+        - `E*`: standard concept explanations.
+        - `C*`: contrastive concept explanations.
+        - `with_lp` / `without_lp`: whether learning-phase examples are included.
 
-        `E1_global_concepts_without_lp`:
-            IP.1, IP.2, and EP.1 are included in the prompt.
-            Only task description and global concepts explanation, but no learning phase.
-
-        `L2_baseline_with_lp`:
-            IP.1, LP.1, and EP.1 are included in the prompt.
-            Task description and learning phase, but no explanations.
-
-        `E2_global_concepts_with_lp`:
-            IP.1, IP.2, LP.1, and EP.1 are included in the prompt.
-            Task description, global concepts explanation, and learning phase. But no local concepts explanation.
-
-        `E3_global_and_local_concepts_with_lp`:
-            IP.1, IP.2, LP.1, LP.2, and EP.1 are included in the prompt.
-            Task description, learning phase, and both global and local concepts explanation.
+    Each enum value is a `PromptSetting`. Use the enum for standard experiments and direct
+    `PromptSetting(...)` values for custom studies.
     """
 
     L1_baseline_without_lp = PromptSetting()
@@ -144,160 +166,44 @@ class PromptTypes(Enum):
 
 
 class ConSim(AutomatedSimulatability):
-    """Code: [:octicons-mark-github-24: `concepts/metrics/consim.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/metrics/consim.py)
+    """
+    ConSim prompt builder for concept-based automated simulatability.
 
-    ConSim for Concept-based Simulatability. Was introduced by Poché et al. in 2025[^1].
+    ConSim measures whether concept explanations help a meta-predictor reproduce a classifier's
+    outputs. In this module, `ConSim` is responsible only for ConSim-specific prompt
+    design and validation. It does not compute model predictions, concept importances, or call the
+    LLM on its own.
 
-    It evaluates all three components of the concept-based explanation:
+    Therefore, user need to compute model predictions and concepts importances beforehand.
 
-    - the concepts space
+    Typical workflow:
+        1. Instantiate `ConSim(classes=...)`.
+        2. Call `select_examples(...)` on precomputed inputs, labels, and model predictions.
+        3. Prepare the explanation artifacts required by the chosen setting:
+           `concepts_interpretation`, `global_importances`, optional `local_importances`, and
+           optional `contrastive_pairs`.
+        4. Call `construct_prompt(...)`.
+        5. Score the result with `score_from_prompts(...)` or a custom LLM loop.
 
-    - the concepts interpretation
-
-    - the concepts importance
-
-    To evaluate explanations on a given model $f$, ConSim evaluates to which extent explanations
-    help a meta-predictor $\\Psi$ to simulate the predictions of the model $f$.
-
-    In our case, the role of the meta-predictor will be played by `user_llm`, and interface calling
-    a model either from local, or from a remote API, such as OpenAI or HuggingFace.
-    Therefore, most of the code correspond to building the prompts for the LLM.
-
-    There are three steps to ConSim:
-
-    - Step 0:
-        Instantiate the ConSim metric
-        with the `model_with_split_points` ($f$) and the `user_llm` ($\\Psi$).
-
-    - Step 1:
-        Select interesting examples for ConSim with the `select_examples` method.
-        Samples are selected to see how well $\\Psi$ can simulate $f$.
-        Thus there are samples for every classes and many initial errors from $f$.
-
-    - Step 2:
-        Evaluate the ConSim score with the `evaluate` method. It is an accuracy score between $\\Psi$ and $f$ predictions.
-        But we selected interesting examples, so it cannot be compared to a natural accuracy on the dataset.
-        Therefore, we need to compare it to a baseline ().
-
-    Tip:
-        We highly recommend to do the steps 1 and 2 several times with different seeds to get more statistically significant results.
-        The initial papers[^1] used five different seeds..
-
-    [^1]:
-        A. Poché, A. Jacovi, A.M. Picard, V. Boutin, and F. Jourdan.
-        [ConSim: Measuring Concept-Based Explanations' Effectiveness with Automated Simulatability](https://aclanthology.org/2025.acl-long.279/).
-        In the Proceedings of the 2025 Association for Computational Linguistics (ACL).
+    Reference:
+        A. Poché, A. Jacovi, A.M. Picard, V. Boutin, and F. Jourdan. ConSim: Measuring
+        Concept-Based Explanations' Effectiveness with Automated Simulatability. ACL 2025.
+        https://aclanthology.org/2025.acl-long.279/
 
     Arguments:
-        model_with_split_points: ModelWithSplitPoints
-            The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
-
-        user_llm: LLMInterface | None
-            The LLM interface that will serve as the meta-predictor.
-            If not provided the user will have to call the ConSim prompts manually.
-            If your preferred LLM API is not supported, you can implement your own LLM interface.
-            You just have to implement the `generate` method.
-
-            The format of the prompt is:
-
-            `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
-
-        activation_granularity: ActivationGranularity
-            The granularity of the activations to use for the explanations.
-
-        classes: list[str] | None
-            The names of classes of the dataset.
-
-        split_point: str
-            Where to split the model to explain.
+        classes: list[str]
+            Display names for class ids. Inherited from `AutomatedSimulatability`; `classes[i]`
+            must match class id `i`.
 
     Attributes:
-        classes: list[str] | None
-            The names of classes of the dataset.
-
-        prompt_types: PromptTypes
-            Enum of the possible prompts types to use.
-
-        model_with_split_points: ModelWithSplitPoints
-            The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
-
-        split_point: str
-            Where to split the model to explain.
-
-        user_llm: LLMInterface | None
-            The LLM interface that will serve as the meta-predictor.
-            If your preferred LLM API is not supported, you can implement your own LLM interface.
-            You just have to implement the `generate` method.
-
-            The format of the prompt is:
-
-            `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
-
-    TODO:
-        validate example in practice
+        classes: list[str]
+            Display names for class ids.
+        prompt_types: type[PromptTypes]
+            Preset prompt configurations shipped with ConSim.
+            These are prompt settings that can be passed to `ConSim.construct_prompt()`.
 
     Examples:
-        Preamble to a metric, fit a concept explainer:
-        >>> import datasets
-        >>> import torch
-        >>> from interpreto import ConSim, ModelWithSplitPoints, ICAConcepts, OpenAILLM
-        >>>
-        >>> # ------------------------
-        >>> # Load a model and wrap it
-        >>> model_with_split_points = ModelWithSplitPoints(
-        ...     "textattack/bert-base-uncased-ag-news",
-        ...     split_points=["bert.encoder.layer.10.output"],
-        ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
-        ...     batch_size=4,
-        ... )
-        >>>
-        >>> # --------------------------------------
-        >>> # Load a dataset and compute activations
-        >>> dataset = datasets.load_dataset("fancyzhx/ag_news")
-        >>> classes = ["World", "Sports", "Business", "Sci/Tech"]
-        >>> activations = model_with_split_points.get_activations(dataset["train"]["text"])
-        >>>
-        >>> # -------------------------
-        >>> # Fit the concept explainer
-        >>> concept_explainer_1 = ICAConcepts(model_with_split_points, nb_concepts=50)
-        >>> concept_explainer_1.fit(activations)
-
-        The two steps of ConSim:
-        >>> # ------------------------------------------------------------------
-        >>> # Step 0: Define the User-LLM and instantiate the ConSim metric
-        >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt-4.1-nano")
-        >>> consim = ConSim(
-        ...     model_with_split_points,
-        ...     user_llm,
-        ...     activation_granularities=ModelWithSplitPoints.activation_granularities.TOKEN,
-        ...     classes=classes,
-        ... )
-        >>>
-        >>> # ----------------------------------------------
-        >>> # Step 1: Select interesting examples for ConSim
-        >>> indices, samples, labels, predictions = consim.select_examples(
-        ...     dataset["train"]["text"], dataset["train"]["label"],
-        ... )
-        >>>
-        >>> # -------------------------------------------------------------
-        >>> # Step 2: Evaluate the ConSim score, do not forget the baseline
-        >>> concepts_interpretation = {0: "example concept"}
-        >>> global_importances = torch.zeros(len(classes), 1)
-        >>> baseline = consim.evaluate(
-        ...     interesting_samples=samples,
-        ...     predictions=predictions,
-        ...     concepts_interpretation=concepts_interpretation,
-        ...     global_importances=global_importances,
-        ...     prompt_type=PromptTypes.L2_baseline_with_lp,
-        ... )
-        >>> consim_score = consim.evaluate(
-        ...     interesting_samples=samples,
-        ...     predictions=predictions,
-        ...     concept_explainer=concept_explainer_1,
-        ...     concepts_interpretation=concepts_interpretation,
-        ...     global_importances=global_importances,
-        ...     prompt_type=PromptTypes.E3_global_and_local_concepts_with_lp,
-        ... )
+        TODO: update examples.
     """
 
     prompt_types: type[PromptTypes] = PromptTypes
@@ -305,23 +211,22 @@ class ConSim(AutomatedSimulatability):
     @staticmethod
     def _quantize_importances(importance: float, threshold: float = 0.05) -> str | None:
         """
-        Convert the normalized importances to literals.
-        The literals and ranges (values for the default threshold value of 0.05) are:
-        - "++" for values above 0.3
-        - "+" for values between 0.05 and 0.3
-        - "-" for values between -0.05 and -0.3
-        - "--" for values below -0.3
+        Convert a normalized importance into the coarse symbols used in ConSim prompts.
+
+        The mapping keeps prompts short and stable across explainers:
+        `++` for values `>= 6 * threshold`, `+` for values `>= threshold`,
+        `-` for values `<= -threshold`, `--` for values `<= -6 * threshold`,
+        and `None` when the importance is too small to display.
 
         Arguments:
             importance: float
-                The importance to convert.
+                Scalar importance value.
             threshold: float
-                The threshold to select the most important concepts for each class.
+                Minimum absolute magnitude required to display a concept.
 
         Returns:
-            literals: str | None
-                The literals corresponding to the importances.
-                None if the importance is below the threshold. This should be filtered afterwards.
+            str | None:
+                One of `{"++", "+", "-", "--"}` or `None` when the concept should be omitted.
         """
         if importance <= -6 * threshold:
             return "--"
@@ -340,7 +245,10 @@ class ConSim(AutomatedSimulatability):
     @staticmethod
     def _resolve_prompt_setting(prompt_type: PromptTypes | PromptSetting) -> PromptSetting:
         """
-        Resolve a PromptSetting from either a PromptTypes enum or a direct PromptSetting.
+        Normalize either a preset enum member or a direct `PromptSetting`.
+
+        This lets public APIs accept the ergonomic preset form while keeping the internal renderer
+        and validator focused on a single concrete type.
         """
         if isinstance(prompt_type, PromptTypes):
             return prompt_type.value
@@ -352,9 +260,10 @@ class ConSim(AutomatedSimulatability):
         concepts_interpretation: dict[int, str],
     ) -> str:
         """
-        Produce a display string for a concept id including its label.
+        Format one concept identifier for display in a prompt.
 
-        Concept descriptions are limited to 100 characters.
+        Descriptions are truncated to 100 characters to keep prompts readable and to avoid a single
+        verbose interpretation dominating the context window.
         """
         if concept_id not in concepts_interpretation:
             raise ValueError(f"Missing label for concept id {concept_id} in `concepts_interpretation`.")
@@ -369,10 +278,25 @@ class ConSim(AutomatedSimulatability):
         threshold: float = 0.05,
     ) -> str:
         """
-        Format the top-k concepts into a printable string.
-        Concepts are sorted by absolute importance.
-        Importances are assumed to be normalized.
-        For contrastive settings, provide `foil_importances` to compute fact - foil.
+        Render a 1D concept-importance vector as a compact ConSim string.
+
+        The method selects the top-`k` concepts by absolute magnitude, quantizes their values with
+        `_quantize_importances`, and returns a short dictionary-like string such as
+        `{C0 (token pattern): ++, C7 (named entity): -}`.
+
+        Arguments:
+            importances: torch.Tensor
+                Concept scores, shape `(nb_concepts,)`.
+            concepts_interpretation: dict[int, str]
+                Human-readable label for each concept id.
+            top_k: int
+                Maximum number of concepts to inspect before thresholding.
+            threshold: float
+                Minimum absolute magnitude required for a concept to appear.
+
+        Returns:
+            str:
+                Printable concept summary.
         """
         if not isinstance(importances, torch.Tensor) or importances.ndim != 1:
             raise ValueError("`importances` must be a 1D torch.Tensor of concept importances.")
@@ -410,7 +334,10 @@ class ConSim(AutomatedSimulatability):
         threshold: float = 0.05,
     ) -> set[int]:
         """
-        Select concept ids that would appear in a rendered concept string.
+        Return the concept ids that would survive `_concepts_to_string`.
+
+        This helper mirrors the rendering logic without building the final string, which is useful
+        when a caller wants to track which concepts are exposed in a prompt.
         """
         if not isinstance(importances, torch.Tensor) or importances.ndim != 1:
             raise ValueError("`importances` must be a 1D torch.Tensor of concept importances.")
@@ -445,43 +372,54 @@ class ConSim(AutomatedSimulatability):
         contrastive_pairs: list[tuple[int, int]] | None = None,
     ) -> tuple[str, list[str], list[str]]:
         """
-        Create a prompt for the LLM model by integrating the different elements.
-        The text is adapted to the particular setting to cover all possibilities.
+        Render a validated ConSim configuration into LLM-ready prompts.
 
-        TODO: update docstring
+        This is the low-level text renderer used by `construct_prompt`. Once inputs have been
+        validated, it performs four deterministic steps:
+            1. build the shared task description and class list;
+            2. optionally add global concept summaries;
+            3. optionally add learning-phase examples with local concept information;
+            4. emit one user prompt per evaluation sample and the aligned expected class names.
 
-        Many possibilities are not explored through the `PromptTypes` enum, because they do not make sense.
+        The method accepts more combinations than the predefined `PromptTypes`, because custom
+        ablations may still be meaningful to power users.
 
         Arguments:
             setting: PromptSetting
-                Configuration, it says which elements should be included in the prompt.
+                Resolved prompt configuration.
             interesting_samples: list[str]
-                The sentences, the first half serve as examples and the second half is to be classified.
+                Selected samples, length `n_samples`.
+                The first `nb_learning_samples` are used in the learning phase and the rest are evaluation samples.
             corresponding_predictions: torch.Tensor
-                The predictions of the model on the sentences.
+                Model predictions aligned with `interesting_samples`, shape `(n_samples,)`.
             corresponding_labels: torch.Tensor
-                Gold labels for samples, required when contrastive local explanations are enabled.
+                Gold labels aligned with `interesting_samples`, shape `(n_samples,)`.
+                Used by contrastive local prompts, with predictions as facts and labels as foils.
             nb_learning_samples: int
-                The number of samples in the learning phase.
+                Number of samples placed in the learning phase.
             classes: dict[int, str]
-                The classes of the dataset (in the classes subset).
+                Display names for the class ids present in this run.
             concepts_interpretation: dict[int, str]
-                Dictionary with concepts interpretations.
+                Human-readable label for each concept id.
             global_importances: dict[int, torch.Tensor]
-                The importance of the concepts for each class.
-                A dictionary with the classes ids as keys and a vector of importances as values.
-            local_importances: list[dict[int, str]] | None
-                The importance of concepts for each sentence.
-                A list with each element corresponding to one sentence.
-                Each element of the list if a dictionary with an importance associated to a concept id.
+                Mapping `class_id -> importance vector`, each vector with shape `(nb_concepts,)`.
+            local_importances: list[torch.Tensor] | None
+                Per-sample local importance tensors. Only the first `nb_learning_samples` entries
+                are used; each entry must have shape `(nb_classes, nb_concepts)`.
+            top_k: int
+                Maximum number of concepts to inspect per rendered explanation.
+            importance_threshold: float
+                Minimum absolute magnitude required for a concept to appear.
             contrastive_pairs: list[tuple[int, int]] | None
-                Contrastive pairs of classes, required when contrastive global explanations are enabled.
+                List of `(fact_class_id, foil_class_id)` pairs for contrastive global prompts.
 
         Returns:
             system_prompt: str
-                The system prompt for the LLM. All instructions, the initial and learning phases.
-            user_prompt: str
-                The user prompt for the LLM. The examples on with the user-llm should predict, thus the evaluation phase.
+                Shared instructions and learning examples.
+            user_prompts: list[str]
+                One prompt per evaluation sample.
+            literal_model_predictions: list[str]
+                Expected class names aligned with `user_prompts`.
         """
         system_prompt_parts = []
 
@@ -651,54 +589,38 @@ class ConSim(AutomatedSimulatability):
         prompt_type: PromptTypes | PromptSetting = PromptTypes.E3_global_and_local_concepts_with_lp,
     ):
         """
-        Create prompts for the user-llm or meta-predictor.
+        Validate that the selected samples and explanation tensors match the chosen setting.
 
-        First the different elements are processed so that they can be included in the prompt via `ConSim._generate_prompt`.
-        Then the elements are integrated into a prompt via `ConSim._setting_to_prompt`.
-
-        TODO: update docstring
+        This method centralizes all shape checks and setting-dependent requirements before prompt
+        rendering. Keeping validation separate from `_setting_to_prompt` makes failures easier to
+        diagnose and keeps the renderer mostly focused on text generation.
 
         Arguments:
-            sentences: list[str]
-                The sentences, the first half serve as examples and the second half is to be classified.
-            predictions: torch.Tensor
-                The predictions of the model on the sentences.
-            nb_classes: int
-                The number of classes.
+            interesting_samples: list[str]
+                Selected samples, length `n_samples`.
+            corresponding_predictions: torch.Tensor
+                Model predictions aligned with `interesting_samples`, shape `(n_samples,)`.
+            corresponding_labels: torch.Tensor
+                Gold labels aligned with `interesting_samples`, shape `(n_samples,)`.
+                The tensor is always required in the signature so callers do not need different
+                code paths for contrastive versus non-contrastive settings.
             concepts_interpretation: dict[int, str]
-                The interpretation of the concepts, concepts are the keys.
-                For example, an interpretation could be the topk words that activates the most a given concepts.
+                Human-readable label for each concept id.
             global_importances: torch.Tensor
-                The importance of the concepts for each class.
-                Shape must be (nb_classes, nb_concepts).
+                Global concept importances, shape `(len(self.classes), nb_concepts)`.
+            nb_learning_samples: int
+                Number of samples that will be placed in the learning phase.
             local_importances: list[torch.Tensor] | None
-                Local concepts importances for each sentence.
-                Each element must have shape (nb_classes, nb_concepts).
-            labels: torch.Tensor
-                Gold labels for learning phase samples, required when contrastive local explanations are enabled.
+                Optional local concept importances. If provided, the list must contain at least
+                `nb_learning_samples` entries and each entry must have shape
+                `(len(self.classes), nb_concepts)`.
             prompt_type: PromptTypes | PromptSetting
-                The type of prompt to use. Possible values are:
+                Either a preset from `PromptTypes` or a custom setting.
 
-                - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
-
-                - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.
-
-                - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.
-
-                - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.
-
-                - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.
-
-                - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
-
-            importance_threshold: float
-                The threshold to quantize concept importances.
-
-        Returns:
-            prompt: list[tuple[Role, str]]
-                The prompts for the LLM, the format matches the `LLMInterface` API.
-            literal_model_predictions: list[str]
-                The model predictions as a list of strings, it allows easier comparison with the `user_llm` answers.
+        Raises:
+            ValueError:
+                If shapes are inconsistent or a required explanation tensor is missing for the
+                chosen setting.
         """
         setting = ConSim._resolve_prompt_setting(prompt_type)
         setting.validate(concepts_interpretation=concepts_interpretation, labels=corresponding_labels)
@@ -772,98 +694,60 @@ class ConSim(AutomatedSimulatability):
         contrastive_pairs: list[tuple[int, int]] | None = None,
     ) -> tuple[str, list[str], list[str]]:
         """
-        Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.
+        Build the prompts needed to run a ConSim evaluation.
 
-        TODO: update docstring
+        It resolves the chosen prompt preset, validates all inputs, filters class-dependent
+        artifacts to the classes that actually appear in `corresponding_predictions`, and delegates
+        the final text rendering to `_setting_to_prompt`.
 
-        First local concepts importances are computed via the `concept_explainer`.
-        Then a prompt is constructed by integrating all the different elements and following the `prompt_type`.
-        The prompt is sent to the `user_llm` and the model predictions are extracted from the response.
-        Finally, the score is computed by comparing the model predictions with the `user_llm` predictions.
-
-        The prompts have five parts:
-
-        - Initial Phase (IP.1) the first part is the task description, which is a list of questions to ask the LLM.
-
-        - Initial Phase (IP.2) the second is a global concepts explanation on $f$. Listing the important concepts for each class.
-
-        - Learning Phase (LP.1) the third gives examples of samples and predictions from the model $f$.
-
-        - Learning Phase (LP.2) the fourth is a local concepts explanation on $f$. Listing the important concepts in each example.
-
-        - Evaluation Phase (EP.1) the fifth is a list of samples on which the meta-predictor $\\Psi$ will be asked to predict the model $f$ predictions.
-
-        The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the
-        model $f$ predictions and computes the accuracy of the explanations.
+        The returned prompts follow the ConSim structure:
+            - task description and class list;
+            - optional global concept summaries;
+            - optional learning-phase examples;
+            - one user prompt per evaluation sample.
 
         Arguments:
+            setting: PromptTypes | PromptSetting
+                Preset or custom prompt configuration.
             interesting_samples: list[str]
-                The interesting samples.
-
+                Selected samples, shape `(n_samples,)`. The first `nb_learning_samples` are used
+                as learning-phase examples, the rest are evaluation samples.
             corresponding_predictions: torch.Tensor
-                The predictions of the model on the interesting samples.
-
-            corresponding_labels: list[int] | None
-                Gold labels for learning phase samples, required when contrastive local explanations are enabled.
-
+                Model predictions aligned with `interesting_samples`, shape `(n_samples,)`.
+            corresponding_labels: torch.Tensor
+                Gold labels aligned with `interesting_samples`, shape `(n_samples,)`.
+            nb_learning_samples: int
+                Number of samples assigned to the learning phase. Must be smaller than
+                `len(interesting_samples)`.
             concepts_interpretation: dict[int, str]
-                The concepts interpretation labels, keyed by concept id.
-
+                Human-readable label for each concept id.
             global_importances: torch.Tensor
-                The importance of the concepts for each class.
-                Shape must be (nb_classes, nb_concepts).
-
+                Global concept importances, shape `(len(self.classes), nb_concepts)`.
             local_importances: list[torch.Tensor] | None
-                The importance of concepts for each sentence.
-                Each element must have shape (nb_classes, nb_concepts).
-                This is computed automatically if not provided.
-
-            prompt_type: PromptTypes | PromptSetting
-                The type of prompt to use. Possible values are:
-
-                - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.
-
-                - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.
-
-                - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.
-
-                - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.
-
-                - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.
-
-                - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.
-
+                Optional local concept importances. Required by settings that expose local concepts.
+                Each entry must have shape `(len(self.classes), nb_concepts)`.
             top_k: int
-                The number of top concepts to show for each class / sample.
-
+                Maximum number of concepts to inspect per rendered explanation.
             importance_threshold: float
-                The threshold to quantize concept importances.
-
+                Minimum absolute magnitude required for a concept to appear.
             contrastive_pairs: list[tuple[int, int]] | None
-                Contrastive pairs of classes, required when contrastive global explanations are enabled.
-
+                List of `(fact_class_id, foil_class_id)` pairs for contrastive global prompts.
 
         Returns:
-            score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]
-                Possible outputs:
-
-                - score (float): The score of the ConSim metric. (The nominal behavior)
-                - None: If the model predictions are empty or the user-llm predictions are empty.
-                    It was chosen to return None,
-                    because ConSim should be called a lot of times for statistically significant results.
-                    Therefore, having a None score once in a while is better than the script crashing.
-                - prompts and model predictions (tuple[list[tuple[Role, str]], list[str]]):
-                    If no user_llm is provided, returns the prompts and the model predictions.
-                    The prompt is the first element of the tuple (list[tuple[Role, str]]).
-                    The predictions are the second element of the tuple (list[str]).
-                    The user will have to call the ConSim prompts manually.
-                    The response of the LLM on the prompts should be compared to the model predictions.
+            system_prompt: str
+                Shared instructions and learning examples.
+            user_prompts: list[str]
+                One prompt per evaluation sample.
+            model_predictions: list[str]
+                Expected class names aligned with `user_prompts`.
 
         Raises:
             ValueError
-                If the model predictions and the user-llm predictions have different lengths.
-            Warnings
-                If the user-llm response is empty or the format is not respected.
+                If the chosen setting is incompatible with the provided inputs.
+
+        Notes:
+            Only classes present in `corresponding_predictions` are rendered into the prompt.
+            When `contrastive_pairs` is provided, pairs involving absent classes are discarded.
         """
         setting = ConSim._resolve_prompt_setting(setting)
 
