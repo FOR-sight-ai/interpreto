@@ -33,6 +33,7 @@ from tqdm import tqdm
 
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
+from interpreto.concepts.metrics.simulatability.base import AutomatedSimulatability
 from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 
@@ -57,14 +58,11 @@ class PromptSetting(NamedTuple):
     # anonymization
     anonymize_classes: bool = False
 
-    # prediction
-    # pred_concepts: bool = False
-
     def validate(
         self,
         *,
         concepts_interpretation: dict[int, str],
-        gold_labels: torch.Tensor | list[int] | None,
+        labels: torch.Tensor | list[int] | None,
     ) -> None:
         """
         Validate the prompt setting against required inputs and incompatible options.
@@ -80,10 +78,17 @@ class PromptSetting(NamedTuple):
                 "PromptSetting.lp_concepts_local_contributions and PromptSetting.lp_local_contrastive_importance are mutually exclusive."
             )
 
-        if self.lp_local_contrastive_importance and gold_labels is None:
+        if self.lp_local_contrastive_importance and labels is None:
             raise ValueError(
-                "PromptSetting.lp_local_contrastive_importance=True requires `gold_labels` to be provided to ConSim.evaluate()."
+                "PromptSetting.lp_local_contrastive_importance=True requires `labels` to be provided to ConSim.evaluate()."
             )
+
+        if self.lp_concepts_local_contributions or self.lp_local_contrastive_importance:
+            if not self.lp_samples:
+                raise ValueError(
+                    "PromptSetting.lp_concepts_local_contributions or PromptSetting.lp_local_contrastive_importance "
+                    "requires `lp_samples=True` to be provided to ConSim.evaluate()."
+                )
 
 
 class PromptTypes(Enum):
@@ -144,7 +149,7 @@ class PromptTypes(Enum):
     )
 
 
-class ConSim:
+class ConSim(AutomatedSimulatability):
     """Code: [:octicons-mark-github-24: `concepts/metrics/consim.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/metrics/consim.py)
 
     ConSim for Concept-based Simulatability. Was introduced by Poché et al. in 2025[^1].
@@ -276,7 +281,7 @@ class ConSim:
         >>>
         >>> # ----------------------------------------------
         >>> # Step 1: Select interesting examples for ConSim
-        >>> samples, labels, predictions = consim.select_examples(
+        >>> indices, samples, labels, predictions = consim.select_examples(
         ...     dataset["train"]["text"], dataset["train"]["label"],
         ... )
         >>>
@@ -302,321 +307,6 @@ class ConSim:
     """
 
     prompt_types: type[PromptTypes] = PromptTypes
-
-    def __init__(
-        self,
-        model_with_split_points: ModelWithSplitPoints,
-        activation_granularity: ActivationGranularity,
-        classes: list[str],
-        user_llm: LLMInterface | None = None,
-        split_point: str | None = None,
-    ):
-        """
-        Initialize the ConSim metric.
-        """
-        self.model_with_split_points = model_with_split_points
-        if split_point is None:
-            if len(self.model_with_split_points.split_points) > 1:
-                raise ValueError(
-                    "If the model has more than one split point, a split point for fitting the concept model should "
-                    f"be specified. Got split point: '{split_point}' with model split points: "
-                    f"{', '.join(self.model_with_split_points.split_points)}."
-                )
-            split_point = self.model_with_split_points.split_points[0]
-
-        if split_point not in self.model_with_split_points.split_points:
-            raise ValueError(
-                f"Split point '{split_point}' not found in model split points: {', '.join(self.model_with_split_points.split_points)}."
-            )
-
-        self.split_point: str = split_point
-        self.activation_granularity: ActivationGranularity = activation_granularity
-        self.user_llm: LLMInterface | None = user_llm
-        self.classes: list[str] = classes
-
-    def _get_predictions(
-        self, inputs: list[str], batch_size: int = 64, device: torch.device | str | None = None, tqdm_bar: bool = False
-    ) -> torch.Tensor:
-        """
-        Get the predictions of the model on a list of inputs.
-        Called by `select_examples`.
-
-        Arguments:
-            inputs: list[str]
-                The inputs to predict.
-            batch_size: int
-                The batch size to use for the predictions.
-            device: torch.device | str
-                The device to use for the predictions.
-            tqdm_bar: bool
-                Whether to show a tqdm bar.
-
-        Returns:
-            predictions: torch.Tensor
-                The predictions of the model on the inputs.
-        """
-        if getattr(self.model_with_split_points, "dispatched", True) is False:
-            # ConSim forwards through self.model_with_split_points._model directly, so ensure weights are loaded.
-            # This is not what NNsight expects, but we do not want to load it a second time nor look into now.
-            self.model_with_split_points.dispatch()
-
-        device = device if device is not None else self.model_with_split_points.device
-        all_predictions = []
-        for batch_index in tqdm(
-            range(0, len(inputs), batch_size),
-            desc="Computing predictions",
-            unit="batch",
-            total=len(inputs),
-            disable=not tqdm_bar,
-        ):
-            batch_inputs = inputs[batch_index : batch_index + batch_size]
-            batch_tokens = self.model_with_split_points.tokenizer(
-                batch_inputs, return_tensors="pt", padding=True, truncation=True
-            ).to(device)  # type: ignore
-            logits = self.model_with_split_points._model(
-                batch_tokens["input_ids"], batch_tokens["attention_mask"]
-            ).logits
-            predictions = torch.argmax(logits, dim=-1)
-            all_predictions.append(predictions)
-        return torch.cat(all_predictions)
-
-    def _extract_interesting_elements(
-        self,
-        inputs: list[str],
-        labels: torch.Tensor,
-        predictions: torch.Tensor,
-        nb_lp_samples: int = 20,
-        nb_ep_samples: int = 20,
-        seed: int = 0,
-        classes_subset: list[int] | None = None,
-    ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
-        """
-        Extract interesting elements from the inputs, labels, and predictions.
-        It selects `nb_lp_samples` + `nb_ep_samples` samples from the inputs.
-        The goal is to select uniformly between each class (with respect to the labels).
-        There should be as many samples where the initial model prediction are correct as incorrect.
-        The samples are then randomly shuffled.
-
-        The first `nb_lp_samples` samples are selected for the learning phase.
-        The last `nb_ep_samples` samples are selected for the evaluation phase.
-
-        Therefore, there is no guarantee on the repartition inside learning and evaluation phase.
-
-        Called by `select_examples`.
-
-        Arguments:
-            inputs: list[str]
-                The inputs to predict.
-            labels: torch.Tensor
-                The labels of the inputs.
-            predictions: torch.Tensor
-                The predictions of the model on the inputs.
-            nb_lp_samples: int
-                The number of samples to select for the learning phase.
-            nb_ep_samples: int
-                The number of samples to select for the evaluation phase.
-            seed: int
-                The seed to use for the random selection.
-            classes_subset: list[int] | None
-                Optional subset of class ids to sample from.
-
-        Returns:
-            interesting_samples: list[str]
-                The interesting samples.
-            labels: torch.Tensor
-                The labels of the interesting samples.
-            predictions: torch.Tensor
-                The predictions of the model on the interesting samples.
-        """
-        if classes_subset is None:
-            class_ids = list(range(len(self.classes))) if self.classes is not None else torch.unique(labels).tolist()
-        else:
-            class_ids = classes_subset
-
-        nb_classes = len(class_ids)
-        nb_correct = (nb_lp_samples + nb_ep_samples) // 2
-        nb_mistakes = nb_lp_samples + nb_ep_samples - nb_correct
-
-        if nb_classes > nb_lp_samples:
-            raise ValueError(
-                f"Not enough samples ({nb_lp_samples}) to represent the {nb_classes} classes in the learning phase."
-                "Please increase the number of learning phase samples or take a subset of classes."
-            )
-
-        # Find the correct and incorrect indices
-        is_prediction_correct = predictions == labels
-        correct_indices = torch.nonzero(is_prediction_correct)
-        incorrect_indices = torch.nonzero(~is_prediction_correct)
-        del is_prediction_correct
-
-        if len(correct_indices) < nb_correct or len(incorrect_indices) < nb_mistakes:
-            raise ValueError(
-                f"Not enough correct or incorrect predictions to select {nb_correct} correct and {nb_mistakes} incorrect."
-                f"Either provide more inputs (currently {len(correct_indices)} correct and {len(incorrect_indices)} incorrect)"
-                "or reduce the number of samples to select."
-            )
-
-        # select random indices
-        torch.random.manual_seed(seed)
-        correct_indices = correct_indices[torch.randperm(len(correct_indices))]
-        incorrect_indices = incorrect_indices[torch.randperm(len(incorrect_indices))]
-
-        # select the first nb_correct and nb_mistakes indices, each class should be represented
-        nb_correct_elements_per_class = nb_correct // nb_classes
-        nb_mistakes_elements_per_class = nb_mistakes // nb_classes
-
-        if nb_correct_elements_per_class == 0 or nb_mistakes_elements_per_class == 0:
-            warnings.warn(
-                f"Not enough correct ({nb_correct_elements_per_class}) or incorrect ({nb_mistakes_elements_per_class})"
-                f" predictions to represent the {nb_classes} classes inb both correct and incorrect."
-                "The classes of interest will be selected randomly.",
-                stacklevel=2,
-            )
-            nb_correct_elements_per_class = 1
-            nb_mistakes_elements_per_class = 1
-
-        # select correct and incorrect indices for each class
-        class_wise_correct_indices = []
-        class_wise_incorrect_indices = []
-        for c in class_ids:
-            class_wise_correct_indices.append(correct_indices[labels[correct_indices] == c])
-            class_wise_incorrect_indices.append(incorrect_indices[labels[incorrect_indices] == c])
-
-        selected_correct_indices = torch.cat([c[:nb_correct_elements_per_class] for c in class_wise_correct_indices])[
-            :nb_correct
-        ]
-        selected_incorrect_indices = torch.cat(
-            [c[:nb_mistakes_elements_per_class] for c in class_wise_incorrect_indices]
-        )[:nb_mistakes]
-
-        # in case the number of correct or incorrect is not a multiple of the number of classes
-        nb_correct_remaining = nb_correct - nb_correct_elements_per_class * nb_classes
-        if nb_correct_remaining:
-            additional_possible_correct_indices = torch.cat(
-                [c[nb_correct_elements_per_class:] for c in class_wise_correct_indices]
-            )
-            new_indices = torch.randint(len(additional_possible_correct_indices), (nb_correct_remaining,))
-            additional_correct_indices = additional_possible_correct_indices[new_indices]
-            selected_correct_indices = torch.cat([selected_correct_indices, additional_correct_indices])
-
-        nb_mistakes_remaining = nb_mistakes - nb_mistakes_elements_per_class * nb_classes
-        if nb_mistakes_remaining:
-            additional_possible_incorrect_indices = torch.cat(
-                [c[nb_mistakes_elements_per_class:] for c in class_wise_incorrect_indices]
-            )
-            new_indices = torch.randint(len(additional_possible_incorrect_indices), (nb_mistakes_remaining,))
-            additional_incorrect_indices = additional_possible_incorrect_indices[new_indices]
-            selected_incorrect_indices = torch.cat([selected_incorrect_indices, additional_incorrect_indices])
-
-        indices = torch.cat([selected_correct_indices, selected_incorrect_indices])
-
-        # shuffle the indices
-        indices = indices[torch.randperm(len(indices))]
-
-        interesting_samples = [inputs[i] for i in indices]
-
-        return interesting_samples, labels[indices], predictions[indices]
-
-    def select_examples(
-        self,
-        inputs: list[str],
-        labels: torch.Tensor,
-        predictions: torch.Tensor | None = None,
-        nb_lp_samples: int = 20,
-        nb_ep_samples: int = 20,
-        seed: int = 0,
-        batch_size: int = 64,
-        device: torch.device | str | None = None,
-        classes_subset: list[int] | list[str] | None = None,
-    ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
-        """
-        Select examples for the ConSim metric. It first computes the models' predictions on the inputs.
-        Then, it selects `nb_lp_samples` + `nb_ep_samples` samples from the inputs.
-        The goal is to select uniformly between each class (with respect to the labels).
-        There should be as many samples where the initial model prediction are correct as incorrect.
-        The samples are then randomly shuffled.
-
-        The first `nb_lp_samples` samples are selected for the learning phase.
-        The last `nb_ep_samples` samples are selected for the evaluation phase.
-
-        Therefore, there is no guarantee on the repartition inside learning and evaluation phase.
-
-        Arguments:
-            inputs: list[str]
-                The inputs to predict.
-            labels: torch.Tensor
-                The labels of the inputs.
-            predictions: torch.Tensor | None
-                The predictions of the model on the inputs.
-                If not provided, the predictions are computed by calling `self._get_predictions`.
-            nb_lp_samples: int
-                The number of samples to select for the learning phase.
-            nb_ep_samples: int
-                The number of samples to select for the evaluation phase.
-            seed: int
-                The seed to use for the random selection.
-            batch_size: int
-                The batch size to use for the predictions.
-            device: torch.device | str | None
-                The device to use for the predictions.
-            classes_subset: list[int] | None
-                Optional subset of classes to sample from. When provided, only samples whose labels
-                and predictions are both in this subset are considered.
-
-        Returns:
-            interesting_samples: list[str]
-                The interesting samples.
-            labels: torch.Tensor
-                The labels of the interesting samples.
-            predictions: torch.Tensor
-                The predictions of the model on the interesting samples.
-        """
-        # compute predictions if not provided
-        if predictions is None:
-            predictions = self._get_predictions(inputs, batch_size=batch_size, device=device)
-
-        class_ids = None
-        if classes_subset is not None:
-            if not isinstance(classes_subset, (list, tuple)):
-                raise TypeError("`classes_subset` must be a list or tuple of class ids or class names.")
-            if len(classes_subset) < 2:
-                raise ValueError("`classes_subset` must contain at least two classes.")
-
-            if not all(isinstance(c, int) for c in classes_subset):
-                raise TypeError("`classes_subset` must be a list of class ids.")
-
-            class_ids = [int(c) for c in classes_subset]
-
-            seen = set()
-            class_ids = [c for c in class_ids if not (c in seen or seen.add(c))]
-
-            if predictions.device != labels.device:
-                predictions = predictions.to(labels.device)
-
-            class_ids_tensor = torch.tensor(class_ids, device=labels.device, dtype=labels.dtype)
-            label_mask = (labels.unsqueeze(1) == class_ids_tensor).any(dim=1)
-            pred_mask = (predictions.unsqueeze(1) == class_ids_tensor).any(dim=1)
-            subset_mask = label_mask & pred_mask
-
-            if not torch.any(subset_mask):
-                raise ValueError(
-                    "No samples found where both labels and predictions are in the requested `classes_subset`."
-                )
-
-            subset_indices = torch.nonzero(subset_mask, as_tuple=False).squeeze(-1)
-            inputs = [inputs[i] for i in subset_indices.tolist()]
-            labels = labels[subset_indices]
-            predictions = predictions[subset_indices]
-
-        return self._extract_interesting_elements(
-            inputs=inputs,
-            labels=labels,
-            predictions=predictions.cpu(),
-            nb_lp_samples=nb_lp_samples,
-            nb_ep_samples=nb_ep_samples,
-            seed=seed,
-            classes_subset=class_ids,
-        )
 
     @staticmethod
     def _quantize_importances(importance: float, threshold: float = 0.05) -> str | None:
@@ -746,34 +436,41 @@ class ConSim:
         }
 
     @staticmethod
-    def _setting_to_prompt(  # noqa: PLR0912  # ignore too many branches  # too many special cases
+    def _setting_to_prompt(  # type: ignore[override]  # noqa: PLR0912  # ignore too many branches  # too many special cases
         setting: PromptSetting,
-        sentences: list[str],
-        predictions: torch.Tensor,
+        interesting_samples: list[str],
+        corresponding_predictions: torch.Tensor,
+        corresponding_labels: torch.Tensor,
+        nb_learning_samples: int,
         classes: dict[int, str],
         concepts_interpretation: dict[int, str],
         global_importances: dict[int, torch.Tensor],
         local_importances: list[torch.Tensor] | None,
-        gold_labels: list[int] | None,
         top_k: int = 5,
         importance_threshold: float = 0.05,
         contrastive_pairs: list[tuple[int, int]] | None = None,
-    ) -> tuple[str, str, list[str]]:
+    ) -> tuple[str, list[str], list[str]]:
         """
         Create a prompt for the LLM model by integrating the different elements.
         The text is adapted to the particular setting to cover all possibilities.
+
+        TODO: update docstring
 
         Many possibilities are not explored through the `PromptTypes` enum, because they do not make sense.
 
         Arguments:
             setting: PromptSetting
                 Configuration, it says which elements should be included in the prompt.
-            sentences: list[str]
+            interesting_samples: list[str]
                 The sentences, the first half serve as examples and the second half is to be classified.
-            predictions: torch.Tensor
+            corresponding_predictions: torch.Tensor
                 The predictions of the model on the sentences.
-            classes: list[str]
-                The classes of the dataset.
+            corresponding_labels: torch.Tensor
+                Gold labels for samples, required when contrastive local explanations are enabled.
+            nb_learning_samples: int
+                The number of samples in the learning phase.
+            classes: dict[int, str]
+                The classes of the dataset (in the classes subset).
             concepts_interpretation: dict[int, str]
                 Dictionary with concepts interpretations.
             global_importances: dict[int, torch.Tensor]
@@ -783,8 +480,6 @@ class ConSim:
                 The importance of concepts for each sentence.
                 A list with each element corresponding to one sentence.
                 Each element of the list if a dictionary with an importance associated to a concept id.
-            gold_labels: list[int] | None
-                Gold labels for samples, required when contrastive local explanations are enabled.
             contrastive_pairs: list[tuple[int, int]] | None
                 Contrastive pairs of classes, required when contrastive global explanations are enabled.
 
@@ -875,19 +570,23 @@ class ConSim:
 
         # ==============================================================================================
         # Learning phase
-        mid_index = len(sentences) // 2
         if setting.lp_samples:
             learning_phase_blocks = []
-            for i in range(mid_index):
+            for i in range(nb_learning_samples):
                 # ----------------------------------------
                 # samples text and label (predicted class)
-                block = [f"Sample_{i}:", f"\tText: {sentences[i]}", f"\tLabel: {classes[int(predictions[i])]}"]
+                block = [
+                    f"Sample_{i}:",
+                    f"\tText: {interesting_samples[i]}",
+                    f"\tLabel: {classes[int(corresponding_predictions[i])]}",
+                ]
 
                 # ----------------------------
                 # concepts local contributions
                 if setting.lp_concepts_local_contributions:
+                    pred = int(corresponding_predictions[i].item())
                     str_importances = ConSim._concepts_to_string(
-                        local_importances[i][predictions[i].to(torch.int32).item()],  # type: ignore
+                        local_importances[i][pred],  # type: ignore
                         concepts_interpretation,
                         top_k=top_k,
                         threshold=importance_threshold,
@@ -897,8 +596,8 @@ class ConSim:
                 # ----------------------------------------
                 # contrastive local concepts contributions
                 if setting.lp_local_contrastive_importance:
-                    pred_index = int(predictions[i].item())
-                    gold_index = gold_labels[i]  # type: ignore
+                    pred_index = int(corresponding_predictions[i].item())
+                    gold_index = int(corresponding_labels[i].item())
 
                     # show the contrastive only for misclassified samples
                     if pred_index == gold_index:
@@ -920,30 +619,41 @@ class ConSim:
                 learning_phase_blocks.append("\n".join(block))
             system_prompt_parts.append("\n".join(learning_phase_blocks))
 
+        # concatenate prompts parts
+        system_prompt = "\n\n".join(system_prompt_parts)
+
         # ==============================================================================================
         # Inference
         # ----------------
         # show the samples
-        ep_local_prompt = "\n".join([f"Sample_{i}: {sentences[i]}" for i in range(mid_index, 2 * mid_index)])
+        user_prompt = [
+            "\n".join(
+                [
+                    f"Sample_{i}:",
+                    f"\tText: {interesting_samples[i]}",
+                    "\tLabel: ",
+                ]
+            )
+            for i in range(nb_learning_samples, len(interesting_samples))
+        ]
 
         # -----------------
         # model predictions (not included in the prompt, but returned to compute accuracy)
-        literal_model_predictions = [classes[int(predictions[i])] for i in range(mid_index)]
-
-        # concatenate prompts parts
-        system_prompt = "\n\n".join(system_prompt_parts)
-        user_prompt = ep_local_prompt
+        literal_model_predictions = [
+            classes[int(corresponding_predictions[i])] for i in range(nb_learning_samples, len(interesting_samples))
+        ]
 
         return system_prompt, user_prompt, literal_model_predictions
 
-    @staticmethod
     def _check_input_settings_correspondence(
-        sentences: list[str],
-        nb_classes: int,
+        self,
+        interesting_samples: list[str],
+        corresponding_predictions: torch.Tensor,
+        corresponding_labels: torch.Tensor,
         concepts_interpretation: dict[int, str],
         global_importances: torch.Tensor,
+        nb_learning_samples: int,
         local_importances: list[torch.Tensor] | None,
-        gold_labels: list[int] | None,
         prompt_type: PromptTypes | PromptSetting = PromptTypes.E3_global_and_local_concepts_with_lp,
     ):
         """
@@ -951,6 +661,8 @@ class ConSim:
 
         First the different elements are processed so that they can be included in the prompt via `ConSim._generate_prompt`.
         Then the elements are integrated into a prompt via `ConSim._setting_to_prompt`.
+
+        TODO: update docstring
 
         Arguments:
             sentences: list[str]
@@ -968,7 +680,7 @@ class ConSim:
             local_importances: list[torch.Tensor] | None
                 Local concepts importances for each sentence.
                 Each element must have shape (nb_classes, nb_concepts).
-            gold_labels: list[int] | None
+            labels: torch.Tensor
                 Gold labels for learning phase samples, required when contrastive local explanations are enabled.
             prompt_type: PromptTypes | PromptSetting
                 The type of prompt to use. Possible values are:
@@ -995,15 +707,32 @@ class ConSim:
                 The model predictions as a list of strings, it allows easier comparison with the `user_llm` answers.
         """
         setting = ConSim._resolve_prompt_setting(prompt_type)
-        setting.validate(concepts_interpretation=concepts_interpretation, gold_labels=gold_labels)
-
-        mid_index = len(sentences) // 2
+        setting.validate(concepts_interpretation=concepts_interpretation, labels=corresponding_labels)
 
         # ==========================================================================================
         # Extensive checks
+        if nb_learning_samples >= len(interesting_samples):
+            raise ValueError(
+                f"`nb_learning_samples` must be smaller than the number of samples. "
+                f"Got {nb_learning_samples=} and {len(interesting_samples)=}."
+            )
+
+        if len(corresponding_predictions) != len(interesting_samples):
+            raise ValueError(
+                f"`corresponding_predictions` and `interesting_samples` must have the same length. "
+                f"Got {len(corresponding_predictions)=} and {len(interesting_samples)=}."
+            )
+
+        if len(corresponding_labels) != len(interesting_samples):
+            raise ValueError(
+                f"`corresponding_labels` and `interesting_samples` must have the same length. "
+                f"Got {len(corresponding_labels)=} and {len(interesting_samples)=}."
+            )
+
         if not isinstance(global_importances, torch.Tensor) or global_importances.ndim != 2:
             raise ValueError("`global_importances` must be a torch.Tensor with shape (nb_classes, nb_concepts).")
-        if global_importances.shape[0] != nb_classes:
+
+        if global_importances.shape[0] != len(self.classes):
             raise ValueError(
                 "`global_importances` must have shape (nb_classes, nb_concepts) with nb_classes matching `classes`."
             )
@@ -1013,188 +742,45 @@ class ConSim:
                 raise ValueError(
                     "`local_importances` must be a non-empty list of torch.Tensor with shape (nb_classes, nb_concepts)."
                 )
+            if len(local_importances) < nb_learning_samples:
+                raise ValueError(
+                    "`local_importances` must have at least `nb_learning_samples` entries. "
+                    f"Got {len(local_importances)=} and {nb_learning_samples=}"
+                )
             for sample_importances in local_importances:
                 if not isinstance(sample_importances, torch.Tensor) or sample_importances.ndim != 2:
                     raise ValueError(
                         "`local_importances` must be a list of torch.Tensor with shape (nb_classes, nb_concepts)."
                     )
-                if sample_importances.shape[0] != nb_classes:
+                if sample_importances.shape[0] != len(self.classes):
                     raise ValueError(
                         "`local_importances` entries must have shape (nb_classes, nb_concepts) with nb_classes matching `classes`."
                     )
-            local_importances_count = len(local_importances)
-            if local_importances_count not in {mid_index, len(sentences)}:
-                raise ValueError(
-                    "`local_importances` must have nb_samples entries matching the learning phase size "
-                    "or the full number of sentences. "
-                    f"Got nb_samples={local_importances_count} and nb_sentences={len(sentences)}."
-                )
-
-        if setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance:
-            if local_importances is None:
-                raise ValueError(
-                    "PromptSetting.lp_concepts_local_contributions or PromptSetting.lp_local_contrastive_importance "
-                    "requires `local_importances` to be provided to ConSim.evaluate()."
-                )
-            if setting.lp_local_contrastive_importance:
-                if gold_labels is None or len(gold_labels) < mid_index:
-                    raise ValueError(
-                        "PromptSetting.lp_local_contrastive_importance=True requires `gold_labels` "
-                        "to be provided for the learning phase samples."
-                    )
-
-    @staticmethod
-    def _extract_predictions_from_response(response: str | None, expected_length: int) -> list[str] | None:
-        """
-        Extract the model predictions from the response.
-        The response is expected to be a list of predictions for each sample.
-        The predictions are expected to be separated by "\n".
-
-        Example of a response:
-
-        ```
-        Sample_0: physician
-        Sample_1: surgeon
-        Sample_2: nurse
-        ```
-
-        Arguments:
-            response: str
-                The response from the user-llm or meta-predictor.
-            expected_length: int
-                The expected length of the response.
-
-        Returns:
-            predictions: list[str] | None
-                The model predictions.
-                If the response is empty or the expected length is not respected, returns None.
-        """
-        if response == "" or response is None:
-            return None
-
-        sentences = response.split("\n")
-
-        while sentences[-1] == "":
-            sentences = sentences[:-1]
-
-        if len(sentences) != expected_length:
-            return None
-
-        # format not respected, expecting predictions to be only separated by "\n"
-        if ":" not in sentences[0]:
-            return sentences
-
-        # expected format: Sample_0: physician\nSample_1: surgeon\nSample_2: nurse
-        predictions = [
-            sentence.split(": ")[1].strip().lower().split(" ")[0]
-            for sentence in sentences
-            if (sentence[:10] == "Prediction" or sentence[:8] == "Sentence" or sentence[:6] == "Sample")
-        ]
-        return predictions
-
-    @staticmethod
-    def _predictions_accuracy(model_predictions: list[str], user_llm_predictions: list[str]) -> float | None:
-        """
-        Compute the accuracy of the model predictions.
-
-        Arguments:
-            model_predictions: list[str]
-                The model predictions.
-            user_llm_predictions: list[str]
-                The user-llm predictions.
-
-        Returns:
-            accuracy: float | None
-                The accuracy of the model predictions.
-                If the model predictions are empty or the user-llm predictions are empty, returns None.
-
-        Raises:
-            ValueError
-                If the model predictions and the user-llm predictions have different lengths.
-        """
-        if len(model_predictions) != len(user_llm_predictions):
-            warnings.warn(
-                "Predictions between model and user-llm have different lengths, returning None"
-                f"respectively: {len(model_predictions)} and {len(user_llm_predictions)}.",
-                stacklevel=2,
+        elif setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance:
+            raise ValueError(
+                "PromptSetting.lp_concepts_local_contributions or PromptSetting.lp_local_contrastive_importance "
+                "requires `local_importances` to be provided to ConSim.evaluate()."
             )
-            return None
 
-        n_correct = len(
-            [
-                1
-                for pred1, pred2 in zip(model_predictions, user_llm_predictions, strict=True)
-                if pred1.lower() == pred2.lower()
-            ]
-        )
-
-        return n_correct / len(model_predictions)
-
-    @staticmethod
-    def _compute_score(
-        user_llm_response: str | None,
-        literal_model_predictions: list[str],
-    ) -> float | None:
-        """
-        Compute the score of the ConSim metric,
-        thus the accuracy of the `user_llm` predictions with respect to the model predictions.
-
-        Responses from the `user_llm` are expected to be in the format:
-
-        ```
-        Sample_0: physician
-        Sample_1: surgeon
-        Sample_2: nurse
-        ```
-
-        Arguments:
-            user_llm_response: str
-                The response from the user-llm or meta-predictor.
-            literal_model_predictions: list[str]
-                The model predictions.
-
-        Returns:
-            score: float | None
-                The score of the ConSim metric.
-                If the model predictions are empty or the user-llm predictions are empty, returns None.
-
-        Raises:
-            ValueError
-                If the model predictions and the user-llm predictions have different lengths.
-        """
-        # extract the model predictions
-        literal_meta_predictions = ConSim._extract_predictions_from_response(
-            response=user_llm_response, expected_length=len(literal_model_predictions)
-        )
-
-        if literal_meta_predictions is None or len(literal_meta_predictions) == 0:
-            warnings.warn(
-                "The user-llm responses are empty or the format is not respected. Returning None. "
-                f"The response was: '{user_llm_response}'",
-                stacklevel=2,
-            )
-            return None
-
-        # compute the accuracy
-        return ConSim._predictions_accuracy(literal_model_predictions, literal_meta_predictions)
-
-    def evaluate(
+    def construct_prompt(  # type: ignore[override]
         self,
+        setting: PromptTypes | PromptSetting,
         interesting_samples: list[str],
-        predictions: torch.Tensor,
-        concept_explainer: ConceptAutoEncoderExplainer | None = None,
+        corresponding_predictions: torch.Tensor,
+        corresponding_labels: torch.Tensor,
+        nb_learning_samples: int,
         *,
         concepts_interpretation: dict[int, str],
         global_importances: torch.Tensor,
         local_importances: list[torch.Tensor] | None = None,
-        prompt_type: PromptTypes | PromptSetting = PromptTypes.E3_global_and_local_concepts_with_lp,
         top_k: int = 5,
         importance_threshold: float = 0.05,
-        gold_labels: list[int] | None = None,
         contrastive_pairs: list[tuple[int, int]] | None = None,
-    ) -> float | None | tuple[list[tuple[Role, str]], list[str]]:
+    ) -> tuple[str, list[str], list[str]]:
         """
         Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.
+
+        TODO: update docstring
 
         First local concepts importances are computed via the `concept_explainer`.
         Then a prompt is constructed by integrating all the different elements and following the `prompt_type`.
@@ -1220,11 +806,11 @@ class ConSim:
             interesting_samples: list[str]
                 The interesting samples.
 
-            predictions: torch.Tensor
+            corresponding_predictions: torch.Tensor
                 The predictions of the model on the interesting samples.
 
-            concept_explainer: ConceptAutoEncoderExplainer | None
-                The concept explainer. Can be None for the baseline.
+            corresponding_labels: list[int] | None
+                Gold labels for learning phase samples, required when contrastive local explanations are enabled.
 
             concepts_interpretation: dict[int, str]
                 The concepts interpretation labels, keyed by concept id.
@@ -1259,9 +845,6 @@ class ConSim:
             importance_threshold: float
                 The threshold to quantize concept importances.
 
-            gold_labels: list[int] | None
-                Gold labels for learning phase samples, required when contrastive local explanations are enabled.
-
             contrastive_pairs: list[tuple[int, int]] | None
                 Contrastive pairs of classes, required when contrastive global explanations are enabled.
 
@@ -1288,52 +871,22 @@ class ConSim:
             Warnings
                 If the user-llm response is empty or the format is not respected.
         """
-        setting = ConSim._resolve_prompt_setting(prompt_type)
-
-        needs_local_importances = setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance
-        if local_importances is None and concept_explainer is not None and needs_local_importances:
-            # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
-            if concept_explainer.split_point not in self.model_with_split_points.split_points:
-                raise ValueError(
-                    "The split point used in the provided `concept_explainer` should be one of the `model_with_split_points` ones."
-                    f"Got split point: '{concept_explainer.split_point}' with model split points: "
-                    f"{', '.join(self.model_with_split_points.split_points)}."
-                )
-            if (
-                concept_explainer.model_with_split_points._model.config.name_or_path
-                != self.model_with_split_points._model.config.name_or_path
-            ):
-                raise ValueError(
-                    "The model used in the provided `concept_explainer` should be the same as the one used in the `model_with_split_points`."
-                    f"Got (concept_explainer) model name or path: '{concept_explainer.model_with_split_points._model.config.name_or_path}'"
-                    f"and (model_with_split_points) model name or path: '{self.model_with_split_points._model.config.name_or_path}'."
-                )
-
-            # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
-            # For now we force gradient-input
-
-            local_importances = concept_explainer.concept_output_gradient(
-                inputs=interesting_samples[: len(interesting_samples) // 2],
-                split_point=self.split_point,
-                activation_granularity=self.activation_granularity,
-                concepts_x_gradients=True,
-                tqdm_bar=False,
-            )
-            local_importances = [sample_importance.squeeze(1) for sample_importance in local_importances]
+        setting = ConSim._resolve_prompt_setting(setting)
 
         # check inputs with respect to setting
-        ConSim._check_input_settings_correspondence(
-            sentences=interesting_samples,
-            nb_classes=len(self.classes),
+        self._check_input_settings_correspondence(
+            interesting_samples=interesting_samples,
+            corresponding_predictions=corresponding_predictions,
+            corresponding_labels=corresponding_labels,
             concepts_interpretation=concepts_interpretation,
             global_importances=global_importances,
             local_importances=local_importances,
-            gold_labels=gold_labels,
             prompt_type=setting,
+            nb_learning_samples=nb_learning_samples,
         )
 
         # extract the classes present in the predictions or the gold labels
-        classes_ids = sorted(set(predictions.tolist()) | set(gold_labels or []))
+        classes_ids = sorted(corresponding_predictions.unique().tolist())
         classes = {class_id: self.classes[class_id] for class_id in classes_ids}
 
         # filter based on classes subset
@@ -1344,35 +897,17 @@ class ConSim:
             ]  # type: ignore
 
         # integrate the different elements into a prompt
-        system_prompt, user_prompt, literal_model_predictions = ConSim._setting_to_prompt(
+        return ConSim._setting_to_prompt(
             setting=setting,
-            sentences=interesting_samples,
-            predictions=predictions,
+            interesting_samples=interesting_samples,
+            corresponding_predictions=corresponding_predictions,
+            corresponding_labels=corresponding_labels,
+            nb_learning_samples=nb_learning_samples,
             classes=classes,
             concepts_interpretation=concepts_interpretation,
             global_importances=global_importances_dict,
             local_importances=local_importances,
-            gold_labels=gold_labels,
             top_k=top_k,
             importance_threshold=importance_threshold,
             contrastive_pairs=contrastive_pairs,
-        )
-
-        # convert the prompt to match the `LLMInterface` API
-        prompts: list[tuple[Role, str]] = [
-            (Role.SYSTEM, system_prompt),
-            (Role.USER, user_prompt),
-            (Role.ASSISTANT, ""),
-        ]
-
-        # if no user_llm is provided, we return the prompts and the model predictions
-        if self.user_llm is None:
-            return prompts, literal_model_predictions
-
-        user_llm_response = self.user_llm.generate(prompts)
-
-        # raise warnings if the response is empty or the format is not respected
-        return self._compute_score(
-            user_llm_response=user_llm_response,
-            literal_model_predictions=literal_model_predictions,
         )
