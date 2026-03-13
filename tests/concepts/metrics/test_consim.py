@@ -27,16 +27,11 @@ This file tests the ConSim metric.
 
 The ConSim metric has many methods, most of them will be tested one by one:
     ConSim.__init__
-    ConSim._get_predictions
-    ConSim._extract_interesting_elements
     ConSim.select_examples
     ConSim.quantize_importances
     ConSim._concepts_to_string
     ConSim._setting_to_prompt
-    ConSim._generate_prompt
-    ConSim._extract_predictions_from_response
-    ConSim._predictions_accuracy
-    ConSim._compute_score
+    ConSim.construct_prompt
     ConSim.evaluate
 
 In the unit tests listed above some configurations will be common:
@@ -51,16 +46,14 @@ Finally, an end to end test will include a call to the `OpenAILLM` if an API key
 
 from __future__ import annotations
 
-import os
-
 import pytest
 import torch
 
 from interpreto import ModelWithSplitPoints
-from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.concepts.metrics.consim import ConSim, PromptTypes
+from interpreto.concepts.metrics import ConSim
 from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 
+PromptTypes = ConSim.prompt_types
 AG = ModelWithSplitPoints.activation_granularities
 
 PROMPT_TYPES = [
@@ -142,97 +135,25 @@ class EmptyResponse(LLMInterface):
         return ""
 
 
-def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints, multi_split_model: ModelWithSplitPoints):
+def test_consim_select_examples():
     """
-    Test the `__init__` method of the ConSim metric.
-    """
-    llm = LLMInterfacePlaceholder()
-    classes = [str(i) for i in range(int(splitted_encoder_ml._model.num_labels))]  # type: ignore
-
-    # when only one split point is available, it should be chosen automatically
-    consim = ConSim(splitted_encoder_ml, user_llm=llm, activation_granularity=AG.TOKEN, classes=classes)
-    assert consim.split_point == splitted_encoder_ml.split_points[0], "consim split_point should match the mwsp"
-    assert consim.user_llm is llm, "consim llm should correspond to the parameter"
-
-    # invalid split point should raise an error
-    with pytest.raises(ValueError):
-        ConSim(
-            splitted_encoder_ml,
-            user_llm=None,
-            activation_granularity=AG.TOKEN,
-            classes=classes,
-            split_point="wrong.point",
-        )
-
-    # when multiple split points exist, omitting split_point must fail
-    with pytest.raises(ValueError):
-        ConSim(multi_split_model, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
-
-
-def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
-    """
-    Test the `_get_predictions` method of the ConSim metric.
-    """
-    # Initialize the ConSim metric
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=["A", "B"])
-
-    inputs = ["This is a first sentence", "Another sentence"]
-
-    # Compute predictions with nnsight
-    with splitted_encoder_ml.trace(inputs):
-        nnsight_output = (
-            splitted_encoder_ml.nns_output
-            if hasattr(splitted_encoder_ml, "nns_output")
-            else splitted_encoder_ml.output
-        )
-        nnsight_preds = torch.argmax(nnsight_output.logits, dim=-1).save()  # type: ignore
-
-    # Verify nnsight predictions
-    assert isinstance(nnsight_preds, torch.Tensor), "problem in the test, not consim"
-    assert nnsight_preds.shape == (len(inputs),), "problem in the test, not consim"
-
-    # Compute predictions with ConSim
-    consim_preds = consim._get_predictions(inputs)
-
-    # Verify ConSim predictions
-    assert isinstance(consim_preds, torch.Tensor), "consim _get_predictions should return a tensor"
-    assert consim_preds.shape == (len(inputs),), "consim._get_predictions outputs lengths should match the inputs"
-
-    # Check that both predictions are equal
-    assert torch.allclose(nnsight_preds, consim_preds, atol=1e-6), (
-        "consim._get_predictions outputs should match manually computed ones"
-    )
-
-
-def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplitPoints):
-    """
-    Test the `_extract_interesting_elements` method of the ConSim metric.
+    Test the `select_examples` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
+    consim = ConSim(classes=classes)
 
     inputs = [f"sentence {i}" for i in range(6)]
     labels = torch.tensor([0, 1, 0, 1, 0, 1])
     predictions = torch.tensor([0, 0, 0, 1, 1, 1])
 
     # 2 correct and 2 incorrect elements should be returned
-    samples, labels, predictions = consim._extract_interesting_elements(
-        inputs, labels, predictions, nb_lp_samples=2, nb_ep_samples=2, seed=0
-    )
+    indices, samples, labels, predictions = consim.select_examples(inputs, labels, predictions, nb_samples=4, seed=0)
 
-    # ensure samples, labels, and predictions all have 4 elements, 2 correct and 2 incorrect
-    assert len(samples) == 4, (
-        "number of samples from `consim._extract_interesting_elements`"
-        "should match the sum of nb_lp_samples and nb_ep_samples"
-    )
-    assert labels.shape == (4,), (
-        "number of labels from `consim._extract_interesting_elements`"
-        "should match the sum of nb_lp_samples and nb_ep_samples"
-    )
-    assert predictions.shape == (4,), (
-        "number of predictions from `consim._extract_interesting_elements`"
-        "should match the sum of nb_lp_samples and nb_ep_samples"
-    )
+    # ensure samples, labels, and predictions all have 4 elements
+    assert len(indices) == 4, "number of indices from `consim.select_examples` should match nb_samples"
+    assert len(samples) == 4, "number of samples from `consim.select_examples` should match nb_samples"
+    assert labels.shape == (4,), "number of labels from `consim.select_examples` should match nb_samples"
+    assert predictions.shape == (4,), "number of predictions from `consim.select_examples` should match nb_samples"
 
     # ensure exactly half of the predictions match the labels
     assert torch.sum(labels == predictions) == 2, "exactly half of the predictions should match the labels"
@@ -243,79 +164,34 @@ def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplit
 
     # not enough correct predictions should raise a value error
     with pytest.raises(ValueError):
-        consim._extract_interesting_elements(inputs[:2], labels[:2], predictions[:2], nb_lp_samples=2, nb_ep_samples=2)
+        consim.select_examples(inputs[:2], labels[:2], predictions[:2], nb_samples=4)
 
 
-def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
-    """
-    Test the `select_examples` method of the ConSim metric.
-    """
-    classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
-
-    # prepare fake methods so we only test the logic of select_examples
-    inputs = ["a", "b", "c", "d", "e", "f"]
-    labels = torch.tensor([0, 1, 0, 1, 0, 1])
-    predictions = torch.tensor([0, 0, 0, 1, 1, 1])
-
-    def fake_get_preds(x, **kwargs):
-        assert x == inputs, "consim did not pass the correct inputs to _get_predictions"
-        return predictions
-
-    consim._get_predictions = fake_get_preds  # type: ignore
-
-    # 2 correct and 2 incorrect elements should be returned
-    samples, labels, predictions = consim.select_examples(inputs, labels, nb_lp_samples=2, nb_ep_samples=2, seed=0)
-
-    # ensure samples, labels, and predictions all have 4 elements, 2 correct and 2 incorrect
-    assert len(samples) == 4, (
-        "number of samples from `consim.select_examples`should match the sum of nb_lp_samples and nb_ep_samples"
-    )
-    assert labels.shape == (4,), (
-        "number of labels from `consim.select_examples`should match the sum of nb_lp_samples and nb_ep_samples"
-    )
-    assert predictions.shape == (4,), (
-        "number of predictions from `consim.select_examples`should match the sum of nb_lp_samples and nb_ep_samples"
-    )
-
-    # ensure exactly half of the predictions match the labels
-    assert torch.sum(labels == predictions) == 2, "exactly half of the predictions should match the labels"
-
-    # ensure each class represents half of the predictions and labels
-    assert torch.sum(labels == 0) == 2, "exactly half of the labels should be of each class"
-    assert torch.sum(predictions == 0) == 2, "exactly half of the predictions should be of each class"
-
-
-def test_consim_select_examples_subset_classes(splitted_encoder_ml: ModelWithSplitPoints):
+def test_consim_select_examples_subset_classes():
     """
     Test the `select_examples` method with a subset of classes.
     """
     classes_names = ["A", "B", "C"]
     classes_subset = [0, 2]
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes_names)
+    consim = ConSim(classes=classes_names)
 
     inputs = [f"sample {i}" for i in range(9)]
     labels = torch.tensor([0, 1, 2, 0, 1, 2, 0, 1, 2])
     predictions = torch.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
 
-    def fake_get_preds(x, **kwargs):
-        assert x == inputs, "consim did not pass the correct inputs to _get_predictions"
-        return predictions
-
-    consim._get_predictions = fake_get_preds  # type: ignore
-
-    samples, selected_labels, selected_predictions = consim.select_examples(
-        inputs,
-        labels,
-        nb_lp_samples=2,
-        nb_ep_samples=2,
+    indices, samples, selected_labels, selected_predictions = consim.select_examples(
+        inputs=inputs,
+        labels=labels,
+        predictions=predictions,
+        nb_samples=4,
         seed=0,
         classes_subset=classes_subset,
     )
 
-    assert len(samples) == 4, "number of samples should match nb_lp_samples + nb_ep_samples"
-    assert selected_labels.shape == (4,), "number of labels should match nb_lp_samples + nb_ep_samples"
-    assert selected_predictions.shape == (4,), "number of predictions should match nb_lp_samples + nb_ep_samples"
+    assert len(indices) == 4, "number of indices should match nb_samples"
+    assert len(samples) == 4, "number of samples should match nb_samples"
+    assert selected_labels.shape == (4,), "number of labels should match nb_samples"
+    assert selected_predictions.shape == (4,), "number of predictions should match nb_samples"
 
     assert all(int(label) in classes_subset for label in selected_labels), "labels should be restricted to the subset"
     assert all(int(pred) in classes_subset for pred in selected_predictions), (
@@ -375,7 +251,7 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # prepare fake method so we only test the logic of setting_to_prompt
     sentences = ["s0", "s1", "s2", "s3"]
     preds = torch.tensor([0, 1, 1, 0])
-    gold_labels = [0, 0, 1, 1]
+    labels = torch.tensor([0, 0, 1, 1])
     classes = ["A", "B"]
     interp = {0: "word"}
     glob = torch.tensor([[0.6], [-0.2]])  # {"A": {0: "++"}, "B": {0: "-"}}
@@ -415,9 +291,10 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # convert the settings to prompt
     system, user, literal = ConSim._setting_to_prompt(
         setting=prompt_settings,
-        sentences=sentences,
-        predictions=preds,
-        gold_labels=gold_labels,
+        interesting_samples=sentences,
+        corresponding_predictions=preds,
+        corresponding_labels=labels,
+        nb_learning_samples=2,
         classes={i: classes[i] for i in range(len(classes))},
         concepts_interpretation=interp,
         global_importances=dict(enumerate(glob)),
@@ -501,9 +378,8 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # ----------------
     # Evaluation Phase
     # samples, only the 2 last samples for ep
-    assert "Sample_2: s2\nSample_3: s3" in user, "user prompt should contain the ep samples"
-    assert "Sample_0" not in user and "Sample_1" not in user, "user prompt should not contain the lp samples"
-    # concepts contributions
+    assert user[0] == "Sample_2:\n\tText: s2\n\tLabel: ", "user prompt should contain the ep samples"
+    assert user[1] == "Sample_3:\n\tText: s3\n\tLabel: ", "user prompt should contain the ep samples"
 
 
 def test_consim_generate_prompt():
@@ -512,6 +388,9 @@ def test_consim_generate_prompt():
     """
     sentences = ["s0", "s1", "s2", "s3"]
     preds = torch.tensor([0, 1, 0, 1])
+    labels = torch.tensor([0, 0, 1, 1])
+    nb_samples = len(sentences)
+    nb_learning_samples = 2
     classes = ["A", "B"]
     interp = {0: "word", 1: "test"}
     glob = torch.tensor([[0.6, 0.1], [-0.6, -0.2]])
@@ -522,35 +401,30 @@ def test_consim_generate_prompt():
         torch.tensor([[-0.2, 0.02], [-0.5, -0.01]]),
     ]
 
-    system_prompt, user_prompt, literal = ConSim._setting_to_prompt(
+    system, user, literal = ConSim._setting_to_prompt(
         setting=PromptTypes.E3_global_and_local_concepts_with_lp.value,
-        sentences=sentences,
-        predictions=preds,
+        interesting_samples=sentences,
+        corresponding_predictions=preds,
+        corresponding_labels=labels,
+        nb_learning_samples=nb_learning_samples,
         classes={i: classes[i] for i in range(len(classes))},
         concepts_interpretation=interp,
         global_importances=dict(enumerate(glob)),
         local_importances=loc,
-        gold_labels=None,
     )
 
-    prompts: list[tuple[Role, str]] = [
-        (Role.SYSTEM, system_prompt),
-        (Role.USER, user_prompt),
-        (Role.ASSISTANT, ""),
-    ]
-
     # test prompt format
-    assert prompts[0][0] is Role.SYSTEM, "prompt should respect the format [(Role.SYSTEM, str), ...]"
-    system = prompts[0][1]
-    assert isinstance(system, str), "prompt should respect the format [(Role.SYSTEM, str), (Role, str)]"
-    assert prompts[1][0] is Role.USER, "prompt should respect the format [(Role.SYSTEM, str), (Role.USER, str)]"
-    user = prompts[1][1]
-    assert isinstance(user, str), "prompt should respect the format [(Role.SYSTEM, str), (Role.USER, str)]"
+    assert isinstance(system, str), "system prompt should be a string"
+    assert isinstance(user, list) and all(isinstance(s, str) for s in user), "user prompt should be a list of strings"
+    assert isinstance(literal, list) and all(isinstance(s, str) for s in literal), (
+        "literal predictions should be a list of strings"
+    )
+
+    # verify lengths
+    assert len(user) == nb_samples - nb_learning_samples, "user prompt should have the correct length"
+    assert len(literal) == nb_samples - nb_learning_samples, "literal predictions should have the correct length"
 
     # verify literal predictions
-    assert isinstance(literal, list), "literal predictions should be a list of strings"
-    assert len(literal) == len(preds) / 2, "literal predictions length should match the number of ep samples"
-    assert all(isinstance(pred, str) for pred in literal), "literal predictions should be a list of strings"
     assert literal == ["A", "B"], "literal predictions should match the expected"
 
     # global importance should have been converted to:
@@ -577,308 +451,230 @@ def test_consim_generate_prompt():
     assert "\n\tConcepts contributions: {C0 (word): --, C1 (test): -}" in system, (
         "system prompt should contain the lp concepts contributions"
     )
-    assert "Sample_2: s2\nSample_3: s3" in user, "user prompt should contain the ep samples"
-    assert "Sample_0" not in user and "Sample_1" not in user, "user prompt should not contain the lp samples"
-    assert "concept" not in user, (
-        "user prompt should not contain the local importance"
-    )  # E3 does not include the concepts contributions in the user prompt
+    assert user[0] == "Sample_2:\n\tText: s2\n\tLabel: ", "user prompt should contain the ep samples"
+    assert user[1] == "Sample_3:\n\tText: s3\n\tLabel: ", "user prompt should contain the ep samples"
 
 
-def test_consim_extract_predictions_from_response():
-    """
-    Test the `_extract_predictions_from_response` method of the ConSim metric.
-    """
-    response = "Sample_0: A\nSample_1: B\n"
-    preds = ConSim._extract_predictions_from_response(response, expected_length=2)
-    assert preds == ["a", "b"], "extracted predictions from response should match the expected ones"
+# TODO: outdated tests, might be useful if we do a consim manager
+# @pytest.mark.parametrize("prompt_type", PROMPT_TYPES)
+# def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type: PromptTypes):
+#     """
+#     Test the `evaluate` method of the ConSim metric.
 
-    # wrong length should return None
-    assert ConSim._extract_predictions_from_response("Sample_0: A", expected_length=2) is None, (
-        "wrong length should return None"
-    )
+#     Parameters
+#     ----------
+#     splitted_encoder_ml: ModelWithSplitPoints
+#         The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
+#         Here a Bert model, but this is not used in this test apart from initializing the ConSim metric.
+#     llm_placeholder: LLMInterface
+#         The LLM interface that will serve as the meta-predictor.
+#         It randomly predicts the classes specified in the prompt.
+#     """
+#     classes = ["A", "B", "C", "D"]
+#     samples = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]
+#     preds = torch.tensor([0, 1, 2, 3, 0, 1, 2, 3, 0, 1])
+#     labels = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3]
+#     contrastive_pairs = [(0, 1), (2, 3)]
 
-    # wrong format should return None
-    assert ConSim._extract_predictions_from_response("[A, B]", expected_length=2) is None, (
-        "wrong format should return None"
-    )
+#     # creating a dummy explainer that will return a gradient of ones
+#     class DummyExplainer(ConceptAutoEncoderExplainer):
+#         fitted = True
+#         _split_point = splitted_encoder_ml.split_points[0]
 
+#         def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
+#             self.model_with_split_points = model_with_split_points
 
-def test_consim_predictions_accuracy():
-    """
-    Test the `_predictions_accuracy` method of the ConSim metric.
-    """
-    preds1 = ["a", "b", "a"]
-    preds2 = ["a", "b", "c"]
-    score = ConSim._predictions_accuracy(preds1, preds2)
-    assert score == 2 / 3, "predictions accuracy should match the expected value"
+#         def concept_output_gradient(self, inputs, *args, **kwargs):
+#             """
+#             consim.evaluate calls this method
+#             """
+#             # Therefore we ensure that it is called only when necessary.
+#             assert prompt_type in [
+#                 PromptTypes.E3_global_and_local_concepts_with_lp,
+#                 PromptTypes.C3_contrastive_global_and_local_concepts_with_lp,
+#                 PromptTypes.C4_contrastive_local_concepts,
+#                 PromptTypes.C5_contrastive_local_only,
+#             ]
+#             # Furthermore, we ensure it is called only with the necessary elements.
+#             assert inputs == ["s0", "s1", "s2", "s3", "s4"]
 
-    # empty predictions or different lengths should return None
-    assert ConSim._predictions_accuracy([], ["a", "b"]) is None, "empty predictions should return None"
-    assert ConSim._predictions_accuracy(["a", "b"], []) is None, "empty predictions should return None"
-    assert ConSim._predictions_accuracy(["a"], ["a", "b"]) is None, (
-        "different prediction and llm responses should return None"
-    )
+#             return [torch.ones(len(classes), 1, 1)] * len(inputs)
 
+#         def fit(self, *args, **kwargs):
+#             pass
 
-def test_consim_compute_score(splitted_encoder_ml: ModelWithSplitPoints):
-    """
-    Test the `_compute_score` method of the ConSim metric.
-    """
-    response = "Sample_0: A\nSample_1: B\nSample_2: A\nSample_3: B"
-    score = ConSim._compute_score(response, ["A", "B", "B", "B"])
-    assert score == 0.75, "consim score should match the expected value"
+#     explainer = DummyExplainer(splitted_encoder_ml)
 
-    # not matching lengths should return None
-    assert ConSim._compute_score(response, ["A", "B"]) is None, "not matching lengths should return None"
+#     # -----------------------------------
+#     # Test consim with a valid LLM output
 
-    # bad formatted response should return None
-    assert ConSim._compute_score("wrong", ["A", "B"]) is None, "bad formatted response should return None"
+#     llm = LLMInterfacePlaceholder()
+#     consim = ConSim(splitted_encoder_ml, user_llm=llm, activation_granularity=AG.TOKEN, classes=classes)
 
+#     # evaluate the ConSim metric
+#     score: float | None = consim.evaluate(  # type: ignore
+#         interesting_samples=samples,
+#         predictions=preds,
+#         labels=labels,
+#         concept_explainer=explainer,
+#         concepts_interpretation={0: "word"},
+#         global_importances=torch.ones(len(classes), 1),
+#         prompt_type=prompt_type,
+#         contrastive_pairs=contrastive_pairs,
+#     )
 
-@pytest.mark.parametrize("prompt_type", PROMPT_TYPES)
-def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type: PromptTypes):
-    """
-    Test the `evaluate` method of the ConSim metric.
+#     # None is allowed in the typing, but it should not happen in this case
+#     # because the llm placeholder always predicts in the expected format
+#     assert score is not None, "consim should not return None with a valid llm response"
+#     assert 0.0 <= score <= 1.0, "consim score should be between 0 and 1"
 
-    Parameters
-    ----------
-    splitted_encoder_ml: ModelWithSplitPoints
-        The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
-        Here a Bert model, but this is not used in this test apart from initializing the ConSim metric.
-    llm_placeholder: LLMInterface
-        The LLM interface that will serve as the meta-predictor.
-        It randomly predicts the classes specified in the prompt.
-    """
-    classes = ["A", "B", "C", "D"]
-    samples = ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]
-    preds = torch.tensor([0, 1, 2, 3, 0, 1, 2, 3, 0, 1])
-    gold_labels = [0, 1, 2, 3, 2, 1, 0, 1, 2, 3]
-    contrastive_pairs = [(0, 1), (2, 3)]
+#     # ---------------------------------
+#     # Test weird LLM outputs management
 
-    # creating a dummy explainer that will return a gradient of ones
-    class DummyExplainer(ConceptAutoEncoderExplainer):
-        fitted = True
-        _split_point = splitted_encoder_ml.split_points[0]
+#     # empty response should return None
+#     consim.user_llm = EmptyResponse()
+#     score: float | None = consim.evaluate(  # type: ignore
+#         interesting_samples=samples,
+#         predictions=preds,
+#         labels=labels,
+#         concept_explainer=explainer,
+#         concepts_interpretation={0: "word"},
+#         global_importances=torch.ones(len(classes), 1),
+#         prompt_type=prompt_type,
+#         contrastive_pairs=contrastive_pairs,
+#     )
+#     assert score is None, "consim should return None on empty llm response"
 
-        def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.model_with_split_points = model_with_split_points
+#     # wrong format should return None
+#     consim.user_llm = WrongFormat()
+#     score: float | None = consim.evaluate(  # type: ignore
+#         interesting_samples=samples,
+#         predictions=preds,
+#         labels=labels,
+#         concept_explainer=explainer,
+#         concepts_interpretation={0: "word"},
+#         global_importances=torch.ones(len(classes), 1),
+#         prompt_type=prompt_type,
+#         contrastive_pairs=contrastive_pairs,
+#     )
+#     assert score is None, "consim should return None on wrong format llm response"
 
-        def concept_output_gradient(self, inputs, *args, **kwargs):
-            """
-            consim.evaluate calls this method
-            """
-            # Therefore we ensure that it is called only when necessary.
-            assert prompt_type in [
-                PromptTypes.E3_global_and_local_concepts_with_lp,
-                PromptTypes.C3_contrastive_global_and_local_concepts_with_lp,
-                PromptTypes.C4_contrastive_local_concepts,
-                PromptTypes.C5_contrastive_local_only,
-            ]
-            # Furthermore, we ensure it is called only with the necessary elements.
-            assert inputs == ["s0", "s1", "s2", "s3", "s4"]
-
-            return [torch.ones(len(classes), 1, 1)] * len(inputs)
-
-        def fit(self, *args, **kwargs):
-            pass
-
-    explainer = DummyExplainer(splitted_encoder_ml)
-
-    # -----------------------------------
-    # Test consim with a valid LLM output
-
-    llm = LLMInterfacePlaceholder()
-    consim = ConSim(splitted_encoder_ml, user_llm=llm, activation_granularity=AG.TOKEN, classes=classes)
-
-    # evaluate the ConSim metric
-    score: float | None = consim.evaluate(  # type: ignore
-        interesting_samples=samples,
-        predictions=preds,
-        gold_labels=gold_labels,
-        concept_explainer=explainer,
-        concepts_interpretation={0: "word"},
-        global_importances=torch.ones(len(classes), 1),
-        prompt_type=prompt_type,
-        contrastive_pairs=contrastive_pairs,
-    )
-
-    # None is allowed in the typing, but it should not happen in this case
-    # because the llm placeholder always predicts in the expected format
-    assert score is not None, "consim should not return None with a valid llm response"
-    assert 0.0 <= score <= 1.0, "consim score should be between 0 and 1"
-
-    # ---------------------------------
-    # Test weird LLM outputs management
-
-    # empty response should return None
-    consim.user_llm = EmptyResponse()
-    score: float | None = consim.evaluate(  # type: ignore
-        interesting_samples=samples,
-        predictions=preds,
-        gold_labels=gold_labels,
-        concept_explainer=explainer,
-        concepts_interpretation={0: "word"},
-        global_importances=torch.ones(len(classes), 1),
-        prompt_type=prompt_type,
-        contrastive_pairs=contrastive_pairs,
-    )
-    assert score is None, "consim should return None on empty llm response"
-
-    # wrong format should return None
-    consim.user_llm = WrongFormat()
-    score: float | None = consim.evaluate(  # type: ignore
-        interesting_samples=samples,
-        predictions=preds,
-        gold_labels=gold_labels,
-        concept_explainer=explainer,
-        concepts_interpretation={0: "word"},
-        global_importances=torch.ones(len(classes), 1),
-        prompt_type=prompt_type,
-        contrastive_pairs=contrastive_pairs,
-    )
-    assert score is None, "consim should return None on wrong format llm response"
-
-    # wrong number of answers should return None
-    consim.user_llm = WrongNumberOfAnswers()
-    score: float | None = consim.evaluate(  # type: ignore
-        interesting_samples=samples,
-        predictions=preds,
-        gold_labels=gold_labels,
-        concept_explainer=explainer,
-        concepts_interpretation={0: "word"},
-        global_importances=torch.ones(len(classes), 1),
-        prompt_type=prompt_type,
-        contrastive_pairs=contrastive_pairs,
-    )
-    assert score is None, "consim should return None on wrong number of answers in llm response"
+#     # wrong number of answers should return None
+#     consim.user_llm = WrongNumberOfAnswers()
+#     score: float | None = consim.evaluate(  # type: ignore
+#         interesting_samples=samples,
+#         predictions=preds,
+#         labels=labels,
+#         concept_explainer=explainer,
+#         concepts_interpretation={0: "word"},
+#         global_importances=torch.ones(len(classes), 1),
+#         prompt_type=prompt_type,
+#         contrastive_pairs=contrastive_pairs,
+#     )
+#     assert score is None, "consim should return None on wrong number of answers in llm response"
 
 
-@pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="No OpenAI API key available.")
-@pytest.mark.slow
-def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
-    """
-    Test the `evaluate` method of the ConSim metric with OpenAI API.
-    """
-    # lazy import to avoid importing openai
-    from interpreto.model_wrapping.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
-        OpenAILLM,
-    )
+# @pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="No OpenAI API key available.")
+# @pytest.mark.slow
+# def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
+#     """
+#     Test the `evaluate` method of the ConSim metric with OpenAI API.
+#     """
+#     # lazy import to avoid importing openai
+#     from interpreto.model_wrapping.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
+#         OpenAILLM,
+#     )
 
-    open_ai_llm = OpenAILLM(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4.1-nano")
+#     open_ai_llm = OpenAILLM(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4.1-nano")
 
-    # -------------------------------------------------
-    # create a dummy dataset of prime-not-prime numbers
-    # samples = ["s0", "s1", "s2", "s3", ...]
-    # predictions = [0, 1, 0, 1, ...]
-    def isprime(n):
-        if n < 2:
-            return False
-        for i in range(2, int(n**0.5) + 1):
-            if n % i == 0:
-                return False
-        return True
+#     # -------------------------------------------------
+#     # create a dummy dataset of prime-not-prime numbers
+#     # samples = ["s0", "s1", "s2", "s3", ...]
+#     # predictions = [0, 1, 0, 1, ...]
+#     def isprime(n):
+#         if n < 2:
+#             return False
+#         for i in range(2, int(n**0.5) + 1):
+#             if n % i == 0:
+#                 return False
+#         return True
 
-    nb_samples = 40
-    samples = [f"s{i}" for i in range(nb_samples)]
-    preds = torch.tensor([int(isprime(i)) for i in range(nb_samples)])
+#     nb_samples = 40
+#     samples = [f"s{i}" for i in range(nb_samples)]
+#     preds = torch.tensor([int(isprime(i)) for i in range(nb_samples)])
 
-    # shuffle the samples and predictions
-    # this simulates the output of ConSim.select_examples
-    torch.random.manual_seed(0)
-    indices = torch.randperm(nb_samples)
-    samples = [samples[i] for i in indices]
-    preds = preds[indices]
+#     # shuffle the samples and predictions
+#     # this simulates the output of ConSim.select_examples
+#     torch.random.manual_seed(0)
+#     indices = torch.randperm(nb_samples)
+#     samples = [samples[i] for i in indices]
+#     preds = preds[indices]
 
-    # -----------------------------------------------------------------
-    # Initialize the ConSim metric with the open_ai_llm api as user_llm
-    classes = ["not prime", "prime"]
-    consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, activation_granularity=AG.TOKEN, classes=classes)
+#     # -----------------------------------------------------------------
+#     # Initialize the ConSim metric with the open_ai_llm api as user_llm
+#     classes = ["not prime", "prime"]
+#     consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, activation_granularity=AG.TOKEN, classes=classes)
 
-    # construct a dummy explainer that will arbitrary local importances
-    class DummyExplainer(ConceptAutoEncoderExplainer):
-        fitted = True
-        _split_point = splitted_encoder_ml.split_points[0]
+#     # construct a dummy explainer that will arbitrary local importances
+#     class DummyExplainer(ConceptAutoEncoderExplainer):
+#         fitted = True
+#         _split_point = splitted_encoder_ml.split_points[0]
 
-        def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.model_with_split_points = model_with_split_points
+#         def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
+#             self.model_with_split_points = model_with_split_points
 
-        def concept_output_gradient(self, inputs, *args, **kwargs):
-            local_importances = []
-            for i, sentence in enumerate(inputs):
-                index = int(sentence[1:])  # remove "s" prefix
-                # generate concepts importances quite arbitrarily
-                values = torch.tensor([index % 2, 1 - i % 2, (4 - index % 5) / 4, (2 - index % 3) / 2])
-                local_importances.append(values.repeat(len(classes), 1).unsqueeze(1))
-            return local_importances
+#         def concept_output_gradient(self, inputs, *args, **kwargs):
+#             local_importances = []
+#             for i, sentence in enumerate(inputs):
+#                 index = int(sentence[1:])  # remove "s" prefix
+#                 # generate concepts importances quite arbitrarily
+#                 values = torch.tensor([index % 2, 1 - i % 2, (4 - index % 5) / 4, (2 - index % 3) / 2])
+#                 local_importances.append(values.repeat(len(classes), 1).unsqueeze(1))
+#             return local_importances
 
-        def fit(self, *args, **kwargs):
-            pass
+#         def fit(self, *args, **kwargs):
+#             pass
 
-    # ---------------------------------------------------------------------------------
-    # make up concepts that could make sense with the prime-not-prime synthetic dataset
-    concepts_interpretation = {
-        0: "is odd",  # %2 == 1
-        1: "lucky number",
-        2: "%5 == 0",
-        3: "%3 == 0",
-    }
+#     # ---------------------------------------------------------------------------------
+#     # make up concepts that could make sense with the prime-not-prime synthetic dataset
+#     concepts_interpretation = {
+#         0: "is odd",  # %2 == 1
+#         1: "lucky number",
+#         2: "%5 == 0",
+#         3: "%3 == 0",
+#     }
 
-    global_importances = torch.tensor([[-0.5, 0.0, 0.2, 0.3], [0.8, 0.0, -0.2, -0.3]])
+#     global_importances = torch.tensor([[-0.5, 0.0, 0.2, 0.3], [0.8, 0.0, -0.2, -0.3]])
 
-    # evaluate the ConSim metric
-    score: float | None = consim.evaluate(  # type: ignore
-        interesting_samples=samples,
-        predictions=preds,
-        concept_explainer=DummyExplainer(splitted_encoder_ml),
-        concepts_interpretation=concepts_interpretation,
-        global_importances=global_importances,
-        prompt_type=PromptTypes.E3_global_and_local_concepts_with_lp,
-    )
+#     # evaluate the ConSim metric
+#     score: float | None = consim.evaluate(  # type: ignore
+#         interesting_samples=samples,
+#         predictions=preds,
+#         concept_explainer=DummyExplainer(splitted_encoder_ml),
+#         concepts_interpretation=concepts_interpretation,
+#         global_importances=global_importances,
+#         prompt_type=PromptTypes.E3_global_and_local_concepts_with_lp,
+#     )
 
-    assert score is None or 0.0 <= score <= 1.0, (
-        "consim score should be between 0 and 1 or None if something went wrong"
-    )
+#     assert score is None or 0.0 <= score <= 1.0, (
+#         "consim score should be between 0 and 1 or None if something went wrong"
+#     )
 
 
 if __name__ == "__main__":
-    from transformers import AutoModelForMaskedLM, AutoModelForSequenceClassification
-
-    mwsp = ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
-        automodel=AutoModelForSequenceClassification,  # type: ignore
-        batch_size=4,
-        device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    )
-
-    multi_split_model = ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_points=[
-            "bert.encoder.layer.1.output",
-            "bert.encoder.layer.3.attention.self.query",
-        ],
-        automodel=AutoModelForMaskedLM,  # type: ignore
-        batch_size=4,
-        device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    )
-
-    test_consim_init(mwsp, multi_split_model)
-    test_consim_get_predictions(mwsp)
-    test_consim_extract_interesting_elements(mwsp)
-    test_consim_select_examples(mwsp)
-    test_consim_quantize_importances()
-    test_consim_quantize_concepts_importances()
-    test_consim_generate_prompt()
-    test_consim_extract_predictions_from_response()
-    test_consim_predictions_accuracy()
+    # test_consim_select_examples()
+    # test_consim_quantize_importances()
+    # test_consim_quantize_concepts_importances()
+    # test_consim_generate_prompt()
+    test_consim_select_examples_subset_classes()
     for prompt_type in [
         PromptTypes.E2_global_concepts_with_lp,
         PromptTypes.C3_contrastive_global_and_local_concepts_with_lp,
     ]:
         try:
             test_consim_setting_to_prompt(prompt_type=prompt_type, anonymize_classes=True)
-            test_consim_evaluate(mwsp, prompt_type=prompt_type)
+            # test_consim_evaluate(prompt_type=prompt_type)
         except NotImplementedError:
             pass
-    if os.environ.get("OPENAI_API_KEY"):
-        test_consim_evaluate_with_openai(mwsp)
+    # if os.environ.get("OPENAI_API_KEY"):
+    #     test_consim_evaluate_with_openai()

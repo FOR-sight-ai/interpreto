@@ -24,18 +24,12 @@
 
 from __future__ import annotations
 
-import warnings
 from enum import Enum
 from typing import NamedTuple
 
 import torch
-from tqdm import tqdm
 
-from interpreto import ModelWithSplitPoints
-from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.simulatability.base import AutomatedSimulatability
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 
 
 class PromptSetting(NamedTuple):
