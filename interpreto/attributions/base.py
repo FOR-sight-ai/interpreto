@@ -673,7 +673,6 @@ class GenerationAttributionExplainer(AttributionExplainer):
             return [targets]  # type: ignore
         if isinstance(targets, MutableMapping):  # TensorMapping cannot be used in isinstance
             targets = targets["input_ids"]  # type: ignore
-            # targets = normalize_target_ids_with_leading_space(self.tokenizer, targets["input_ids"])
             if targets.dim() == 1:
                 return list(normalize_target_ids_with_leading_space(self.tokenizer, targets))
             if targets.shape[0] > 1:
@@ -682,7 +681,6 @@ class GenerationAttributionExplainer(AttributionExplainer):
             return [normalize_target_ids_with_leading_space(self.tokenizer, targets.squeeze(dim=0))]
         if isinstance(targets, torch.Tensor):
             targets = targets.squeeze(dim=0)  # remove batch dimension if any
-            # targets = normalize_target_ids_with_leading_space(self.tokenizer, targets)
             assert targets.dim() == 1, "Target tensor must be 1-D."
             return [normalize_target_ids_with_leading_space(self.tokenizer, targets)]
         if isinstance(targets, Iterable):

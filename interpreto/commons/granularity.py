@@ -335,7 +335,6 @@ class Granularity(Enum):
 
     @staticmethod
     def _starts_word(token: str) -> bool:
-        # return token.startswith((" ", "Ġ", "__"))
         return token.startswith((" ", "Ġ", "▁", "__"))
 
     @staticmethod
