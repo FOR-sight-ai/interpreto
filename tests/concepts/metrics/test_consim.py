@@ -51,6 +51,7 @@ Finally, an end to end test will include a call to the `OpenAILLM` if an API key
 
 from __future__ import annotations
 
+import importlib.util
 import os
 
 import pytest
@@ -721,7 +722,10 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     assert score is None, "consim should return None on wrong number of answers in llm response"
 
 
-@pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="No OpenAI API key available.")
+@pytest.mark.skipif(
+    os.environ.get("OPENAI_API_KEY") is None or importlib.util.find_spec(openai) is None,
+    reason="No OpenAI API key available.",
+)
 @pytest.mark.slow
 def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     """
