@@ -85,8 +85,8 @@ class TopKInputs(BaseConceptInterpretationMethod):
             It can be tuned through the `unique_words_kwargs` argument.
 
         unique_words_kwargs (dict):
-            The kwargs to pass to the `extract_unique_words` function.
-            See [`extract_unique_words`][interpreto.concepts.interpretations.extract_unique_words] for more details.
+            The kwargs to pass to the `extract_ngrams` function.
+            See [`extract_ngrams`][interpreto.concepts.interpretations.extract_ngrams] for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         concept_model_device (torch.device | str | None):

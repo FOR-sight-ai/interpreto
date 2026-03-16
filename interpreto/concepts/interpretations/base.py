@@ -53,7 +53,7 @@ def _ensure_nltk_resources(lemmatize: bool) -> None:
     """
     Ensure NLTK resources are downloaded.
 
-    Only used in `extract_unique_words`.
+    Only used in `extract_ngrams`.
 
     The `lru_cache` ensures the download are only called once.
     """
@@ -65,121 +65,17 @@ def _ensure_nltk_resources(lemmatize: bool) -> None:
 
 
 @jaxtyped(typechecker=beartype)
-def extract_unique_words(
-    inputs: list[str],
-    count_min_threshold: int = 1,
-    return_counts: bool = False,
-    lemmatize: bool = False,
-    words_to_ignore: list[str] | None = None,
-) -> list[str] | Counter[str]:
-    """
-    Extract words from a text.
-
-    Depending on parameters, it may select a subset of words or return the counts of each word.
-
-    Args:
-        inputs (str):
-            The text to extract words from.
-
-        count_min_threshold (float, optional):
-            The minimum total number of a occurrence of a word in the whole `inputs`.
-
-        return_counts (bool, optional):
-            Whether to return the counts of each word.
-            Defaults to False.
-
-        words_to_ignore: (list[str], optional):
-            A list of words to ignore.
-
-    Examples:
-        Fastest version as used in `TopKInputs`.
-        >>> extract_unique_words(["Interpreto is the latin for 'to interpret'.", "interpreto is magic"])
-        ["interpreto", "is", "the", "latin", "for", "to", "'", "interpret", ".", "magic"]
-
-        More complex use:
-        >>> import nltk
-        >>> from datasets import load_dataset
-        >>> from nltk.corpus import stopwords
-        >>>
-        >>> from interpreto.concepts.interpretations import extract_unique_words
-        >>>
-        >>> nltk.download("stopwords")
-        >>>
-        >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> extract_unique_words(
-        ...     inputs=dataset,
-        ...     count_min_threshold=20,
-        ...     return_counts=True,
-        ...     lemmatize=True,
-        ...     words_to_ignore=stopwords.words("english") + [".", ",", "'s", "n't", "--", "``", "'"],
-        ... )
-        Counter({'film': 1402,
-                 'movie': 1243,
-                 'one': 594,
-                 'like': 574,
-                 'ha': 563,
-                 'make': 437,
-                 'story': 417,
-        ...
-                 'pop': 20,
-                 'college': 20,
-                 'bear': 20,
-                 'plain': 20,
-                 'generic': 20})
-
-    Returns:
-        list[str] | Counter[str]:
-            The list of unique words or the counts of each word.
-
-    Raises:
-        ValueError:
-            If the input is not a list of strings.
-    """
-    # ensure NLTK resources are downloaded
-    _ensure_nltk_resources(lemmatize=lemmatize)
-
-    if lemmatize:
-        lemmatizer = WordNetLemmatizer()
-
-    # counter both list unique words and counts of each word
-    words_count = Counter()
-
-    for text in inputs:
-        for word in word_tokenize(text):
-            # lemmatize words
-            if lemmatize:
-                word = lemmatizer.lemmatize(word.lower())  # noqa: PLW2901  # type: ignore  (ignore possibly unbound)
-
-            # ignore words
-            if words_to_ignore is not None and word in words_to_ignore:
-                continue
-
-            # add word to counter
-            words_count[word] += 1
-
-    # filter too rare words
-    if count_min_threshold > 1:
-        words_count = Counter({key: count for key, count in words_count.items() if count >= count_min_threshold})
-
-    if return_counts:
-        return words_count
-
-    return list(words_count.keys())
-
-
-@jaxtyped(typechecker=beartype)
 def extract_ngrams(
     inputs: list[str],
-    n: int,
+    n: int = 1,
     count_min_threshold: int = 1,
     return_counts: bool = False,
     lemmatize: bool = False,
     words_to_ignore: list[str] | None = None,
 ) -> list[str] | Counter[str]:
     """
-    Extract n-grams (from 1-gram up to n-gram) from a list of texts.
+    Extract n-grams (from 1-gram up to n-gram of words) from a list of texts.
 
-    Similar to `extract_unique_words` but also considers multi-word groups.
     If n=3, it extracts 1-grams, 2-grams, and 3-grams.
 
     Args:
@@ -211,7 +107,7 @@ def extract_ngrams(
     if lemmatize:
         lemmatizer = WordNetLemmatizer()
 
-    ngram_counts: Counter[str] = Counter()
+    tuple_ngram_counts: Counter[tuple[str]] = Counter()
 
     for text in inputs:
         tokens = word_tokenize(text)
@@ -220,26 +116,28 @@ def extract_ngrams(
         processed = []
         for word in tokens:
             if lemmatize:
-                word = lemmatizer.lemmatize(word.lower())  # noqa: PLW2901
+                word = lemmatizer.lemmatize(word.lower())  # noqa: PLW2901  # type: ignore  (ignore possibly unbound)
             if words_to_ignore is not None and word in words_to_ignore:
                 continue
             processed.append(word)
-            ngram_counts[(word,)] += 1  # unigram tuple
+            tuple_ngram_counts[(word,)] += 1  # unigram tuple
 
         for size in range(2, n + 1):  # skips size 1 as covered over
             for i in range(len(processed) - size + 1):
-                ngram_counts[tuple(processed[i : i + size])] += 1 # >1-gram tuples
-    
-    ngram_counts = Counter({
-            " ".join(key): count  # convert ngram tuples to strings
-            for key, count in ngram_counts.items()
-            if count >= count_min_threshold # filter too rare n-grams
-        })
-    
-    if return_counts:
-        return ngram_counts
+                tuple_ngram_counts[tuple(processed[i : i + size])] += 1  # >1-gram tuples
 
-    return list(ngram_counts.keys())
+    str_ngram_counts: Counter[str] = Counter(
+        {
+            " ".join(key): count  # convert ngram tuples to strings
+            for key, count in tuple_ngram_counts.items()
+            if count >= count_min_threshold  # filter too rare n-grams
+        }
+    )
+
+    if return_counts:
+        return str_ngram_counts
+
+    return list(str_ngram_counts.keys())
 
 
 def verify_concepts_indices(
@@ -318,8 +216,8 @@ class BaseConceptInterpretationMethod(ABC):
             It can be tuned through the `unique_words_kwargs` argument.
 
         unique_words_kwargs (dict):
-            The kwargs to pass to the `extract_unique_words` function.
-            see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+            The kwargs to pass to the `extract_ngrams` function.
+            see `interpreto.concepts.interpretations.topk_inputs.extract_ngrams` for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         concept_model_device (torch.device | str | None):
@@ -663,7 +561,7 @@ class BaseConceptInterpretationMethod(ABC):
                         "but `use_unique_words` is True. "
                         "Therefore, the inputs and activations will likely mismatch. "
                         "Either do not provide `latent_activations` and `concepts_activations`, "
-                        "or use `interpreto.concepts.interpretation.extract_unique_words` yourself, "
+                        "or use `interpreto.concepts.interpretation.extract_ngrams` yourself, "
                         "and set `use_unique_words` to False.",
                         stacklevel=2,
                     )
