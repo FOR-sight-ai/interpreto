@@ -289,14 +289,14 @@ class AutomatedSimulatability:
                 f"Got {len(user_prompts)} user prompts and {len(model_predictions)} model predictions."
             )
 
+        responses = llm_interface.batch_generate(system_prompt, user_prompts)  # type: ignore
+
         score = 0
-        for user, pred in zip(user_prompts, model_predictions, strict=True):
-            prompt = [
-                (Role.SYSTEM, system_prompt),
-                (Role.USER, user),
-            ]
-            response = llm_interface.generate(prompt)
-            if response is not None and response.lower() == pred.lower():
+        for llm_pred, ref_pred in zip(responses, model_predictions, strict=True):
+            if llm_pred is None:
+                continue
+
+            if llm_pred.split(" ")[0].lower() == ref_pred.lower():
                 score += 1
 
         return score / len(user_prompts)
