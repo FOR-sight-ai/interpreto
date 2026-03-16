@@ -723,7 +723,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
 
 
 @pytest.mark.skipif(
-    os.environ.get("OPENAI_API_KEY") is None or importlib.util.find_spec(openai) is None,
+    os.environ.get("OPENAI_API_KEY") is None or importlib.util.find_spec("openai") is None,
     reason="No OpenAI API key available.",
 )
 @pytest.mark.slow
