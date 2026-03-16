@@ -361,7 +361,6 @@ def test_topk_inputs_from_vocabulary(splitted_encoder_ml: ModelWithSplitPoints):
     "activation_granularity",
     [
         AG.CLS_TOKEN,
-        AG.WORD,
     ],
 )
 def test_topk_inputs_from_unique_words(
@@ -421,7 +420,7 @@ def test_topk_inputs_from_unique_words(
     assert len(top_k_unique_letters[0].keys()) == len(set(top_k_unique_letters[0].keys()))
 
 
-@pytest.mark.parametrize("activation_granularity", [AG.CLS_TOKEN, AG.WORD])
+@pytest.mark.parametrize("activation_granularity", [AG.CLS_TOKEN]) # ngram concept interpretation only works when using the activations from the CLS_TOKEN
 @pytest.mark.parametrize("n", [2, 3]) # test ngram=2 et ngram=3
 def test_topk_inputs_from_ngrams(
     splitted_encoder_ml: ModelWithSplitPoints, activation_granularity: ActivationGranularity, n: int

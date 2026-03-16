@@ -647,6 +647,13 @@ class BaseConceptInterpretationMethod(ABC):
                 # ----------------------------------------------------------------------------------
                 # Case 2: use_unique_words >= 1
                 # first list unique words/ngrams from the inputs and compute the activations from them
+                if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
+                    raise ValueError(
+                        f"`use_unique_words` requires `activation_granularity=CLS_TOKEN`, "
+                        f"got `{self.activation_granularity}`. "
+                        "Ngram-based interpretation relies on the CLS token activation "
+                        "to represent each ngram as a single unit."
+                    )
                 granular_inputs: list[str] = extract_ngrams(
                     inputs=inputs, n=self.use_unique_words, return_counts=False, **self.unique_words_kwargs
                 )  # type: ignore  (sure list[str] with return_counts=False)
