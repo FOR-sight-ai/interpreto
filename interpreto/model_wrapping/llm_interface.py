@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -67,7 +68,7 @@ class OpenAILLM(LLMInterface):
         except ImportError as e:
             raise ImportError("Install openai to use OpenAI API.") from e
 
-        self.client = openai.OpenAI(api_key=api_key)
+        self.client = openai.AsyncOpenAI(api_key=api_key)
         self.model = model
         self.num_try = num_try
 
@@ -95,6 +96,31 @@ class OpenAILLM(LLMInterface):
             except Exception as e:
                 print(e)
         return label
+
+    async def in_batch_generate(self, system_prompt, user_prompt, semaphore):
+        async with semaphore:
+            response = await self.client.responses.create(
+                model=self.model,
+                prompt_cache_key="shared-system-prompt-v1",
+                input=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+
+            return response.output_text
+
+    async def async_batch_generate(self, system_prompt: str, user_prompts: list[str]) -> list[str | None]:
+        semaphore = asyncio.Semaphore(10)
+
+        tasks = [self.in_batch_generate(system_prompt, p, semaphore) for p in user_prompts]
+
+        responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+        return responses
+
+    def batch_generate(self, system_prompt: str, user_prompts: list[str]) -> list[str | None]:
+        return asyncio.run(self.async_batch_generate(system_prompt, user_prompts))
 
 
 # class GoogleGeminiLLM(LLMInterface):
