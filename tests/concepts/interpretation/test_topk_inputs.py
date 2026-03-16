@@ -38,7 +38,7 @@ import torch
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.base import ConceptEncoderExplainer
-from interpreto.concepts.interpretations import TopKInputs, extract_unique_words
+from interpreto.concepts.interpretations import TopKInputs, extract_ngrams
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 
 AG = TopKInputs.activation_granularities
@@ -356,26 +356,16 @@ def test_topk_inputs_from_vocabulary(splitted_encoder_ml: ModelWithSplitPoints):
             assert token in vocabulary
 
 
-@pytest.mark.parametrize(
-    "activation_granularity",
-    [
-        AG.CLS_TOKEN,
-        AG.WORD,
-    ],
-)
-def test_topk_inputs_from_unique_words(
-    splitted_encoder_ml: ModelWithSplitPoints, activation_granularity: ActivationGranularity
-):
+@pytest.mark.parametrize("n", [1, 2, 3])
+def test_topk_inputs_from_ngrams(splitted_encoder_ml: ModelWithSplitPoints, n: int):
     """
-    Test that topk inputs can be obtained from unique words
+    Test that topk inputs can be obtained from ngram words
     """
+    #  ngram concept interpretation only works when using the activations from the CLS_TOKEN
+    activation_granularity = AG.CLS_TOKEN
     k = 2
-    letters = ["A", "B", "C", "D", "E", "F"]
     data = ["A B C D E F A B C D E F A B C D E F", "A B C D E F A B C D E F", "A B C D E F", "A B C"]
 
-    assert sorted(extract_unique_words(data)) == sorted(letters)  # type: ignore
-
-    # initializing the explainer
     split = "bert.encoder.layer.1.output"
     splitted_encoder_ml.split_points = split
     concept_model = ConceptModelCounter()
@@ -391,33 +381,39 @@ def test_topk_inputs_from_unique_words(
     topk_inputs = TopKInputs(
         concept_explainer=concept_explainer,
         activation_granularity=activation_granularity,
-        use_unique_words=True,
+        use_unique_words=n,
         k=k,
         concept_encoding_batch_size=1,  # one call for each input
     )
 
-    # getting the top k unique words
-    top_k_unique_letters = topk_inputs.interpret(
+    # compute expected ngrams
+    all_ngrams = extract_ngrams(data, n=n)
+
+    # getting the top k ngram words
+    top_k_ngram_letters = topk_inputs.interpret(
         concepts_indices=0,
         inputs=data,
     )
 
-    # Dummy concept model should have been called three times
-    assert concept_model.count == len(letters)
+    # Dummy concept model should have been called once per ngram
+    assert concept_model.count == len(all_ngrams)
 
     # Output should be a dict with only one key: `0`
-    assert isinstance(top_k_unique_letters, dict) and len(top_k_unique_letters) == 1
-    assert 0 in top_k_unique_letters
+    assert isinstance(top_k_ngram_letters, dict) and len(top_k_ngram_letters) == 1
+    assert 0 in top_k_ngram_letters
 
     # There should be k elements in the first key
-    assert len(top_k_unique_letters[0]) == k
+    assert len(top_k_ngram_letters[0]) == k
 
-    # The values should be letters in `letters`
-    assert all(isinstance(c, str) for c in top_k_unique_letters[0].keys())
-    assert all(letter in letters for letter in top_k_unique_letters[0].keys())
+    # The values should be ngrams from the expected set
+    assert all(isinstance(c, str) for c in top_k_ngram_letters[0].keys())
+    assert all(ngram in all_ngrams for ngram in top_k_ngram_letters[0].keys())
+
+    # Each result should have between 1 and n words
+    assert all(1 <= len(ngram.split()) <= n for ngram in top_k_ngram_letters[0].keys())
 
     # Values should be unique
-    assert len(top_k_unique_letters[0].keys()) == len(set(top_k_unique_letters[0].keys()))
+    assert len(top_k_ngram_letters[0].keys()) == len(set(top_k_ngram_letters[0].keys()))
 
 
 def test_topk_inputs_error_raising(
@@ -467,34 +463,34 @@ def test_topk_inputs_error_raising(
             )
 
 
-def test_extract_unique_words():
-    """Test the extract_unique_words function basic functionality"""
+def test_extract_ngrams():
+    """Test the extract_ngrams function basic functionality"""
     # Test basic functionality with single sentence
     input_text = ["Hello world, hello WORLD!"]
     expected = ["Hello", "world", ",", "hello", "WORLD", "!"]
-    assert extract_unique_words(input_text) == expected
+    assert extract_ngrams(input_text) == expected
 
     # Test with multiple sentences
     input_text = ["Hello world", "Hello universe", "world of code"]
     expected = ["Hello", "world", "universe", "of", "code"]
-    assert extract_unique_words(input_text) == expected
+    assert extract_ngrams(input_text) == expected
 
     # Test with count_min_threshold
     input_text = ["the cat and the dog", "the bird and the fish"]
-    result = extract_unique_words(input_text, count_min_threshold=2)
+    result = extract_ngrams(input_text, count_min_threshold=2)
     assert "the" in result  # 'the' appears 4 times
     assert "and" in result  # 'and' appears 2 times
     assert "cat" not in result  # 'cat' appears only once
 
     # Test return_counts
     input_text = ["word word WORD", "another word"]
-    counts = extract_unique_words(input_text, return_counts=True)
+    counts = extract_ngrams(input_text, return_counts=True)
     assert counts["word"] == 3  # type: ignore
     assert counts["WORD"] == 1  # type: ignore
 
     # Test lemmatize
     input_text = ["Running runs Run", "cats dogs running"]
-    counts = extract_unique_words(input_text, lemmatize=True, return_counts=True)
+    counts = extract_ngrams(input_text, lemmatize=True, return_counts=True)
     assert "run" in counts
     assert "runs" not in counts
     assert "cat" in counts
@@ -503,22 +499,22 @@ def test_extract_unique_words():
     # Test words_to_ignore
     input_text = ["the cat and the dog", "the bird and the fish"]
     ignore_words = ["the", "and"]
-    result = extract_unique_words(input_text, words_to_ignore=ignore_words)
+    result = extract_ngrams(input_text, words_to_ignore=ignore_words)
     assert result.sort() == ["cat", "dog", "bird", "fish"].sort()  # type: ignore
 
 
-def test_extract_unique_words_edge_cases():
-    """Test extract_unique_words with edge cases"""
+def test_extract_ngrams_edge_cases():
+    """Test extract_ngrams with edge cases"""
     # Empty input
-    assert extract_unique_words([]) == []
+    assert extract_ngrams([]) == []
 
     # Single word
-    assert extract_unique_words(["word"]) == ["word"]
+    assert extract_ngrams(["word"]) == ["word"]
 
     # Special characters and punctuation
     input_text = ["Hello!@#$%^&*()world"]
     expected = ["Hello", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "world"]
-    assert extract_unique_words(input_text) == expected
+    assert extract_ngrams(input_text) == expected
 
 
 if __name__ == "__main__":
@@ -536,11 +532,10 @@ if __name__ == "__main__":
     ]
     activation_dict = splitted_encoder_ml.get_activations(sentences, activation_granularity=AG.TOKEN)
 
-    test_extract_unique_words()
-    test_extract_unique_words_edge_cases()
+    test_extract_ngrams()
+    test_extract_ngrams_edge_cases()
     test_topk_inputs_from_activations(splitted_encoder_ml)
     test_topk_inputs_from_vocabulary(splitted_encoder_ml)
-    test_topk_inputs_from_unique_words(splitted_encoder_ml, AG.CLS_TOKEN)
     test_topk_inputs_concepts_selection(splitted_encoder_ml)
     test_topk_inputs_sources(splitted_encoder_ml)
     test_topk_inputs_error_raising(splitted_encoder_ml, activation_dict)  # type: ignore

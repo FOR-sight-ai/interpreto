@@ -29,7 +29,7 @@ icon: material/keyboard-tab-reverse
       members:
         - generate
 
-::: interpreto.concepts.interpretations.extract_unique_words
+::: interpreto.concepts.interpretations.extract_ngrams
     handler: python
     options:
       show_root_heading: true
