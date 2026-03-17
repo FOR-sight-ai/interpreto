@@ -51,6 +51,34 @@ from interpreto.model_wrapping.inference_wrapper import InferenceModes, Inferenc
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
+def setup_tokenizer_for_perturbations(model: Any, tokenizer: PreTrainedTokenizer) -> tuple[Any, int]:
+    """Return a replacement token ID, preferring the tokenizer native mask token when available."""
+
+    resize_token_embeddings = False
+
+    if tokenizer.pad_token is None:
+        tokenizer.add_special_tokens({"pad_token": "<pad>"})
+        resize_token_embeddings = True
+
+    mask_token_id = getattr(tokenizer, "mask_token_id", None)
+    if mask_token_id is not None:
+        replace_token_id = mask_token_id
+    else:
+        replace_token = "[REPLACE]"
+        if replace_token not in tokenizer.get_vocab():
+            tokenizer.add_tokens([replace_token])
+            resize_token_embeddings = True
+
+        replace_token_id = tokenizer.convert_tokens_to_ids(replace_token)
+        if isinstance(replace_token_id, list):
+            replace_token_id = replace_token_id[0]
+
+    if resize_token_embeddings:
+        model.resize_token_embeddings(len(tokenizer))
+
+    return model, int(replace_token_id)
+
+
 class ModelTask(Enum):
     """
     Enum to represent the model task type.
@@ -206,23 +234,7 @@ class AttributionExplainer:
 
     def _set_tokenizer(self, model, tokenizer) -> tuple[PreTrainedModel, int]:
         self.tokenizer = tokenizer
-        # replace token for perturbations
-        replace_token = "[REPLACE]"
-        if replace_token not in tokenizer.get_vocab():
-            tokenizer.add_tokens([replace_token])
-
-        # add a pad token if it does not exist
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.add_special_tokens({"pad_token": "<pad>"})
-
-        # resize model with new tokens
-        model.resize_token_embeddings(len(self.tokenizer))
-
-        replace_token_id = self.tokenizer.convert_tokens_to_ids(replace_token)
-        if isinstance(replace_token_id, list):
-            replace_token_id = replace_token_id[0]
-
-        return model, replace_token_id
+        return setup_tokenizer_for_perturbations(model, self.tokenizer)
 
     def get_scores(
         self,
