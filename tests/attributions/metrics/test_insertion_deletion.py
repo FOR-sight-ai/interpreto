@@ -139,13 +139,15 @@ def test_non_regression_insertion_deletion(sentences, metric_test_case):
         n_perturbations=n_perturbations,
     )
 
-    # Assert that the "[REPLACE]" token has correctly been added to the tokenizer
-    assert "[REPLACE]" in metric.tokenizer.get_vocab()
-
     # Assert that the perturbator stored its params correctly
     assert isinstance(metric.perturbator, expected_results["perturbator_type"])
     assert metric.perturbator.n_perturbations == n_perturbations
-    replace_id = metric.tokenizer.convert_tokens_to_ids("[REPLACE]")  # the token ID should match what we just added
+    replace_id = metric.tokenizer.mask_token_id
+    if replace_id is None:
+        assert "[REPLACE]" in metric.tokenizer.get_vocab()
+        replace_id = metric.tokenizer.convert_tokens_to_ids(
+            "[REPLACE]"
+        )  # the token ID should match what we just added
     assert metric.perturbator.replace_token_id == replace_id
 
     # Assert that get_mask returns a tensor of the right shape
