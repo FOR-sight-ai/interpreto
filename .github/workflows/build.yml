@@ -20,6 +20,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
+      id: setup-python
       uses: actions/setup-python@v4.3.0
       with:
         python-version: ${{ matrix.python-version }}
@@ -32,12 +33,12 @@ jobs:
       uses: actions/cache@v4.2.2
       with:
         path: .venv
-        key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('pyproject.toml') }}
 
     - name: Recreate virtual environment if cache is invalid
       run: |
         if [ ! -f .venv/bin/python ]; then
-          uv venv --python=python${{ matrix.python-version }}
+          uv venv --clear --python=python${{ matrix.python-version }}
         fi
 
     - name: Install dependencies
