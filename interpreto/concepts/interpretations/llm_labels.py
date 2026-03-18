@@ -271,7 +271,8 @@ class LLMLabels(BaseConceptInterpretationMethod):
             concepts_activations=concepts_activations,
         )
 
-        labels: Mapping[int, str | None] = {}
+        # Construct one user prompt for each concept
+        user_prompts: list[str] = []
         for concept_idx in sure_concepts_indices:
             example_idx = self.sampling_method.sample_examples(
                 concept_activations=sure_concepts_activations[:, concept_idx],
@@ -285,14 +286,16 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 sample_ids=granular_sample_ids,
                 k_context=self.k_context,
             )
-            example_prompt = _build_example_prompt(examples)
-            prompt: list[tuple[Role, str]] = [
-                (Role.SYSTEM, self.system_prompt),
-                (Role.USER, example_prompt),
-                (Role.ASSISTANT, ""),
-            ]
-            label = self.llm_interface.generate(prompt)
-            labels[concept_idx] = label
+            user_prompts.append(_build_example_prompt(examples))
+        
+        # batched llm call for concepts interpretations
+        responses = self.llm_interface.batch_generate(system_prompt=self.system_prompt, user_prompts=user_prompts)
+
+        # map labels to concepts
+        labels: Mapping[int, str | None] = {
+            concept_idx: label
+            for concept_idx, label in zip(sure_concepts_indices, responses, strict=True)
+        }
         return labels
 
 
