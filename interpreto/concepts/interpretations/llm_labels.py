@@ -289,7 +289,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
             user_prompts.append(_build_example_prompt(examples))
         
         # batched llm call for concepts interpretations
-        responses = self.llm_interface.batch_generate_async(system_prompt=self.system_prompt, user_prompts=user_prompts)
+        responses = self.llm_interface.batch_generate(system_prompt=self.system_prompt, user_prompts=user_prompts)
 
         # map labels to concepts
         labels: Mapping[int, str | None] = {
