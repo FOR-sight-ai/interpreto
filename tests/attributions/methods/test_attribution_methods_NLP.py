@@ -339,11 +339,6 @@ def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sente
 
 # TODO: test that targets are correctly processed
 
-# TODO: add qualitative testing:
-#       - for a custom classification model only using the first token, verify that the first token is the most important
-#       - for a custom model with a single dense layer (eye(l) times range(l, 0, -1)), verify that the importance order as the inputs
-#       - for a generation model, task it to copy the input text and verify that the important tokens are the ones that are copied
-
 # TODO: test batch size management with very different inputs, tensor mappings of shape: [(1, 10), (5, 10), (100, 10), (2, 10)...].
 #       test that the output shapes are correct for each case.
 #       There should be a counter wrapped around a model to verify that the number of calls to the model is correct.
