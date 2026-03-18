@@ -38,7 +38,7 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
+from interpreto.model_wrapping.llm_interface import LLMInterface
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
 
