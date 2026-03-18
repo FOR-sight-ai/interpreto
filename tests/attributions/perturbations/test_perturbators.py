@@ -132,7 +132,7 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         if isinstance(perturbator, OcclusionPerturbator):
             real_p = l + 1
         elif isinstance(perturbator, SobolTokenPerturbator):
-            k = 30  # default value
+            k = perturbator.n_token_perturbations
             real_p = (l + 2) * k
         else:
             real_p = p
