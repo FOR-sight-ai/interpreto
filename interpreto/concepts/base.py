@@ -447,7 +447,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
                     aggregate by sentences following the split defined by
                     :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.
-                    Requires `spacy` to be installed.
 
             aggregation_strategy:
                 Strategy to aggregate token activations into larger inputs granularities.

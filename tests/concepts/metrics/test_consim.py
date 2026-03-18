@@ -46,6 +46,9 @@ Finally, an end to end test will include a call to the `OpenAILLM` if an API key
 
 from __future__ import annotations
 
+import importlib.util
+import os
+
 import pytest
 import torch
 
@@ -574,16 +577,19 @@ def test_consim_generate_prompt():
 #     assert score is None, "consim should return None on wrong number of answers in llm response"
 
 
-# @pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="No OpenAI API key available.")
-# @pytest.mark.slow
-# def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
-#     """
-#     Test the `evaluate` method of the ConSim metric with OpenAI API.
-#     """
-#     # lazy import to avoid importing openai
-#     from interpreto.model_wrapping.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
-#         OpenAILLM,
-#     )
+@pytest.mark.skipif(
+    os.environ.get("OPENAI_API_KEY") is None or importlib.util.find_spec("openai") is None,
+    reason="No OpenAI API key available.",
+)
+@pytest.mark.slow
+def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
+    """
+    Test the `evaluate` method of the ConSim metric with OpenAI API.
+    """
+    # lazy import to avoid importing openai
+    from interpreto.model_wrapping.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
+        OpenAILLM,
+    )
 
 #     open_ai_llm = OpenAILLM(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4.1-nano")
 

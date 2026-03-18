@@ -27,9 +27,7 @@ Definition of different granularity levels for explainers (tokens, words, senten
 
 from __future__ import annotations
 
-import os
 from enum import Enum
-from functools import lru_cache
 
 import torch
 from beartype import beartype
@@ -38,13 +36,39 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
-# Lazy spacy import for SENTENCE granularities
-try:
-    import spacy
-
-    _HAS_SPACY = True
-except ModuleNotFoundError:
-    _HAS_SPACY = False
+# TODO I dont know where to put this...
+END_SENTENCE = (".", "?", "!")
+END_PART_SENTENCE = (",", ";", ":", ".", "!", "?")
+SENTENCE_SPLIT_EXCEPTIONS = (
+    "Mr.",
+    "Mrs.",
+    "Ms.",
+    "Dr.",
+    "Prof.",
+    "Sr.",
+    "Jr.",
+    "St.",
+    "Mt.",
+    "etc.",
+    "cf.",
+    "i.e.",
+    "e.g.",
+    "vs.",
+    "nb.",
+    "env.",
+    "approx.",
+    "min.",
+    "max.",
+    "resp.",
+    "ex.",
+    "ref.",
+    "Ph.D.",
+    "M.Sc.",
+    "B.Sc.",
+    "U.S.",
+    "U.K.",
+    "E.U.",
+)
 
 
 class GranularityAggregationStrategy(Enum):
@@ -138,6 +162,7 @@ class Granularity(Enum):
     TOKEN = "token"  # Strictly tokens of the input
     WORD = "word"  # Words of the input
     SENTENCE = "sentence"  # Sentences of the input
+    PART_SENTENCE = "part_sentence"  # Part of sentences, split on ",", ";", ":", ".", "!", "?"
     # PARAGRAPH = "paragraph"  # Not supported yet, the "\n\n" characters are replaced by spaces in many tokenizers.
     DEFAULT = ALL_TOKENS
 
@@ -168,6 +193,8 @@ class Granularity(Enum):
             - ``TOKEN``: Strictly tokens of the input.
 
             - ``WORD``: Tokens are grouped by word.
+
+            - ``PART_SENTENCE``: Tokens are grouped by part of sentence, split on ",", ";", ":", ".", "!", "?".
 
             - ``SENTENCE``: Tokens are grouped by sentence.
 
@@ -236,38 +263,37 @@ class Granularity(Enum):
                     Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
                     for i in range(n_inputs)
                 ]
-            # spaCy-based levels (require offset_mapping & fast tokenizer)
-            case Granularity.SENTENCE as level:
+
+            case Granularity.PART_SENTENCE | Granularity.SENTENCE:
+                if self is Granularity.PART_SENTENCE:
+                    split = END_PART_SENTENCE
+                else:
+                    split = END_SENTENCE
                 if tokenizer is None:
                     raise ValueError(
-                        "Cannot get indices without a tokenizer if granularity is TOKEN."
+                        "Cannot get indices without a tokenizer if granularity is PART_SENTENCE."
                         + "Please provide a tokenizer or set granularity to ALL_TOKENS."
                     )
-
-                # if not tokenizer or not tokenizer.is_fast:
-                #     raise ValueError(f"{level.value} granularity needs a *fast* tokenizer.")
-                if "offset_mapping" not in inputs:
-                    raise ValueError(
-                        f"{level} granularity requires `return_offsets_mapping=True` when you call the tokenizer."
-                    )
-
-                if not _HAS_SPACY:
-                    raise ModuleNotFoundError(
-                        "spaCy is needed for sentence granularity.  Install with: `uv pip install spacy`"
-                    )
-
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
-                offset_maps = inputs["offset_mapping"]  # (n, lp, 2)
-
+                if tokenizer.is_fast and isinstance(inputs, BatchEncoding) and getattr(inputs, "encodings", None):
+                    return [
+                        Granularity.__sentence_get_indices_from_offsets(
+                            inputs["input_ids"][i],  # type: ignore
+                            inputs.encodings[i].offsets,  # type: ignore[attr-defined]
+                            tokenizer,
+                            split,  # type: ignore
+                        )
+                        for i in range(n_inputs)
+                    ]
                 return [
-                    Granularity.__spacy_get_indices(
-                        input_ids=inputs["input_ids"][i],  # type: ignore
-                        offsets=offset_maps[i],  # type: ignore
-                        tokenizer=tokenizer,
-                        level=level,
+                    Granularity.__sentence_get_indices_from_input_ids(
+                        inputs["input_ids"][i],  # type: ignore
+                        tokenizer,
+                        split,  # type: ignore
                     )
                     for i in range(n_inputs)
                 ]
+
             case _:
                 raise NotImplementedError(f"Granularity level {self} not implemented")
 
@@ -299,9 +325,7 @@ class Granularity(Enum):
         return token.startswith((" ", "Ġ", "__"))
 
     @staticmethod
-    def __word_get_indices_from_input_ids(
-        input_ids: list[int], tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast
-    ) -> list[list[int]]:
+    def __word_get_indices_from_input_ids(input_ids: list[int], tokenizer: PreTrainedTokenizer) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         special_ids = tokenizer.all_special_ids
         tokens = tokenizer.convert_ids_to_tokens(input_ids, skip_special_tokens=False)
@@ -324,6 +348,222 @@ class Granularity(Enum):
         # If there's a word left, we put it in indices
         if current_word:
             indices.append(current_word)
+        return indices
+
+    # Mini functions for sentence splitting, to keep the main function clearer:
+    @staticmethod
+    def __next_non_special(start: int, ids, special_ids) -> int | None:
+        """
+        Find the next non-special token index after `start` (used to look ahead safely).
+        """
+        for j in range(start, len(ids)):
+            if ids[j] not in special_ids:
+                return j
+        return None
+
+    @staticmethod
+    def __starts_with_space_marker(token: str) -> bool:
+        """
+        Detect "whitespace is part of the next token" across common tokenization schemes:
+          - SentencePiece: '▁'
+          - GPT2 BPE: 'Ġ'
+          - Literal leading space: ' '
+        """
+        return token.startswith(("▁", "Ġ", " "))
+
+    @staticmethod
+    def __decode_one(tokenizer: PreTrainedTokenizer, tok_id: int) -> str:
+        """
+        Decode a single token id without normalizing spaces, to reliably detect leading whitespace/newlines.
+        """
+        return tokenizer.decode(
+            [tok_id],
+            skip_special_tokens=False,
+            clean_up_tokenization_spaces=False,
+        )
+
+    @staticmethod
+    def __build_sentence_exception_id_seqs(
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+    ) -> list[list[int]]:
+        """
+        Build token-id sequences for exceptions (multiple casing + optional leading space),
+        to robustly match both GPT-style (space in token) and WordPiece/BPE tokenizers.
+        """
+        seqs: list[list[int]] = []
+
+        for ex in SENTENCE_SPLIT_EXCEPTIONS:  # type: ignore
+            # Variants to be robust across cased/uncased and GPT-style leading-space tokens
+            base_variants = {ex, ex.lower(), ex.upper()}
+            variants = set(base_variants)
+            variants.update({" " + v for v in base_variants})
+
+            for v in variants:
+                ids = tokenizer.encode(v, add_special_tokens=False)
+                if ids:
+                    seqs.append([int(x) for x in ids])
+
+        # Deduplicate
+        uniq: list[list[int]] = []
+        seen: set[tuple[int, ...]] = set()
+        for s in seqs:
+            t = tuple(s)
+            if t not in seen:
+                seen.add(t)
+                uniq.append(s)
+
+        # Optional: longer first (slightly faster / more specific first)
+        uniq.sort(key=len, reverse=True)
+        return uniq
+
+    @staticmethod
+    def __is_index_in_any_exception(
+        ids: list[int],
+        idx: int,
+        exception_id_seqs: list[list[int]],
+    ) -> bool:
+        """
+        Returns True if token position `idx` lies inside ANY matched exception sequence.
+        This prevents splitting not only after the final '.', but also inside multi-dot
+        abbreviations like 'U.S.' in the slow fallback mode.
+        """
+        for seq in exception_id_seqs:
+            n = len(seq)
+            if n == 0:
+                continue
+
+            # Try alignments where `idx` could correspond to any position inside `seq`
+            for offset in range(n):
+                start = idx - offset
+                end = start + n
+                if start < 0 or end > len(ids):
+                    continue
+                if ids[start:end] == seq:
+                    return True
+
+        return False
+
+    @staticmethod
+    def __sentence_get_indices_from_offsets(
+        input_ids: torch.Tensor,
+        offsets: list[tuple[int, int]],
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+        split: list[str],
+    ) -> list[list[int]]:
+        """
+        Split ONLY when there is an end-of-sentence punctuation (., ?, !) followed by whitespace
+        in the original text, EXCEPT if inside an exception (e.g., "U.S.", "Mr."...).
+
+        For some tokenizers (e.g., GPT2 byte-level BPE), the whitespace can be included in the
+        *next token span*, so offset gaps alone are not sufficient. We thus also check whether
+        the next token *decodes* with a leading whitespace.
+        """
+        special_ids = tokenizer.all_special_ids
+        ids = [int(x) for x in input_ids.tolist()]
+        tokens = tokenizer.convert_ids_to_tokens(ids, skip_special_tokens=False)
+        exception_id_seqs = Granularity.__build_sentence_exception_id_seqs(tokenizer)
+
+        indices: list[list[int]] = []
+        current_sentence: list[int] = []
+
+        for i, (tok_id, tok_str) in enumerate(zip(ids, tokens, strict=True)):
+            # Skip special tokens (CLS/SEP/PAD...):
+            if tok_id in special_ids:
+                continue
+            current_sentence.append(i)
+
+            j = Granularity.__next_non_special(i + 1, ids, special_ids)
+            if j is None:
+                continue
+
+            # IMPORTANT: accept tokens like "Ġ!!", "...", "Ġ?", etc.
+            if not any(p in tok_str for p in split):  # type: ignore
+                # if not tok_str.endswith(split):  # type: ignore[arg-type]
+                continue
+
+            # Exception guard (only relevant for '.' abbreviations)
+            if ("." in tok_str) and Granularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
+                continue
+
+            curr_end = offsets[i][1]
+            next_start = offsets[j][0]
+
+            # 1) Offsets-based whitespace (works well for BERT-like tokenizers)
+            has_whitespace_after = (next_start - curr_end) >= 1
+
+            # 2) Decode-based whitespace (works well for GPT2-like tokenizers and newline tokens)
+            if not has_whitespace_after:
+                next_piece = Granularity.__decode_one(tokenizer, ids[j])  # type: ignore
+                has_whitespace_after = bool(next_piece) and next_piece[0].isspace()
+
+            # 3) Token-string space marker (fixes SentencePiece/LLaMA/Mistral: tokens like "▁Is")
+            if not has_whitespace_after:
+                has_whitespace_after = Granularity.__starts_with_space_marker(tokens[j])
+
+            # If punctuation is followed by whitespace, start a new group
+            if has_whitespace_after:
+                indices.append(current_sentence)
+                current_sentence = []
+
+        if current_sentence:
+            indices.append(current_sentence)
+
+        return indices
+
+    @staticmethod
+    def __sentence_get_indices_from_input_ids(
+        input_ids: list[int] | torch.Tensor,
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+        split: list[str],
+    ) -> list[list[int]]:
+        """
+        Basic tokenizers (no offsets): simple split when we see ".", "?" or "!".
+        Split on end punctuation directly, EXCEPT if inside an exception (e.g., "U.S.", "Mr."...).
+        Avoid splitting multiple times for '...' when it is tokenized as ".", ".", ".".
+        """
+        special_ids = tokenizer.all_special_ids
+
+        ids = (
+            [int(x) for x in input_ids.tolist()]
+            if isinstance(input_ids, torch.Tensor)
+            else [int(x) for x in input_ids]
+        )
+        tokens = tokenizer.convert_ids_to_tokens(ids, skip_special_tokens=False)
+        exception_id_seqs = Granularity.__build_sentence_exception_id_seqs(tokenizer)
+
+        indices: list[list[int]] = []
+        current_sentence: list[int] = []
+
+        for i, (tok_id, tok_str) in enumerate(zip(ids, tokens, strict=True)):
+            # Skip special tokens (CLS/SEP/PAD...):
+            if tok_id in special_ids:
+                continue
+            current_sentence.append(i)
+
+            # Fallback rule: split on end-of-sentence (".", "?", "!") punctuation suffix.
+            if not any(p in tok_str for p in split):  # type: ignore
+                continue
+
+            # Exception guard (prevents splitting inside 'U.S.' etc.)
+            if Granularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
+                continue
+
+            # Avoid splitting 3 times for "..." when it is tokenized as ".", ".", "."
+            j = Granularity.__next_non_special(i + 1, ids, special_ids)
+            # if j is not None and tokens[j].startswith("."):
+            #    continue  # still in a run of dots
+            if j is not None:
+                last_char = tok_str[-1]
+                next_tok = tokens[j].lstrip("▁Ġ ")
+                if next_tok.startswith(last_char):
+                    continue
+
+            indices.append(current_sentence)
+            current_sentence = []
+
+        if current_sentence:
+            indices.append(current_sentence)
+
         return indices
 
     @jaxtyped(typechecker=beartype)
@@ -374,6 +614,7 @@ class Granularity(Enum):
         inputs: BatchEncoding,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         return_text: bool = False,
+        raw_text: list[str] | None = None,
         indices_list: list[list[list[int]]] | None = None,
     ) -> list[list[list[int]]] | list[list[str]]:
         """
@@ -391,6 +632,11 @@ class Granularity(Enum):
             return_text (bool, optional):
                 If True, the text corresponding to the token indices is returned.
                 If False, the token ids are returned. Defaults to False.
+            raw_text (list[str] | None):
+                Optional list of original (pre-tokenization) texts, one per batch element.
+                If provided and tokenizer is fast, SENTENCE text will be reconstructed by slicing
+                the original string using offsets to preserve exact formatting (e.g., "url.com")
+                and casing. Leading whitespace is stripped.
             indices_list (list[list[list[int]]] | None): Precomputed indices list from `get_indices` method to avoid recomputation.
 
         Returns:
@@ -421,60 +667,37 @@ class Granularity(Enum):
                 if return_text:
                     text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)  # type: ignore
                     decomposition.append(text)
+                # Proposition for exact recontruction but too costly (I keep only if one day is necessary
+                # to have exact text reconstruction for sentences, but it is not the case for now):
+                # if return_text:
+                #     assert tokenizer is not None
+                #     if (
+                #         (self is Granularity.SENTENCE or self is Granularity.WORD)
+                #         and raw_text is not None
+                #         and tokenizer.is_fast
+                #         and isinstance(inputs, BatchEncoding)
+                #         and getattr(inputs, "encodings", None)
+                #     ):
+                #         # Offsets are aligned with token positions in the encoding
+                #         offsets = inputs.encodings[i].offsets  # type: ignore[attr-defined]
+
+                #         start = offsets[gran_indices[0]][0]
+                #         end = offsets[gran_indices[-1]][1]
+
+                #         # exact substring + remove leading whitespace
+                #         text = raw_text[i][start:end].lstrip()
+                #         decomposition.append(text)
+                #     else:
+                #         # Default: decode (works everywhere), but strip leading spaces for SENTENCE
+                #         text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)
+                #         if self is Granularity.SENTENCE:
+                #             text = text.lstrip()
+                #         decomposition.append(text)
                 else:
                     decomposition.append(ids)
             all_decompositions.append(decomposition)
 
         return all_decompositions
-
-    @staticmethod
-    @lru_cache(maxsize=2)  # keep a model in cache to reuse easily
-    def __get_spacy(model: str = "en_core_web_sm"):
-        """
-        Lazily load a small spaCy pipeline.
-        The model name can be patched via `SPACY_MODEL` env-var if needed.
-        """
-
-        try:
-            nlp = spacy.load(model, disable=["ner", "tagger", "lemmatizer"])  # type: ignore
-        except OSError as e:
-            raise ModuleNotFoundError(
-                "Unable to load spaCy model. Please download it via `python -m spacy download en_core_web_sm`"
-            ) from e
-
-        # sentence boundaries
-        if "sentencizer" not in nlp.pipe_names:
-            nlp.add_pipe("sentencizer")
-        return nlp
-
-    @staticmethod
-    def __spacy_get_indices(input_ids, offsets, tokenizer, level) -> list[list[int]]:
-        """
-        Generic spaCy-based grouper turning char-span segments (sent/para)
-        into token-index groups.
-        """
-
-        # Build raw text (special tokens removed to keep offsets aligned)
-        text = tokenizer.decode(input_ids, skip_special_tokens=True)
-
-        # Run spaCy once per sample
-        nlp = Granularity.__get_spacy(os.environ.get("SPACY_MODEL", "en_core_web_sm"))
-        doc = nlp(text)
-
-        # Obtain character spans for each requested granularity
-        span_list = list(doc.sents)
-
-        # Map char spans → token indices using the HF offset mapping
-        groups: list[list[int]] = []
-        for span in span_list:
-            token_indices = [
-                i
-                for i, (s, e) in enumerate(offsets)
-                if s is not None and e is not None and s >= span.start_char and e <= span.end_char + 1
-            ]
-            if token_indices:  # skip empty groups (can happen on only-punct spans)
-                groups.append(token_indices)
-        return groups
 
     def granularity_score_aggregation(  # noqa: PLR0912  # ignore too many branches
         self,
@@ -564,7 +787,7 @@ class Granularity(Enum):
                     # convert contribution to tensor for faster indexing
                     indices = torch.tensor(sample_indices).squeeze(1)
                     contribution = contribution[:, indices]
-                case Granularity.WORD | Granularity.SENTENCE:
+                case Granularity.WORD | Granularity.PART_SENTENCE | Granularity.SENTENCE:
                     # verify aggregation strategy is not None:
                     if granularity_aggregation_strategy is None:
                         raise ValueError(
@@ -634,7 +857,7 @@ class Granularity(Enum):
                         # convert contribution to tensor for faster indexing
                         indices = torch.tensor(target_indices).squeeze(1)
                         contribution = contribution[indices, :]
-                case Granularity.WORD | Granularity.SENTENCE:
+                case Granularity.WORD | Granularity.PART_SENTENCE | Granularity.SENTENCE:
                     # verify aggregation strategy is not None:
                     if granularity_aggregation_strategy is None:
                         raise ValueError(
