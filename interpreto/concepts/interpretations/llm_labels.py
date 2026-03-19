@@ -38,7 +38,7 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
+from interpreto.model_wrapping.llm_interface import LLMInterface
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
 
@@ -149,8 +149,8 @@ class LLMLabels(BaseConceptInterpretationMethod):
             It can be tuned through the `unique_words_kwargs` argument.
 
         unique_words_kwargs (dict):
-            The kwargs to pass to the `extract_unique_words` function.
-            See [`extract_unique_words`][interpreto.concepts.interpretations.extract_unique_words] for more details.
+            The kwargs to pass to the `extract_ngrams` function.
+            See [`extract_ngrams`][interpreto.concepts.interpretations.extract_ngrams] for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         k_quantile (int):
@@ -176,7 +176,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         k_examples: int = 30,
         k_context: int = 0,
         use_vocab: bool = False,
-        use_unique_words: bool = False,
+        use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,
@@ -271,7 +271,8 @@ class LLMLabels(BaseConceptInterpretationMethod):
             concepts_activations=concepts_activations,
         )
 
-        labels: Mapping[int, str | None] = {}
+        # Construct one user prompt for each concept
+        user_prompts: list[str] = []
         for concept_idx in sure_concepts_indices:
             example_idx = self.sampling_method.sample_examples(
                 concept_activations=sure_concepts_activations[:, concept_idx],
@@ -285,14 +286,16 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 sample_ids=granular_sample_ids,
                 k_context=self.k_context,
             )
-            example_prompt = _build_example_prompt(examples)
-            prompt: list[tuple[Role, str]] = [
-                (Role.SYSTEM, self.system_prompt),
-                (Role.USER, example_prompt),
-                (Role.ASSISTANT, ""),
-            ]
-            label = self.llm_interface.generate(prompt)
-            labels[concept_idx] = label
+            user_prompts.append(_build_example_prompt(examples))
+        
+        # batched llm call for concepts interpretations
+        responses = self.llm_interface.batch_generate(system_prompt=self.system_prompt, user_prompts=user_prompts)
+
+        # map labels to concepts
+        labels: Mapping[int, str | None] = {
+            concept_idx: label
+            for concept_idx, label in zip(sure_concepts_indices, responses, strict=True)
+        }
         return labels
 
 

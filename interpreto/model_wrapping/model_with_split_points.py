@@ -91,7 +91,6 @@ class ActivationGranularity(Enum):
         Then the activations are flattened.
         ``(n x g, d)`` where `g` is the number of sentences in the input.
         The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
-        Requires `spacy` to be installed.
 
     - ``TOKEN``:
         the raw activations are flattened, but the special tokens are removed.
@@ -804,7 +803,6 @@ class ModelWithSplitPoints(LanguageModel):
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of sentences in the input.
                     The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
-                    Requires `spacy` to be installed.
 
                 - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
                     the raw activations are flattened, but the special tokens are removed.
@@ -1079,7 +1077,6 @@ class ModelWithSplitPoints(LanguageModel):
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of sentences in the input.
                     The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
-                    Requires `spacy` to be installed.
 
                 - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
                     the raw activations are flattened, but the special tokens are removed.

@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 
 import pytest
@@ -33,7 +34,7 @@ from transformers.tokenization_utils_base import BatchEncoding
 
 # local import – the module is supplied alongside this test file
 from interpreto import Granularity
-from interpreto.commons.granularity import _HAS_SPACY, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy
 
 # -------
 # Helpers
@@ -65,12 +66,8 @@ def simple_text():
 
 @pytest.fixture(scope="module")
 def complex_text():
-    """Multi‑clause, multi‑sentence, multi‑paragraph text for spaCy levels."""
-    return (
-        "Although it was raining, we went for a walk. "  # 1st sentence (2 clauses)
-        "We took umbrellas.\n\n"  # 2nd sentence, same paragraph
-        "It was fun."  # New paragraph
-    )
+    """5 sentences and 7 part‑sentences, with various punctuation and spacing."""
+    return "Although it was raining, we went for a walk. Mr. Smith was with us... We took umbrellas?\nThis is url.com and I love, this !?! Ahah!"
 
 
 # ----------------------------------------
@@ -310,97 +307,168 @@ def test_word_aggregation_matches_manual(simple_text, real_bert_tokenizer, strat
 
 
 # ----------------------------------------------------------
-# spaCy‑based granularities (SENTENCE )
-
-needs_spacy = pytest.mark.skipif(
-    not _HAS_SPACY,
-    reason="spaCy  not available – skipping high‑level tests",
-)
+# SENTENCE granularities
 
 
-@needs_spacy
-def test_spacy_granularities_indices(complex_text, real_bert_tokenizer):
-    """Basic sanity checks on the hierarchy of spaCy granularities."""
+def test_sentence_granularities_indices(complex_text, real_bert_tokenizer):
+    """Basic sanity checks on the hierarchy of sentence granularities."""
 
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
 
     sent_idx = Granularity.SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
 
-    # We know our handcrafted *complex_text*:
-    # 1st sentence (2 clauses): "Although it was raining, we went for a walk. "
-    # 2nd sentence (1 clause) in same paragraph: "We took umbrellas.\n\n"
-    # 3rd sentence (1 clause) in a new paragraph: "It was fun."
-
-    #   • 4 clauses   (2 + 1 + 1)
-    #   • 3 sentences (2 + 1)
-    #   • 2 paragraphs
-    assert len(sent_idx) == 3
-
-    # Hierarchy sanity: same tokens regrouped, nothing lost / duplicated
-    flat_sent = sorted(i for grp in sent_idx for i in grp)
-    assert flat_sent == list(range(len(tokens["input_ids"][0])))
+    assert len(sent_idx) == 5, f"Expected 5 sentences, got {len(sent_idx)}"
 
 
-@needs_spacy
-def test_spacy_granularities_matrices_and_decomposition(complex_text, real_bert_tokenizer):
-    """Full round‑trip checks for SENTENCE ."""
+def test_sentence_granularities_indices_part_sentence(complex_text, real_bert_tokenizer):
+    """Basic sanity checks on the hierarchy of sentence granularities."""
+
+    tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
+
+    part_sent_idx = Granularity.PART_SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
+
+    assert len(part_sent_idx) == 7, f"Expected 7 part-sentences, got {len(part_sent_idx)}"
+
+
+def test_sentence_part_sentence_granularity_with_different_tokenizers():
+    def assert_segment_matches(repo_id: str, segment: str, ref: str):
+        seg = segment.lower()
+
+        # Allow an optional leading newline for the "This is the end..." sentence
+        if ref == "this is the end of the test!!!":
+            seg = seg.lstrip("\n")
+            assert ref in seg, f"Expected '{ref}' in segment '{segment}' for tokenizer {repo_id}"
+
+        # Allow "url.com" OR "url. com" (optional space after the dot) for the URL sentence
+        elif ref == "this url.com is?":
+            assert re.search(r"this url\. ?com is\?", seg), (
+                f"Expected '{ref}' (or 'this url. com is?') in segment '{segment}' for tokenizer {repo_id}"
+            )
+
+        # Default strict containment check for other sentences
+        else:
+            assert ref in seg, f"Expected '{ref}' in segment '{segment}' for tokenizer {repo_id}"
+
+    for repo_id in [
+        "hf-internal-testing/tiny-random-bert",
+        "hf-internal-testing/tiny-random-gpt2",
+        "hf-internal-testing/tiny-random-roberta",
+        "hf-internal-testing/tiny-random-t5",
+        "hf-internal-testing/tiny-random-MistralForCausalLM",
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+    ]:
+        tokenizer = AutoTokenizer.from_pretrained(repo_id)
+        text = "This is : a test. Mr. is this a test?\nThis is the end of the test!!! Or, is it?! This url.com is?"
+
+        tokens = tokenizer(text, return_tensors="pt", return_offsets_mapping=True)
+
+        # --- SENTENCE granularity ---
+        sent_idx = Granularity.SENTENCE.get_indices(tokens, tokenizer)[0]
+        sent_text = Granularity.SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
+
+        assert len(sent_idx) == 5, (
+            f"[SENTENCE] Expected 5 sentences, got {len(sent_idx)} for tokenizer {repo_id}",
+            f"{sent_text}",
+        )
+
+        expected_sent = [
+            "this is : a test.",
+            "mr. is this a test?",
+            "this is the end of the test!!!",
+            "or, is it?!",
+            "this url.com is?",
+        ]
+
+        for segment, ref in zip(sent_text, expected_sent, strict=True):
+            assert_segment_matches(repo_id, segment, ref)
+
+        # --- PART_SENTENCE granularity (also splits on ',' and ':') ---
+        part_idx = Granularity.PART_SENTENCE.get_indices(tokens, tokenizer)[0]
+        part_text = Granularity.PART_SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
+
+        # We expect extra splits due to ',' and ':' :
+        assert len(part_idx) == 7, (
+            f"[PART_SENTENCE] Expected 7 segments, got {len(part_idx)} for tokenizer {repo_id}",
+            f"{part_text}",
+        )
+
+        expected_part = [
+            "this is :",
+            "a test.",
+            "mr. is this a test?",
+            "this is the end of the test!!!",
+            "or,",
+            "is it?!",
+            "this url.com is?",
+        ]
+
+        for segment, ref in zip(part_text, expected_part, strict=True):
+            seg = segment.lower()
+
+            # Allow an optional leading newline on the first chunk after the line break
+            if ref == "this is the end of the test!!!":
+                seg = seg.lstrip("\n")
+                assert ref in seg, f"Expected '{ref}' in segment '{segment}' for tokenizer {repo_id}"
+            else:
+                assert_segment_matches(repo_id, segment, ref)
+
+
+def test_sentence_granularities_matrices_and_decomposition(complex_text, real_bert_tokenizer):
+    """Full round‑trip checks for SENTENCE and PART-SENTENCE granularities."""
 
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
     seq_len = tokens["input_ids"].shape[1]
 
-    gran = Granularity.SENTENCE
+    for gran in (Granularity.SENTENCE, Granularity.PART_SENTENCE):
+        indices = gran.get_indices(tokens, real_bert_tokenizer)[0]
 
-    indices = gran.get_indices(tokens, real_bert_tokenizer)[0]
+        # Association matrix
+        assoc = gran.get_association_matrix(tokens, real_bert_tokenizer)[0]
+        expected_mat = _build_expected_matrix(indices, seq_len)
+        assert torch.equal(assoc, expected_mat)
 
-    # Association matrix
-    assoc = gran.get_association_matrix(tokens, real_bert_tokenizer)[0]
-    expected_mat = _build_expected_matrix(indices, seq_len)
-    assert torch.equal(assoc, expected_mat)
+        # Decomposition (ids)
+        decomp_ids = gran.get_decomposition(tokens, real_bert_tokenizer)[0]
+        assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
 
-    # Decomposition (ids)
-    decomp_ids = gran.get_decomposition(tokens, real_bert_tokenizer)[0]
-    assert decomp_ids == [[int(tokens["input_ids"][0][i]) for i in grp] for grp in indices]
+        # Decomposition (text)
+        decomp_text: list[str] = gran.get_decomposition(tokens, real_bert_tokenizer, return_text=True)[0]  # type: ignore
+        # Silent print for manual inspection when running directly
+        # (f"\n[{gran}] decomposition:\n", decomp_text)
 
-    # Decomposition (text)
-    decomp_text: list[str] = gran.get_decomposition(tokens, real_bert_tokenizer, return_text=True)[0]  # type: ignore
-    # Silent print for manual inspection when running directly
-    print(f"\n[{gran}] decomposition:\n", decomp_text)
+        # Each segment must be non‑empty & appear verbatim in the original text
+        raw_text = real_bert_tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)
+        for segment in decomp_text:
+            assert segment.strip() in raw_text
 
-    # Each segment must be non‑empty & appear verbatim in the original text
-    raw_text = real_bert_tokenizer.decode(tokens["input_ids"][0], skip_special_tokens=True)
-    for segment in decomp_text:
-        assert segment.strip() in raw_text
-
-    # Join without spaces – coverage check (no char lost)
-    joined = " ".join(seg.strip() for seg in decomp_text)
-    assert joined == raw_text
+        # Join without spaces – coverage check (no char lost)
+        joined = " ".join(seg.strip() for seg in decomp_text)
+        assert joined == raw_text
 
 
-@needs_spacy
 @pytest.mark.parametrize("strategy", STRATS)
 def test_sentence_aggregation_matches_manual(complex_text, real_bert_tokenizer, strategy):
     """
-    Same as the WORD-level test, but for SENTENCE-level granularity.
-    This test depends on spaCy for sentence segmentation.
+    Same as the WORD-level test, but for SENTENCE and PART-SENTENCE-level granularity.
     """
 
     tok = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
     seq_len = tok["input_ids"].shape[1]
     scores = torch.randn(3, seq_len)  # three scores per token for variation
 
-    indices = Granularity.SENTENCE.get_indices(tok, real_bert_tokenizer)[0]
+    for gran in (Granularity.SENTENCE, Granularity.PART_SENTENCE):
+        indices = gran.get_indices(tok, real_bert_tokenizer)[0]
 
-    expected = _manual_aggregate(scores, indices, strategy)
+        expected = _manual_aggregate(scores, indices, strategy)
 
-    obtained = Granularity.SENTENCE.granularity_score_aggregation(
-        contribution=scores,
-        granularity_aggregation_strategy=strategy,
-        inputs=tok,
-        tokenizer=real_bert_tokenizer,
-        aggregate_inputs=True,
-    )
-
-    assert torch.allclose(obtained, expected, atol=1e-6)
+        obtained = gran.granularity_score_aggregation(
+            contribution=scores,
+            granularity_aggregation_strategy=strategy,
+            inputs=tok,
+            tokenizer=real_bert_tokenizer,
+            aggregate_inputs=True,
+        )
+        assert torch.allclose(obtained, expected, atol=1e-6)
 
 
 # -----------------------------------------------------------------

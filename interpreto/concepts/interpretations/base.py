@@ -53,7 +53,7 @@ def _ensure_nltk_resources(lemmatize: bool) -> None:
     """
     Ensure NLTK resources are downloaded.
 
-    Only used in `extract_unique_words`.
+    Only used in `extract_ngrams`.
 
     The `lru_cache` ensures the download are only called once.
     """
@@ -65,106 +65,79 @@ def _ensure_nltk_resources(lemmatize: bool) -> None:
 
 
 @jaxtyped(typechecker=beartype)
-def extract_unique_words(
+def extract_ngrams(
     inputs: list[str],
+    n: int = 1,
     count_min_threshold: int = 1,
     return_counts: bool = False,
     lemmatize: bool = False,
     words_to_ignore: list[str] | None = None,
 ) -> list[str] | Counter[str]:
     """
-    Extract words from a text.
+    Extract n-grams (from 1-gram up to n-gram of words) from a list of texts.
 
-    Depending on parameters, it may select a subset of words or return the counts of each word.
+    If n=3, it extracts 1-grams, 2-grams, and 3-grams.
 
     Args:
-        inputs (str):
-            The text to extract words from.
+        inputs (list[str]):
+            The texts to extract n-grams from.
 
-        count_min_threshold (float, optional):
-            The minimum total number of a occurrence of a word in the whole `inputs`.
+        n (int):
+            The maximum n-gram size. All sizes from 1 to n are extracted.
+
+        count_min_threshold (int, optional):
+            The minimum total number of occurrences of an n-gram in the whole `inputs`.
 
         return_counts (bool, optional):
-            Whether to return the counts of each word.
+            Whether to return the counts of each n-gram.
             Defaults to False.
 
-        words_to_ignore: (list[str], optional):
-            A list of words to ignore.
+        lemmatize (bool, optional):
+            Whether to lemmatize words before counting.
 
-    Examples:
-        Fastest version as used in `TopKInputs`.
-        >>> extract_unique_words(["Interpreto is the latin for 'to interpret'.", "interpreto is magic"])
-        ["interpreto", "is", "the", "latin", "for", "to", "'", "interpret", ".", "magic"]
-
-        More complex use:
-        >>> import nltk
-        >>> from datasets import load_dataset
-        >>> from nltk.corpus import stopwords
-        >>>
-        >>> from interpreto.concepts.interpretations import extract_unique_words
-        >>>
-        >>> nltk.download("stopwords")
-        >>>
-        >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> extract_unique_words(
-        ...     inputs=dataset,
-        ...     count_min_threshold=20,
-        ...     return_counts=True,
-        ...     lemmatize=True,
-        ...     words_to_ignore=stopwords.words("english") + [".", ",", "'s", "n't", "--", "``", "'"],
-        ... )
-        Counter({'film': 1402,
-                 'movie': 1243,
-                 'one': 594,
-                 'like': 574,
-                 'ha': 563,
-                 'make': 437,
-                 'story': 417,
-        ...
-                 'pop': 20,
-                 'college': 20,
-                 'bear': 20,
-                 'plain': 20,
-                 'generic': 20})
+        words_to_ignore (list[str] | None, optional):
+            A list of words to ignore (applied to individual tokens before forming n-grams).
 
     Returns:
         list[str] | Counter[str]:
-            The list of unique words or the counts of each word.
-
-    Raises:
-        ValueError:
-            If the input is not a list of strings.
+            The list of unique n-grams or the counts of each n-gram.
     """
-    # ensure NLTK resources are downloaded
     _ensure_nltk_resources(lemmatize=lemmatize)
 
     if lemmatize:
         lemmatizer = WordNetLemmatizer()
 
-    # counter both list unique words and counts of each word
-    words_count = Counter()
+    tuple_ngram_counts: Counter[tuple[str]] = Counter()
 
     for text in inputs:
-        for word in word_tokenize(text):
-            # lemmatize words
+        tokens = word_tokenize(text)
+
+        # preprocess tokens
+        processed = []
+        for word in tokens:
             if lemmatize:
                 word = lemmatizer.lemmatize(word.lower())  # noqa: PLW2901  # type: ignore  (ignore possibly unbound)
-
-            # ignore words
             if words_to_ignore is not None and word in words_to_ignore:
                 continue
+            processed.append(word)
+            tuple_ngram_counts[(word,)] += 1  # unigram tuple
 
-            # add word to counter
-            words_count[word] += 1
+        for size in range(2, n + 1):  # skips size 1 as covered over
+            for i in range(len(processed) - size + 1):
+                tuple_ngram_counts[tuple(processed[i : i + size])] += 1  # >1-gram tuples
 
-    # filter too rare words
-    if count_min_threshold > 1:
-        words_count = Counter({key: count for key, count in words_count.items() if count >= count_min_threshold})
+    str_ngram_counts: Counter[str] = Counter(
+        {
+            " ".join(key): count  # convert ngram tuples to strings
+            for key, count in tuple_ngram_counts.items()
+            if count >= count_min_threshold  # filter too rare n-grams
+        }
+    )
 
     if return_counts:
-        return words_count
+        return str_ngram_counts
 
-    return list(words_count.keys())
+    return list(str_ngram_counts.keys())
 
 
 def verify_concepts_indices(
@@ -243,8 +216,8 @@ class BaseConceptInterpretationMethod(ABC):
             It can be tuned through the `unique_words_kwargs` argument.
 
         unique_words_kwargs (dict):
-            The kwargs to pass to the `extract_unique_words` function.
-            see `interpreto.concepts.interpretations.topk_inputs.extract_unique_words` for more details.
+            The kwargs to pass to the `extract_ngrams` function.
+            see `interpreto.concepts.interpretations.topk_inputs.extract_ngrams` for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         concept_model_device (torch.device | str | None):
@@ -259,7 +232,7 @@ class BaseConceptInterpretationMethod(ABC):
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
-        use_unique_words: bool = False,
+        use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
         concept_model_device: torch.device | str | None = None,
     ):
@@ -283,7 +256,7 @@ class BaseConceptInterpretationMethod(ABC):
         self.aggregation_strategy: GranularityAggregationStrategy = aggregation_strategy
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
-        self.use_unique_words: bool = use_unique_words
+        self.use_unique_words: int = int(use_unique_words)
         self.unique_words_kwargs: dict = unique_words_kwargs
         self.concept_model_device: torch.device | str | None = concept_model_device
 
@@ -568,12 +541,19 @@ class BaseConceptInterpretationMethod(ABC):
             if inputs is None:
                 raise ValueError("Inputs must be provided when `use_vocab` is False.")
 
-            if self.use_unique_words:
+            if self.use_unique_words >= 1:
                 # ----------------------------------------------------------------------------------
-                # Case 2: use_unique_words=True
-                # first list unique words from the inputs and compute the activations from them
-                granular_inputs: list[str] = extract_unique_words(
-                    inputs=inputs, return_counts=False, **self.unique_words_kwargs
+                # Case 2: use_unique_words >= 1
+                # first list unique words/ngrams from the inputs and compute the activations from them
+                if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
+                    raise ValueError(
+                        f"`use_unique_words` requires `activation_granularity=CLS_TOKEN`, "
+                        f"got `{self.activation_granularity}`. "
+                        "Ngram-based interpretation relies on the CLS token activation "
+                        "to represent each ngram as a single unit."
+                    )
+                granular_inputs: list[str] = extract_ngrams(
+                    inputs=inputs, n=self.use_unique_words, return_counts=False, **self.unique_words_kwargs
                 )  # type: ignore  (sure list[str] with return_counts=False)
                 if latent_activations is not None and concepts_activations is not None:
                     warnings.warn(
@@ -581,7 +561,7 @@ class BaseConceptInterpretationMethod(ABC):
                         "but `use_unique_words` is True. "
                         "Therefore, the inputs and activations will likely mismatch. "
                         "Either do not provide `latent_activations` and `concepts_activations`, "
-                        "or use `interpreto.concepts.interpretation.extract_unique_words` yourself, "
+                        "or use `interpreto.concepts.interpretation.extract_ngrams` yourself, "
                         "and set `use_unique_words` to False.",
                         stacklevel=2,
                     )

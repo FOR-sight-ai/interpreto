@@ -30,7 +30,7 @@ from typing import NamedTuple
 
 import torch
 
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
+from interpreto.model_wrapping.llm_interface import LLMInterface
 
 
 class AutomatedSimulatability:

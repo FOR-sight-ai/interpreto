@@ -45,7 +45,6 @@ jobs:
         source .venv/bin/activate
         make update-deps
         uv pip install -r requirements-dev.txt
-        python -m spacy download en_core_web_sm
 
 
     - name: Export HF_HUB_TOKEN
