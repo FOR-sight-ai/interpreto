@@ -407,6 +407,9 @@ class AttributionExplainer:
             for score, mask in zip(scores, mask_generator, strict=True)
         )
 
+        # Aggregate the score with respect to the granularity level
+        # - Aggregate over the inputs for gradient-based methods: (t, l) -> (t, lg)
+        # - Aggregate over the targets if the model is a generation model: (t, l) -> (tg, l)
         granular_contributions = (
             self.granularity.granularity_score_aggregation(
                 contribution=contribution.cpu(),
@@ -624,7 +627,9 @@ def normalize_target_ids_with_leading_space(tokenizer: PreTrainedTokenizer, targ
     """Ensure target text starts with a space and return retokenized target ids."""
     target_text = tokenizer.decode(target, skip_special_tokens=True)
     if isinstance(target_text, str):
-        normalized_target_text = target_text if target_text.startswith(" ") else f" {target_text}"
+        if target_text.startswith(" "):
+            return target
+        normalized_target_text = f" {target_text}"
     elif isinstance(target_text, Iterable):
         normalized_target_text = [
             target_text_elem if target_text_elem.startswith(" ") else f" {target_text_elem}"
