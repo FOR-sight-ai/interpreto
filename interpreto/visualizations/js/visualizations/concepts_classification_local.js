@@ -1,384 +1,264 @@
 (function () {
     /**
-     * ClassificationLocalConceptsVisualization - Visualization for local concepts in classification tasks
+     * ClassificationLocalConceptsVisualization - Static visualization for local concepts in
+     * classification tasks.
      */
     window.ClassificationLocalConceptsVisualization = class ClassificationLocalConceptsVisualization {
         /**
-         * @param {string} uniqueIdClasses - The unique id of the div containing the classes
-         * @param {string} uniqueIdConcepts - The unique id of the div containing the concepts
-         * @param {string} uniqueIdConceptsWrapper - The unique id of the concepts wrapper div
-         * @param {string} uniqueIdSample - The unique id of the div containing the sample
+         * @param {string} uniqueIdRoot - The unique id of the root div containing the visualization
          * @param {string} jsonData - The JSON data containing classes, concepts, and sample
          */
-        constructor(
-            uniqueIdClasses,
-            uniqueIdConcepts,
-            uniqueIdConceptsWrapper,
-            uniqueIdSample,
-            jsonData
-        ) {
+        constructor(uniqueIdRoot, jsonData) {
             console.log("Creating ClassificationLocalConceptsVisualization");
 
-            this.uniqueIdClasses = uniqueIdClasses;
-            this.uniqueIdConcepts = uniqueIdConcepts;
-            this.uniqueIdConceptsWrapper = uniqueIdConceptsWrapper;
-            this.uniqueIdSample = uniqueIdSample;
+            this.uniqueIdRoot = uniqueIdRoot;
             this.data = JSON.parse(jsonData);
 
+            this.classes = Array.isArray(this.data.classes) ? this.data.classes : [];
             this.sample = Array.isArray(this.data.sample) ? this.data.sample : [];
-            this.activations = Array.isArray(this.data.activations)
-                ? this.data.activations
-                : [];
-            this.activationsByClass = this.data.activations_by_class || null;
             this.importances = Array.isArray(this.data.importances)
                 ? this.data.importances
                 : [];
             this.labels = Array.isArray(this.data.labels) ? this.data.labels : [];
             this.labelsByClass = this.data.labels_by_class || null;
-
             this.topK = Math.max(0, parseInt(this.data.top_k || 0, 10));
-            this.conceptColor = this.data.concept_color || "#f39c12";
-            this.defaultColormap = this.data.default_colormap || {};
-            this.onClickColorMap =
-                Array.isArray(this.data.onclick_colormap) &&
-                this.data.onclick_colormap.length >= 2
-                    ? this.data.onclick_colormap
-                    : null;
 
-            this.backgroundColor = StyleComputer.getBackgroundRgb();
-            this.classElements = [];
-            this.sampleElements = [];
-            this.conceptElements = [];
-            this.topConcepts = [];
+            this.positiveColor = getComputedStyle(document.documentElement)
+                .getPropertyValue("--positive-color")
+                .trim() || "#ff0000";
+            this.negativeColor = getComputedStyle(document.documentElement)
+                .getPropertyValue("--negative-color")
+                .trim() || "#0000ff";
 
-            this.hoveredClassId = null;
-            this.selectedClassId = null;
-            this.hoveredConceptIndex = null;
-            this.selectedConceptIndex = null;
+            this.maxAbsImportance = this._computeMaxAbsImportance();
+            this.unionConceptIds = this._computeUnionConceptIds();
 
-            // Create DOM
-            this._createClasses();
-            this._createSample();
-            this._setTopConcepts(this._computeDefaultTopConcepts());
-            this._renderConcepts();
-
-            // Initial render
-            this._refreshAll();
+            this._render();
         }
 
-        /**
-         * Create class elements in the DOM
-         */
-        _createClasses() {
-            const container = document.getElementById(this.uniqueIdClasses);
-            if (!container) return;
-
-            this.classElements = DOMRenderer.renderClassButtons(
-                container,
-                this.data.classes || [],
-                {
-                    onClick: (id) => this._onClassClick(id),
-                    onMouseOver: (id) => this._onClassMouseOver(id),
-                    onMouseOut: (id) => this._onClassMouseOut(id),
-                },
-                { useColors: false }
-            );
-        }
-
-        /**
-         * Create sample elements in the DOM
-         */
-        _createSample() {
-            const container = document.getElementById(this.uniqueIdSample);
-            if (!container) return;
-
-            const { wordElements } = DOMRenderer.renderInputs(container, this.sample);
-            this.sampleElements = wordElements;
-        }
-
-        /**
-         * Render concept elements in the DOM
-         */
-        _renderConcepts() {
-            const wrapper = document.getElementById(this.uniqueIdConceptsWrapper);
-            const container = document.getElementById(this.uniqueIdConcepts);
-            if (!wrapper || !container) {
-                this.conceptElements = [];
+        _render() {
+            const root = document.getElementById(this.uniqueIdRoot);
+            if (!root) {
                 return;
             }
 
-            this.conceptElements = ConceptsLocalUtils.renderConceptList(
-                wrapper,
-                container,
-                this.topConcepts,
-                {
-                    onClick: (index) => this._onConceptClick(index),
-                    onMouseOver: (index) => this._onConceptMouseOver(index),
-                    onMouseOut: (index) => this._onConceptMouseOut(index),
-                }
+            root.innerHTML = "";
+
+            const plot = document.createElement("div");
+            plot.classList.add("local-classification-plot");
+
+            plot.appendChild(this._createDivider());
+            plot.appendChild(this._createSampleRow());
+            plot.appendChild(this._createDivider());
+            plot.appendChild(this._createHeaderRow());
+
+            for (let classId = 0; classId < this.classes.length; classId++) {
+                plot.appendChild(this._createClassRow(classId));
+            }
+
+            plot.appendChild(this._createDivider());
+            root.appendChild(plot);
+        }
+
+        _createDivider() {
+            const divider = document.createElement("div");
+            divider.classList.add("local-classification-divider");
+            return divider;
+        }
+
+        _createSampleRow() {
+            const row = document.createElement("div");
+            row.classList.add("local-classification-grid", "local-classification-sample-row");
+
+            const label = document.createElement("div");
+            label.classList.add("local-classification-side-label");
+            label.textContent = "Sample";
+
+            const content = document.createElement("div");
+            content.classList.add("local-classification-main-cell");
+
+            const line = document.createElement("div");
+            line.classList.add("local-classification-token-line");
+
+            for (let tokenIndex = 0; tokenIndex < this.sample.length; tokenIndex++) {
+                const tokenElement = document.createElement("div");
+                tokenElement.classList.add("common-word-style", "local-classification-token");
+                tokenElement.dataset.wordIndex = tokenIndex.toString();
+                tokenElement.textContent = DOMRenderer.normalizeSpecialChars(this.sample[tokenIndex]);
+                line.appendChild(tokenElement);
+            }
+
+            content.appendChild(line);
+            row.appendChild(label);
+            row.appendChild(content);
+            return row;
+        }
+
+        _createHeaderRow() {
+            const row = document.createElement("div");
+            row.classList.add("local-classification-grid", "local-classification-header-row");
+
+            const classesHeader = document.createElement("div");
+            classesHeader.classList.add("local-classification-column-heading");
+            classesHeader.textContent = "Classes";
+
+            const conceptsHeader = document.createElement("div");
+            conceptsHeader.classList.add("local-classification-column-heading");
+            conceptsHeader.textContent = "Concepts";
+
+            row.appendChild(classesHeader);
+            row.appendChild(conceptsHeader);
+            return row;
+        }
+
+        _createClassRow(classId) {
+            const row = document.createElement("div");
+            row.classList.add("local-classification-grid", "local-classification-class-row");
+
+            const classCell = document.createElement("div");
+            classCell.classList.add(
+                "common-word-style",
+                "local-classification-class-name"
             );
-        }
+            classCell.dataset.classId = classId.toString();
+            classCell.textContent = this._getClassName(classId);
 
-        /**
-         * Refresh all view components
-         */
-        _refreshAll() {
-            this._refreshClasses();
-            this._refreshConcepts();
-            this._refreshTokens();
-        }
+            const conceptsCell = document.createElement("div");
+            conceptsCell.classList.add("local-classification-main-cell");
 
-        /**
-         * Handle class click event
-         * @param {number} classId
-         */
-        _onClassClick(classId) {
-            const wasSelected = this.selectedClassId === classId;
-            this.selectedClassId = wasSelected ? null : classId;
-            this.hoveredClassId = null;
+            const conceptsLine = document.createElement("div");
+            conceptsLine.classList.add("local-classification-concepts-line");
 
-            if (wasSelected) {
-                this._setTopConcepts(this._computeDefaultTopConcepts());
-            } else {
-                this._setTopConcepts(this._computeClassTopConcepts(classId));
+            const rowConcepts = this._buildRowConcepts(classId);
+            for (let conceptIndex = 0; conceptIndex < rowConcepts.length; conceptIndex++) {
+                conceptsLine.appendChild(this._createConceptChip(rowConcepts[conceptIndex]));
             }
 
-            this._renderConcepts();
-            this._refreshAll();
+            conceptsCell.appendChild(conceptsLine);
+            row.appendChild(classCell);
+            row.appendChild(conceptsCell);
+            return row;
         }
 
-        /**
-         * Handle class mouse over event
-         * @param {number} classId
-         */
-        _onClassMouseOver(classId) {
-            this.hoveredClassId = classId;
-            this._refreshClasses();
+        _createConceptChip(concept) {
+            const chip = document.createElement("div");
+            chip.classList.add(
+                "common-word-style",
+                "highlighted-word-style",
+                "concept-style",
+                "local-classification-chip"
+            );
+            chip.dataset.conceptId = concept.id.toString();
+            chip.textContent = this._formatLabel(concept.label);
+            chip.style.cssText = this._buildConceptChipStyle(concept.score);
+            DOMRenderer.setTooltip(chip, StyleComputer.formatTooltip(concept.score));
+            return chip;
         }
 
-        /**
-         * Handle class mouse out event
-         * @param {number} classId
-         */
-        _onClassMouseOut(classId) {
-            if (this.hoveredClassId === classId) {
-                this.hoveredClassId = null;
-            }
-            this._refreshClasses();
-        }
-
-        /**
-         * Handle concept click event
-         * @param {number} conceptIndex
-         */
-        _onConceptClick(conceptIndex) {
-            const wasSelected = this.selectedConceptIndex === conceptIndex;
-            this.selectedConceptIndex = wasSelected ? null : conceptIndex;
-            if (wasSelected) {
-                this.hoveredConceptIndex = null;
-            }
-            this._refreshAll();
-        }
-
-        /**
-         * Handle concept mouse over event
-         * @param {number} conceptIndex
-         */
-        _onConceptMouseOver(conceptIndex) {
-            this.hoveredConceptIndex = conceptIndex;
-            this._refreshAll();
-        }
-
-        /**
-         * Handle concept mouse out event
-         * @param {number} conceptIndex
-         */
-        _onConceptMouseOut(conceptIndex) {
-            if (this.hoveredConceptIndex === conceptIndex) {
-                this.hoveredConceptIndex = null;
-            }
-            this._refreshAll();
-        }
-
-        /**
-         * Refresh class styles
-         */
-        _refreshClasses() {
-            for (const element of this.classElements) {
-                const classId = parseInt(element.dataset.classId, 10);
-                const isActive = classId === this.hoveredClassId;
-                const isSelected = classId === this.selectedClassId;
-
-                let style = StyleComputer.buildLabelStyle(null, isActive, isSelected, {
-                    onClickColorMap: this.onClickColorMap,
-                    enableHighlight: true,
-                    showDefaultBackground: false,
-                    showBackgroundForSelected: true,
-                    useOnClickColorMap: false,
-                });
-                if (!isActive && !isSelected) {
-                    style += "outline-color: currentColor;";
-                }
-                element.style.cssText = style;
-                element.classList.toggle("is-emphasized", isActive || isSelected);
-            }
-        }
-
-        /**
-         * Refresh concept list styles
-         */
-        _refreshConcepts() {
-            if (!this.conceptElements.length) {
-                return;
-            }
-
-            const activeIndex = this._getActiveConceptIndex();
-            const showDefaultBackground = activeIndex === null;
-
-            for (let i = 0; i < this.conceptElements.length; i++) {
-                const element = this.conceptElements[i];
-                const concept = this.topConcepts[i];
-                const isActive = i === activeIndex;
-                const isSelected = i === this.selectedConceptIndex;
-
-                element.classList.remove("selected-style");
-
-                element.style.cssText = StyleComputer.buildLabelStyle(
-                    concept.color,
-                    isActive,
-                    isSelected,
-                    {
-                        onClickColorMap: this.onClickColorMap,
-                        enableHighlight: true,
-                        showDefaultBackground,
-                        showBackgroundForSelected: true,
-                        useOnClickColorMap: false,
+        _computeMaxAbsImportance() {
+            let maxValue = 0;
+            for (let classId = 0; classId < this.importances.length; classId++) {
+                const row = Array.isArray(this.importances[classId]) ? this.importances[classId] : [];
+                for (let conceptId = 0; conceptId < row.length; conceptId++) {
+                    const rawValue = typeof row[conceptId] === "number" ? row[conceptId] : 0;
+                    const absValue = Math.abs(rawValue);
+                    if (absValue > maxValue) {
+                        maxValue = absValue;
                     }
-                );
-                element.classList.toggle("is-emphasized", isActive || isSelected);
-
-                DOMRenderer.setTooltip(
-                    element,
-                    StyleComputer.formatTooltip(concept.score)
-                );
-            }
-        }
-
-        /**
-         * Refresh sample token highlights
-         */
-        _refreshTokens() {
-            const activations = this._getActiveActivations();
-            const hasTokenActivations =
-                Array.isArray(activations) &&
-                activations.length > 1 &&
-                activations.length === this.sample.length;
-
-            if (!hasTokenActivations || !this.topConcepts.length) {
-                ConceptsLocalUtils.clearTokenStyles(this.sampleElements);
-                return;
-            }
-
-            const activeIndex = this._getActiveConceptIndex();
-            if (activeIndex === null) {
-                ConceptsLocalUtils.updateTokensDefault(
-                    this.sampleElements,
-                    activations,
-                    this.topConcepts,
-                    this.backgroundColor
-                );
-            } else {
-                const concept = this.topConcepts[activeIndex];
-                if (!concept) {
-                    ConceptsLocalUtils.clearTokenStyles(this.sampleElements);
-                    return;
-                }
-                ConceptsLocalUtils.updateTokensForConcept(
-                    this.sampleElements,
-                    activations,
-                    concept,
-                    this.backgroundColor
-                );
-            }
-        }
-
-        _setTopConcepts(concepts) {
-            this.topConcepts = concepts;
-            this.hoveredConceptIndex = null;
-            this.selectedConceptIndex = null;
-        }
-
-        _computeDefaultTopConcepts() {
-            if (!this.activations.length) {
-                return [];
-            }
-            const nbConcepts = this.activations[0].length || 0;
-            const totals = new Array(nbConcepts).fill(0);
-            for (let tokenIndex = 0; tokenIndex < this.activations.length; tokenIndex++) {
-                const row = this.activations[tokenIndex] || [];
-                for (let conceptId = 0; conceptId < nbConcepts; conceptId++) {
-                    const value = typeof row[conceptId] === "number" ? row[conceptId] : 0;
-                    totals[conceptId] += Math.abs(value);
                 }
             }
-            return this._buildTopConcepts(totals, this.labels, this.activations);
+            return maxValue;
         }
 
-        _computeClassTopConcepts(classId) {
-            const row = this.importances[classId] || [];
-            return this._buildTopConcepts(
-                row,
-                this._getLabelsForClass(classId),
-                this._getClassActivations(classId)
-            );
+        _computeUnionConceptIds() {
+            const conceptIds = [];
+            const seen = new Set();
+
+            for (let classId = 0; classId < this.importances.length; classId++) {
+                const rankedEntries = this._buildAbsoluteRankedEntries(this.importances[classId] || []);
+                const selectedEntries = rankedEntries.slice(0, this.topK);
+                for (let entryIndex = 0; entryIndex < selectedEntries.length; entryIndex++) {
+                    const conceptId = selectedEntries[entryIndex].id;
+                    if (seen.has(conceptId)) {
+                        continue;
+                    }
+                    seen.add(conceptId);
+                    conceptIds.push(conceptId);
+                }
+            }
+
+            return conceptIds;
         }
 
-        _buildTopConcepts(scores, labels, activationsForMaxAbs = null) {
-            const entries = ConceptsLocalUtils.buildRankedEntries(scores);
-            const limitedEntries = this.topK > 0
-                ? entries.slice(0, this.topK)
-                : entries;
-            const activations = activationsForMaxAbs || this.activations;
+        _buildAbsoluteRankedEntries(scores) {
+            const entries = [];
+            for (let conceptId = 0; conceptId < scores.length; conceptId++) {
+                const rawValue = typeof scores[conceptId] === "number" ? scores[conceptId] : 0;
+                entries.push({
+                    id: conceptId,
+                    rawValue,
+                    absValue: Math.abs(rawValue),
+                });
+            }
 
-            return limitedEntries.map((entry) => {
-                const label = Array.isArray(labels) && labels[entry.id] !== undefined
-                    ? labels[entry.id]
-                    : `Concept #${entry.id}`;
-                const maxAbs = ConceptsLocalUtils.getMaxAbsForConcept(entry.id, activations);
-                const color = ConceptsLocalUtils.getConceptColor(
-                    entry.id,
-                    this.defaultColormap,
-                    this.conceptColor
-                );
-                return {
-                    id: entry.id,
-                    label,
-                    score: entry.rawValue,
-                    maxAbs,
-                    color,
-                };
+            entries.sort((left, right) => {
+                if (right.absValue !== left.absValue) {
+                    return right.absValue - left.absValue;
+                }
+                if (right.rawValue !== left.rawValue) {
+                    return right.rawValue - left.rawValue;
+                }
+                return left.id - right.id;
             });
+
+            return entries;
         }
 
-        _getClassActivations(classId) {
-            if (!this.activationsByClass) {
-                return null;
+        _getRowThreshold(classId) {
+            const scores = Array.isArray(this.importances[classId]) ? this.importances[classId] : [];
+            if (!scores.length || this.topK <= 0) {
+                return Infinity;
             }
-            return (
-                this.activationsByClass[classId] ||
-                this.activationsByClass[String(classId)] ||
-                null
-            );
+
+            const thresholdIndex = Math.min(this.topK, scores.length) - 1;
+            const absoluteScores = scores
+                .map((value) => Math.abs(typeof value === "number" ? value : 0))
+                .sort((left, right) => right - left);
+            return absoluteScores[thresholdIndex];
         }
 
-        _getActiveActivations() {
-            if (this.selectedClassId !== null) {
-                const classActivations = this._getClassActivations(this.selectedClassId);
-                if (classActivations) {
-                    return classActivations;
+        _buildRowConcepts(classId) {
+            const threshold = this._getRowThreshold(classId);
+            const scores = Array.isArray(this.importances[classId]) ? this.importances[classId] : [];
+            const labels = this._getLabelsForClass(classId);
+            const concepts = [];
+
+            for (let conceptIndex = 0; conceptIndex < this.unionConceptIds.length; conceptIndex++) {
+                const conceptId = this.unionConceptIds[conceptIndex];
+                const rawValue = typeof scores[conceptId] === "number" ? scores[conceptId] : 0;
+                if (Math.abs(rawValue) < threshold) {
+                    continue;
                 }
+                concepts.push({
+                    id: conceptId,
+                    label: labels[conceptId] !== undefined ? labels[conceptId] : `Concept #${conceptId}`,
+                    score: rawValue,
+                });
             }
-            return this.activations;
+
+            concepts.sort((left, right) => {
+                if (right.score !== left.score) {
+                    return right.score - left.score;
+                }
+                return left.id - right.id;
+            });
+
+            return concepts;
+        }
+
+        _getClassName(classId) {
+            const classData = this.classes[classId] || {};
+            return classData.name || `Class #${classId}`;
         }
 
         _getLabelsForClass(classId) {
@@ -390,14 +270,37 @@
             return Array.isArray(labels) ? labels : this.labels;
         }
 
-        _getActiveConceptIndex() {
-            if (this.hoveredConceptIndex !== null) {
-                return this.hoveredConceptIndex;
+        _buildConceptChipStyle(score) {
+            const absValue = Math.abs(score);
+            if (absValue === 0 || this.maxAbsImportance <= 0) {
+                return "background-color: transparent; outline-color: transparent;";
             }
-            if (this.selectedConceptIndex !== null) {
-                return this.selectedConceptIndex;
+
+            const colorHex = score >= 0 ? this.positiveColor : this.negativeColor;
+            const color = StyleComputer.hexToRgb(colorHex);
+            const normalizedAlpha = Math.max(
+                0,
+                Math.min(absValue / this.maxAbsImportance, 1)
+            );
+            const brightness = StyleComputer.getBrightness(color);
+
+            let style =
+                `background-color: rgba(${color[0]},${color[1]},${color[2]},${normalizedAlpha});` +
+                `outline-color: rgba(${color[0]},${color[1]},${color[2]},${normalizedAlpha});`;
+
+            if (normalizedAlpha >= 0.35 && brightness < 150) {
+                style += "color: white;";
             }
-            return null;
+
+            return style;
+        }
+
+        // This mirrors DOMRenderer.renderConcepts label formatting and could be abstracted later.
+        _formatLabel(label) {
+            if (Array.isArray(label)) {
+                return label.join("\n");
+            }
+            return String(label);
         }
     };
 })();

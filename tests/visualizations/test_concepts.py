@@ -112,6 +112,23 @@ def test_plot_concepts_classification_local_classwise_labels(tmp_path):
     assert payload["activations_by_class"]["1"] == [[0.1, 0.9]]
 
 
+def test_plot_concepts_classification_local_uses_static_root(tmp_path):
+    html = _render_concepts_html(
+        tmp_path,
+        sample=["A", "sample"],
+        classes_names=["Neg", "Pos"],
+        concepts_activations=[[0.4, 0.2], [0.1, 0.3]],
+        concepts_importances=[[0.6, -0.2], [-0.4, 0.5]],
+        concepts_labels={0: "Sentiment", 1: "Topic"},
+        top_k=1,
+    )
+
+    assert re.search(r"<div id='classification-local-[^']+'></div>", html)
+    assert "<h3>Classes</h3>" not in html
+    assert "<h3>Concepts</h3>" not in html
+    assert "<h3>Sample</h3>" not in html
+
+
 def test_plot_concepts_generation_local_payload_keys(tmp_path):
     sample = ["Test", "generation", "concepts", "visualization"]
     concepts_labels = {0: "A", 1: "E"}

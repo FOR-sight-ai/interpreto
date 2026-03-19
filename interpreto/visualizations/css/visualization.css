@@ -57,9 +57,14 @@
   font-size: inherit;
 }
 
-.body-visualization h3 {
+.body-visualization h3,
+.visualization-keyword-style {
+  font-family: var(--visualization-font-family);
   font-size: var(--visualization-heading-font-size);
   font-weight: 600;
+}
+
+.body-visualization h3 {
   margin: 0.8em 0 0.4em;
 }
 
@@ -349,6 +354,97 @@
   white-space: nowrap;
 }
 
+.local-classification-plot {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 100%;
+}
+
+.local-classification-divider {
+  height: 1px;
+  background-color: currentColor;
+  opacity: 0.3;
+}
+
+.local-classification-plot > .local-classification-divider:last-child {
+  margin-top: 0.3em;
+}
+
+.local-classification-grid {
+  display: grid;
+  grid-template-columns: minmax(6.5em, 11em) minmax(0, 1fr);
+  column-gap: 0.75em;
+  align-items: start;
+  padding: 0.4em 0;
+}
+
+.local-classification-sample-row {
+  padding-top: 0.45em;
+  padding-bottom: 0.45em;
+}
+
+.local-classification-header-row {
+  padding-top: 0.45em;
+  padding-bottom: 0.2em;
+}
+
+.local-classification-class-row {
+  padding-top: 0.12em;
+  padding-bottom: 0.12em;
+}
+
+.local-classification-side-label,
+.local-classification-column-heading {
+  line-height: 1.35;
+}
+
+.local-classification-side-label,
+.local-classification-column-heading {
+  font-size: var(--visualization-heading-font-size);
+  font-weight: 600;
+}
+
+.local-classification-main-cell {
+  min-width: 0;
+}
+
+.local-classification-token-line,
+.local-classification-concepts-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em 0.35em;
+  min-width: 0;
+}
+
+.local-classification-token,
+.local-classification-chip {
+  margin-right: 0;
+}
+
+.local-classification-token {
+  line-height: 1.35;
+}
+
+.local-classification-class-name {
+  padding: 0;
+  border-radius: 0;
+  font-size: var(--visualization-token-font-size);
+  font-weight: inherit;
+  line-height: var(--visualization-line-height);
+  background-color: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.local-classification-chip {
+  padding: 0.05em 0.4em;
+  outline-width: 1px;
+  outline-style: solid;
+  border-radius: 0.45em;
+  line-height: 1.3;
+}
+
 @media (max-width: 640px) {
   .concepts-header {
     grid-template-columns: 1fr;
@@ -361,5 +457,10 @@
 
   .concept-barplot-group {
     grid-template-columns: 1fr;
+  }
+
+  .local-classification-grid {
+    grid-template-columns: minmax(5.5em, 7.5em) minmax(0, 1fr);
+    column-gap: 0.6em;
   }
 }

@@ -699,9 +699,10 @@ def plot_classification_local_concepts(
             {class_id/class_name: [scores]}.
         concepts_labels: Either {concept_id: label}, a list of labels, or
             {class_id/class_name: {concept_id: label}} for class-wise labels.
-        top_k: Number of concepts shown in the concept list.
-        default_colormap: Optional {concept_id: color} override for concept colors.
-        onclick_colormap: (selected_color, hover_color) for active labels.
+        top_k: Number of concepts used to build the per-class concept selection.
+        concept_color: Legacy compatibility argument for this view.
+        default_colormap: Legacy compatibility argument for this view.
+        onclick_colormap: Legacy compatibility argument for this view.
     """
 
     if not isinstance(top_k, int) or top_k <= 0:
@@ -780,6 +781,8 @@ def plot_classification_local_concepts(
                 raise ValueError(f"Missing activations for class {class_name!r}.")
             activations_by_class_index[class_index] = matrix
 
+    # The local classification renderer now uses sign-based concept chips, but the
+    # legacy color payload fields stay in place for API and payload compatibility.
     data = {
         "classes": classes_descriptions,
         "sample": sample_tokens,
@@ -797,22 +800,11 @@ def plot_classification_local_concepts(
     json_data = json.dumps(data, ensure_ascii=True, indent=2)
 
     unique_id = f"{uuid.uuid4()}"
-    body = (
-        f"<h3>Classes</h3>"
-        f"<div class='line-style'><div id='classes-{unique_id}'></div></div>\n"
-        f"<div id='concepts-wrapper-{unique_id}'>"
-        f"<h3>Concepts</h3>"
-        f"<div id='concepts-{unique_id}'></div>"
-        f"</div>\n"
-        f"<h3>Sample</h3><div id='sample-{unique_id}'></div>\n"
-    )
+    body = f"<div id='classification-local-{unique_id}'></div>\n"
     body += f"""
     <script>
         var viz = new ClassificationLocalConceptsVisualization(
-            'classes-{unique_id}',
-            'concepts-{unique_id}',
-            'concepts-wrapper-{unique_id}',
-            'sample-{unique_id}',
+            'classification-local-{unique_id}',
             {json.dumps(json_data)}
         );
         window.viz = viz;
