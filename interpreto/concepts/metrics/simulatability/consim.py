@@ -442,7 +442,7 @@ class ConSim(AutomatedSimulatability):
                 task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions (why predict this class and not the other) as reference for the task. "
             else:
                 task_description_prompt += "You will have examples of samples and labels as reference for the task. "
-        task_description_prompt += "Each sample class prediction should be in the format: ```\nSample_0: {label_0}\nSample_1: {label_1}\n...\n``` with {label_i} being the class associated to the sample."
+        task_description_prompt += "User's prompt will contain an evaluation sample on which you should predict the class. Only return the class name, no other text."
         # TODO: for concepts say how to interpret the values ++ + - --... what is negative and positive
         assert len(task_description_prompt) > 0
         system_prompt_parts.append(task_description_prompt)

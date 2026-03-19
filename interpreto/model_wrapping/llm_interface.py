@@ -67,6 +67,7 @@ class OpenAILLM(LLMInterface):
     def batch_generate(self, system_prompt: str, user_prompts: list[str], **generation_kwargs) -> list[str | None]:
         return [self.generate(system_prompt, p, **generation_kwargs) for p in user_prompts]
 
+
 class HuggingFaceLLM(LLMInterface):
     def __init__(self, model: str, batch_size: int = 8, device: str = "auto"):
         self.model_name = model
@@ -77,7 +78,7 @@ class HuggingFaceLLM(LLMInterface):
         self.model = AutoModelForCausalLM.from_pretrained(
             model,
             torch_dtype="auto",
-            device_map=device ,
+            device_map=device,
         )
 
         if self.tokenizer.pad_token_id is None:

@@ -48,13 +48,14 @@ from __future__ import annotations
 
 import importlib.util
 import os
+from abc import abstractmethod
 
 import pytest
 import torch
 
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.metrics import ConSim
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
+from interpreto.model_wrapping.llm_interface import LLMInterface
 
 PromptTypes = ConSim.prompt_types
 AG = ModelWithSplitPoints.activation_granularities
@@ -73,19 +74,26 @@ PROMPT_TYPES = [
 ]
 
 
-class LLMInterfacePlaceholder(LLMInterface):
+class LLMInterfaceParent(LLMInterface):
     def __init__(self):
         pass
 
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
-        system_prompt, user_prompt = prompt[0][1], prompt[1][1]
+    @abstractmethod
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
+        pass
 
+    def batch_generate(self, system_prompt: str, user_prompts: list[str], **generation_kwargs) -> list[str | None]:
+        return [self.generate(system_prompt, p, **generation_kwargs) for p in user_prompts]
+
+
+class LLMInterfacePlaceholder(LLMInterfaceParent):
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
         # extract the classes from the system prompt
-        classes_str = system_prompt.split("The classes are: [")[1].split("]")[0]
+        classes_str = system_prompt.split("The classes are: [")[1].split("]", maxsplit=1)[0]
         classes = classes_str.split(", ")
 
         # extract the sample indices from the user prompt
-        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_")[0]
+        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_", maxsplit=1)[0]
         # Format:
         #     Sample_0: "this is the first sample"
         #     Sample_1: "this is the second sample"
@@ -96,19 +104,14 @@ class LLMInterfacePlaceholder(LLMInterface):
         return response
 
 
-class WrongNumberOfAnswers(LLMInterface):
-    def __init__(self):
-        pass
-
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
-        system_prompt, user_prompt = prompt[0][1], prompt[1][1]
-
+class WrongNumberOfAnswers(LLMInterfaceParent):
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
         # extract the classes from the system prompt
-        classes_str = system_prompt.split("The classes are: [")[1].split("]")[0]
+        classes_str = system_prompt.split("The classes are: [")[1].split("]", maxsplit=1)[0]
         classes = classes_str.split(", ")
 
         # extract the sample indices from the user prompt
-        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_")[0]
+        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_", maxsplit=1)[0]
         # Format:
         #     Sample_0: "this is the first sample"
         #     Sample_1: "this is the second sample"
@@ -122,19 +125,13 @@ class WrongNumberOfAnswers(LLMInterface):
         return response
 
 
-class WrongFormat(LLMInterface):
-    def __init__(self):
-        pass
-
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+class WrongFormat(LLMInterfaceParent):
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
         return "The predictions are: {class_0, class_1, class_2}"
 
 
-class EmptyResponse(LLMInterface):
-    def __init__(self):
-        pass
-
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+class EmptyResponse(LLMInterfaceParent):
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
         return ""
 
 
@@ -312,9 +309,10 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # Initial Phase
     # task description
     assert "You are a classifier." in system, "system prompt should contain the task description"
-    assert "```\nSample_0: {label_0}\nSample_1: {label_1}\n...\n```" in system, (
-        "system prompt should contain the expected response format"
-    )
+    assert (
+        "User's prompt will contain an evaluation sample on which you should predict the class. Only return the class name, no other text."
+        in system
+    ), "system prompt should contain the expected response format"
     if anonymize_classes:
         assert "The classes are: [Class_0, Class_1]" in system, "system prompt should contain the anonymized classes"
     else:
@@ -590,6 +588,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     from interpreto.model_wrapping.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
         OpenAILLM,
     )
+
 
 #     open_ai_llm = OpenAILLM(api_key=os.environ["OPENAI_API_KEY"], model="gpt-4.1-nano")
 
