@@ -297,7 +297,14 @@ class AttributionExplainer:
             ValueError: If the type of model_inputs is not supported.
         """
         if isinstance(model_inputs, str):
-            return [self.tokenizer(model_inputs, return_tensors="pt", return_offsets_mapping=True, truncation=True)]
+            return [
+                self.tokenizer(
+                    model_inputs.rstrip(),
+                    return_tensors="pt",
+                    return_offsets_mapping=True,
+                    truncation=True,
+                )
+            ]
         if isinstance(
             model_inputs, BatchEncoding
         ):  # we cant use TensorMapping in the isinstance so we use MutableMapping.
@@ -628,6 +635,29 @@ class ClassificationAttributionExplainer(AttributionExplainer):
         return model_inputs, sanitized_targets
 
 
+def normalize_target_ids_with_leading_space(tokenizer: PreTrainedTokenizer, target: torch.Tensor) -> torch.Tensor:
+    """Ensure target text starts with a space and return retokenized target ids."""
+    target_text = tokenizer.decode(target, skip_special_tokens=True)
+    if isinstance(target_text, str):
+        if target_text.startswith(" "):
+            return target
+        normalized_target_text = f" {target_text}"
+    elif isinstance(target_text, Iterable):
+        normalized_target_text = [
+            target_text_elem if target_text_elem.startswith(" ") else f" {target_text_elem}"
+            for target_text_elem in target_text
+        ]
+    else:
+        raise TypeError(f"Decoded target text must be a string or an iterable of strings, got {type(target_text)}.")
+    normalized_target_ids = tokenizer(
+        normalized_target_text,
+        return_tensors="pt",
+        truncation=True,
+        add_special_tokens=False,
+    )["input_ids"].squeeze(dim=0)
+    return normalized_target_ids
+
+
 class GenerationAttributionExplainer(AttributionExplainer):
     """
     Attribution explainer for generation models
@@ -654,20 +684,22 @@ class GenerationAttributionExplainer(AttributionExplainer):
             ValueError: If the target type is not supported.
         """
         if isinstance(targets, str):
-            targets = self.tokenizer(targets, return_tensors="pt", truncation=True)["input_ids"].squeeze(dim=0)
+            targets = self.tokenizer(
+                targets if targets.startswith(" ") else " " + targets, return_tensors="pt", truncation=True
+            )["input_ids"].squeeze(dim=0)
             return [targets]  # type: ignore
         if isinstance(targets, MutableMapping):  # TensorMapping cannot be used in isinstance
-            targets = targets["input_ids"]
+            targets = targets["input_ids"]  # type: ignore
             if targets.dim() == 1:
-                return list(targets)
+                return list(normalize_target_ids_with_leading_space(self.tokenizer, targets))
             if targets.shape[0] > 1:
                 targets = targets.split(1, dim=0)  # If the batch size > 1, we cut into a list of n mappings.
-                return [t.squeeze(dim=0) for t in targets]  # type: ignore
-            return [targets.squeeze(dim=0)]
+                return [normalize_target_ids_with_leading_space(self.tokenizer, t.squeeze(dim=0)) for t in targets]  # type: ignore
+            return [normalize_target_ids_with_leading_space(self.tokenizer, targets.squeeze(dim=0))]
         if isinstance(targets, torch.Tensor):
             targets = targets.squeeze(dim=0)  # remove batch dimension if any
             assert targets.dim() == 1, "Target tensor must be 1-D."
-            return [targets]
+            return [normalize_target_ids_with_leading_space(self.tokenizer, targets)]
         if isinstance(targets, Iterable):
             return list(itertools.chain(*[self.process_targets(item) for item in targets]))
         raise ValueError(
@@ -678,7 +710,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
     def process_inputs_to_explain_and_targets(
         self,
         model_inputs: Iterable[TensorMapping],
-        targets: GeneratedTarget | None = None,
+        targets: GeneratedTarget,
         **model_kwargs,
     ) -> tuple[Iterable[BatchEncoding], Iterable[torch.Tensor]]:
         """
@@ -699,25 +731,21 @@ class GenerationAttributionExplainer(AttributionExplainer):
         """
         # TODO: verify that inputs and targets have the same length
         sanitized_targets: list[torch.Tensor]
-        if targets is None:
-            model_inputs_to_explain, sanitized_targets = self.inference_wrapper.get_inputs_to_explain_and_targets(
-                model_inputs, **model_kwargs
+        sanitized_targets = self.process_targets(targets)  # type: ignore
+        model_inputs_to_explain = []
+        for model_input, target in zip(model_inputs, sanitized_targets, strict=True):
+            target_2d = target.unsqueeze(dim=0)  # add batch dimension for concatenation with model_input
+            model_inputs_to_explain.append(
+                {
+                    "input_ids": torch.cat(
+                        [model_input["input_ids"].to(self.device), target_2d.to(self.device)], dim=1
+                    ),  # type: ignore
+                    "attention_mask": torch.cat(
+                        [model_input["attention_mask"].to(self.device), torch.ones_like(target_2d).to(self.device)],
+                        dim=1,
+                    ),  # type: ignore
+                }
             )
-            # Remove batch dimension to align with targets in ClassificationExplainer (1-D tensor of shape (t,))
-            sanitized_targets = [t.squeeze(dim=0) if t.dim() >= 1 else t for t in sanitized_targets]
-        else:
-            sanitized_targets = self.process_targets(targets)
-            model_inputs_to_explain = []
-            for model_input, target in zip(model_inputs, sanitized_targets, strict=True):
-                target_2d = target.unsqueeze(dim=0)  # add batch dimension for concatenation with model_input
-                model_inputs_to_explain.append(
-                    {
-                        "input_ids": torch.cat([model_input["input_ids"], target_2d], dim=1),  # type: ignore
-                        "attention_mask": torch.cat(
-                            [model_input["attention_mask"], torch.ones_like(target_2d)], dim=1
-                        ),  # type: ignore
-                    }
-                )
 
         # Convert to a `BatchEncoding` object and add offsets mapping:
         # TODO: see if it can be optimized, conversion might be necessary only for WORD and SENTENCE granularity

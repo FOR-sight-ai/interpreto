@@ -207,55 +207,34 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
     )
 
     # we need to test both type of inputs: text, list_text, tokenized_text, tokenized_list_text:
-    text = "He is my best friend"
-    list_text = [
-        "Short",
-        "Medium sentence length",
-        "Much longer sentence length, because we need to test different length of sentences",
-        "Interpreto is magic",
+    list_texts = [
+        "I like this",
+        "Oh it's cool",
+        ["My dog is ", "this is very"],
+        "Interpreto is",
+        "This is two sentences. The goal is",
     ]
-    list_input_text_onlytext = [text, text, list_text, list_text]
-
-    list_input_text_onlytokenized = [
-        tokenizer(
-            input_text_onlytext, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-        ).to(DEVICE)
-        for input_text_onlytext in [text, list_text]
+    list_tokenized_texts = [
+        tokenizer(text, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+        for text in list_texts
     ]
 
-    list_input_text = list_input_text_onlytext + list_input_text_onlytokenized
-
-    # we need to test with and without targets:
     if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
-        list_target = [
-            None,
-            "and I like him.",
-            None,
-            ["sentence", "for testing", "that is good practice", "try it."],
-            None,
-            None,
+        list_targets = ["video", "and I like it.", ["nice", "good"], "a great library", "to test."]
+        list_tokenized_targets = [
+            tokenizer(target, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+            for target in list_targets
         ]
+        list_texts_complete = list_texts + list_tokenized_texts + list_texts
+        list_targets_complete = list_targets + list_targets + list_tokenized_targets
     else:
-        list_target = [
-            None,
-            1,
-            None,
-            torch.tensor([[0, 1], [0, 1], [0, 1], [0, 1]]),
-            None,
-            [0, 0, 1, 0],
-        ]
+        list_targets = [None, 1, [0, 1], None, torch.tensor([[0, 1]])]
+        list_texts_complete = list_texts + list_tokenized_texts
+        list_targets_complete = list_targets + list_targets
 
-    for input_text, target in zip(list_input_text, list_target, strict=False):
-        # if we have a generative model, we need to give the max_length:
+    for input_text, target in zip(list_texts_complete, list_targets_complete, strict=False):
         try:
-            if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
-                attributions = explainer.explain(
-                    input_text,
-                    targets=target,
-                    max_length=35,
-                )
-            else:
-                attributions = explainer.explain(input_text, targets=target)
+            attributions = explainer.explain(input_text, targets=target)
         except IncompatibilityError:
             continue
 
