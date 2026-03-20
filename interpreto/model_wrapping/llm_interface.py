@@ -41,7 +41,7 @@ class LLMInterface(ABC):
 
 
 class OpenAILLM(LLMInterface):
-    def __init__(self, api_key: str, model: str = "gpt-4.1-nano"):
+    def __init__(self, api_key: str, model: str = "gpt-4.1-nano", default_generation_kwargs: dict | None = None):
         try:
             import openai  # noqa: PLC0415
         except ImportError as e:
@@ -49,8 +49,13 @@ class OpenAILLM(LLMInterface):
 
         self.client = openai.OpenAI(api_key=api_key)
         self.model = model
+        self.default_generation_kwargs = default_generation_kwargs or {
+            "temperature": 0.0,
+            "max_output_tokens": 20,
+        }
 
     def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
+        kwargs = {**self.default_generation_kwargs, **generation_kwargs}
         try:
             response = self.client.responses.create(
                 model=self.model,
@@ -59,6 +64,7 @@ class OpenAILLM(LLMInterface):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
+                **kwargs,
             )
             return response.output_text
         except Exception:

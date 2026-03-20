@@ -229,6 +229,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         inputs: list[str] | None = None,
         latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
+        **generation_kwargs,
     ) -> Mapping[int, str | None]:
         """
         Give the interpretation of the concepts dimensions in the latent space into a human-readable format.
@@ -251,6 +252,9 @@ class LLMLabels(BaseConceptInterpretationMethod):
             concepts_activations (Float[torch.Tensor, "nl cpt"] | None):
                 The concepts activations matching the inputs. If not provided,
                 it is computed from the inputs or latent activations.
+
+            **generation_kwargs:
+                Keyword arguments passed to `llm_interface.generate`.
 
         Returns:
             Mapping[int, str | None]: The textual labels of the concepts indices.
@@ -287,14 +291,15 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 k_context=self.k_context,
             )
             user_prompts.append(_build_example_prompt(examples))
-        
+
         # batched llm call for concepts interpretations
-        responses = self.llm_interface.batch_generate(system_prompt=self.system_prompt, user_prompts=user_prompts)
+        responses = self.llm_interface.batch_generate(
+            system_prompt=self.system_prompt, user_prompts=user_prompts, **generation_kwargs
+        )
 
         # map labels to concepts
         labels: Mapping[int, str | None] = {
-            concept_idx: label
-            for concept_idx, label in zip(sure_concepts_indices, responses, strict=True)
+            concept_idx: label for concept_idx, label in zip(sure_concepts_indices, responses, strict=True)
         }
         return labels
 

@@ -253,6 +253,7 @@ class AutomatedSimulatability:
         system_prompt: str,
         user_prompts: list[str],
         model_predictions: list[str],
+        **generation_kwargs,
     ):
         """
         Score prompts with an LLM interface using exact-match accuracy.
@@ -273,6 +274,8 @@ class AutomatedSimulatability:
                 Evaluation prompts, one per sample.
             model_predictions: list[str]
                 Expected class names aligned with `user_prompts`.
+            **generation_kwargs:
+                Keyword arguments passed to `llm_interface.generate`.
 
         Returns:
             simulatability_score: float
@@ -289,7 +292,7 @@ class AutomatedSimulatability:
                 f"Got {len(user_prompts)} user prompts and {len(model_predictions)} model predictions."
             )
 
-        responses = llm_interface.batch_generate(system_prompt, user_prompts)  # type: ignore
+        responses = llm_interface.batch_generate(system_prompt, user_prompts, **generation_kwargs)  # type: ignore
 
         score = 0
         for llm_pred, ref_pred in zip(responses, model_predictions, strict=True):
