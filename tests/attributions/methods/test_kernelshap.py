@@ -58,16 +58,16 @@ def test_kernel_shap_init_and_mask(bert_model, bert_tokenizer, granularity, n_pe
         device=DEVICE,
     )
 
-    # 3) "[REPLACE]" token must have been added
-    assert "[REPLACE]" in bert_tokenizer.get_vocab()
-
     # 4) perturbator is ShapTokenPerturbator with correct params
     assert isinstance(explainer.perturbator, ShapTokenPerturbator)
     pert = explainer.perturbator
     assert pert.n_perturbations == n_perturbations
     assert pert.granularity == granularity
     # replace_token_id matches tokenizer
-    rid = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
+    rid = bert_tokenizer.mask_token_id
+    if rid is None:
+        assert "[REPLACE]" in bert_tokenizer.get_vocab()
+        rid = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
     expected_id = rid if isinstance(rid, int) else rid[0]
     assert pert.replace_token_id == expected_id
 

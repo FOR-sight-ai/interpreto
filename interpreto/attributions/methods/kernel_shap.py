@@ -74,7 +74,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
         granularity: Granularity = Granularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
-        n_perturbations: int = 1000,
+        n_perturbations: int = 100,
         device: torch.device | None = None,
     ):
         """
