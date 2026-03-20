@@ -2271,14 +2271,15 @@ For more details, please refer to the <a href="https://for-sight-ai.github.io/in
 <span class="n">DEVICE</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
 
 <span class="c1"># utils</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">IPython.display</span><span class="w"> </span><span class="kn">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">IPython.display</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTML</span><span class="p">,</span> <span class="n">display</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">display_topngram_dropdown</span><span class="p">(</span><span class="n">topngram_words</span><span class="p">):</span>
-    <span class="n">data_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span>
-        <span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="p">[{</span><span class="s2">&quot;ngram&quot;</span><span class="p">:</span> <span class="n">ng</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span> <span class="k">for</span> <span class="n">ng</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">topngram_words</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-    <span class="p">})</span>
+    <span class="n">data_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+        <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="p">[{</span><span class="s2">&quot;ngram&quot;</span><span class="p">:</span> <span class="n">ng</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span> <span class="k">for</span> <span class="n">ng</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">topngram_words</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="p">)</span>
 
     <span class="n">options_html</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&lt;option value=&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&quot;&gt;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1">&lt;/option&gt;&#39;</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">topngram_words</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
 
@@ -2373,7 +2374,7 @@ For more details, please refer to the <a href="https://for-sight-ai.github.io/in
 <span class="n">classes_names</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;validation&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">feature</span><span class="o">.</span><span class="n">names</span>
 
 <span class="c1"># Compute the [CLS] token activations</span>
-<span class="n">granularity</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="o">.</span><span class="n">activation_granularities</span><span class="o">.</span><span class="n">CLS_TOKEN</span> <span class="c1"># required for ngram interpretation.</span>
+<span class="n">granularity</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="o">.</span><span class="n">activation_granularities</span><span class="o">.</span><span class="n">CLS_TOKEN</span>  <span class="c1"># required for ngram interpretation.</span>
 <span class="n">activations</span> <span class="o">=</span> <span class="n">model_with_split_points</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span>
     <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
     <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
@@ -2402,7 +2403,9 @@ For more details, please refer to the <a href="https://for-sight-ai.github.io/in
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts</span><span class="w"> </span><span class="kn">import</span> <span class="n">SemiNMFConcepts</span>
 
 <span class="c1"># instantiate the concept explainer</span>
-<span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">SemiNMFConcepts</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span> <span class="c1"># nb: nb_concept must be bigger than the number of classes, since there should be at least 1 concept = 1 class</span>
+<span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">SemiNMFConcepts</span><span class="p">(</span>
+    <span class="n">model_with_split_points</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span>
+<span class="p">)</span>  <span class="c1"># nb: nb_concept must be bigger than the number of classes, since there should be at least 1 concept = 1 class</span>
 
 <span class="c1"># fit the concept explainer on activations</span>
 <span class="n">concept_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
@@ -5362,7 +5365,7 @@ Class: neutral:
         <span class="n">concept_explainer</span><span class="o">=</span><span class="n">concept_explainers</span><span class="p">[</span><span class="n">target</span><span class="p">],</span>
         <span class="n">k</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
         <span class="n">activation_granularity</span><span class="o">=</span><span class="n">granularity</span><span class="p">,</span>
-        <span class="n">use_unique_words</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="c1"># 5-grams words to illustrate each concept</span>
+        <span class="n">use_unique_words</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>  <span class="c1"># 5-grams words to illustrate each concept</span>
         <span class="n">unique_words_kwargs</span><span class="o">=</span><span class="p">{</span>
             <span class="s2">&quot;count_min_threshold&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.002</span><span class="p">),</span>
             <span class="s2">&quot;lemmatize&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
@@ -5603,15 +5606,10 @@ Class: neutral
 
 <div class="codehilite"><pre><span></span><code><span class="n">plot_concepts</span><span class="p">(</span>
     <span class="n">classes_names</span><span class="o">=</span><span class="n">classes_names</span><span class="p">,</span>
-    <span class="n">concepts_importances</span><span class="o">=</span><span class="p">{</span>
-        <span class="n">classes_names</span><span class="p">[</span><span class="n">t</span><span class="p">]:</span> <span class="n">concept_importances</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">concept_importances</span>
-    <span class="p">},</span>
+    <span class="n">concepts_importances</span><span class="o">=</span><span class="p">{</span><span class="n">classes_names</span><span class="p">[</span><span class="n">t</span><span class="p">]:</span> <span class="n">concept_importances</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">concept_importances</span><span class="p">},</span>
     <span class="n">concepts_labels</span><span class="o">=</span><span class="p">{</span>
         <span class="n">classes_names</span><span class="p">[</span><span class="n">t</span><span class="p">]:</span> <span class="p">{</span>
-            <span class="n">cid</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ngrams</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-            <span class="k">for</span> <span class="n">cid</span><span class="p">,</span> <span class="n">ngrams</span> <span class="ow">in</span> <span class="n">concept_interpretations</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">ngrams</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">cid</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ngrams</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="k">for</span> <span class="n">cid</span><span class="p">,</span> <span class="n">ngrams</span> <span class="ow">in</span> <span class="n">concept_interpretations</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">ngrams</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="p">}</span>
         <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">concept_interpretations</span>
     <span class="p">},</span>
