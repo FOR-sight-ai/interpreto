@@ -68,17 +68,16 @@ def test_lime_attribution_init_and_mask(
         device=DEVICE,
     )
 
-    # 1) "[REPLACE]" token must have been added
-    assert "[REPLACE]" in bert_tokenizer.get_vocab()
-
     # 2) check the perturbator stored our params correctly
     assert isinstance(explainer.perturbator, RandomMaskedTokenPerturbator)
     perturbator = explainer.perturbator
     assert perturbator.n_perturbations == n_perturbations
     assert pytest.approx(perturbator.perturb_probability, rel=1e-6) == perturb_probability
     assert perturbator.granularity == granularity
-    # the token ID should match what we just added
-    replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
+    replace_id = bert_tokenizer.mask_token_id
+    if replace_id is None:
+        assert "[REPLACE]" in bert_tokenizer.get_vocab()
+        replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
     assert perturbator.replace_token_id == (replace_id if isinstance(replace_id, int) else replace_id[0])
 
     # 3) check the aggregator

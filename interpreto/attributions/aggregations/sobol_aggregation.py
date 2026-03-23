@@ -104,13 +104,3 @@ class SobolAggregator(Aggregator):
             raise ValueError(f"Unknown Sobol indices order: {self.sobol_indices_order}")
 
         return token_importance.T
-
-        # # Compute token-wise variance on the initial mask
-        # initial_results: Float[torch.Tensor, t, k] = results[:k].T
-        # initial_var: Float[torch.Tensor, t, 1] = torch.var(initial_results, dim=1, keepdim=True)
-
-        # # Compute token-wise sobol attribution indices
-        # token_results: Float[torch.Tensor, t, l, k] = results[k:].view(t, l, k)
-        # difference: Float[torch.Tensor, t, l, k] = token_results - initial_results.unsqueeze(1)
-        # token_importance: Float[torch.Tensor, t, l] = torch.mean(difference**2, dim=-1) / (initial_var + 1e-6)
-        # return token_importance

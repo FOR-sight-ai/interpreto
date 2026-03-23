@@ -79,7 +79,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
         granularity: Granularity = Granularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
-        n_token_perturbations: int = 32,
+        n_token_perturbations: int = 16,
         sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.FIRST_ORDER,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,
         device: torch.device | None = None,
