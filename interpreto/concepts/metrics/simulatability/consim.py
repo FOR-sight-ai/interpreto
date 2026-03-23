@@ -108,14 +108,14 @@ class PromptSetting(NamedTuple):
 
         if self.lp_local_contrastive_importance and labels is None:
             raise ValueError(
-                "PromptSetting.lp_local_contrastive_importance=True requires `labels` to be provided to ConSim.evaluate()."
+                "PromptSetting.lp_local_contrastive_importance=True requires `labels` to be provided to ConSim.construct_prompt()."
             )
 
         if self.lp_concepts_local_contributions or self.lp_local_contrastive_importance:
             if not self.lp_samples:
                 raise ValueError(
                     "PromptSetting.lp_concepts_local_contributions or PromptSetting.lp_local_contrastive_importance "
-                    "requires `lp_samples=True` to be provided to ConSim.evaluate()."
+                    "requires `lp_samples=True` to be provided to ConSim.construct_prompt()."
                 )
 
 
@@ -174,16 +174,21 @@ class ConSim(AutomatedSimulatability):
     design and validation. It does not compute model predictions, concept importances, or call the
     LLM on its own.
 
-    Therefore, user need to compute model predictions and concepts importances beforehand.
+    Therefore, users need to compute model predictions and concept explanations beforehand.
 
     Typical workflow:
         1. Instantiate `ConSim(classes=...)`.
         2. Call `select_examples(...)` on precomputed inputs, labels, and model predictions.
-        3. Prepare the explanation artifacts required by the chosen setting:
+        3. Use a fitted concept explainer upstream to build the explanation artifacts required by
+           the chosen setting, for example with
+           `TopKInputs(concept_explainer).interpret(...)` and
+           `concept_explainer.concept_output_gradient(...)`:
            `concepts_interpretation`, `global_importances`, optional `local_importances`, and
            optional `contrastive_pairs`.
         4. Call `construct_prompt(...)`.
-        5. Score the result with `score_from_prompts(...)` or a custom LLM loop.
+        5. Run the prompts through your LLM interface outside this class.
+        6. Compute responses with `llm_interface.batch_generate(...)`.
+        7. Score the returned responses with `score_from_responses(...)`.
 
     Reference:
         A. Poché, A. Jacovi, A.M. Picard, V. Boutin, and F. Jourdan. ConSim: Measuring
@@ -203,7 +208,47 @@ class ConSim(AutomatedSimulatability):
             These are prompt settings that can be passed to `ConSim.construct_prompt()`.
 
     Examples:
-        TODO: update examples.
+        Minimal runnable example with precomputed concept-explainer artifacts:
+
+        >>> import torch
+        >>> from interpreto.concepts.metrics import ConSim
+        >>>
+        >>> metric = ConSim(classes=["negative", "positive"])
+        >>> samples = ["great acting", "boring plot", "loved the ending", "fell asleep"]
+        >>> labels = torch.tensor([1, 0, 1, 0])
+        >>> predictions = torch.tensor([1, 0, 0, 0])
+        >>> # These artifacts usually come from a fitted concept explainer:
+        >>> # - `concepts_interpretation` from TopKInputs(...) or LLMLabels(...)
+        >>> # - `local_importances` from concept_explainer.concept_output_gradient(...)
+        >>> concepts_interpretation = {
+        ...     0: "positive sentiment words",
+        ...     1: "negative sentiment words",
+        ... }
+        >>> global_importances = torch.tensor([
+        ...     [-0.8, 0.7],
+        ...     [0.9, -0.6],
+        ... ])
+        >>> local_importances = [
+        ...     torch.tensor([[-0.2, 0.4], [0.5, -0.1]]),
+        ...     torch.tensor([[0.3, -0.5], [-0.4, 0.2]]),
+        ...     torch.tensor([[-0.1, 0.3], [0.4, -0.2]]),
+        ...     torch.tensor([[0.5, -0.3], [-0.2, 0.1]]),
+        ... ]
+        >>> system_prompt, user_prompts, model_predictions = metric.construct_prompt(
+        ...     setting=ConSim.prompt_types.E3_global_and_local_concepts_with_lp,
+        ...     interesting_samples=samples,
+        ...     corresponding_predictions=predictions,
+        ...     corresponding_labels=labels,
+        ...     nb_learning_samples=2,
+        ...     concepts_interpretation=concepts_interpretation,
+        ...     global_importances=global_importances,
+        ...     local_importances=local_importances,
+        ... )
+        >>> len(system_prompt) > 0 and len(user_prompts) == len(model_predictions)
+        True
+        >>> # In practice, call your LLM interface here and pass its responses below.
+        >>> responses = llm_interface.batch_generate(system_prompt, user_prompts)
+        >>> metric.score_from_responses(responses, model_predictions)
     """
 
     prompt_types: type[PromptTypes] = PromptTypes
@@ -482,7 +527,7 @@ class ConSim(AutomatedSimulatability):
         if setting.global_contrastive_importances:
             if contrastive_pairs is None:
                 raise ValueError(
-                    "PromptSetting.global_contrastive_importances=True requires `contrastive_pairs` to be provided to ConSim.evaluate()."
+                    "PromptSetting.global_contrastive_importances=True requires `contrastive_pairs` to be provided to ConSim.construct_prompt()."
                 )
 
             contrastive_prompt_parts = []
@@ -675,7 +720,7 @@ class ConSim(AutomatedSimulatability):
         elif setting.lp_concepts_local_contributions or setting.lp_local_contrastive_importance:
             raise ValueError(
                 "PromptSetting.lp_concepts_local_contributions or PromptSetting.lp_local_contrastive_importance "
-                "requires `local_importances` to be provided to ConSim.evaluate()."
+                "requires `local_importances` to be provided to ConSim.construct_prompt()."
             )
 
     def construct_prompt(  # type: ignore[override]

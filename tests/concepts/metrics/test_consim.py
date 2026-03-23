@@ -32,7 +32,7 @@ The ConSim metric has many methods, most of them will be tested one by one:
     ConSim._concepts_to_string
     ConSim._setting_to_prompt
     ConSim.construct_prompt
-    ConSim.evaluate
+    AutomatedSimulatability.score_from_responses
 
 In the unit tests listed above some configurations will be common:
 - the `ModelWithSplitPoints` will be used around a Bert model,
@@ -55,6 +55,7 @@ import torch
 
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.metrics import ConSim
+from interpreto.concepts.metrics.simulatability.base import AutomatedSimulatability
 from interpreto.model_wrapping.llm_interface import LLMInterface
 
 PromptTypes = ConSim.prompt_types
@@ -240,6 +241,26 @@ def test_consim_quantize_concepts_importances():
     )
 
     assert rendered == "{C0 (w0): ++, C3 (w3): --, C1 (w1): -}", "wrong concept string rendering"
+
+
+def test_score_from_responses():
+    """
+    Test the `score_from_responses` helper on precomputed responses.
+    """
+    responses = ["A trailing text", "b", "wrong", None]
+    model_predictions = ["A", "B", "C", "D"]
+
+    score = AutomatedSimulatability.score_from_responses(responses, model_predictions)
+
+    assert score == 0.5, "two responses should match exactly after normalization"
+
+
+def test_score_from_responses_length_mismatch():
+    """
+    Test `score_from_responses` length validation.
+    """
+    with pytest.raises(ValueError):
+        AutomatedSimulatability.score_from_responses(["A"], ["A", "B"])
 
 
 @pytest.mark.parametrize("prompt_type", PROMPT_TYPES)

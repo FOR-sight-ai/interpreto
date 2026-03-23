@@ -30,8 +30,6 @@ from typing import NamedTuple
 
 import torch
 
-from interpreto.model_wrapping.llm_interface import LLMInterface
-
 
 class AutomatedSimulatability:
     """
@@ -43,10 +41,64 @@ class AutomatedSimulatability:
 
     Architecture:
         - `select_examples` extracts a balanced subset from precomputed model outputs.
+        - upstream code computes explanation artifacts for those samples.
         - subclasses implement `construct_prompt` to turn those samples and explanations into
           prompts.
-        - `score_from_prompts` runs the prompts through an `LLMInterface` and computes
-          exact-match accuracy.
+        - caller code sends the prompts to an LLM interface or any other meta-predictor.
+        - `score_from_responses` computes exact-match accuracy from the returned responses.
+
+    Example:
+        `AutomatedSimulatability` is abstract, so a minimal subclass is needed to show the
+        end-to-end flow:
+
+        >>> import torch
+        >>> from typing import NamedTuple
+        >>> from interpreto.concepts.metrics.simulatability.base import AutomatedSimulatability
+        >>>
+        >>> class ToySetting(NamedTuple):
+        ...     pass
+        >>>
+        >>> class ToyMetric(AutomatedSimulatability):
+        ...     def construct_prompt(
+        ...         self,
+        ...         setting,
+        ...         interesting_samples,
+        ...         corresponding_predictions,
+        ...         corresponding_labels,
+        ...         **kwargs,
+        ...     ):
+        ...         _ = (setting, corresponding_labels, kwargs)
+        ...         system_prompt = "Return only the class name."
+        ...         user_prompts = [f"Text: {sample}\\nLabel: " for sample in interesting_samples]
+        ...         model_predictions = [
+        ...             self.classes[int(prediction)] for prediction in corresponding_predictions.tolist()
+        ...         ]
+        ...         return system_prompt, user_prompts, model_predictions
+        >>>
+        >>> metric = ToyMetric(classes=["negative", "positive"])
+        >>> inputs = ["awful movie", "great movie", "bad ending", "excellent ending"]
+        >>> labels = torch.tensor([0, 1, 1, 0])
+        >>> predictions = torch.tensor([0, 1, 0, 1])
+        >>> _, interesting_samples, selected_labels, selected_predictions = metric.select_examples(
+        ...     inputs=inputs,
+        ...     labels=labels,
+        ...     predictions=predictions,
+        ...     nb_samples=4,
+        ...     seed=0,
+        ... )
+        >>> system_prompt, user_prompts, model_predictions = metric.construct_prompt(
+        ...     ToySetting(),
+        ...     interesting_samples,
+        ...     selected_predictions,
+        ...     selected_labels,
+        ... )
+        >>> len(system_prompt) > 0 and len(user_prompts) == len(model_predictions)
+        True
+        >>> # In practice, call your LLM here:
+        >>> # responses = llm_interface.batch_generate(system_prompt, user_prompts)
+        >>> responses = list(model_predictions)
+        >>> metric.score_from_responses(responses, model_predictions)
+        1.0
     """
 
     def __init__(self, classes: list[str]):
@@ -78,8 +130,9 @@ class AutomatedSimulatability:
         and evaluation samples however they want.
 
         The goal is to find `interesting_samples` for the metric. With this, we over represent
-        misclassifications and some classes. Therefore, the LLM judge used in `score_from_prompts`
-        cannot shortcut the task by predicting real labels, otherwise it would obtain a score of 0.5.
+        misclassifications and some classes. Therefore, the meta-predictor used after
+        `construct_prompt` cannot shortcut the task by predicting real labels, otherwise it would
+        obtain a score of 0.5.
 
         Arguments:
             inputs: list[str]
@@ -242,40 +295,31 @@ class AutomatedSimulatability:
                 Expected class names aligned with `user_prompts`.
 
         Notes:
-            `score_from_prompts` assumes `len(user_prompts) == len(model_predictions)` and that
-            each response can be compared to a single class label.
+            `score_from_responses` assumes `len(user_prompts) == len(model_predictions)` and that
+            downstream generation returns one response per prompt.
         """
         raise NotImplementedError
 
     @staticmethod
-    def score_from_prompts(
-        llm_interface: LLMInterface,
-        system_prompt: str,
-        user_prompts: list[str],
+    def score_from_responses(
+        responses: list[str | None],
         model_predictions: list[str],
-        **generation_kwargs,
     ):
         """
-        Score prompts with an LLM interface using exact-match accuracy.
+        Score precomputed responses with exact-match accuracy.
 
-        The same `system_prompt` is paired with each element of `user_prompts`. Each response is
-        compared case-insensitively to the expected class name in `model_predictions`.
+        Each response is compared case-insensitively to the expected class name in
+        `model_predictions`.
 
-        Keeping scoring here lets subclasses focus on prompt construction while users remain free
-        to cache prompts, swap LLM backends, or replace the scorer entirely if they need a more
-        elaborate protocol.
+        Keeping scoring here lets subclasses focus on prompt construction while callers remain
+        free to cache prompts, swap LLM backends, or replace the scorer entirely if they need a
+        more elaborate protocol.
 
         Arguments:
-            llm_interface: LLMInterface
-                Interface used to generate one response per prompt.
-            system_prompt: str
-                Shared system message.
-            user_prompts: list[str]
-                Evaluation prompts, one per sample.
+            responses: list[str | None]
+                One generated response per evaluation prompt.
             model_predictions: list[str]
-                Expected class names aligned with `user_prompts`.
-            **generation_kwargs:
-                Keyword arguments passed to `llm_interface.generate`.
+                Expected class names aligned with `responses`.
 
         Returns:
             simulatability_score: float
@@ -283,16 +327,14 @@ class AutomatedSimulatability:
 
         Raises:
             ValueError:
-                If `user_prompts` and `model_predictions` do not have the same length.
+                If `responses` and `model_predictions` do not have the same length.
         """
 
-        if len(user_prompts) != len(model_predictions):
+        if len(responses) != len(model_predictions):
             raise ValueError(
-                "The number of user prompts and model predictions must be the same. "
-                f"Got {len(user_prompts)} user prompts and {len(model_predictions)} model predictions."
+                "The number of responses and model predictions must be the same. "
+                f"Got {len(responses)} responses and {len(model_predictions)} model predictions."
             )
-
-        responses = llm_interface.batch_generate(system_prompt, user_prompts, **generation_kwargs)  # type: ignore
 
         score = 0
         for llm_pred, ref_pred in zip(responses, model_predictions, strict=True):
@@ -302,4 +344,4 @@ class AutomatedSimulatability:
             if llm_pred.split(" ")[0].lower() == ref_pred.lower():
                 score += 1
 
-        return score / len(user_prompts)
+        return score / len(responses)
