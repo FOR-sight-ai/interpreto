@@ -94,10 +94,10 @@ fi
 committed=false
 cleanup() {
     if ! $committed; then
-        git checkout -- pyproject.toml >/dev/null 2>&1 || true
+        git restore --source=HEAD --staged --worktree pyproject.toml >/dev/null 2>&1 || true
     fi
 }
-trap cleanup ERR INT
+trap cleanup EXIT INT TERM
 
 if ! NEXT_VERSION="$next_version" python - <<'PY'
 from pathlib import Path
@@ -131,16 +131,12 @@ fi
 git commit -m "${current_version} -> ${next_version}"
 committed=true
 
-if ! git push; then
-    error "Failed to push commit to upstream."
-fi
-
 if ! git tag "${tag_name}"; then
     error "Failed to create tag ${tag_name}."
 fi
 
-if ! git push origin "${tag_name}"; then
-    error "Failed to push tag ${tag_name} to origin."
+if ! git push --atomic origin "${current_branch}" "${tag_name}"; then
+    error "Failed to push commit and tag to origin."
 fi
 
 echo -e "${GREEN}Version bumped from ${current_version} to ${next_version}.${RESET}"

@@ -149,8 +149,8 @@ class LLMLabels(BaseConceptInterpretationMethod):
             It can be tuned through the `unique_words_kwargs` argument.
 
         unique_words_kwargs (dict):
-            The kwargs to pass to the `extract_unique_words` function.
-            See [`extract_unique_words`][interpreto.concepts.interpretations.extract_unique_words] for more details.
+            The kwargs to pass to the `extract_ngrams` function.
+            See [`extract_ngrams`][interpreto.concepts.interpretations.extract_ngrams] for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
         k_quantile (int):
@@ -176,7 +176,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         k_examples: int = 30,
         k_context: int = 0,
         use_vocab: bool = False,
-        use_unique_words: bool = False,
+        use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,

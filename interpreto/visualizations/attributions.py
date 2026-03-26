@@ -1,4 +1,26 @@
-# attributions.py
+# MIT License
+#
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 from __future__ import annotations
 
@@ -179,6 +201,14 @@ class AttributionVisualization:
         )
 
 
+def _to_numpy_for_stats(tensor: torch.Tensor) -> np.ndarray:
+    """Convert tensors to NumPy for statistics, handling dtypes unsupported by NumPy."""
+    detached = tensor.detach().cpu()
+    if detached.dtype is torch.bfloat16:
+        detached = detached.to(torch.float32)
+    return detached.numpy()
+
+
 def _display_generation_attributions(
     attribution_output: AttributionOutput,
     *,
@@ -217,7 +247,7 @@ def _display_generation_attributions(
     )
 
     if normalize:
-        attributions_np = attribution_output.attributions.cpu().detach().numpy()
+        attributions_np = _to_numpy_for_stats(attribution_output.attributions)
         min_value = np.nanmin([np.nanmin(attributions_np), -np.nanmax(attributions_np)]).item()
         max_value = np.nanmax([np.nanmax(attributions_np), -np.nanmin(attributions_np)]).item()
         assert min_value <= max_value, f"The min value ({min_value}) should be less than the max value ({max_value})"

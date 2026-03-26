@@ -43,7 +43,7 @@ from transformers import BatchEncoding
 from transformers.modeling_utils import PreTrainedModel
 from transformers.tokenization_utils import PreTrainedTokenizer
 
-from interpreto.attributions.base import AttributionOutput
+from interpreto.attributions.base import AttributionOutput, setup_tokenizer_for_perturbations
 from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
     DeletionPerturbator,
     InsertionDeletionPerturbator,
@@ -114,23 +114,7 @@ class InsertionDeletionBase:
 
     def _set_tokenizer(self, model, tokenizer) -> tuple[PreTrainedModel, int]:
         self.tokenizer = tokenizer
-        # replace token for perturbations
-        replace_token = "[REPLACE]"
-        if replace_token not in tokenizer.get_vocab():
-            tokenizer.add_tokens([replace_token])
-
-        # add a pad token if it does not exist
-        if self.tokenizer.pad_token is None:
-            self.tokenizer.add_special_tokens({"pad_token": "<pad>"})
-
-        # resize model with new tokens
-        model.resize_token_embeddings(len(self.tokenizer))
-
-        replace_token_id = self.tokenizer.convert_tokens_to_ids(replace_token)
-        if isinstance(replace_token_id, list):
-            replace_token_id = replace_token_id[0]
-
-        return model, replace_token_id
+        return setup_tokenizer_for_perturbations(model, self.tokenizer)
 
     @property
     def device(self) -> torch.device:

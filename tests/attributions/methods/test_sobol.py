@@ -64,14 +64,16 @@ def test_sobol_attribution_init_and_mask(
         sampler=sampler,
     )
 
-    # 1) [REPLACE] token must have been added
-    assert "[REPLACE]" in bert_tokenizer.get_vocab()
-
     # 2) check the perturbator stored our enums correctly
     assert isinstance(explainer.perturbator, SobolTokenPerturbator)
     assert isinstance(explainer.aggregator, SobolAggregator)
     assert explainer.perturbator.sampler_class == sampler.value
     assert explainer.aggregator.sobol_indices_order == order.value
+    expected_replace_id = bert_tokenizer.mask_token_id
+    if expected_replace_id is None:
+        assert "[REPLACE]" in bert_tokenizer.get_vocab()
+        expected_replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
+    assert explainer.perturbator.replace_token_id == expected_replace_id
 
     # 3) get_mask returns a float32 tensor of shape (n_perturbations, seq_len)   # TODO: put this in a common perturbator test
     seq_len = 8

@@ -257,10 +257,11 @@ class Granularity(Enum):
 
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
 
-                if tokenizer.is_fast and isinstance(inputs, BatchEncoding):
+                if Granularity.__word_ids_are_usable(tokenizer, inputs):
                     return [Granularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
+
                 return [
-                    Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)  # type: ignore
+                    Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)
                     for i in range(n_inputs)
                 ]
 
@@ -309,6 +310,18 @@ class Granularity(Enum):
         return [[i] for i, tok_id in enumerate(tokens_ids) if tok_id not in special_ids]
 
     @staticmethod
+    def __word_ids_are_usable(tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast, inputs: BatchEncoding) -> bool:
+        """Return True when we have a fast-tokenizer and word ids provide meaningful word grouping."""
+        if not tokenizer.is_fast:
+            print("Tokenizer is not fast, cannot use word_ids for WORD granularity.")
+            return False
+        word_ids = inputs.word_ids(0)
+        is_valid = isinstance(word_ids, list) and any(x is not None for x in word_ids)
+        if is_valid:
+            return True
+        return False
+
+    @staticmethod
     def __word_get_indices_from_word_ids(word_ids: list[int | None]) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         mapping: dict[int, list[int]] = {}
@@ -322,10 +335,12 @@ class Granularity(Enum):
 
     @staticmethod
     def _starts_word(token: str) -> bool:
-        return token.startswith((" ", "Ġ", "__"))
+        return token.startswith((" ", "Ġ", "▁", "__"))
 
     @staticmethod
-    def __word_get_indices_from_input_ids(input_ids: list[int], tokenizer: PreTrainedTokenizer) -> list[list[int]]:
+    def __word_get_indices_from_input_ids(
+        input_ids: list[int] | torch.Tensor, tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast
+    ) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         special_ids = tokenizer.all_special_ids
         tokens = tokenizer.convert_ids_to_tokens(input_ids, skip_special_tokens=False)
@@ -795,7 +810,9 @@ class Granularity(Enum):
                         )
                     # iterate over granularity elements
                     aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
-                        (contribution.shape[0], len(sample_indices))
+                        (contribution.shape[0], len(sample_indices)),
+                        dtype=contribution.dtype,
+                        device=contribution.device,
                     )
                     for aggregation_index, token_indices in enumerate(sample_indices):
                         # extract token contribution for each word/sentence
@@ -865,7 +882,9 @@ class Granularity(Enum):
                         )
                     # iterate over granularity elements
                     aggregated_contribution: Float[torch.Tensor, "g lg"] = torch.zeros(
-                        (len(target_indices), contribution.shape[1])
+                        (len(target_indices), contribution.shape[1]),
+                        dtype=contribution.dtype,
+                        device=contribution.device,
                     )
                     for aggregation_index, token_indices in enumerate(target_indices):
                         # extract token contribution for each word/sentence
