@@ -205,14 +205,18 @@ def test_consim_quantize_importances():
     Test the `quantize_importances` method of the ConSim metric.
     """
     thr = 0.05
-    assert ConSim._quantize_importances(0.4, thr) == "++", "quantize_importances should return ++ for values > 0.3"
-    assert ConSim._quantize_importances(0.1, thr) == "+", (
-        "quantize_importances should return + for values between 0.05 and 0.3"
+    assert ConSim._quantize_importances(0.4, thr) == "Highly supportive", (
+        "quantize_importances should return Highly supportive for values > 0.3"
     )
-    assert ConSim._quantize_importances(-0.1, thr) == "-", (
+    assert ConSim._quantize_importances(0.1, thr) == "Supportive", (
+        "quantize_importances should return Supportive for values between 0.05 and 0.3"
+    )
+    assert ConSim._quantize_importances(-0.1, thr) == "Opposed", (
         "quantize_importances should return - for values between -0.3 and -0.05"
     )
-    assert ConSim._quantize_importances(-0.5, thr) == "--", "quantize_importances should return -- for values < -0.3"
+    assert ConSim._quantize_importances(-0.5, thr) == "Very opposed", (
+        "quantize_importances should return Very opposed for values < -0.3"
+    )
     assert ConSim._quantize_importances(0.04, thr) is None, (
         "quantize_importances should return None for values between -0.05 and 0.05"
     )
@@ -240,7 +244,9 @@ def test_consim_quantize_concepts_importances():
         threshold=0.05,
     )
 
-    assert rendered == "{C0 (w0): ++, C3 (w3): --, C1 (w1): -}", "wrong concept string rendering"
+    assert rendered == "{C0 (w0): Highly supportive, C3 (w3): Very opposed, C1 (w1): Opposed}", (
+        "wrong concept string rendering"
+    )
 
 
 def test_score_from_responses():
@@ -275,8 +281,8 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     labels = torch.tensor([0, 0, 1, 1])
     classes = ["A", "B"]
     interp = {0: "word"}
-    glob = torch.tensor([[0.6], [-0.2]])  # {"A": {0: "++"}, "B": {0: "-"}}
-    loc = [  # [{0: "+"}, {0: "-"}, {0: "+"}, {0: "-"}]
+    glob = torch.tensor([[0.6], [-0.2]])  # {"A": {0: "Highly supportive"}, "B": {0: "Opposed"}}
+    loc = [  # [{0: "Supportive"}, {0: "Opposed"}, {0: "Supportive"}, {0: "Opposed"}]
         torch.tensor([[0.2], [-0.2]]),
         torch.tensor([[0.2], [-0.1]]),
         torch.tensor([[-0.1], [0.2]]),
@@ -342,20 +348,20 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
     # global concepts explanation
     if prompt_settings.concepts_global_importances:
         if anonymize_classes:
-            assert "Class_0: {C0 (word): ++}" in system, (
+            assert "Class_0: {C0 (word): Highly supportive}" in system, (
                 "system prompt should contain the anonymized global concepts importance"
             )
         else:
-            assert "B: {C0 (word): -}" in system, "system prompt should contain the global concepts importance"
+            assert "B: {C0 (word): Opposed}" in system, "system prompt should contain the global concepts importance"
 
     # contrastive global explanation
     if prompt_settings.global_contrastive_importances:
         if anonymize_classes:
-            assert "\tfact: Class_1, foil: Class_0: {C0 (word): --}" in system, (
+            assert "\tfact: Class_1, foil: Class_0: {C0 (word): Very opposed}" in system, (
                 "system prompt should contain the anonymized global contrastive concepts importance"
             )
         else:
-            assert "\tfact: B, foil: A: {C0 (word): --}" in system, (
+            assert "\tfact: B, foil: A: {C0 (word): Very opposed}" in system, (
                 "system prompt should contain the global contrastive concepts importance"
             )
 
@@ -377,31 +383,32 @@ def test_consim_setting_to_prompt(prompt_type: PromptTypes, anonymize_classes: b
 
     # local concepts explanation
     if prompt_settings.lp_concepts_local_contributions:
-        assert "\n\tConcepts contributions: {C0 (word): +}" in system, (
+        assert "\n\tConcepts contributions: {C0 (word): Supportive}" in system, (
             "system prompt should contain the lp concepts contributions"
         )
-        assert "\n\tConcepts contributions: {C0 (word): -}" in system, (
+        assert "\n\tConcepts contributions: {C0 (word): Opposed}" in system, (
             "system prompt should contain the lp concepts contributions"
         )
 
     # contrastive local explanation
     if prompt_settings.lp_local_contrastive_importance:
-        assert "\n\tConcepts contributions: {C0 (word): +}" in system, (
+        assert "\n\tConcepts contributions: {C0 (word): Supportive}" in system, (
             "system prompt should contain the lp concepts contributions"
         )
         if anonymize_classes:
-            assert "\n\tConcepts contributions supporting Class_1 rather than Class_0: {C0 (word): --}" in system, (
-                "system prompt should contain the anonymized contrastive local concepts importance"
-            )
+            assert (
+                "\n\tConcepts contributions supporting Class_1 rather than Class_0: {C0 (word): Very opposed}"
+                in system
+            ), "system prompt should contain the anonymized contrastive local concepts importance"
         else:
-            assert "\n\tConcepts contributions supporting B rather than A: {C0 (word): --}" in system, (
+            assert "\n\tConcepts contributions supporting B rather than A: {C0 (word): Very opposed}" in system, (
                 "system prompt should contain the anonymized contrastive local concepts importance"
             )
     # ----------------
     # Evaluation Phase
     # samples, only the 2 last samples for ep
-    assert user[0] == "Sample_2:\n\tText: s2\n\tLabel: ", "user prompt should contain the ep samples"
-    assert user[1] == "Sample_3:\n\tText: s3\n\tLabel: ", "user prompt should contain the ep samples"
+    assert user[0] == "Evaluation sample:\n\tText: s2\n\tLabel: ", "user prompt should contain the ep samples"
+    assert user[1] == "Evaluation sample:\n\tText: s3\n\tLabel: ", "user prompt should contain the ep samples"
 
 
 def test_consim_generate_prompt():
@@ -456,10 +463,10 @@ def test_consim_generate_prompt():
     assert "C0 (word)" in system, (
         "high global importance concepts should be in the system prompt"
     )  # E3 includes the concepts interpretation
-    assert "A: {C0 (word): ++, C1 (test): +}" in system, (
+    assert "A: {C0 (word): Highly supportive, C1 (test): Supportive}" in system, (
         "high global importance concepts should be in the system prompt"
     )  # E3 includes the global concepts importance
-    assert "B: {C0 (word): --, C1 (test): -}" in system, (
+    assert "B: {C0 (word): Very opposed, C1 (test): Opposed}" in system, (
         "high global importance concepts should be in the system prompt"
     )  # E3 includes the global concepts importance
     assert "Sample_0:\n\tText: s0" in system, "system prompt should contain the lp samples"
@@ -467,14 +474,14 @@ def test_consim_generate_prompt():
     assert "Sample_2" not in system and "Sample_3" not in system, "system prompt should not contain the ep samples"
     assert "\n\tLabel: A" in system, "system prompt should contain the anonymized predictions"
     assert "\n\tLabel: B" in system, "system prompt should contain the anonymized predictions"
-    assert "\n\tConcepts contributions: {C0 (word): ++, C1 (test): +}" in system, (
+    assert "\n\tConcepts contributions: {C0 (word): Highly supportive, C1 (test): Supportive}" in system, (
         "system prompt should contain the lp concepts contributions"
     )
-    assert "\n\tConcepts contributions: {C0 (word): --, C1 (test): -}" in system, (
+    assert "\n\tConcepts contributions: {C0 (word): Very opposed, C1 (test): Opposed}" in system, (
         "system prompt should contain the lp concepts contributions"
     )
-    assert user[0] == "Sample_2:\n\tText: s2\n\tLabel: ", "user prompt should contain the ep samples"
-    assert user[1] == "Sample_3:\n\tText: s3\n\tLabel: ", "user prompt should contain the ep samples"
+    assert user[0] == "Evaluation sample:\n\tText: s2\n\tLabel: ", "user prompt should contain the ep samples"
+    assert user[1] == "Evaluation sample:\n\tText: s3\n\tLabel: ", "user prompt should contain the ep samples"
 
 
 # TODO: outdated tests, might be useful if we do a consim manager
@@ -620,7 +627,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
 #     def isprime(n):
 #         if n < 2:
 #             return False
-#         for i in range(2, int(n**0.5) + 1):
+#         for i in range(2, int(n**0.5) Supportive 1):
 #             if n % i == 0:
 #                 return False
 #         return True

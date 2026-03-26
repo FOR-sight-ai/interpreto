@@ -274,16 +274,16 @@ class ConSim(AutomatedSimulatability):
                 One of `{"++", "+", "-", "--"}` or `None` when the concept should be omitted.
         """
         if importance <= -6 * threshold:
-            return "--"
+            return "Very opposed"
 
         if importance <= -threshold:
-            return "-"
+            return "Opposed"
 
         if importance >= 6 * threshold:
-            return "++"
+            return "Highly supportive"
 
         if importance >= threshold:
-            return "+"
+            return "Supportive"
 
         return None
 
@@ -473,7 +473,7 @@ class ConSim(AutomatedSimulatability):
         # ----------------
         # task description
 
-        task_description_prompt = "You are a classifier. For each sample, you have to predict the class. "
+        task_description_prompt = "You are a classifier. Your task is to assign a label to the evaluation sample. "
         if setting.global_contrastive_importances:
             task_description_prompt += "To complete the task, you will be given the concepts and their contrastive importance for each class. "
         elif setting.concepts_global_importances:
@@ -482,13 +482,21 @@ class ConSim(AutomatedSimulatability):
             )
         if setting.lp_samples:
             if setting.lp_concepts_local_contributions:
-                task_description_prompt += "You will have examples of samples, labels, and concepts contributions to labels as reference for the task. "
+                task_description_prompt += "You will have examples of samples, labels, and concepts contributions to labels as reference to learn the task. "
             elif setting.lp_local_contrastive_importance:
-                task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions (why predict this class and not the other) as reference for the task. "
+                task_description_prompt += "You will have examples of samples, labels, and contrastive concepts contributions (why predict this class and not the other) as reference to learn the task. "
             else:
-                task_description_prompt += "You will have examples of samples and labels as reference for the task. "
+                task_description_prompt += (
+                    "You will have examples of samples and labels as reference to learn the task. "
+                )
+        if (
+            setting.concepts_global_importances
+            or setting.global_contrastive_importances
+            or setting.lp_concepts_local_contributions
+            or setting.lp_local_contrastive_importance
+        ):
+            task_description_prompt += " For each concept, the importances are 'Very opposed', 'Opposed', 'Supportive', or 'Highly supportive'. It means that a opposed concept is present in the text, the corresponding class is improbable. In the other hand, when a supportive concept is present in the text, the corresponding class is more likely."
         task_description_prompt += "User's prompt will contain an evaluation sample on which you should predict the class. Only return the class name, no other text."
-        # TODO: for concepts say how to interpret the values ++ + - --... what is negative and positive
         assert len(task_description_prompt) > 0
         system_prompt_parts.append(task_description_prompt)
 
@@ -603,10 +611,10 @@ class ConSim(AutomatedSimulatability):
         # Inference
         # ----------------
         # show the samples
-        user_prompt = [
+        user_prompts = [
             "\n".join(
                 [
-                    f"Sample_{i}:",
+                    "Evaluation sample:",
                     f"\tText: {interesting_samples[i]}",
                     "\tLabel: ",
                 ]
@@ -620,7 +628,7 @@ class ConSim(AutomatedSimulatability):
             classes[int(corresponding_predictions[i])] for i in range(nb_learning_samples, len(interesting_samples))
         ]
 
-        return system_prompt, user_prompt, literal_model_predictions
+        return system_prompt, user_prompts, literal_model_predictions
 
     def _check_input_settings_correspondence(
         self,
