@@ -223,7 +223,7 @@ class AttributionExplainer:
         if not hasattr(self, "tokenizer"):
             model, _ = self._set_tokenizer(model, tokenizer)
         self.inference_wrapper = self._associated_inference_wrapper(
-            model, batch_size=batch_size, device=device, mode=inference_mode
+            model, tokenizer, batch_size=batch_size, device=device, mode=inference_mode
         )  # type: ignore
         self.perturbator = perturbator or Perturbator()
         self.aggregator = aggregator or Aggregator()
