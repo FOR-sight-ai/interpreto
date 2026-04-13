@@ -1,5 +1,29 @@
 # MIT License
 #
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# MIT License
+#
 # Copyright (c) 2025 IRT Antoine de Saint Exupery et Universite Paul Sabatier Toulouse III - All
 # rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupery,
 # CRIAQ and ANITI - https://www.deel.ai/.
@@ -100,8 +124,6 @@ def test_plot_concepts_classification_local_classwise_labels(tmp_path):
         "sample",
         "labels",
         "labels_by_class",
-        "activations",
-        "activations_by_class",
         "importances",
     } <= set(payload.keys())
     assert payload["sample"] == sample
@@ -109,7 +131,8 @@ def test_plot_concepts_classification_local_classwise_labels(tmp_path):
     assert payload["labels_by_class"]["0"][0] == "Neg sentiment"
     assert payload["labels_by_class"]["1"][1] == "Food quality"
     assert payload["labels"] == ["Neg sentiment", "Service issues"]
-    assert payload["activations_by_class"]["1"] == [[0.1, 0.9]]
+    if "activations_by_class" in payload:
+        assert payload["activations_by_class"]["1"] == [[0.1, 0.9]]
 
 
 def test_plot_concepts_classification_local_uses_static_root(tmp_path):

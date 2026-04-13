@@ -273,16 +273,30 @@ def test_build_example_prompt():
 
 @pytest.fixture
 def splitted_encoder() -> ModelWithSplitPoints:
-    return ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
-        automodel=AutoModelForMaskedLM,  # type: ignore
-    )
+    # return ModelWithSplitPoints(
+    #     "hf-internal-testing/tiny-random-bert",
+    #     split_points=["bert.encoder.layer.1.output"],
+    #     automodel=AutoModelForMaskedLM,  # type: ignore
+    # )
+    try:
+        return ModelWithSplitPoints(
+            "hf-internal-testing/tiny-random-bert",
+            split_points=["bert.encoder.layer.1.output"],
+            automodel=AutoModelForMaskedLM,  # type: ignore
+        )
+    except OSError as exc:
+        pytest.skip(f"Skipping llm_labels tests: unable to load tiny-random-bert ({exc})")
 
 
 class LLMInterfaceMock(LLMInterface):
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+    # def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
+        _ = (system_prompt, user_prompt, generation_kwargs)
         return "mock answer"
+
+    def batch_generate(self, system_prompt: str, user_prompts: list[str], **generation_kwargs) -> list[str | None]:
+        _ = (system_prompt, generation_kwargs)
+        return ["mock answer" for _ in user_prompts]
 
 
 def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):

@@ -81,25 +81,87 @@ class HuggingFaceLLM(LLMInterface):
         self.device = device
 
         self.tokenizer = AutoTokenizer.from_pretrained(model)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model,
-            torch_dtype="auto",
-            device_map=device,
-        )
+        self.tokenizer.padding_side = "left"
+        self.tokenizer.truncation_side = "left"
+        # self.model = AutoModelForCausalLM.from_pretrained(
+        #     model,
+        #     torch_dtype="auto",
+        #     device_map=device,
+        # )
+        try:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model,
+                dtype="auto",
+                device_map=device,
+            )
+        except TypeError:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model,
+                torch_dtype="auto",
+                device_map=device,
+            )
 
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        if device == "auto":
+            # model_device = getattr(self.model, "device", None)
+            model_device = self._resolve_model_device()
+            if model_device is None:
+                model_device = next(self.model.parameters()).device
+            self._inputs_device = model_device
+        else:
+            self._inputs_device = torch.device(device)
+
+    def _resolve_model_device(self) -> torch.device | None:
+        hf_device_map = getattr(self.model, "hf_device_map", None)
+        if isinstance(hf_device_map, dict):
+            for target in hf_device_map.values():
+                if isinstance(target, int):
+                    return torch.device(f"cuda:{target}")
+                if isinstance(target, str):
+                    if target in {"disk", "meta"}:
+                        continue
+                    return torch.device(target)
+
+        model_device = getattr(self.model, "device", None)
+        if model_device is not None and str(model_device) != "meta":
+            return torch.device(model_device)
+
+        return None
+
+    def _compute_tokenizer_max_length(self, generation_kwargs: dict) -> int | None:
+        max_positions = getattr(self.model.config, "max_position_embeddings", None)
+        if max_positions is None:
+            return None
+
+        requested_new_tokens = generation_kwargs.get("max_new_tokens")
+        if requested_new_tokens is None:
+            requested_new_tokens = 32
+
+        safe_input_length = max_positions - int(requested_new_tokens)
+        if safe_input_length <= 0:
+            return max_positions
+        return safe_input_length
 
     def _format_prompt(self, system_prompt: str, user_prompt: str) -> str:
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        return self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
+        # return self.tokenizer.apply_chat_template(
+        #     messages,
+        #     tokenize=False,
+        #     add_generation_prompt=True,
+        # )
+        if getattr(self.tokenizer, "chat_template", None):
+            return self.tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+
+        return f"System:\n{system_prompt}\n\nUser:\n{user_prompt}\n\nAssistant:\n"
 
     def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
         return self.batch_generate(system_prompt, [user_prompt], **generation_kwargs)[0]
@@ -117,12 +179,14 @@ class HuggingFaceLLM(LLMInterface):
             batch_prompts = formatted_prompts[i : i + self.batch_size]
 
             try:
+                tokenizer_max_length = self._compute_tokenizer_max_length(generation_kwargs)
                 inputs = self.tokenizer(
                     batch_prompts,
                     return_tensors="pt",
                     padding=True,
                     truncation=True,
-                ).to(self.device)
+                    max_length=tokenizer_max_length,
+                ).to(self._inputs_device)
 
                 with torch.no_grad():
                     generated_ids = self.model.generate(
