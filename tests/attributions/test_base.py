@@ -32,12 +32,6 @@ from interpreto.attributions.base import ClassificationAttributionExplainer, Inf
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class DummyInferenceWrapper:
-    def get_targets(self, _):
-        # For each input, return a dummy tensor with logits
-        return [torch.tensor([1]), torch.tensor([0])]
-
-
 def test_inference_mode():
     # check that inference mode is picklable
     pickled = pickle.dumps(InferenceModes.LOG_SOFTMAX)
@@ -112,10 +106,10 @@ def test_process_targets(bert_model, bert_tokenizer):
 
 def test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer):
     explainer = ClassificationAttributionExplainer(bert_model, tokenizer=bert_tokenizer, batch_size=2, device=DEVICE)
-    explainer.inference_wrapper = DummyInferenceWrapper()  # type: ignore
+    explainer.inference_wrapper = lambda *args, **kwargs: [torch.tensor([[1]]), torch.tensor([[0]])]  # type: ignore
 
     # Model input example
-    model_inputs = [
+    model_inputs: list[TensorMapping] = [
         {
             "input_ids": torch.tensor([[101, 2023, 2003, 1037, 2742, 102]]),
             "attention_mask": torch.tensor([[1, 1, 1, 1, 1, 1]]),
@@ -166,3 +160,12 @@ def test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer):
     ]
     targets = [0, 1]
     processed_inputs, processed_targets = explainer.process_inputs_to_explain_and_targets(model_inputs_masked, targets)
+
+
+if __name__ == "__main__":
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    test_process_targets(bert_model, bert_tokenizer)
+    test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer)

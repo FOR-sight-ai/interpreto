@@ -265,6 +265,7 @@ class ShiftCopyForCausalLM(nn.Module):
         input_ids: torch.Tensor | None = None,
         inputs_embeds: torch.Tensor | None = None,
         attention_mask: torch.Tensor | None = None,
+        **kwargs,
     ) -> CausalLMOutput:
         if inputs_embeds is None:
             if input_ids is None:
@@ -370,7 +371,7 @@ if __name__ == "__main__":
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_ID).to(DEVICE)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=True)
     model.eval()
-    test_classification_attribution_methods_detect_emotion_word((model, tokenizer, None), Sobol)
+    test_classification_attribution_methods_detect_emotion_word((model, tokenizer, None), Saliency)
     # tokenizer = LetterTokenizer()
     # model = ShiftCopyForCausalLM(vocab_size=len(tokenizer)).to(DEVICE)
     # model.eval()

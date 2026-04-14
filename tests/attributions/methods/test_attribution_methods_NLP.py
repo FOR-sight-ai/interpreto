@@ -34,6 +34,7 @@ from transformers import (
     # AutoModelForQuestionAnswering,
     # AutoModelForTokenClassification,
     AutoTokenizer,
+    BatchEncoding,
 )
 
 from interpreto.attributions import (
@@ -233,6 +234,10 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
         list_targets_complete = list_targets + list_targets
 
     for input_text, target in zip(list_texts_complete, list_targets_complete, strict=False):
+        if isinstance(input_text, BatchEncoding) and input_text["input_ids"].shape[0] > 1:
+            # skip batch encoding with multiple rows
+            continue
+
         try:
             attributions = explainer.explain(input_text, targets=target)
         except IncompatibilityError:
@@ -393,38 +398,43 @@ def test_attribution_methods_memory_management_generation(attribution_explainer)
 #       There should be a counter wrapped around a model to verify that the number of calls to the model is correct.
 
 if __name__ == "__main__":
-    # test_attribution_methods_with_text_short(
-    #     model_name="hf-internal-testing/tiny-random-bert",
-    #     attribution_explainer=IntegratedGradients,
-    # )
-    # test_attribution_methods_with_text_short(
-    #     model_name="hf-internal-testing/tiny-random-gpt2",
-    #     attribution_explainer=Lime,
-    # )
-    # test_attribution_methods_granularity(
-    #     model_name="hf-internal-testing/tiny-random-bert",
-    #     attribution_explainer=Occlusion,
-    #     granularity=Granularity.WORD,
-    # )
-    # test_attribution_methods_granularity(
-    #     model_name="hf-internal-testing/tiny-random-gpt2",
-    #     attribution_explainer=Occlusion,
-    #     granularity=Granularity.WORD,
-    # )
-    # test_attribution_methods_granularity_aggregation_strategy(
-    #     model_name="hf-internal-testing/tiny-random-gpt2",
-    #     attribution_explainer=VarGrad,
-    #     granularity=Granularity.WORD,
-    #     aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
-    # )
-    # bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
-    # bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
-    # sentences = [
-    #     "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
-    #     "Interpreto is magical",
-    #     "Testing interpreto",
-    # ]
-    # test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
-    # test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
+    test_attribution_methods_with_text_short(
+        model_name="hf-internal-testing/tiny-random-t5",
+        attribution_explainer=IntegratedGradients,
+    )
+    test_attribution_methods_with_text_short(
+        model_name="hf-internal-testing/tiny-random-gpt2",
+        attribution_explainer=Lime,
+    )
+    test_attribution_methods_granularity(
+        model_name="hf-internal-testing/tiny-random-bert",
+        attribution_explainer=Occlusion,
+        granularity=Granularity.WORD,
+    )
+    test_attribution_methods_granularity(
+        model_name="hf-internal-testing/tiny-random-gpt2",
+        attribution_explainer=VarGrad,
+        granularity=Granularity.WORD,
+    )
+    test_attribution_methods_granularity(
+        model_name="hf-internal-testing/tiny-random-bert",
+        attribution_explainer=Saliency,
+        granularity=Granularity.ALL_TOKENS,
+    )
+    test_attribution_methods_granularity_aggregation_strategy(
+        model_name="hf-internal-testing/tiny-random-gpt2",
+        attribution_explainer=GradientShap,
+        granularity=Granularity.SENTENCE,
+        aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
+    )
+    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    sentences = [
+        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
+        "Interpreto is magical",
+        "Testing interpreto",
+    ]
+    test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
+    test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
     test_attribution_methods_memory_management_classification(IntegratedGradients)
     test_attribution_methods_memory_management_generation(SmoothGrad)
