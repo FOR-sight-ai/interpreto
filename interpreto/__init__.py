@@ -42,14 +42,13 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
-from .model_wrapping import ModelWithSplitPoints
-from .others import (
+from .lens import (
     LogitLens,
+    TunedLens,
 )
-from .visualizations.attributions import (
+from .model_wrapping import ModelWithSplitPoints
+from .visualizations import (
     AttributionVisualization,
-)
-from .visualizations.concepts import (
     ConceptHighlightVisualization,
 )
 
@@ -64,4 +63,22 @@ def get_version() -> str:
         return "unknown"
 
 
-__all__ = []
+__all__ = [
+    "GradientShap",
+    "Granularity",
+    "IntegratedGradients",
+    "KernelShap",
+    "Lime",
+    "LogitLens",
+    "ModelWithSplitPoints",
+    "Occlusion",
+    "SquareGrad",
+    "Saliency",
+    "SmoothGrad",
+    "Sobol",
+    "TunedLens",
+    "VarGrad",
+    "get_version",
+    "AttributionVisualization",
+    "ConceptHighlightVisualization",
+]

@@ -22,9 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Copyright IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
-# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
-# CRIAQ and ANITI - https://www.deel.ai/
-# =====================================================================================
+from .logit_lens import LogitLens
+from .tuned_lens import TunedLens
 
-from .logit_lens_general import LogitLens
+__all__ = ["LogitLens", "TunedLens"]
