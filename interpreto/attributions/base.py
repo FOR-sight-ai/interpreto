@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import itertools
 from abc import abstractmethod
-from collections.abc import Callable, Iterable, MutableMapping
+from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -226,7 +226,6 @@ class AttributionExplainer:
             model, _ = self._set_tokenizer(model, tokenizer)
         self.inference_wrapper = self._associated_inference_wrapper(
             model,
-            self.tokenizer,
             gradients=use_gradient,
             input_x_gradient=input_x_gradient,
             batch_size=batch_size,
@@ -237,7 +236,6 @@ class AttributionExplainer:
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.granularity_aggregation_strategy = granularity_aggregation_strategy
-        self.inference_wrapper.pad_token_id = self.tokenizer.pad_token_id
 
     def _set_tokenizer(self, model, tokenizer) -> tuple[PreTrainedModel, int]:
         self.tokenizer = tokenizer
@@ -306,19 +304,24 @@ class AttributionExplainer:
                 )
             ]
         if isinstance(model_inputs, BatchEncoding):
-            splitted_encodings = []
-            for i, enc in enumerate(model_inputs.encodings):  # type: ignore  # one Encoding per row
-                data_i = {
-                    k: (v[i].unsqueeze(0) if isinstance(v, torch.Tensor) else [v[i]]) for k, v in model_inputs.items()
-                }
-                splitted_encodings.append(
-                    BatchEncoding(
-                        data=data_i,  # tensors/arrays for that row
-                        encoding=enc,  # its Encoding (keeps word_ids, offsets…) necessary for granularity
-                        tensor_type="pt",  # keep tensors if you had them
-                    )
+            if "input_ids" not in model_inputs.keys():
+                raise ValueError(
+                    "The tokenized model_inputs must contain the key 'input_ids' to be processed by the attribution explainer. "
+                    f"Got {model_inputs.keys()}."
                 )
-            return splitted_encodings
+            if not isinstance(model_inputs["input_ids"], torch.Tensor):
+                raise ValueError(
+                    "The tokenized model_inputs must contain a torch.Tensor for the key 'input_ids' to be processed by the attribution explainer. "
+                    "Use `model_inputs = tokenizer(..., return_tensors='pt')` to convert the model_inputs to a torch.Tensor. "
+                    f"Got {type(model_inputs['input_ids'])}."
+                )
+            if model_inputs["input_ids"].shape[0] != 1:  # type: ignore
+                raise ValueError(
+                    "The tokenized model_inputs must contain a single sample to be processed by the attribution explainer. "
+                    "Samples should be tokenized one by one or passed as list of texts directly. "
+                    f"Got {model_inputs['input_ids'].shape[0]} samples."  # type: ignore
+                )
+            return [model_inputs]
         if isinstance(model_inputs, Iterable):
             return list(itertools.chain(*[self.process_model_inputs(item) for item in model_inputs]))
         raise ValueError(
@@ -354,6 +357,27 @@ class AttributionExplainer:
             "to correctly process inputs and targets for explanations."
         )
 
+    @abstractmethod
+    def post_processing(
+        self, contribution: Float[torch.Tensor, "t l"]
+    ) -> tuple[ModelTask, Float[torch.Tensor, "t l"]]:
+        """
+        Task specific post-processing of the attribution scores.
+
+        This method is called after the aggregation of the scores to obtain the contribution values.
+
+        Args:
+            contribution (Float[torch.Tensor, "t l"]): The contribution values.
+
+        Returns:
+            model_task (ModelTask): The model task.
+            contribution (Float[torch.Tensor, "t l"]): The post-processed contribution values.
+        """
+        raise NotImplementedError(
+            "Specific task subclasses must implement the 'post_processing' method "
+            "to correctly post-process the contribution values."
+        )
+
     def explain(
         self,
         model_inputs: ModelInputs,
@@ -365,13 +389,10 @@ class AttributionExplainer:
         Computes attributions for NLP models.
 
         Process:
-            1. Process and standardize the model inputs.
-            2. Create the tokenizer's pad token if not already set and add it to the inference wrapper.
-            3. If targets are not provided, create them. Otherwise, for each input-target pair, process them.
-            4. Decompose the inputs based on the desired granularity and decode tokens.
-            5. Generate perturbations for the constructed inputs.
-            6. Compute scores using either gradients (if use_gradient is True) or targeted logits.
-            7. Aggregate the scores to obtain contribution values.
+            1. Process and standardize the model inputs and targets.
+            2. Generate perturbations for the constructed inputs, perturbations are based on the granularity.
+            3. Compute scores using either gradients or targeted logits depending on the method.
+            4. Aggregate the scores to obtain contribution values.
 
         Args:
             model_inputs (ModelInputs): Raw inputs for the model.
@@ -386,12 +407,12 @@ class AttributionExplainer:
             List[AttributionOutput]: A list of attribution outputs, one per input sample.
         """
         # Ensure the model inputs are in the correct format
-        sanitized_model_inputs: Iterable[TensorMapping] = self.process_model_inputs(model_inputs)
+        sanitized_model_inputs: list[TensorMapping] = self.process_model_inputs(model_inputs)
 
         # Process the inputs and targets for explanation
         # If targets are not provided, create them from model_inputs_to_explain.
-        model_inputs_to_explain: Iterable[TensorMapping]
-        sanitized_targets: Iterable[Int[torch.Tensor, "t"]]
+        model_inputs_to_explain: list[TensorMapping]
+        sanitized_targets: list[Int[torch.Tensor, "t"]]
         model_inputs_to_explain, sanitized_targets = self.process_inputs_to_explain_and_targets(
             sanitized_model_inputs,
             targets,  # type: ignore
@@ -399,26 +420,27 @@ class AttributionExplainer:
 
         # Create perturbation masks and perturb inputs based on the masks.
         # Inputs might be embedded during the perturbation process if the perturbator works with embeddings.
-        pert_generator: Iterable[TensorMapping]
-        mask_generator: Iterable[torch.Tensor | None]
+        pert_generator: Iterator[TensorMapping]
+        mask_generator: Iterator[Int[torch.Tensor, "p l"] | None]
         pert_generator, mask_generator = split_iterator(self.perturbator.perturb(m) for m in model_inputs_to_explain)
 
         # Compute the score on perturbed inputs:
-        # - If use_gradient is True, compute gradients.
+        # - If self.inference_wrapper.gradients is True, compute gradients.
         # - Otherwise, compute targeted logits.
-        scores: Iterable[torch.Tensor] = self.inference_wrapper(pert_generator, (a for a in sanitized_targets))
+        scores: Iterator[Float[torch.Tensor, "p t"]] = self.inference_wrapper(
+            pert_generator, (a for a in sanitized_targets)
+        )
 
         # Aggregate the scores using the aggregator function and the perturbation masks.
         # Aggregation over perturbations: (p, t), (p, l) -> (t, l)
-        contributions = (
-            self.aggregator(score.detach(), mask.to(score.device) if mask is not None else None)
-            for score, mask in zip(scores, mask_generator, strict=True)
+        contributions: Iterator[Float[torch.Tensor, "t l"]] = (
+            self.aggregator(score.detach(), mask) for score, mask in zip(scores, mask_generator, strict=True)
         )
 
         # Aggregate the score with respect to the granularity level
         # - Aggregate over the inputs for gradient-based methods: (t, l) -> (t, lg)
         # - Aggregate over the targets if the model is a generation model: (t, l) -> (tg, l)
-        granular_contributions = (
+        granular_contributions: Iterator[Float[torch.Tensor, "tg lg"]] = (
             self.granularity.granularity_score_aggregation(
                 contribution=contribution.cpu(),
                 granularity_aggregation_strategy=self.granularity_aggregation_strategy,
@@ -441,31 +463,19 @@ class AttributionExplainer:
         for contribution, model_input, elements, target in zip(
             granular_contributions, model_inputs_to_explain, granular_inputs_texts, sanitized_targets, strict=True
         ):
-            if self.inference_wrapper.__class__.__name__ == "GenerationInferenceWrapper":
-                model_task = ModelTask.GENERATION
-                t, l = contribution.shape
-                mask = torch.triu(torch.ones((t, l), dtype=torch.bool), diagonal=l - t)
-                contribution[mask] = float("nan")
-                classes = None
-            elif self.inference_wrapper.__class__.__name__ == "ClassificationInferenceWrapper":
-                classes = target
-                model_task = ModelTask.CLASSIFICATION
-            else:
-                raise NotImplementedError(
-                    f"Model type {self.inference_wrapper.model.__class__.__name__} not supported for AttributionExplainer."
-                )
+            # contributions post-processing
+            model_task, clean_contribution = self.post_processing(contribution)
 
             # sanitize model_input
-            _ = model_input.pop("inputs_embeds", None)
+            model_input.pop("inputs_embeds", None)
             model_input["attention_mask"] = model_input["attention_mask"][0].unsqueeze(dim=0)
 
             # construct attribution output
             attribution_output = AttributionOutput(
-                attributions=contribution,
+                attributions=clean_contribution,
                 elements=elements,
                 model_inputs_to_explain=model_input,
                 model_task=model_task,
-                classes=classes,
                 targets=target.cpu(),  # TODO: manage target device in the inference wrapper
                 granularity=self.granularity,
                 granularity_aggregation_strategy=self.granularity_aggregation_strategy,
@@ -500,7 +510,7 @@ class ClassificationAttributionExplainer(AttributionExplainer):
 
     def process_targets(
         self, targets: ClassificationTarget, expected_length: int | None = None
-    ) -> Iterable[Int[torch.Tensor, "t"]]:
+    ) -> list[Int[torch.Tensor, "t"]]:
         """
         Normalize classification targets into a list of 1D integer tensors.
 
@@ -548,14 +558,14 @@ class ClassificationAttributionExplainer(AttributionExplainer):
                     "Mismatch between the inputs and targets length."
                     + f" Target tensor of {targets.shape[0]} elements, but the length of the inputs is {expected_length}."
                 )
-            if targets.ndim != 2:  # actually verified by jaxtyping
+            if targets.ndim != 2:
                 raise TypeError(
                     "Target tensor must be one-dimensional or two-dimensional."
                     + f" Target tensor has {targets.ndim} dimensions."
                 )
-            if torch.is_floating_point(targets):  # actually verified by jaxtyping
+            if torch.is_floating_point(targets):
                 raise TypeError("Target tensor must be integers.")
-            return targets.unbind(dim=0)
+            return list(targets.unbind(dim=0))
 
         # iterable
         if isinstance(targets, Iterable):
@@ -566,12 +576,12 @@ class ClassificationAttributionExplainer(AttributionExplainer):
                 )
 
             # iterable[int]
-            if all(isinstance(t, int) for t in targets):  # actually verified by jaxtyping
+            if all(isinstance(t, int) for t in targets):
                 return [torch.tensor([target]) for target in targets]
 
             # iterable[torch.Tensor]
-            iterable_targets: Iterable[torch.Tensor] = targets  # type: ignore
-            if all(isinstance(t, torch.Tensor) for t in iterable_targets):  # actually verified by jaxtyping
+            iterable_targets: list[torch.Tensor] = list(targets)  # type: ignore
+            if all(isinstance(t, torch.Tensor) for t in iterable_targets):
                 if any(target.ndim != 1 for target in iterable_targets):
                     raise TypeError("If the targets are iterable of tensors, the tensors must be one-dimensional.")
                 if any(torch.is_floating_point(target) for target in iterable_targets):
@@ -615,12 +625,29 @@ class ClassificationAttributionExplainer(AttributionExplainer):
         sanitized_targets: list[Int[torch.Tensor, "t"]]
         if targets is None:
             # compute targets from logits if not provided
-            sanitized_targets = list(self.inference_wrapper(model_inputs))
+            # inputs have already been split, so we only need to select the first element
+            sanitized_targets = [t[0] for t in self.inference_wrapper(model_inputs)]
         else:
             # process targets and ensure they have the same length as inputs
             sanitized_targets = self.process_targets(targets, expected_length=len(model_inputs))
 
         return model_inputs, sanitized_targets
+
+    def post_processing(self, contribution: Float[torch.Tensor, "t l"]):
+        """
+        Classification specific post-processing of the attribution scores.
+
+        No post-processing is required for classification.
+
+        Args:
+            contribution (Float[torch.Tensor, "t l"]): The contribution values.
+
+        Returns:
+            model_task (ModelTask): The model task.
+            contribution (Float[torch.Tensor, "t l"]): The post-processed contribution values.
+
+        """
+        return ModelTask.CLASSIFICATION, contribution
 
 
 class GenerationAttributionExplainer(AttributionExplainer):
@@ -751,6 +778,25 @@ class GenerationAttributionExplainer(AttributionExplainer):
         ]
 
         return model_inputs_to_explain, sanitized_targets
+
+    def post_processing(self, contribution: Float[torch.Tensor, "t l"]):
+        """
+        Generation specific post-processing of the attribution scores.
+
+        Later generated tokens cannot be important for earlier ones, so we set them to NaN.
+
+        Args:
+            contribution (Float[torch.Tensor, "t l"]): The contribution values.
+
+        Returns:
+            model_task (ModelTask): The model task.
+            contribution (Float[torch.Tensor, "t l"]): The post-processed contribution values.
+
+        """
+        t, l = contribution.shape
+        mask = torch.triu(torch.ones((t, l), dtype=torch.bool), diagonal=l - t)
+        contribution[mask] = float("nan")
+        return ModelTask.GENERATION, contribution
 
 
 class FactoryGeneratedMeta(type):
