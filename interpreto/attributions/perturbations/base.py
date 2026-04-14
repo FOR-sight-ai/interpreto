@@ -29,11 +29,12 @@ Base classes for perturbations used in attribution methods
 from __future__ import annotations
 
 from abc import abstractmethod
+from copy import deepcopy
 
 import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
-from transformers.tokenization_utils import PreTrainedTokenizer
+from transformers import PreTrainedTokenizer
 
 from interpreto.commons.granularity import Granularity
 from interpreto.typing import TensorMapping
@@ -92,45 +93,53 @@ class EmbeddingsPerturbator(Perturbator):
         self.inputs_embedder = inputs_embedder
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        embeddings = self._embed(model_inputs)
-        return self.perturb_embeds(embeddings)
-
-    def perturb_embeds(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        """
-        Perturb the input of the model, given as embeddings
-
-        Args:
-            model_inputs (TensorMapping): Mapping given by the tokenizer, should contain "inputs_embeds", otherwise, the given inputs_embedder will be used to compute them from "input_ids"
-        Returns:
-            TensorMapping: Perturbed mapping
-            torch.Tensor | None: Perturbation mask, if applicable
-        """
-        return model_inputs, None
-
-    def _embed(self, model_inputs: TensorMapping) -> TensorMapping:
-        """
-        Embed the inputs using the inputs_embedder
-
-        Args:
-            model_inputs (TensorMapping): input mapping containing "input_ids".
-
-        Raises:
-            ValueError: If "input_ids" is not present in the input mapping.
-
-        Returns:
-            TensorMapping: The input mapping with "inputs_embeds" added.
-        """
-        # If input ids are present, get the embeddings and add them to the model inputs
+        # very input_ids are present
         if "input_ids" not in model_inputs:
-            raise ValueError("model_inputs should contain either 'input_ids' or 'inputs_embeds'")
+            raise ValueError("model_inputs should contain 'input_ids'")
 
-        # extract input ids: (1, l)
-        input_ids = model_inputs["input_ids"].to(self.inputs_embedder.weight.device)  # type: ignore
+        inputs = deepcopy(model_inputs)
 
-        # convert input ids to embeddings: (1, l, d)
-        model_inputs["inputs_embeds"] = self.inputs_embedder(input_ids)
+        # extract input ids
+        input_ids: Float[torch.Tensor, "1 l"] = inputs["input_ids"].to(self.inputs_embedder.weight.device)  # type: ignore
 
-        return model_inputs
+        # convert input ids to embeddings
+        inputs_embeds: Float[torch.Tensor, "1 l d"] = self.inputs_embedder(input_ids)
+
+        # perturb embeddings
+        perturbed_embeds: Float[torch.Tensor, "p l d"]
+        mask: Float[torch.Tensor, "p l"] | None
+        perturbed_embeds, mask = self.perturb_embeds(inputs_embeds)
+
+        # repeat inputs elements to match perturbations
+        p = perturbed_embeds.shape[0]
+        for key, tensor in inputs.items():
+            # repeat the first dimension to match perturbations
+            inputs[key] = tensor.repeat((p, 1, 1)[: tensor.dim()])
+
+        inputs["inputs_embeds"] = perturbed_embeds
+
+        return inputs, mask
+
+    def perturb_embeds(
+        self, inputs_embeds: Float[torch.Tensor, "1 l d"]
+    ) -> tuple[Float[torch.Tensor, "p l d"], Float[torch.Tensor, "p l"] | None]:
+        """
+        Perturb the input of the model, given as embeddings.
+        This method should be implemented in subclasses to indeed perturb the embeddings.
+
+        Args:
+            inputs_embeds (torch.Tensor):
+                Embeddings of the input tokens.
+                Shape: (1, l, d)
+        Returns:
+            perturbed_embeds (torch.Tensor):
+                Perturbed embeddings.
+                Shape: (p, l, d)
+            mask (torch.Tensor | None):
+                Perturbation mask.
+                Shape: (p, l)
+        """
+        return inputs_embeds, None
 
 
 class IdsPerturbator(Perturbator):

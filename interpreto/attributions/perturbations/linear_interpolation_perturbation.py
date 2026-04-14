@@ -26,10 +26,10 @@ from __future__ import annotations
 
 import torch
 from beartype import beartype
-from jaxtyping import Float, Int64, jaxtyped
+from jaxtyping import Float, jaxtyped
 
 from interpreto.attributions.perturbations.base import EmbeddingsPerturbator
-from interpreto.typing import TensorBaseline, TensorMapping
+from interpreto.typing import TensorBaseline
 
 
 class LinearInterpolationPerturbator(EmbeddingsPerturbator):
@@ -112,23 +112,26 @@ class LinearInterpolationPerturbator(EmbeddingsPerturbator):
         return torch.linspace(0, 1, self.n_perturbations, device=device).view(-1, *([1] * (len(shape) - 1)))
 
     @jaxtyped(typechecker=beartype)
-    def perturb_embeds(self, model_inputs: TensorMapping) -> tuple[TensorMapping, None]:
+    def perturb_embeds(self, inputs_embeds: Float[torch.Tensor, "1 l d"]) -> tuple[Float[torch.Tensor, "p l d"], None]:
         """
         Applies linear interpolation perturbation between the baseline and the original embeddings.
+
+        Args:
+            inputs_embeds (torch.Tensor):
+                Embeddings of the input tokens.
+                Shape: (1, l, d)
+        Returns:
+            perturbed_embeds (torch.Tensor):
+                Perturbed embeddings.
+                Shape: (p, l, d)
+            mask (None):
+                placeholder
         """
-        embeddings: Float[torch.Tensor, "1 l d"] = model_inputs["inputs_embeds"]
+        # construct baselines and interpolation coefficients
+        baseline: Float[torch.Tensor, "1 l d"] = self._generate_baseline(inputs_embeds)
+        alphas: Float[torch.Tensor, "p 1 1"] = self._generate_alphas(inputs_embeds.shape, inputs_embeds.device)
 
-        baseline: Float[torch.Tensor, "1 l d"] = self._generate_baseline(embeddings)
-        alphas: Float[torch.Tensor, "p 1 1"] = self._generate_alphas(embeddings.shape, embeddings.device)
+        # interpolate between baseline and input embeddings
+        perturbed_embeds: Float[torch.Tensor, "p l d"] = (1 - alphas) * inputs_embeds + alphas * baseline
 
-        pert = (1 - alphas) * embeddings + alphas * baseline  # (p, 1, l, d)
-
-        # Flatten (p, 1, l, d) -> (p, l, d)
-        model_inputs["inputs_embeds"] = pert.view(self.n_perturbations, *embeddings.shape[1:])
-
-        # Repeat and flatten the attention mask accordingly: (1, l) -> (p, l)
-        attn: Int64[torch.Tensor, "1 l"] = model_inputs["attention_mask"]
-        attn = attn.unsqueeze(0).repeat(self.n_perturbations, 1, 1).reshape(self.n_perturbations, -1)
-        model_inputs["attention_mask"] = attn
-
-        return model_inputs, None
+        return perturbed_embeds, None
