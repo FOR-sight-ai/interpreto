@@ -25,65 +25,84 @@
 import pytest
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from transformers.utils.quantization_config import BitsAndBytesConfig
 
 from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
+from interpreto.typing import IncompatibilityError
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-SENTENCES = ["Hello, my dog is cute", "Hello, my cat is cute"]
+
+CLASSIFICATION_MODELS = [
+    "hf-internal-testing/tiny-random-albert",
+    "hf-internal-testing/tiny-random-bart",
+    "hf-internal-testing/tiny-random-distilbert",
+    "hf-internal-testing/tiny-random-ElectraModel",
+    "hf-internal-testing/tiny-random-roberta",
+    "hf-internal-testing/tiny-random-t5",
+    "hf-internal-testing/tiny-xlm-roberta",
+]
 
 
-classification_models = ["hf-internal-testing/tiny-random-bert"]
-bab_configs = [BitsAndBytesConfig(load_in_8bit=True), BitsAndBytesConfig(load_in_4bit=True), None]
+def test_classification_wrapper_fast():
+    """Test classification wrapper with a single model for fast tests."""
+    test_classification_wrapper("hf-internal-testing/tiny-random-bert")
 
 
-@pytest.mark.parametrize("model_name", classification_models)
-def test_classification_inference_wrapper_single_sentence(model_name):
-    bert_model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    bert_tokenizer = AutoTokenizer.from_pretrained(model_name)
+@pytest.mark.slow
+@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+def test_classification_wrapper(model_name):
+    # sentences divided in two batches which we could see as different samples in interpreto
+    # for each sample there are several perturbed sentences
+    sentences = [
+        ["first sample"] * 2,
+        ["second sample, longer"] * 4,
+    ]
 
     # Model preparation
-    inference_wrapper = ClassificationInferenceWrapper(bert_model, batch_size=5, device=DEVICE)
-    inference_wrapper.pad_token_id = bert_tokenizer.pad_token_id
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    embedder = model.get_input_embeddings()
+    inference_wrapper = ClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
+
+    # Construct inputs
+    with torch.no_grad():
+        tokens = [tokenizer(s, return_tensors="pt", padding=True, truncation=True).to(DEVICE) for s in sentences]
+        logits = [model(**t).logits for t in tokens]
+        targets = [l[0].argmax(dim=-1, keepdim=True) for l in logits]
+        embeddings = []
+        for t in tokens:
+            e = t.copy()
+            e["inputs_embeds"] = embedder(e.pop("input_ids"))
+            embeddings.append(e)
 
     # Reference values
-    tokens = bert_tokenizer(SENTENCES[0], return_tensors="pt", padding=True, truncation=True)
-    tokens.to(DEVICE)
-    logits = bert_model(**tokens).logits
-    target = logits.argmax(dim=-1)
-    predefined_targets = torch.randperm(logits.shape[-1]).to(DEVICE)
-    scores = logits.index_select(dim=-1, index=predefined_targets)
+    expected_targets = [l.argmax(dim=-1, keepdim=True) for l in logits]
+    targeted_logits = [l.gather(dim=-1, index=t) for l, t in zip(logits, expected_targets, strict=True)]
 
-    # Tests
-    assert torch.equal(logits, inference_wrapper.get_logits(tokens.copy()))
-    assert torch.equal(logits, next(inference_wrapper.get_logits([tokens.copy()])))
-    assert torch.equal(target, inference_wrapper.get_targets(tokens.copy()))  # type: ignore
-    assert torch.equal(target, next(inference_wrapper.get_targets([tokens.copy()])))  # type: ignore
-    assert torch.equal(scores, inference_wrapper.get_targeted_logits(tokens.copy(), predefined_targets))  # type: ignore
-    assert torch.equal(scores, next(inference_wrapper.get_targeted_logits([tokens.copy()], [predefined_targets])))  # type: ignore
+    # Compute elements with the wrapper
+    test_targets = list(inference_wrapper(tokens))
+    test_targeted_logits = list(inference_wrapper(tokens, targets))
+    inference_wrapper.gradients = True
+    try:
+        test_gradients = list(inference_wrapper(embeddings, targets))
+    except IncompatibilityError:
+        test_gradients = "ignore"
+
+    for i in range(len(sentences)):
+        assert torch.allclose(expected_targets[i].cpu(), test_targets[i], atol=1e-5), (
+            "Classification targets are not argmax"
+        )
+        assert torch.allclose(targeted_logits[i], test_targeted_logits[i], atol=1e-5), (
+            "Classification targeted logits are not correct"
+        )
+        grads_shape = (
+            len(sentences[i]),
+            targets[i].shape[0],
+            embeddings[i]["inputs_embeds"].shape[1],
+        )  # (b, n_targets, seq_len) or (b, t, l)
+        if test_gradients != "ignore":
+            assert grads_shape == test_gradients[i].shape, "Classification gradients have wrong shape."
 
 
-@pytest.mark.parametrize("bab_config", bab_configs)
-@pytest.mark.parametrize("model_name", classification_models)
-def test_classification_inference_wrapper_multiple_sentences(model_name, bab_config):
-    # Model preparation
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name, quantization_config=bab_config)
-    inference_wrapper = ClassificationInferenceWrapper(model, batch_size=5, device=DEVICE)
-
-    ### Reference values
-    tokens = tokenizer(SENTENCES, return_tensors="pt", padding=True, truncation=True)
-    tokens.to(DEVICE)
-    logits = model(**tokens).logits
-    targets = logits.argmax(dim=-1)
-    predefined_targets = torch.randperm(logits.shape[-1]).to(DEVICE)
-    target_logits = torch.gather(logits, dim=-1, index=predefined_targets.unsqueeze(0).expand(logits.shape[0], -1))
-
-    ### Tests
-    test_logits = torch.stack(list(inference_wrapper.get_logits(tokens.copy())))
-    test_targets = torch.stack(list(inference_wrapper.get_targets(tokens.copy())))
-    test_target_logits = torch.stack(list(inference_wrapper.get_targeted_logits(tokens.copy(), predefined_targets)))
-
-    assert torch.all(torch.isclose(logits, test_logits, atol=1e-5))
-    assert torch.all(torch.isclose(targets, test_targets, atol=1e-5))
-    assert torch.all(torch.isclose(target_logits, test_target_logits, atol=1e-5))
+if __name__ == "__main__":
+    test_classification_wrapper("hf-internal-testing/tiny-random-roberta")
+    test_classification_wrapper("hf-internal-testing/tiny-random-bart")
