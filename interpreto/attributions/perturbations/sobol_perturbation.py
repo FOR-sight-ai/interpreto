@@ -36,7 +36,7 @@ from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TokenMaskBasedPerturbator
+from interpreto.attributions.perturbations.base import IdsPerturbator
 from interpreto.commons.granularity import Granularity
 
 
@@ -50,14 +50,13 @@ class SequenceSamplers(Enum):
     LatinHypercube = qmc.LatinHypercube
 
 
-class SobolTokenPerturbator(TokenMaskBasedPerturbator):
+class SobolTokenPerturbator(IdsPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        inputs_embedder: torch.nn.Module | None = None,
         granularity: Granularity = Granularity.TOKEN,
         replace_token_id: int = 0,
-        n_token_perturbations: int = 30,
+        n_token_perturbations: int = 16,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,
     ):
         """
@@ -72,7 +71,6 @@ class SobolTokenPerturbator(TokenMaskBasedPerturbator):
         """
         super().__init__(
             tokenizer=tokenizer,
-            inputs_embedder=inputs_embedder,
             granularity=granularity,
             n_perturbations=-1,  # TODO: find a better way to handle this, I guess, it should not be an attribute of the parent class
             replace_token_id=replace_token_id,
@@ -81,7 +79,7 @@ class SobolTokenPerturbator(TokenMaskBasedPerturbator):
         self.sampler_class = sampler.value
 
     @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p {mask_dim}"]:
+    def get_mask(self, mask_dim: int, **kwargs) -> Float[torch.Tensor, "p {mask_dim}"]:
         """
         Generates a binary mask for each token in the sequence.
 
@@ -96,8 +94,9 @@ class SobolTokenPerturbator(TokenMaskBasedPerturbator):
         p = (l + 2) * k
 
         # Generate to random independent matrices A & B
-        A: Float[torch.Tensor, k, l] = torch.Tensor(self.sampler_class(l).random(k))
-        B: Float[torch.Tensor, k, l] = torch.Tensor(self.sampler_class(l).random(k))
+        AB: Float[torch.Tensor, k, 2 * l] = torch.Tensor(self.sampler_class(2 * l).random(k))
+        A: Float[torch.Tensor, k, l] = AB[:, :l]
+        B: Float[torch.Tensor, k, l] = AB[:, l:]
 
         # Initialize C
         C: Float[torch.Tensor, l, k, l] = A.repeat(l, 1, 1)
@@ -110,30 +109,4 @@ class SobolTokenPerturbator(TokenMaskBasedPerturbator):
         # We reshape stack all C_i, A, and B to match the expected shape from interpreto API.
         masks: Float[torch.Tensor, p, l] = torch.concat([A, B, C.view(l * k, l)], dim=0)
 
-        return masks
-
-        # # Generate index tensor for perturbations.
-        # col_indices: Int[torch.Tensor, l * k] = torch.arange(l).repeat_interleave(k)
-
-        # # Compute the start and end indices.
-        # row_indices: Int[torch.Tensor, l * k] = torch.arange(l * k) + k
-
-        # # Initial random mask.
-        # initial_mask: Float[torch.Tensor, k, l] = torch.Tensor(self.sampler_class(l).random(k))
-
-        # # Expand mask across all perturbation steps.
-        # mask: Float[torch.Tensor, p, l] = initial_mask.repeat((l + 1, 1))
-
-        # # Generate index tensor for perturbations.
-        # col_indices: Int[torch.Tensor, l * k] = torch.arange(l).repeat_interleave(k)
-
-        # # Compute the start and end indices.
-        # row_indices: Int[torch.Tensor, l * k] = torch.arange(l * k) + k
-
-        # # Flip the selected mask values without a loop
-        # mask[row_indices, col_indices] = 1 - mask[row_indices, col_indices]
-
-        # if self.sobol_indices_order == SobolIndicesOrders.TOTAL_ORDER.value:
-        #     mask[k:] = 1 - mask[k:]
-
-        # return mask
+        return (masks < 0.5).float()

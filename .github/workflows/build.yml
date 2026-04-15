@@ -14,12 +14,13 @@ jobs:
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
     - uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
+      id: setup-python
       uses: actions/setup-python@v4.3.0
       with:
         python-version: ${{ matrix.python-version }}
@@ -32,12 +33,12 @@ jobs:
       uses: actions/cache@v4.2.2
       with:
         path: .venv
-        key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('pyproject.toml') }}
 
     - name: Recreate virtual environment if cache is invalid
       run: |
         if [ ! -f .venv/bin/python ]; then
-          uv venv --python=python${{ matrix.python-version }}
+          uv venv --clear --python=python${{ matrix.python-version }}
         fi
 
     - name: Install dependencies
@@ -45,7 +46,6 @@ jobs:
         source .venv/bin/activate
         make update-deps
         uv pip install -r requirements-dev.txt
-        python -m spacy download en_core_web_sm
 
 
     - name: Export HF_HUB_TOKEN
@@ -70,6 +70,7 @@ jobs:
             "hf-internal-testing/tiny-random-LlamaForCausalLM",
             "hf-internal-testing/tiny-random-roberta",
             "hf-internal-testing/tiny-random-t5",
+            "textattack/bert-base-uncased-imdb",
         ]
 
         # We will call .from_pretrained(...) once per model_id, 

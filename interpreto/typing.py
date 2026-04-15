@@ -45,6 +45,10 @@ Nested = T | Iterable["Nested[T]"]
 NestedIterable = Nested[Iterable[T]]
 TensorMapping = MutableMapping[str, torch.Tensor]
 
+SingleAttribution = (
+    Float[torch.Tensor, "l"] | Float[torch.Tensor, "l c"] | Float[torch.Tensor, "l l_g"] | Float[torch.Tensor, "l l_t"]
+)
+
 
 @runtime_checkable
 class HasWordIds(Protocol, Generic[O_co]):

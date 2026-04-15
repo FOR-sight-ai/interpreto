@@ -31,7 +31,6 @@ from __future__ import annotations
 import pytest
 import torch
 
-from interpreto import Granularity
 from interpreto.concepts import (
     BatchTopKSAEConcepts,
     Cockatiel,
@@ -168,6 +167,7 @@ def test_overcomplete_cbe(
 @pytest.mark.parametrize(
     "granularity",
     [
+        ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
         ModelWithSplitPoints.activation_granularities.TOKEN,
         ModelWithSplitPoints.activation_granularities.WORD,
         ModelWithSplitPoints.activation_granularities.SENTENCE,
@@ -207,12 +207,13 @@ def test_concept_output_gradient(
         raise ValueError(f"Unknown method_class {method_class}")
 
     if not cbe.has_differentiable_concept_decoder:
-        pytest.skip("Skipping test for method_class that does not have a differentiable concept decoder")
+        pytest.skip(f"Skipping test for {method_class.__name__} that does not have a differentiable concept decoder")
 
     gradients = cbe.concept_output_gradient(
         sentences,
-        targets=[0],
+        targets=None,
         activation_granularity=granularity,
+        concepts_x_gradients=True,
     )
     assert gradients is not None, f"{method_class.__name__}.concept_output_gradient returned None"
     assert isinstance(gradients, list), (
@@ -233,9 +234,12 @@ def test_concept_output_gradient(
             truncation=True,
             return_offsets_mapping=True,
         )
-        indices_list = Granularity.get_indices(tokens, granularity.value, tokenizer)  # type: ignore
-        nb_granularity_elements = len(indices_list[0])
-        assert grad.shape == (1, nb_granularity_elements, concepts_dim), (
+        if granularity == ModelWithSplitPoints.activation_granularities.CLS_TOKEN:
+            nb_granularity_elements = 1
+        else:
+            indices_list = granularity.value.get_indices(tokens, tokenizer)  # type: ignore
+            nb_granularity_elements = len(indices_list[0])
+        assert grad.shape[1:] == (nb_granularity_elements, concepts_dim), (
             "Gradient shape mismatch: got "
             f"{tuple(grad.shape)}, expected {(1, nb_granularity_elements, concepts_dim)} for sentence '{sentence}'"
         )
@@ -269,6 +273,6 @@ if __name__ == "__main__":
         splitted_encoder_ml=splitted_encoder_ml,
         activations_dict=activations_dict,
         sentences=sentences,
-        method_class=NeuronsAsConcepts,
-        granularity=ModelWithSplitPoints.activation_granularities.WORD,
+        method_class=SemiNMFConcepts,
+        granularity=ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
     )

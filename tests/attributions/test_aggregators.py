@@ -40,6 +40,8 @@ from interpreto.attributions.aggregations import (
     TrapezoidalMeanAggregator,
     VarianceAggregator,
 )
+from interpreto.attributions.aggregations.linear_regression_aggregation import Kernels
+from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
 
 AGGREGATOR_CLASSES = [
     MeanAggregator,
@@ -89,7 +91,6 @@ def test_aggregator_shapes_with_mask(aggregator_cls_with_mask):
     agg = aggregator_cls_with_mask()
     result = agg(x, mask)
 
-    print("Testing", aggregator_cls_with_mask.__name__, "with input shape:", x.shape, " Result shape:", result.shape)
     assert result.shape == expected_shape, (
         f"{aggregator_cls_with_mask.__name__} with input shape {x.shape} and mask shape {mask.shape} returned {result.shape}, expected {expected_shape}"
     )
@@ -111,3 +112,35 @@ def test_aggregator_shapes_sobol():
     assert result.shape == expected_shape, (
         f"SobolAggregator with input shape {x.shape} and mask shape {mask.shape} returned {result.shape}, expected {expected_shape}"
     )
+
+
+def test_shap_aggregator_issue_68():
+    """
+    Reproduce issue 68: https://github.com/FOR-sight-ai/interpreto/issues/68
+
+    With l = 2 and p big enough, some random seeds produce non invertible matrixes for the aggregator.
+
+    We looped over seeds and for p=100 and l=2 the first seed was 5.
+    """
+    p = 100
+    l = 2
+
+    perturbator = ShapTokenPerturbator(n_perturbations=p)
+
+    aggregator = LinearRegressionAggregator(
+        distance_function=None,  # Kernel SHAP does not use distance function
+        similarity_kernel=Kernels.ONES,
+    )
+
+    torch.manual_seed(5)
+
+    mask = perturbator.get_mask(l)
+    results = torch.randn((mask.shape[0], 1))
+
+    # _LinAlgError: linalg.inv: The diagonal element 3 is zero, the inversion could not be completed because the input matrix is singular.
+    try:
+        aggregator(results, mask)
+    except torch._C._LinAlgError as e:  # type: ignore
+        pytest.fail(f"Issue 68 reproduced: LinearRegressionAggregator raised LinAlgError: {e}")
+    except Exception as e:
+        pytest.fail(f"LinearRegressionAggregator raised unexpected exception: {e}")

@@ -37,7 +37,7 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from torch.nn import functional as F
 
-from interpreto.attributions.aggregations.base import Aggregator
+from interpreto.attributions.aggregations.base import Aggregator, cast_input_to_dtype
 
 DistancesFromMaskProtocol = Callable[[Float[Tensor, "p l"]], Float[Tensor, "p"]]
 SimilarityKernelProtocol = Callable[[Float[Tensor, "p"], float], Float[Tensor, "p"]]
@@ -127,6 +127,7 @@ class LinearRegressionAggregator(Aggregator):
         self.similarity_kernel = similarity_kernel
         self.kernel_width = kernel_width if kernel_width is not None else default_kernel_width_fn
 
+    @cast_input_to_dtype
     @jaxtyped(typechecker=beartype)
     def aggregate(
         self,
@@ -178,13 +179,15 @@ class LinearRegressionAggregator(Aggregator):
 
         # Compute closed form solution for the linear model
         # Add a constant column for the bias term
-        X: Float[Tensor, p, l + 1] = torch.cat([torch.ones(results.shape[0], 1, device=mask.device), mask], dim=1)
+        X: Float[Tensor, p, l + 1] = torch.cat(
+            [torch.ones(results.shape[0], 1, device=mask.device, dtype=self.dtype), mask], dim=1
+        )
 
         # formula from wikipedia: https://en.wikipedia.org/wiki/Weighted_least_squares
-        # \theta =(X^T W X)^{-1} (X^T W y)
+        # \theta =(X^T w X)^{-1} (X^T w y)
         XT_W: Float[Tensor, l + 1, p] = X.T * weights
         epsilon: Float[Tensor, l + 1, l + 1] = (
-            torch.eye(XT_W.shape[0], device=XT_W.device) * 1e-6
+            torch.eye(XT_W.shape[0], device=XT_W.device, dtype=self.dtype) * 1e-6
         )  # To prevent inversion errors
         theta: Float[Tensor, l + 1, t] = torch.inverse(XT_W @ X + epsilon) @ (XT_W @ results)
 

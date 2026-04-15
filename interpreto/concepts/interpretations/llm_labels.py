@@ -28,20 +28,19 @@ from __future__ import annotations
 import warnings
 from collections.abc import Mapping
 from enum import Enum
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 import torch
 from jaxtyping import Float
 
-from interpreto import ModelWithSplitPoints
+from interpreto.commons.granularity import GranularityAggregationStrategy
+from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
-    verify_concepts_indices,
-    verify_granular_inputs,
 )
 from interpreto.model_wrapping.llm_interface import LLMInterface, Role
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
-from interpreto.typing import ConceptModelProtocol, ConceptsActivations, LatentActivations
+from interpreto.typing import ConceptsActivations, LatentActivations
 
 
 class SamplingMethod(Enum):
@@ -107,59 +106,113 @@ class LLMLabels(BaseConceptInterpretationMethod):
         [Language models can explain neurons in language models](https://openaipublic.blob.core.windows.net/neuron-explainer/paper/index.html)
         2023.
 
-    Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model with split points to use for the interpretation.
-        split_point (str): The split point to use for the interpretation.
-        concept_model (ConceptModelProtocol): The concept model to use for the interpretation.
-        activation_granularity (ActivationGranularity): The granularity at which the interpretation is computed.
-            Allowed values are `TOKEN`, `WORD`, `SENTENCE`, and `SAMPLE`.
-            Ignored when use_vocab=True.
-        llm_interface (LLMInterface): The LLM interface to use for the interpretation.
-        sampling_method (SAMPLING_METHOD): The method to use for sampling the inputs provided to the LLM.
-        k_examples (int): The number of inputs to use for the interpretation.
-        k_context (int): The number of context tokens to use around the concept tokens.
-        use_vocab (bool): If True, the interpretation will be computed from the vocabulary of the model.
-        k_quantile (int): The number of quantiles to use for sampling the inputs, if `sampling_method` is `QUANTILE`.
-        system_prompt (str | None): The system prompt to use for the LLM. If None, a default prompt is used.
+    Arguments:
+        concept_explainer (ConceptEncoderExplainer):
+            The fitted concept explainer used for encoding activations.
+
+        activation_granularity (ActivationGranularity):
+            The granularity of the activations to use for the interpretation.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+
+        aggregation_strategy (GranularityAggregationStrategy):
+            The aggregation strategy to use for the activations.
+            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+
+        llm_interface (LLMInterface):
+            The LLM interface to use for the interpretation.
+
+        concept_encoding_batch_size (int):
+            The batch size to use for the concept encoding.
+
+        sampling_method (SAMPLING_METHOD):
+            The method to use for sampling the inputs provided to the LLM.
+
+        k_examples (int):
+            The number of inputs to use for the interpretation.
+
+        k_context (int):
+            The number of context tokens to use around the concept tokens.
+            In the prompt, in the examples, the k context tokens before and after the concept token are selected.
+            It is recommended to set it to between 5 and 10 for TOKEN and WORD granularities.
+            However, if the granularity is CLS_TOKEN or SAMPLE,
+            or `use_unique_words=True` or `use_vocab=True`,
+            it will be forced to 0.
+            Indeed, in these cases the context do not make sense.
+
+        use_vocab (bool):
+            If True, the interpretation will be computed from the vocabulary of the model.
+
+        use_unique_words (bool):
+            If True, the interpretation will be computed from the unique words of the inputs.
+            Incompatible with `use_vocab=True`.
+            Default unique words selects all different word from the input.
+            It can be tuned through the `unique_words_kwargs` argument.
+
+        unique_words_kwargs (dict):
+            The kwargs to pass to the `extract_ngrams` function.
+            See [`extract_ngrams`][interpreto.concepts.interpretations.extract_ngrams] for more details.
+            Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
+
+        k_quantile (int):
+            The number of quantiles to use for sampling the inputs, if `sampling_method` is `QUANTILE`.
+
+        system_prompt (str | None):
+            The system prompt to use for the LLM. If None, a default prompt is used.
+
+        concept_model_device (torch.device | str | None):
+            The device to use for the concept model forward pass.
+            If None, does not change the device.
     """
 
     def __init__(
         self,
         *,
-        model_with_split_points: ModelWithSplitPoints,
-        concept_model: ConceptModelProtocol,
-        split_point: str | None = None,
+        concept_explainer: ConceptEncoderExplainer,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         llm_interface: LLMInterface,
+        concept_encoding_batch_size: int = 1024,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
         k_context: int = 0,
         use_vocab: bool = False,
+        use_unique_words: bool | int = 0,
+        unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,
+        concept_model_device: torch.device | str | None = None,
     ):
         super().__init__(
-            model_with_split_points=model_with_split_points,
-            split_point=split_point,
-            concept_model=concept_model,
+            concept_explainer=concept_explainer,
             activation_granularity=activation_granularity,
+            aggregation_strategy=aggregation_strategy,
+            concept_encoding_batch_size=concept_encoding_batch_size,
+            use_vocab=use_vocab,
+            use_unique_words=use_unique_words,
+            unique_words_kwargs=unique_words_kwargs,
+            concept_model_device=concept_model_device,
         )
 
-        if activation_granularity not in (
-            ActivationGranularity.TOKEN,
-            ActivationGranularity.WORD,
-            ActivationGranularity.SENTENCE,
-            ActivationGranularity.SAMPLE,
+        if k_context > 0 and (
+            use_vocab
+            or use_unique_words
+            or self.activation_granularity
+            in [
+                ActivationGranularity.SAMPLE,
+                ActivationGranularity.CLS_TOKEN,
+            ]
         ):
-            raise ValueError(
-                f"The granularity {activation_granularity} is not supported. Supported `activation_granularities`: TOKEN, WORD, SENTENCE, and SAMPLE"
+            k_context = 0
+            warnings.warn(
+                "k_context is set to 0 because use_vocab or use_unique_words or activation_granularity is SAMPLE or CLS_TOKEN."
+                "With these granularities, it is not possible to provide context around the granular inputs.",
+                stacklevel=2,
             )
 
         self.llm_interface = llm_interface
         self.sampling_method = sampling_method
         self.k_examples = k_examples
         self.k_context = k_context
-        self.use_vocab = use_vocab
         self.k_quantile = k_quantile
 
         if system_prompt is None:
@@ -172,9 +225,9 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
     def interpret(
         self,
-        concepts_indices: int | list[int],
+        concepts_indices: int | list[int] | Literal["all"],
         inputs: list[str] | None = None,
-        latent_activations: LatentActivations | None = None,
+        latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, str | None]:
         """
@@ -182,44 +235,44 @@ class LLMLabels(BaseConceptInterpretationMethod):
         The interpretation is a mapping between the concepts indices and a short textual description.
         The granularity of input examples is determined by the `activation_granularity` class attribute.
 
+
         Args:
-            concepts_indices (int | list[int]): The indices of the concepts to interpret.
-            inputs (list[str] | None): The inputs to use for the interpretation.
-                Necessary if not `use_vocab`, as examples are extracted from the inputs.
-            latent_activations (Float[torch.Tensor, "nl d"] | None): The latent activations matching the inputs. If not provided, it is computed from the inputs.
-            concepts_activations (Float[torch.Tensor, "nl cpt"] | None): The concepts activations matching the inputs. If not provided, it is computed from the inputs or latent activations.
+            concepts_indices (int | list[int] | Literal["all"]):
+                The indices of the concepts to interpret. If "all", all concepts are interpreted.
+
+            inputs (list[str] | None):
+                The inputs to use for the interpretation.
+                Necessary if not `use_vocab`,as examples are extracted from the inputs.
+
+            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+                The latent activations matching the inputs. If not provided,
+                it is computed from the inputs.
+
+            concepts_activations (Float[torch.Tensor, "nl cpt"] | None):
+                The concepts activations matching the inputs. If not provided,
+                it is computed from the inputs or latent activations.
+
         Returns:
             Mapping[int, str | None]: The textual labels of the concepts indices.
         """
-
-        if self.use_vocab:
-            sure_inputs, sure_concepts_activations = self.concepts_activations_from_vocab()
-            granular_inputs = sure_inputs
-            granular_sample_ids = list(range(len(sure_inputs)))
-        else:
-            if inputs is None:
-                raise ValueError("Inputs must be provided when `use_vocab` is False.")
-            sure_inputs = inputs
-            sure_concepts_activations = self.concepts_activations_from_source(
-                inputs=inputs,
-                latent_activations=latent_activations,
-                concepts_activations=concepts_activations,
-            )
-            granular_inputs, granular_sample_ids = self.get_granular_inputs(sure_inputs)
-
-        concepts_indices = verify_concepts_indices(
-            concepts_activations=sure_concepts_activations,
+        sure_concepts_indices: list[int]
+        granular_inputs: list[str]
+        sure_concepts_activations: Float[torch.Tensor, "nl cpt"]
+        granular_sample_ids: list[int]
+        (
+            sure_concepts_indices,
+            granular_inputs,
+            sure_concepts_activations,
+            granular_sample_ids,
+        ) = self.get_granular_inputs_and_concept_activations(
             concepts_indices=concepts_indices,
-        )
-        verify_granular_inputs(
-            granular_inputs=granular_inputs,
-            sure_concepts_activations=sure_concepts_activations,
+            inputs=inputs,
             latent_activations=latent_activations,
             concepts_activations=concepts_activations,
         )
 
         labels: Mapping[int, str | None] = {}
-        for concept_idx in concepts_indices:
+        for concept_idx in sure_concepts_indices:
             example_idx = self.sampling_method.sample_examples(
                 concept_activations=sure_concepts_activations[:, concept_idx],
                 k_examples=self.k_examples,
@@ -352,19 +405,19 @@ def _format_examples(
     k_context: int,
 ) -> list[Example]:
     """Format examples for the LLM input. If k_context > 0, it will add context around
-    the selected text (for instance tokens befor and after the selected token). Concept
+    the selected text (for instance tokens before and after the selected token). Concept
     activations are normalized to a scale of 0 to 10, 10 being the maximum activation
     for the concept in the set of inputs.
 
     Args:
         example_ids (list[int]): selected example ids to provide to the LLM.
-        inputs (list[str]): the list of all granular texts from the inputs, flatened.
+        inputs (list[str]): the list of all granular texts from the inputs, flattened.
         concept_activations (Float[torch.Tensor, &quot;ng&quot;]): the concept activations for each granular text.
         sample_ids (list[int]): the id of which sample each granular text belongs to.
 
     Raises:
         ValueError: if concept_activations is not a 1D tensor
-        ValueError: if the lenght of inputs, sample_ids, and concept_activations do not match.
+        ValueError: if the length of inputs, sample_ids, and concept_activations do not match.
 
     Returns:
         list[Example]: list of Example objects, each containing the texts and normalized concept
@@ -390,7 +443,11 @@ def _format_examples(
             example = Example(
                 texts=[
                     text
-                    for text, id in zip(inputs[left_idx:right_idx], sample_ids[left_idx:right_idx], strict=False)
+                    for text, id in zip(
+                        inputs[left_idx:right_idx],
+                        sample_ids[left_idx:right_idx],
+                        strict=False,
+                    )
                     if id == sample_idx
                 ],
                 activations=[
@@ -437,6 +494,11 @@ def _build_example_prompt(examples: list[Example]) -> str:
         str: prompt containing the formatted examples for the LLM.
     """
     example_prompts: list[str] = []
+
+    # Text without context and only unique words or tokens
+    if all(isinstance(e.texts, str) for e in examples):
+        return ", ".join([f'("{e.texts}", {e.activations})' for e in examples])
+
     for i, example in enumerate(examples):
         if isinstance(example.texts, str) and isinstance(example.activations, int):
             # Text without context
@@ -467,18 +529,23 @@ def _build_example_prompt(examples: list[Example]) -> str:
 
 
 # From https://github.com/EleutherAI/delphi/blob/article_version/sae_auto_interp/explainers/default/prompts.py
-SYSTEM_PROMPT_WITH_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
-Your task is to analyze text and provide an explanation that thoroughly encapsulates possible patterns found in it.
-Guidelines:
+SYSTEM_PROMPT_WITH_CONTEXT = """Your role is to label the concepts/patterns present in the different examples.
 
 You will be given a list of text examples on which special tokens are selected and between delimiters like <<this>>.
 How important each token is for the behavior is listed after each example in parentheses, with importance from 0 to 10.
 
-- Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
-- If the examples are uninformative, you don't need to mention them. Don't focus on giving examples of important tokens, but try to summarize the patterns found in the examples.
-- Do not mention the marker tokens (<< >>) in your explanation.
-- Do not make lists of possible explanations.
-- Keep your explanations short and concise, with no more that 15 words, for example "reference to blue objects" or "word before a comma"
+Hard rules:
+- The label should summarize the concept linking the examples together. Give a single label describing all examples highlighted tokens.
+- The label should be between 1 and 5 words long.
+- The shorter the label the better. The best is a word.
+- Do not make a sentence.
+- The label should be the most precise possible. The goal is to be able to differentiate between concepts.
+- The label should encompass most examples. But you can ignore the non-informative ones.
+- Do not mention the marker tokens (<< >>) in your explanation. Nor refer to the importance.
+- Only focus on the content and the label.
+- Never ever give labels with more than 5 words, they would be cut out.
+
+Some examples: 'blue', 'positive sentiment and enthusiasm', 'legal entities', 'medical places', 'hate', 'noun phrase', 'ion or iou sounds', 'questions' final words'...
 """
 
 SYSTEM_PROMPT_WITHOUT_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
@@ -490,6 +557,7 @@ How important each text is for the behavior is listed after each example in pare
 
 - Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
 - If the examples are uninformative, you don't need to mention them. Don't focus on giving examples, but try to summarize the patterns found in the examples.
-- Do not make lists of possible explanations.
-- Keep your explanations short and concise, with no more that 15 words, for example "reference to blue objects" or "word before a comma"
+- Do not make lists of possible explanations. Find a single concept that best describes the examples.
+- Strike the balance between being concise and informative. From 1 to 5 words. 5 is an absolute maximum.
+- Refrain from including uninformative elements like "patterns found include ...", "the examples show ...", or "text contains ...".
 """

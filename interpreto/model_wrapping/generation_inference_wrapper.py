@@ -39,77 +39,6 @@ class GenerationInferenceWrapper(InferenceWrapper):
     PAD_LEFT = True
 
     @singledispatchmethod
-    def get_inputs_to_explain_and_targets(self, model_inputs, **generation_kwargs):
-        """Prepare the inputs and targets for explanation in a generation setting.
-
-        This method must be implemented for the different supported input types
-        (``MutableMapping`` or ``Iterable``). It returns both the original prompt
-        concatenated with the generated continuation and the token IDs of the
-        generated part.
-
-        Args:
-            model_inputs (MutableMapping | Iterable[MutableMapping]): Input(s) to
-                the model. Each mapping must contain ``input_ids`` or
-                ``inputs_embeds`` and ``attention_mask`` as expected by Hugging
-                Face models.
-            **generation_kwargs: Additional arguments forwarded to
-                ``model.generate()`` such as ``max_new_tokens`` or ``do_sample``.
-
-        Returns:
-            tuple[TensorMapping, torch.Tensor]: The full input mapping and the
-            IDs of the generated continuation.
-        """
-        raise NotImplementedError(
-            f"type {type(model_inputs)} not supported for method get_inputs_to_explain_and_targets in class {self.__class__.__name__}"
-        )
-
-    @get_inputs_to_explain_and_targets.register(MutableMapping)
-    def _(self, model_inputs: TensorMapping, **generation_kwargs) -> tuple[TensorMapping, torch.Tensor]:
-        """Generate continuations for a batch of sequences.
-
-        Args:
-            model_inputs (TensorMapping): Mapping with at least ``input_ids`` and
-                ``attention_mask`` representing one or more sequences.
-            **generation_kwargs: Keyword arguments forwarded to ``model.generate()``.
-
-        Returns:
-            full_mapping (TensorMapping): The full input mapping containing the original sequences and
-                  the generated continuation.
-            targets_ids (torch.Tensor): The token IDs of the generated part.
-        """
-        filtered_model_inputs = {key: model_inputs[key].to(self.device) for key in ("input_ids", "attention_mask")}
-
-        full_ids = self.model.generate(**filtered_model_inputs, **generation_kwargs)
-        original_length = model_inputs["attention_mask"].shape[-1]
-        targets_ids = full_ids[..., original_length:]
-        full_attention_mask = torch.cat(
-            [model_inputs["attention_mask"].to(self.device), torch.ones_like(targets_ids)], dim=-1
-        )
-        full_mapping = {"input_ids": full_ids, "attention_mask": full_attention_mask}
-        return full_mapping, targets_ids
-
-    @get_inputs_to_explain_and_targets.register(Iterable)
-    def _(
-        self, model_inputs: Iterable[TensorMapping], **generation_kwargs
-    ) -> tuple[Iterable[TensorMapping], Iterable[torch.Tensor]]:
-        """Apply :meth:`get_inputs_to_explain_and_targets` to each element.
-
-        Args:
-            model_inputs (Iterable[TensorMapping]): Iterable of input mappings.
-            **generation_kwargs: Arguments forwarded to ``model.generate()``.
-
-        Returns:
-            l_full_mappings (Iterable[TensorMapping]): The full mappings for each element of ``model_inputs``.
-            l_targets_ids (Iterable[torch.Tensor]): The token IDs of the generated part for each element of ``model_inputs``.
-        """
-        l_full_mappings, l_targets_ids = [], []
-        for model_input in model_inputs:
-            full_mappings, targets_ids = self.get_inputs_to_explain_and_targets(model_input, **generation_kwargs)
-            l_full_mappings.append(full_mappings)
-            l_targets_ids.append(targets_ids)
-        return l_full_mappings, l_targets_ids
-
-    @singledispatchmethod
     def get_targeted_logits(self, model_inputs, targets, mode="logits"):
         """Return the logits associated with the target tokens.
 
@@ -126,11 +55,11 @@ class GenerationInferenceWrapper(InferenceWrapper):
         )
 
     @get_targeted_logits.register(MutableMapping)
-    def _(
+    def _get_targeted_logits_from_mapping(
         self,
         model_inputs: TensorMapping,
         targets: torch.Tensor,
-    ):
+    ) -> torch.Tensor:
         """Retrieve logits for a single batch of inputs.
 
         Args:
@@ -199,16 +128,14 @@ class GenerationInferenceWrapper(InferenceWrapper):
             for elem in model_inputs
         ]
         all_logits = self._get_logits_from_iterable(model_inputs)
-        # TODO: remove debug lists
-        logits_debug_list = list(all_logits)
-        targets_debug_list = list(targets)
-        for logits, target in zip(logits_debug_list, targets_debug_list, strict=True):
-            # for logits, target in zip(all_logits, targets, strict=True):
+
+        for logits, target in zip(all_logits, targets, strict=True):
             target_length = target.shape[-1]
             targeted_logits = logits[..., -target_length:, :]
 
             targeted_logits = self.mode(targeted_logits)
 
-            extended_target = target.expand(logits.shape[0], -1)
+            extended_target = target.expand(logits.shape[0], -1).to(self.device)
+
             selected_logits = targeted_logits.gather(dim=-1, index=extended_target.unsqueeze(-1)).squeeze(-1)
             yield selected_logits

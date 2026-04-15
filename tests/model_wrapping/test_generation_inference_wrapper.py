@@ -29,237 +29,131 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+SENTENCES = ["Hello, my dog is cute", "Hello, my cat is cute"]
+GENERATION_MODELS = ["hf-internal-testing/tiny-random-LlamaForCausalLM", "hf-internal-testing/tiny-random-gpt2"]
+TARGET_LENGTH = 2
 
-generation_models = ["hf-internal-testing/tiny-random-LlamaForCausalLM", "hf-internal-testing/tiny-random-gpt2"]
 
-
-def prepare_model_and_tokenizer(model_name: str):
-    """
-    Helper function to prepare the tokenizer and model.
-    """
+def prepare_generation_wrapper(model_name: str):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
+
+    model = AutoModelForCausalLM.from_pretrained(model_name).to(DEVICE)
+    model.eval()
+
     inference_wrapper = GenerationInferenceWrapper(model, batch_size=5, device=DEVICE)
-    return tokenizer, model, inference_wrapper
-
-
-@pytest.mark.parametrize("model_name", generation_models)
-def test_generation_inference_wrapper_single_sentence(model_name, sentences):
-    """
-    Tests the all function of the generation inference wrapper with a single sentence input.
-
-    The test ensures:
-      - The full model input is constructed by appending the target to the original input.
-      - The first part of the full input exactly matches the original input.
-      - The second part of the full input exactly matches the generated target.
-      - The logits, targeted logits, and gradient matrix have the expected shapes.
-    """
-
-    # Model preparation
-    tokenizer, model, inference_wrapper = prepare_model_and_tokenizer(model_name)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-
-    model_inputs = tokenizer(
-        sentences[0], return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-    )
-    model_inputs.to(DEVICE)
-    model_inputs_length = model_inputs["input_ids"].shape[1]
-    max_length = model_inputs_length + 12
-
-    full_model_inputs, target = inference_wrapper.get_inputs_to_explain_and_targets(
-        model_inputs, max_length=max_length, do_sample=False
-    )
-    target_length = target.shape[1]
-    full_shape = full_model_inputs["input_ids"].shape[1]
-    # Check that the first part of the full input is equal to the original input.
-    assert full_model_inputs["input_ids"][:, :-target_length].equal(model_inputs["input_ids"]), (
-        "For a single sentence, the first part of the full input does not match the original input."
-    )
-
-    # Check that the second part of the full input is equal to the target.
-    assert full_model_inputs["input_ids"][:, -target_length:].equal(target), (
-        "For a single sentence, the target part of the full input does not match the provided target."
-    )
-
-    # Check that the full input has the expected shape given by the max_length.
-    assert full_model_inputs["input_ids"].shape[1] == max_length, (
-        "The full input shape doesn't match the expected shape given by max_length."
-    )
-
-    logits = inference_wrapper.get_logits(full_model_inputs)
-    # Check that the logits shape is correct.
-    assert logits.shape == (1, full_shape, model.config.vocab_size), (
-        "For a single sentence, the logits shape is incorrect."
-    )
-
-    targeted_logits = inference_wrapper.get_targeted_logits(full_model_inputs, target)
-    # Check that the targeted logits shape is correct.
-    assert targeted_logits.shape == (1, target_length), (
-        "For a single sentence, the targeted logits shape is incorrect."
-    )
-
-    grad_matrix = inference_wrapper.get_gradients(full_model_inputs, target)
-    # Check that the gradient matrix shape is correct.
-    assert isinstance(grad_matrix, torch.Tensor)
-    assert grad_matrix.shape == (1, target_length, full_shape), (
-        "For a single sentence, the gradient matrix shape is incorrect."
-    )
-
-
-@pytest.mark.parametrize("model_name", generation_models)
-def test_generation_inference_wrapper_multiple_sentences(model_name, sentences):
-    """
-    Tests all function of the generation inference wrapper with multiple sentences input.
-
-    The test ensures:
-      - The full model input is constructed by appending the generated targets to the original inputs.
-      - The first part of the full input exactly matches the original input.
-      - The second part of the full input exactly matches the provided target.
-      - The logits, targeted logits, and gradient matrix have the expected shapes for all sentences.
-    """
-    # Model preparation
-    tokenizer, model, inference_wrapper = prepare_model_and_tokenizer(model_name)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    n_sentences = len(sentences)
-    model_inputs = tokenizer(
-        sentences, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-    )
-    model_inputs.to(DEVICE)
-    model_inputs_length = model_inputs["input_ids"].shape[1]
-    max_length = model_inputs_length + 12
-
-    full_model_inputs, target = inference_wrapper.get_inputs_to_explain_and_targets(
-        model_inputs, max_length=max_length, do_sample=False
-    )
-    target_length = target.shape[1]
-    full_shape = full_model_inputs["input_ids"].shape[1]
-    # Check that the first part of the full input is equal to the original input.
-    assert full_model_inputs["input_ids"][:, :-target_length].equal(model_inputs["input_ids"]), (
-        "For multiple sentences, the first part of the full input does not match the original input."
-    )
-
-    # Check that the second part of the full input is equal to the target.
-    assert full_model_inputs["input_ids"][:, -target_length:].equal(target), (
-        "For multiple sentences, the target part of the full input does not match the provided target."
-    )
-
-    # Check that the full input has the expected shape given by the max_length.
-    assert full_model_inputs["input_ids"].shape[1] == max_length, (
-        "The full input shape doesn't match the expected shape given by max_length."
-    )
-
-    logits = inference_wrapper.get_logits(full_model_inputs)
-    # Check that the logits shape is correct.
-    assert logits.shape == (n_sentences, full_shape, model.config.vocab_size), (
-        "For multiple sentences, the logits shape is incorrect."
-    )
-
-    targeted_logits = inference_wrapper.get_targeted_logits(full_model_inputs, target)
-    # Check that the targeted logits shape is correct.
-    assert targeted_logits.shape == (n_sentences, target_length), (
-        "For multiple sentences, the targeted logits shape is incorrect."
-    )
-
-    grad_matrix = inference_wrapper.get_gradients(full_model_inputs, target)
-    # Check that the gradient matrix shape is correct.
-    assert isinstance(grad_matrix, torch.Tensor)
-    assert grad_matrix.shape == (n_sentences, target_length, full_shape), (
-        "For multiple sentences, the gradient matrix shape is incorrect."
-    )
-
-
-@pytest.mark.parametrize("model_name", generation_models)
-def test_generation_inference_wrapper_multiple_mappings(model_name, sentences):
-    """
-    Tests all function of the generation inference wrapper with multiple mappings.
-
-    This test verifies that:
-      - The full model inputs are correctly constructed by appending the target to the original inputs.
-      - The first part of each full input matches the corresponding original input.
-      - The second part of each full input exactly matches the generated target.
-      - The shapes of the logits, targeted logits, and gradient matrix are as expected for each mapping.
-    """
-    # Model preparation
-    tokenizer, model, inference_wrapper = prepare_model_and_tokenizer(model_name)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
     inference_wrapper.pad_token_id = tokenizer.pad_token_id
-    n_sentences = len(sentences)
-    nb_split = 2
-    if nb_split >= n_sentences:
-        raise ValueError("nb_split must be less than the number of sentences (n_sentences).")
 
-    model_inputs1 = tokenizer(
-        sentences[:nb_split], return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-    )
-    model_inputs2 = tokenizer(
-        sentences[nb_split:], return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-    )
-    model_inputs1.to(DEVICE)
-    model_inputs2.to(DEVICE)
-    model_inputs = [model_inputs1, model_inputs2]
-    model_inputs_length1 = model_inputs1["input_ids"].shape[1]
-    model_inputs_length2 = model_inputs2["input_ids"].shape[1]
-    max_length = max(model_inputs_length1, model_inputs_length2) + 6
+    return model, tokenizer, inference_wrapper
 
-    full_model_inputs, target = inference_wrapper.get_inputs_to_explain_and_targets(
-        model_inputs, max_length=max_length, do_sample=False
-    )
 
-    target_length1 = target[0].shape[1]
-    target_length2 = target[1].shape[1]
-    full_shape1 = full_model_inputs[0]["input_ids"].shape[1]
-    full_shape2 = full_model_inputs[1]["input_ids"].shape[1]
+def compute_reference_targeted_logits(
+    model: AutoModelForCausalLM,
+    model_inputs,
+    targets: torch.Tensor,
+    mode,
+) -> torch.Tensor:
+    trimmed_inputs = {
+        key: value[..., :-1, :] if key == "inputs_embeds" else value[..., :-1] for key, value in model_inputs.items()
+    }
 
-    # check that the first part of the full input is equal to the original input:
-    assert full_model_inputs[0]["input_ids"][:, :-target_length1].equal(model_inputs[0]["input_ids"]), (
-        "The first part of the full input for mapping 0 does not match the original input."
-    )
-    assert full_model_inputs[1]["input_ids"][:, :-target_length2].equal(model_inputs[1]["input_ids"]), (
-        "The first part of the full input for mapping 1 does not match the original input."
-    )
+    with torch.no_grad():
+        logits = model(**trimmed_inputs).logits
 
-    # check that the second part of the full input is equal to the target:
-    assert full_model_inputs[0]["input_ids"][:, -target_length1:].equal(target[0]), (
-        "The target part of the full input for mapping 0 does not match the target."
-    )
-    assert full_model_inputs[1]["input_ids"][:, -target_length2:].equal(target[1]), (
-        "The target part of the full input for mapping 1 does not match the target."
+    target_logits = logits[..., -targets.shape[-1] :, :]
+    target_logits = mode(target_logits)
+    expanded_targets = targets.expand(logits.shape[0], -1)
+    return target_logits.gather(dim=-1, index=expanded_targets.unsqueeze(-1)).squeeze(-1)
+
+
+@pytest.mark.parametrize("model_name", GENERATION_MODELS)
+def test_generation_inference_wrapper_single_sentence(model_name):
+    model, tokenizer, inference_wrapper = prepare_generation_wrapper(model_name)
+
+    tokens = tokenizer(SENTENCES[0], return_tensors="pt")
+    tokens.to(DEVICE)
+    targets = tokens["input_ids"][..., -TARGET_LENGTH:]
+
+    reference_scores = compute_reference_targeted_logits(
+        model,
+        tokens,
+        targets,
+        inference_wrapper.mode,
     )
 
-    # Check that the full input has the expected shape given by the max_length.
-    assert full_model_inputs[0]["input_ids"].shape[1] == max_length, (
-        "The full input shape doesn't match the expected shape given by max_length."
+    test_scores_mapping = inference_wrapper.get_targeted_logits(tokens.copy(), targets)
+    test_scores_iterable = next(inference_wrapper.get_targeted_logits([tokens.copy()], [targets]))
+
+    assert torch.allclose(reference_scores, test_scores_mapping, atol=1e-5)
+    assert torch.allclose(reference_scores, test_scores_iterable, atol=1e-5)
+
+
+@pytest.mark.parametrize("model_name", GENERATION_MODELS)
+def test_generation_inference_wrapper_multiple_sentences(model_name):
+    model, tokenizer, inference_wrapper = prepare_generation_wrapper(model_name)
+
+    batch_tokens = tokenizer(SENTENCES, return_tensors="pt", padding=True, truncation=True)
+    batch_tokens.to(DEVICE)
+    batch_targets = batch_tokens["input_ids"][..., -TARGET_LENGTH:]
+
+    reference_batch_scores = compute_reference_targeted_logits(
+        model,
+        batch_tokens,
+        batch_targets,
+        inference_wrapper.mode,
     )
-    assert full_model_inputs[1]["input_ids"].shape[1] == max_length, (
-        "The full input shape doesn't match the expected shape given by max_length."
+    test_batch_scores = inference_wrapper.get_targeted_logits(batch_tokens.copy(), batch_targets)
+
+    assert torch.allclose(reference_batch_scores, test_batch_scores, atol=1e-5)
+
+    tokenized_sentences = [tokenizer(sentence, return_tensors="pt") for sentence in SENTENCES]
+    for tokens in tokenized_sentences:
+        tokens.to(DEVICE)
+
+    targets_list = [tokens["input_ids"][..., -TARGET_LENGTH:] for tokens in tokenized_sentences]
+    reference_iterable_scores = [
+        compute_reference_targeted_logits(model, tokens, targets, inference_wrapper.mode)
+        for tokens, targets in zip(tokenized_sentences, targets_list, strict=True)
+    ]
+    test_iterable_scores = list(
+        inference_wrapper.get_targeted_logits([tokens.copy() for tokens in tokenized_sentences], targets_list)
     )
 
-    logits = inference_wrapper.get_logits(full_model_inputs)
-    logits2 = list(logits)
-    # check that the logits shape is correct:
-    assert logits2[0].shape == (nb_split, full_shape1, model.config.vocab_size), (
-        "Logits shape for mapping 0 is incorrect."
-    )
-    assert logits2[1].shape == (n_sentences - nb_split, full_shape2, model.config.vocab_size), (
-        "Logits shape for mapping 1 is incorrect."
-    )
+    for reference_scores, test_scores in zip(reference_iterable_scores, test_iterable_scores, strict=True):
+        assert torch.allclose(reference_scores, test_scores, atol=1e-5)
 
-    targeted_logits = inference_wrapper.get_targeted_logits(full_model_inputs, target)
-    targeted_logits2 = list(targeted_logits)
-    # check that the targeted logits shape is correct:
-    assert targeted_logits2[0].shape == (nb_split, target_length1), "Targeted logits shape for mapping 0 is incorrect."
-    assert targeted_logits2[1].shape == (n_sentences - nb_split, target_length2), (
-        "Targeted logits shape for mapping 1 is incorrect."
-    )
 
-    grad_matrix = iter(inference_wrapper.get_gradients(full_model_inputs, target))
-    # check that the grad matrix shape is correct:
-    assert next(grad_matrix).shape == (nb_split, target_length1, full_shape1), (
-        "Gradient matrix shape for mapping 0 is incorrect."
+@pytest.mark.parametrize("model_name", GENERATION_MODELS)
+def test_generation_inference_wrapper_with_inputs_embeds(model_name):
+    model, tokenizer, inference_wrapper = prepare_generation_wrapper(model_name)
+
+    tokens = tokenizer(SENTENCES[0], return_tensors="pt")
+    tokens.to(DEVICE)
+
+    with torch.no_grad():
+        inputs_embeds = model.get_input_embeddings()(tokens["input_ids"])
+
+    model_inputs = {
+        "inputs_embeds": inputs_embeds,
+        "attention_mask": tokens["attention_mask"],
+    }
+    targets = tokens["input_ids"][..., -TARGET_LENGTH:]
+
+    reference_scores = compute_reference_targeted_logits(
+        model,
+        model_inputs,
+        targets,
+        inference_wrapper.mode,
     )
-    assert next(grad_matrix).shape == (n_sentences - nb_split, target_length2, full_shape2), (
-        "Gradient matrix shape for mapping 1 is incorrect."
-    )
+    test_scores = inference_wrapper.get_targeted_logits(model_inputs.copy(), targets)
+
+    assert torch.allclose(reference_scores, test_scores, atol=1e-5)
+
+
+def test_generation_inference_wrapper_unsupported_input_type():
+    inference_wrapper = object.__new__(GenerationInferenceWrapper)
+
+    with pytest.raises(NotImplementedError, match="not supported"):
+        inference_wrapper.get_targeted_logits(1, torch.tensor([[0]]))

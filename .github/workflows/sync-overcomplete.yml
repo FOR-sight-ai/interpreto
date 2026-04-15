@@ -1,0 +1,42 @@
+name: Sync vendored overcomplete subset
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Mondays 08:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync vendored files
+        run: python interpreto/_vendor/overcomplete/_sync_overcomplete.py
+        
+      - name: Apply vendored patch
+        run: |
+          git apply --check interpreto/_vendor/overcomplete/overcomplete.patch
+          git apply --whitespace=fix interpreto/_vendor/overcomplete/overcomplete.patch
+        
+
+      - name: Create Pull Request if changes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(vendor): sync overcomplete subset"
+          title: "chore(vendor): sync overcomplete subset"
+          body: |
+            Automated sync of vendored overcomplete modules.
+            See interpreto/_vendor/overcomplete/VENDORED_FROM for upstream commit.
+          branch: "bot/sync-overcomplete"
+          delete-branch: true

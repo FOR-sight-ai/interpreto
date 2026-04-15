@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 import gc
+import warnings
 from collections.abc import Callable, Iterable
 from enum import Enum
 from math import ceil
@@ -44,8 +45,25 @@ from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
-from interpreto.model_wrapping.splitting_utils import get_layer_by_idx, sort_paths, validate_path, walk_modules
+from interpreto.model_wrapping.splitting_utils import (
+    get_layer_by_idx,
+    sort_paths,
+    validate_path,
+    walk_modules,
+)
 from interpreto.typing import ConceptsActivations, LatentActivations
+
+# Prevents:
+# UserWarning: Module ... of type ... has pre-defined a `output` attribute.
+# nnsight access for `output` will be mounted at `.nns_output` instead of `.output` for this module only.
+# This error message is raised by `nnsight` but it is treated by interpreto with the following line:
+# `output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"`
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    module="nnsight.intervention.envoy",
+    message=r".*has pre-defined a `output` attribute.*",
+)
 
 
 class InitializationError(ValueError):
@@ -55,10 +73,6 @@ class InitializationError(ValueError):
 class ActivationGranularity(Enum):
     """
     Activation selection strategies for `ModelWithSplitPoints.get_activations()`.
-
-    - ``ALL``:
-        the raw activations are returned as is ``(n, l, d)``.
-        They are padded manually so that each batch of activations can be concatenated.
 
     - ``ALL_TOKENS``:
         the raw activations are flattened ``(n x l, d)``.
@@ -77,7 +91,6 @@ class ActivationGranularity(Enum):
         Then the activations are flattened.
         ``(n x g, d)`` where `g` is the number of sentences in the input.
         The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
-        Requires `spacy` to be installed.
 
     - ``TOKEN``:
         the raw activations are flattened, but the special tokens are removed.
@@ -91,7 +104,6 @@ class ActivationGranularity(Enum):
         The split is defined by `interpreto.commons.granularity.Granularity.WORD`.
     """
 
-    ALL = "all"
     ALL_TOKENS = Granularity.ALL_TOKENS
     CLS_TOKEN = "cls_token"
     SAMPLE = "sample"
@@ -308,7 +320,7 @@ class ModelWithSplitPoints(LanguageModel):
         self.split_points = split_points  # this uses the setter which handles validation
         self._model: PreTrainedModel  # specify type of `_model` attribute from NNsight
         if self.repo_id is None:
-            self.repo_id = self._model.config.name_or_path
+            self.repo_id = self._model.config.name_or_path  # type: ignore  (under specification from NNsight)
         self.batch_size = batch_size
 
         if not isinstance(model_or_repo_id, str):
@@ -357,7 +369,9 @@ class ModelWithSplitPoints(LanguageModel):
 
     @staticmethod
     def _pad_and_concat(
-        tensor_list: list[Float[torch.Tensor, "n_i l_i d"]], pad_side: str, pad_value: float
+        tensor_list: list[Float[torch.Tensor, "n_i l_i d"]],
+        pad_side: str,
+        pad_value: float,
     ) -> Float[torch.Tensor, "sum(n_i) max_l d"]:
         """
         Concatenates a list of 3D tensors along dim=0 after padding their second dimension to the same length.
@@ -397,7 +411,7 @@ class ModelWithSplitPoints(LanguageModel):
         self,
         inputs: BatchEncoding | torch.Tensor,
         activation_granularity: ActivationGranularity,
-    ) -> list[list[list[int]]] | None:
+    ) -> list[list[list[int]]]:
         """Get the indices of the granularity level, might be None.
 
         The indices correspond to how Granularity work in general in Interpreto.
@@ -412,7 +426,7 @@ class ModelWithSplitPoints(LanguageModel):
                 See `get_activations` for more details.
 
         Returns:
-            list[list[list[int]]] | None: The indices of the granularity level.
+            list[list[list[int]]]: The indices of the granularity level.
                 One sublist for each sample,
                 for each sample: one subsublist for each granularity element,
                 for each granularity element: list of indices of tokens composing the granularity element.
@@ -420,9 +434,6 @@ class ModelWithSplitPoints(LanguageModel):
 
         # Apply selection rule
         match activation_granularity:
-            case AG.ALL:
-                return None
-
             case AG.CLS_TOKEN:
                 # get either the tensor or the input_ids tensor
                 inputs_tensor: torch.Tensor = inputs if isinstance(inputs, torch.Tensor) else inputs["input_ids"]  # type: ignore
@@ -431,7 +442,7 @@ class ModelWithSplitPoints(LanguageModel):
                 if inputs_tensor[0, 0] != self.tokenizer.cls_token_id:
                     raise ValueError(
                         "The first token of the input tensor is not the CLS token. "
-                        "Please provide a tensor with the CLS token as the first token."
+                        "Please provide a tensor with the CLS token as the first token. "
                         "This may happen if you asking for a ``CLS_TOKEN`` granularity while not doing classification."
                     )
 
@@ -451,7 +462,7 @@ class ModelWithSplitPoints(LanguageModel):
             case AG.TOKEN | AG.WORD | AG.SENTENCE | AG.SAMPLE:
                 if not isinstance(inputs, BatchEncoding):
                     raise ValueError(
-                        "Cannot get indices without a tokenizer if granularity is TOKEN or SAMPLE."
+                        "Cannot get indices without a tokenizer if granularity is TOKEN or SAMPLE. "
                         + "Please provide a tokenizer or set granularity to ALL_TOKENS."
                         + f"Got: {type(inputs)}"
                     )
@@ -461,9 +472,8 @@ class ModelWithSplitPoints(LanguageModel):
                     activation_granularity = AG.TOKEN
 
                 # extract indices of activations to keep from inputs
-                return Granularity.get_indices(
+                return activation_granularity.value.get_indices(
                     inputs=inputs,
-                    granularity=activation_granularity.value,  # type: ignore
                     tokenizer=self.tokenizer,
                 )
 
@@ -474,10 +484,10 @@ class ModelWithSplitPoints(LanguageModel):
     def _apply_selection_strategy(
         self,
         activations: Float[torch.Tensor, "n l d"],
-        granularity_indices: list[list[list[int]]] | None,
+        granularity_indices: list[list[list[int]]],
         activation_granularity: ActivationGranularity,
         aggregation_strategy: GranularityAggregationStrategy | None,
-    ) -> Float[torch.Tensor, "n l d"] | Float[torch.Tensor, "ng d"]:
+    ) -> list[Float[torch.Tensor, "g d"]]:
         """Apply selection strategy to activations.
 
         In theory, we could use the same code for most granularities thanks to the `granularity_indices` argument.
@@ -490,7 +500,7 @@ class ModelWithSplitPoints(LanguageModel):
         ...     "A BC DEF",
         ...     "abc de f"
         ... ]
-        >>> indices = Granularity.get_indices(example, Granularity.WORD, tokenizer)
+        >>> indices = Granularity.WORD.get_indices(example, tokenizer)
         >>> indices
         [
              [ [0], [1, 2], [3, 4, 5] ],
@@ -505,22 +515,26 @@ class ModelWithSplitPoints(LanguageModel):
 
         If we had to use this information to obtain the activations of the word `"abc"`,
         we would look at the activations of shape (n, l, d).
-        Then extract the elements of interest by `activations[1, [0, 1, 2],:]`,
+        Then extract the elements of interest by `activations[1, [0, 1, 2], :]`,
         the second sample, first three tokens, all of the model dimensions.
         The final step would be the aggregation over the token dimension.
 
         By applying this operation to all words, we would obtain six activation vectors, as we have six words.
-        These are stacked to build the granular activations of shape `(ng, d)`
-        where `ng` is the total number of granular elements over the n provided samples.
+        Words are kept by sample, here there are two samples, sol the list has two elements.
+        Each element is a tensor of shape (g, d), where g is the number of granular elements in one input.
+        In our case g is 3 for both samples, so the list has two elements of shape (3, d).
 
         Args:
             activations (InterventionProxy): Activations to apply selection strategy to.
             activation_granularity (ActivationGranularity): Selection strategy to apply. see :meth:`ModelWithSplitPoints.get_activations`.
             aggregation_strategy (GranularityAggregationStrategy | None): Aggregation strategy to apply. see :meth:`ModelWithSplitPoints.get_activations`.
-            granularity_indices (list[list[list[int]]] | None): Indices of the granularity level, might be None.
+            granularity_indices (list[list[list[int]]]): Indices of the granularity level, might be None.
 
         Returns:
-            torch.Tensor: The aggregated activations. (n, l, d) or (ng, d)
+            activation_list (list[torch.tensor]):
+                List of activations, one element for each sample. (len(activation_list) == n)
+                Each element of the list is a tensor of shape (g, d),
+                where g depends on the granularity strategy and the length of the input.
         """
         if granularity_indices is None:
             if activation_granularity in [AG.TOKEN, AG.SAMPLE, AG.WORD, AG.SENTENCE]:
@@ -531,17 +545,13 @@ class ModelWithSplitPoints(LanguageModel):
 
         # Apply selection rule
         match activation_granularity:
-            case AG.ALL:
-                # raw activations
-                return activations
-
             case AG.CLS_TOKEN:
                 # select the first token of each sample
-                return activations[:, 0, :]
+                return list(activations[:, 0, :].unsqueeze(1))
 
             case AG.ALL_TOKENS:
                 # select all tokens of each sample
-                return activations.flatten(0, 1)
+                return list(activations)
 
             case AG.TOKEN | AG.SAMPLE:
                 if aggregation_strategy is None and activation_granularity == AG.SAMPLE:
@@ -558,18 +568,15 @@ class ModelWithSplitPoints(LanguageModel):
 
                     # aggregate activations for SAMPLE strategy
                     if activation_granularity == AG.SAMPLE:
-                        selected_activations = GranularityAggregationStrategy.aggregate(
+                        selected_activations = aggregation_strategy.aggregate(
                             selected_activations,
-                            strategy=aggregation_strategy,  # type: ignore
                             dim=-2,
                         )
 
                     # add to the selected activations list
                     activation_list.append(selected_activations)
 
-                # concat all activations
-                flatten_activations: Float[torch.Tensor, "ng d"] = torch.concat(activation_list, dim=0)
-                return flatten_activations
+                return activation_list
 
             case AG.WORD | AG.SENTENCE:
                 if aggregation_strategy is None:
@@ -582,21 +589,22 @@ class ModelWithSplitPoints(LanguageModel):
 
                 # iterate over samples
                 for i, indices in enumerate(granularity_indices):  # type: ignore
+                    sample_activations_list: list[Float[torch.Tensor, "1 d"]] = []
                     # iterate over activations
                     for index in indices:
                         # select activation for the current granularity element
                         granular_activations = activations[i, index]
 
                         # aggregate token activations over the granularity element
-                        aggregated_activations = GranularityAggregationStrategy.aggregate(
-                            granular_activations, strategy=aggregation_strategy, dim=-2
-                        )
+                        aggregated_activations = aggregation_strategy.aggregate(granular_activations, dim=-2)
 
-                        activation_list.append(aggregated_activations)
+                        sample_activations_list.append(aggregated_activations)
 
-                # concat all activations
-                flatten_activations: Float[torch.Tensor, "ng d"] = torch.concat(activation_list, dim=0)
-                return flatten_activations
+                    # cat activations for the current sample
+                    sample_activations: Float[torch.Tensor, "g d"] = torch.cat(sample_activations_list, dim=0)
+                    activation_list.append(sample_activations)
+
+                return activation_list
 
             case _:
                 raise ValueError(f"Invalid activation selection strategy: {activation_granularity}")
@@ -608,7 +616,7 @@ class ModelWithSplitPoints(LanguageModel):
         new_activations: Float[torch.Tensor, "n l d"] | Float[torch.Tensor, "ng d"],
         activation_granularity: ActivationGranularity,
         aggregation_strategy: GranularityAggregationStrategy | None,
-        granularity_indices: list[list[list[int]]] | None = None,
+        granularity_indices: list[list[list[int]]],
     ) -> Float[torch.Tensor, "n l d"]:
         """
         Reintegrates the selected activations into the initial activations.
@@ -633,12 +641,9 @@ class ModelWithSplitPoints(LanguageModel):
             Float[torch.Tensor, "n l d"]: The reintegrated activations tensor.
         """
         match activation_granularity:
-            case AG.ALL:
-                # raw activations
-                return new_activations
-
             case AG.CLS_TOKEN:
                 # reintegrate the reconstructed CLS token activations into the initial activations
+                initial_activations = initial_activations.clone()
                 initial_activations[:, 0, :] = new_activations
                 return initial_activations
 
@@ -647,9 +652,6 @@ class ModelWithSplitPoints(LanguageModel):
                 return new_activations.view(initial_activations.shape)
 
             case AG.TOKEN:
-                if granularity_indices is None:
-                    raise ValueError("granularity_indices cannot be None when activation_granularity is TOKEN.")
-
                 # iterate over samples
                 current_index = 0
                 for i, indices in enumerate(granularity_indices):
@@ -665,10 +667,6 @@ class ModelWithSplitPoints(LanguageModel):
                 return initial_activations
 
             case AG.WORD | AG.SENTENCE:
-                if granularity_indices is None:
-                    raise ValueError(
-                        "granularity_indices cannot be None when activation_granularity is WORD or SENTENCE."
-                    )
                 if aggregation_strategy is None:
                     raise ValueError(
                         "aggregation_strategy cannot be None when activation_granularity is WORD or SENTENCE."
@@ -685,9 +683,7 @@ class ModelWithSplitPoints(LanguageModel):
                         aggregated_activations = new_activations[current_index : current_index + 1]
 
                         # repeat the activations to match the length of the word/sentence
-                        unfolded_activations = GranularityAggregationStrategy.unfold(
-                            aggregated_activations, aggregation_strategy, len(index)
-                        )
+                        unfolded_activations = aggregation_strategy.unfold(aggregated_activations, len(index))
                         torch_index = torch.tensor(index).to(initial_activations.device)
 
                         # reintegrate the repeated granular activations into the initial activations
@@ -764,8 +760,9 @@ class ModelWithSplitPoints(LanguageModel):
         pad_side: str | None = None,
         tqdm_bar: bool = False,
         include_predicted_classes: bool = False,
+        flatten_activations: bool = True,
         model_forward_kwargs: dict[str, Any] = {},
-    ) -> dict[str, LatentActivations]:
+    ) -> dict[str, LatentActivations] | dict[str, list[LatentActivations]]:
         """
 
         Get intermediate activations for all model split points on the given `inputs`.
@@ -788,10 +785,6 @@ class ModelWithSplitPoints(LanguageModel):
 
                 Available options are:
 
-                - ``ModelWithSplitPoints.activation_granularities.ALL``:
-                    the raw activations are returned as is ``(n, l, d)``.
-                    They are padded manually so that each batch of activations can be concatenated.
-
                 - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:
                     the raw activations are flattened ``(n x l, d)``.
                     Hence, each token activation is now considered as a separate element.
@@ -809,7 +802,6 @@ class ModelWithSplitPoints(LanguageModel):
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of sentences in the input.
                     The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
-                    Requires `spacy` to be installed.
 
                 - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
                     the raw activations are flattened, but the special tokens are removed.
@@ -854,6 +846,14 @@ class ModelWithSplitPoints(LanguageModel):
                 Whether to include the predicted classes in the output dictionary.
                 Only applicable for classification models.
 
+            flatten_activations (bool):
+                Whether to flatten the activations tensors.
+
+                - If True, the activations will be flattened from (n, l, d) to (n x l, d).
+                    It allows stocking the activations for a given layer in a single tensor.
+
+                - If False, for each layer, a list of sample-wise activations will be returned.
+
             model_forward_kwargs (dict):
                 Additional keyword arguments passed to the model forward pass.
 
@@ -875,6 +875,7 @@ class ModelWithSplitPoints(LanguageModel):
                     "`include_predicted_classes` is only supported for classification models. "
                     f"Provided model is a {self._model.__class__.__name__}."
                 )
+        self.tokenizer.padding_side = pad_side
 
         # add padding token to vocabulary if not present (model and tokenizer)
         if not hasattr(self.tokenizer, "pad_token") or self.tokenizer.pad_token is None:
@@ -888,10 +889,14 @@ class ModelWithSplitPoints(LanguageModel):
             for i in range(0, len(inputs), self.batch_size):
                 end_idx = min(i + self.batch_size, len(inputs))
                 batch_generator.append({key: value[i:end_idx] for key, value in inputs.items()})
-        else:  # sequence of inputs or tensors
+        elif isinstance(inputs, list | torch.Tensor):
             # create a generator for iterable of inputs and tensors
             batch_generator = (
                 inputs[i : min(i + self.batch_size, len(inputs))] for i in range(0, len(inputs), self.batch_size)
+            )
+        else:
+            raise TypeError(
+                f"Invalid inputs type: {type(inputs)}. Expected: list[str] | torch.Tensor | BatchEncoding."
             )
 
         # wrap generator in tqdm for progress bar
@@ -918,8 +923,6 @@ class ModelWithSplitPoints(LanguageModel):
                     if isinstance(batch_inputs, list):
                         # tokenize text inputs for granularity selection
                         # include "offsets_mapping" for sentence selection strategy
-                        if activation_granularity == AG.CLS_TOKEN:
-                            self.tokenizer.padding_side = "right"
                         tokenized_inputs = self.tokenizer(
                             batch_inputs,
                             return_tensors="pt",
@@ -937,7 +940,9 @@ class ModelWithSplitPoints(LanguageModel):
                         tokenized_inputs = batch_inputs
 
                     # get granularity indices
-                    granularity_indices = self._get_granularity_indices(tokenized_inputs, activation_granularity)
+                    granularity_indices: list[list[list[int]]] = self._get_granularity_indices(
+                        tokenized_inputs, activation_granularity
+                    )
 
                     # extract offset mapping not supported by forward but was necessary for sentence selection strategy
                     if isinstance(tokenized_inputs, (BatchEncoding, dict)):  # noqa: UP038
@@ -978,20 +983,21 @@ class ModelWithSplitPoints(LanguageModel):
                         # potentially aggregate activations over the granularity elements
                         # this merges the `n` and `g` dimensions with `g` a subset of `n`
                         # shape (n, l, d) only for `ALL` granularity, thus raw activations
-                        granular_activations: Float[torch.Tensor, "ng d"] | Float[torch.Tensor, "n l d"] = (
-                            self._apply_selection_strategy(
-                                activations=batch_sp_activations,
-                                granularity_indices=granularity_indices,
-                                activation_granularity=activation_granularity,
-                                aggregation_strategy=aggregation_strategy,
-                            )
+                        granular_activations: list[Float[torch.Tensor, "g d"]] = self._apply_selection_strategy(
+                            activations=batch_sp_activations,
+                            granularity_indices=granularity_indices,
+                            activation_granularity=activation_granularity,
+                            aggregation_strategy=aggregation_strategy,
                         )
 
-                        activations[sp].append(granular_activations)
+                        activations[sp].extend(granular_activations)
 
                     if include_predicted_classes:
-                        # for granularities outside of `ALL`
-                        if granularity_indices is not None:
+                        if not flatten_activations:
+                            activations["predictions"].extend(
+                                list(batch_predictions)  # type: ignore  (ignore possibly unbound)
+                            )
+                        else:
                             # adapt predictions to match the granularity indices
                             repeats: Float[torch.Tensor, "ng"] = torch.tensor(
                                 [len(indices) for indices in granularity_indices]
@@ -999,29 +1005,31 @@ class ModelWithSplitPoints(LanguageModel):
 
                             # predictions have a shape (n,), which we convert to (ng,)
                             # by repeating each predicted class as many times as the number of granularity elements in a sample
-                            repeated_predictions = torch.repeat_interleave(batch_predictions, repeats, dim=0)  # type: ignore  (ignore possibly unbound)
+                            repeated_predictions = torch.repeat_interleave(
+                                batch_predictions,  # type: ignore  (ignore possibly unbound)
+                                repeats,
+                                dim=0,
+                            )
                             activations["predictions"].append(repeated_predictions)
 
         # ------------------------------------------------------------------------------------------
         # concat activation batches and validate that activations have the expected type
         for split_point in self.split_points:
-            if activation_granularity == AG.ALL:
-                # three dimensional tensor (n, l, d)
-                activations[split_point] = ModelWithSplitPoints._pad_and_concat(
-                    activations[split_point], pad_side, 0.0
-                )
-            else:
+            if flatten_activations:
                 # two dimensional tensor (n*g, d)
                 activations[split_point] = torch.cat(activations[split_point], dim=0)
 
         if include_predicted_classes:
-            activations["predictions"] = torch.cat(activations["predictions"], dim=0)
+            if flatten_activations:
+                activations["predictions"] = torch.cat(activations["predictions"], dim=0)
         else:
             activations.pop("predictions", None)
 
         # validate that activations have the expected type
         for layer, act in activations.items():
-            if not isinstance(act, torch.Tensor):
+            act_is_tensor = isinstance(act, torch.Tensor)
+            act_is_list_of_tensors = isinstance(act, list) and all(isinstance(a, torch.Tensor) for a in act)
+            if not (act_is_tensor or act_is_list_of_tensors):
                 raise RuntimeError(
                     f"Invalid output for layer '{layer}'. Expected torch.Tensor activation, got {type(act)}: {act}"
                 )
@@ -1068,7 +1076,6 @@ class ModelWithSplitPoints(LanguageModel):
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of sentences in the input.
                     The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
-                    Requires `spacy` to be installed.
 
                 - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
                     the raw activations are flattened, but the special tokens are removed.
@@ -1114,9 +1121,9 @@ class ModelWithSplitPoints(LanguageModel):
                 concepts.
         """
         # sanity check
-        if activation_granularity in [AG.ALL, AG.SAMPLE]:
+        if activation_granularity is AG.SAMPLE:
             raise ValueError(
-                "The activation granularity cannot be ALL or SAMPLE to compute the concept output gradients. "
+                "The activation granularity cannot be SAMPLE to compute the concept output gradients. "
                 "Please choose another granularity strategy among: ALL_TOKENS, CLS_TOKEN, TOKEN, WORD, SENTENCE. "
             )
 
@@ -1175,7 +1182,11 @@ class ModelWithSplitPoints(LanguageModel):
                     if activation_granularity == AG.CLS_TOKEN:
                         self.tokenizer.padding_side = "right"
                     tokenized_inputs = self.tokenizer(
-                        batch_inputs, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
+                        batch_inputs,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
+                        return_offsets_mapping=True,
                     )
                     if isinstance(self.args[0], T5ForConditionalGeneration):
                         # TODO: find a way for this not to be necessary
@@ -1213,17 +1224,19 @@ class ModelWithSplitPoints(LanguageModel):
                     ng = sum([len(indices) for indices in granularity_indices])  # number of granularity elements
 
                     # apply selection strategy
-                    selected_activations: Float[torch.Tensor, ng, d]
+                    selected_activations: list[Float[torch.Tensor, "g {d}"]]
                     selected_activations = self._apply_selection_strategy(
                         activations=raw_activations,  # use the last batch of activations
                         granularity_indices=granularity_indices,
                         activation_granularity=activation_granularity,
                         aggregation_strategy=aggregation_strategy,
                     )
+                    # concatenate the selected activations into a single tensor
+                    flattened_activations: Float[torch.Tensor, ng, d] = torch.cat(selected_activations, dim=0)
 
                     # encode activations into concepts
-                    concept_activations: Float[torch.Tensor, "{ng} c"] = encode_activations(selected_activations)
-                    del selected_activations
+                    concept_activations: Float[torch.Tensor, "{ng} c"] = encode_activations(flattened_activations)
+                    del selected_activations, flattened_activations
                     c = concept_activations.shape[-1]
 
                     # decode concepts back into activations
@@ -1297,7 +1310,13 @@ class ModelWithSplitPoints(LanguageModel):
                     targets_gradients: Float[torch.Tensor, t, ng, d] = (
                         torch.stack(targets_gradients_list, dim=0).detach().cpu().save()  # type: ignore  (nnsight under specification)
                     )
-                    del targets_gradients_list, concept_activations, concept_activations_grad, logits, all_logits  # type: ignore (possibly unbound grad)
+                    del (
+                        targets_gradients_list,
+                        concept_activations,
+                        concept_activations_grad,  # type: ignore (possibly unbound grad),
+                        logits,
+                        all_logits,
+                    )
 
                     # split gradients for each input sentence from (t, ng, d) to n * (t, g, d)
                     start = 0
@@ -1314,8 +1333,10 @@ class ModelWithSplitPoints(LanguageModel):
         return gradients_list
 
     def get_split_activations(
-        self, activations: dict[str, LatentActivations], split_point: str | None = None
-    ) -> LatentActivations:
+        self,
+        activations: dict[str, LatentActivations] | dict[str, list[LatentActivations]],
+        split_point: str | None = None,
+    ) -> LatentActivations | list[LatentActivations]:
         """
         Extract activations for the specified split point.
         If no split point is specified, it works if and only if the `model_with_split_points` has only one split point.
@@ -1362,10 +1383,17 @@ class ModelWithSplitPoints(LanguageModel):
         else:
             local_split_point: str = self.split_points[0]
 
-        if not isinstance(activations, dict) or not all(isinstance(act, torch.Tensor) for act in activations.values()):
+        act_is_dict_of_tensors = isinstance(activations, dict) and all(
+            isinstance(act, torch.Tensor) for act in activations.values()
+        )
+        act_is_dict_of_list_of_tensors = isinstance(activations, dict) and all(
+            isinstance(act, list) and all(isinstance(a, torch.Tensor) for a in act) for act in activations.values()
+        )
+        if not (act_is_dict_of_tensors or act_is_dict_of_list_of_tensors):
             raise TypeError(
                 "Invalid activations for the concept explainer. "
-                "Activations should be a dictionary of model paths and torch.Tensor activations. "
+                "Activations should be a dictionary of model paths and torch.Tensor activations, "
+                "or a dictionary of model paths and list of torch.Tensor activations. "
                 f"Got: '{type(activations)}'"
             )
         activations_split_points: list[str] = list(activations.keys())  # type: ignore

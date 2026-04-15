@@ -1,0 +1,10 @@
+repo: https://github.com/KempnerInstitute/overcomplete.git
+ref: main
+commit: a1781af49c6e4bbfdbfd763b9757bcf6c5dd6403
+vendored_at_utc: 2026-01-18T14:04:41Z
+directories:
+  - overcomplete/optimization -> interpreto/_vendor/overcomplete/optimization
+  - overcomplete/sae -> interpreto/_vendor/overcomplete/sae
+files:
+  - overcomplete/base.py -> interpreto/_vendor/overcomplete/base.py
+  - overcomplete/metrics.py -> interpreto/_vendor/overcomplete/metrics.py

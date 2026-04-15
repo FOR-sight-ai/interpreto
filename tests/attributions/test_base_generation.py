@@ -22,7 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from collections.abc import Mapping
 
 import torch
 
@@ -83,51 +82,4 @@ def test_process_targets(gpt2_model, gpt2_tokenizer):
         assert all(isinstance(result, torch.Tensor) for result in results), (
             "The elements of the list must be of type torch.Tensor."
         )
-        assert all(result.dim() == 2 for result in results), "The elements of the list must have 2 dimensions."
-        assert all(result.shape[0] == 1 for result in results), (
-            "The first dimension of the elements of the list must be 1."
-        )
-
-
-def test_process_inputs_to_explain_and_targets(gpt2_model, gpt2_tokenizer):
-    explainer = GenerationAttributionExplainer(gpt2_model, gpt2_tokenizer, batch_size=2)  # type: ignore
-    list_targets = create_targets_test(gpt2_tokenizer)
-    list_targets.append(None)  # Add None to the list of targets for testing
-
-    # Model input example
-    model_input1 = gpt2_tokenizer(["I like kittens and I like dogs."], return_tensors="pt")
-    model_input2 = gpt2_tokenizer(["Interpreto is incredible."], return_tensors="pt", return_offsets_mapping=True)
-
-    model_input1element = [model_input1]
-    model_input2elements = [model_input1, model_input2]
-    model_input4elements = [model_input1, model_input2, model_input2, model_input1]
-    model_inputs = (
-        [model_input1element] * 3 + [model_input2elements] * 4 + [model_input4elements] + [model_input1element]
-    )  # Repeat the model inputs for each target and the corresponding number of elements in the target (+ one for the None target).
-    # TODO: add a raise error in the process_inputs_to_explain_and_targets method if the number of elements in the model_input is not equal to the number of elements in the target.
-
-    for model_input, target in zip(model_inputs, list_targets, strict=True):
-        processed_inputs, processed_targets = explainer.process_inputs_to_explain_and_targets(
-            model_input, targets=target
-        )
-        assert isinstance(processed_inputs, list), "processed_inputs must be a list"
-        assert all(isinstance(processed_input, Mapping) for processed_input in processed_inputs), (
-            "The elements of the processed_inputs list must be of type Mapping."
-        )
-        assert all(processed_input["input_ids"].dim() == 2 for processed_input in processed_inputs), (
-            "The input_ids of the element of the processed_inputs list must have 2 dimensions."
-        )
-        assert all(processed_input["input_ids"].shape[0] == 1 for processed_input in processed_inputs), (
-            "The first dimension of the input_ids of the element of the processed_inputs list must be 1."
-        )
-
-        assert isinstance(processed_targets, list), "processed_targets must be a list"
-        assert all(isinstance(processed_target, torch.Tensor) for processed_target in processed_targets), (
-            "The elements of the processed_targets list must be of type torch.Tensor."
-        )
-        assert all(processed_target.dim() == 2 for processed_target in processed_targets), (
-            "The elements of the processed_targets list must have 2 dimensions."
-        )
-        assert all(processed_target.shape[0] == 1 for processed_target in processed_targets), (
-            "The first dimension of the elements of the processed_targets list must be 1."
-        )
+        assert all(result.dim() == 1 for result in results), "The elements of the list must have 1 dimension."

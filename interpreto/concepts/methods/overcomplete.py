@@ -33,11 +33,11 @@ from enum import Enum
 from typing import Generic, TypeVar
 
 import torch
-from overcomplete import optimization as oc_opt
-from overcomplete import sae as oc_sae
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from interpreto._vendor.overcomplete import optimization as oc_opt
+from interpreto._vendor.overcomplete import sae as oc_sae
 from interpreto.concepts.base import ConceptAutoEncoderExplainer, check_fitted
 from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
@@ -247,7 +247,9 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         batch_size: int = 1024,
         criterion: type[SAELoss] = MSELoss,
         optimizer_class: type[torch.optim.Optimizer] = torch.optim.Adam,
+        optimizer_kwargs: dict = {},
         scheduler_class: type[torch.optim.lr_scheduler.LRScheduler] | None = None,
+        scheduler_kwargs: dict = {},
         lr: float = 1e-3,
         nb_epochs: int = 20,
         clip_grad: float | None = None,
@@ -264,8 +266,10 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             use_amp (bool): Whether to use automatic mixed precision for fitting.
             criterion (interpreto.concepts.SAELoss): Loss criterion for the training of the `concept_model`.
             optimizer_class (type[torch.optim.Optimizer]): Optimizer for the training of the `concept_model`.
+            optimizer_kwargs (dict): Keyword arguments to pass to the optimizer.
             scheduler_class (type[torch.optim.lr_scheduler.LRScheduler] | None): Learning rate scheduler for the
                 training of the `concept_model`.
+            scheduler_kwargs (dict): Keyword arguments to pass to the scheduler.
             lr (float): Learning rate for the training of the `concept_model`.
             nb_epochs (int): Number of epochs for the training of the `concept_model`.
             clip_grad (float | None): Gradient clipping value for the training of the `concept_model`.
@@ -283,7 +287,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             device = self.device
         split_activations = self._prepare_fit(activations, overwrite=overwrite)
         dataloader = DataLoader(TensorDataset(split_activations.detach()), batch_size=batch_size, shuffle=True)
-        optimizer_kwargs = {"lr": lr}
+        optimizer_kwargs.update({"lr": lr})
         optimizer = optimizer_class(self.concept_model.parameters(), **optimizer_kwargs)  # type: ignore
         train_params = {
             "model": self.concept_model,
@@ -296,7 +300,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             "device": device,
         }
         if scheduler_class is not None:
-            scheduler = scheduler_class(optimizer)
+            scheduler = scheduler_class(optimizer, **scheduler_kwargs)
             train_params["scheduler"] = scheduler
 
         if use_amp:
@@ -526,6 +530,24 @@ class JumpReLUSAEConcepts(SAEExplainer[oc_sae.JumpSAE]):
     @property
     def concept_model_class(self) -> type[oc_sae.JumpSAE]:
         return oc_sae.JumpSAE
+
+
+class MpSAEConcepts(SAEExplainer[oc_sae.MpSAE]):
+    """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py)
+
+    `ConceptAutoEncoderExplainer` with the MpSAE from Costa et al. (2025)[^6] as concept model.
+
+    Matching Pursuit SAE implementation from [overcomplete.sae.MpSAE](https://github.com/KempnerInstitute/overcomplete/blob/f86ecab80333bb0fad77337f8e6b7aa649a3ae34/overcomplete/sae/mp_sae.py) class.
+
+    [^6]:
+        Valérie Costa, Thomas Fel, Ekdeep Singh Lubana, Bahareh Tolooshams, Demba Ba (2025).
+        [From Flat to Hierarchical: Extracting Sparse Representations with Matching Pursuit](https://arxiv.org/abs/2506.03093).
+        arXiv preprint arXiv:2506.03093.
+    """
+
+    @property
+    def concept_model_class(self) -> type[oc_sae.MpSAE]:
+        return oc_sae.MpSAE
 
 
 class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):

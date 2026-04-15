@@ -1,10 +1,3 @@
-from .attributions import AttributionVisualization
-from .concepts import ConceptHighlightVisualization
+from .attributions import AttributionVisualization, plot_attributions
+from .concepts import plot_concepts
 from .lens import display_lens_results, render_lens_results
-
-__all__ = [
-    "AttributionVisualization",
-    "ConceptHighlightVisualization",
-    "display_lens_results",
-    "render_lens_results",
-]

@@ -10,7 +10,11 @@ nav:
   - Home: index.md
   - Tutorials:
     - Use Attribution Methods: notebooks/attribution_walkthrough.ipynb
-    - Training a Concept Explainer: notebooks/concept_examples.ipynb
+    - Concept-based Explanations for Classification: notebooks/classification_concept_tutorial.ipynb
+    - Concept-based Explanations for Generation: notebooks/generation_concept_tutorial.ipynb
+    - Examples:
+      - Classification Demonstration: notebooks/examples/classification_demonstration.ipynb
+      - Generation Demonstration: notebooks/examples/generation_demonstration.ipynb
     - Lens Methods: notebooks/lens_notebook.ipynb
   - API Reference:
     - Attribution Explainers:
@@ -27,7 +31,8 @@ nav:
         - Sobol: api/attributions/methods/sobol.md
         - VarGrad: api/attributions/methods/vargrad.md
       - Metrics:
-        - Overview: api/attributions/metrics/overview.md
+        - Deletion: api/attributions/metrics/deletion.md
+        - Insertion: api/attributions/metrics/insertion.md
     - Concept Explainers:
       - Overview: api/concepts/overview.md
       - ModelWithSplitPoints: api/concepts/model_with_split_points.md
@@ -37,18 +42,13 @@ nav:
         - Neurons as Concepts: api/concepts/methods/neurons_as_concepts.md
         - Optimization Methods: api/concepts/methods/optim.md
         - SAEs (Sparse AutoEncoders): api/concepts/methods/sae.md
-      - Concept Interpretations:
-        - TopKInputs: api/concepts/interpretations/topk_inputs.md
+      - Concept Interpretations: api/concepts/concepts_interpretations.md
       - Metrics:
         - Overview: api/concepts/metrics/overview.md
+        - ConSim: api/concepts/metrics/consim.md
         - Dictionary Metrics: api/concepts/metrics/dictionary_metrics.md
         - Reconstruction Metrics: api/concepts/metrics/reconstruction_metrics.md
         - Sparsity: api/concepts/metrics/sparsity_metrics.md
-    - Lens:
-      - Overview: api/lens/overview.md
-      - Methods:
-        - Logit Lens: api/lens/methods/logit_lens.md
-        - Tuned Lens: api/lens/methods/tuned_lens.md
   - Roadmap: roadmap.md
   - Contributing: contributing.md
   - About: about.md

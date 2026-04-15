@@ -54,14 +54,14 @@ class LLMInterface(ABC):
 
 #     def generate(self, system_prompt: str, user_prompt: str, max_new_tokens: int = 200) -> str:
 #         prompt = f"{system_prompt}\n\nUser: {user_prompt}\nAssistant:"
-#         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+#         inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True).to(self.device)
 #         output_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=True)
 #         output = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
 #         return output[len(prompt) :].strip()
 
 
 class OpenAILLM(LLMInterface):
-    def __init__(self, api_key: str, model: str = "o4-mini", num_try: int = 5):
+    def __init__(self, api_key: str, model: str = "gpt-4.1-nano", num_try: int = 5):
         try:
             import openai  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
         except ImportError as e:

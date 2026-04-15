@@ -31,13 +31,13 @@ from typing import Generic, TypeVar
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from overcomplete.optimization import BaseOptimDictionaryLearning
 from sklearn.base import TransformerMixin
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA, FastICA, TruncatedSVD
 from torch import nn
 
 from interpreto import ModelWithSplitPoints
+from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer
 
@@ -111,8 +111,10 @@ class ICAWrapper(SkLearnWrapper):
         self.to(device)
 
     @jaxtyped(typechecker=beartype)
-    def fit(self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False) -> FastICA | None:
-        ica = FastICA(n_components=self.nb_concepts, random_state=self.random_state, max_iter=500)
+    def fit(
+        self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
+    ) -> FastICA | None:
+        ica = FastICA(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
         ica.fit(x.detach().cpu().numpy())
 
         self.mean.data = torch.as_tensor(ica.mean_, dtype=torch.float32, device=self.mean.device)

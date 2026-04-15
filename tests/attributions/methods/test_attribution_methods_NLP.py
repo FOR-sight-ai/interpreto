@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import math
 import os
 
 import pytest
@@ -48,7 +49,7 @@ from interpreto.attributions import (
     VarGrad,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.commons.granularity import _HAS_SPACY, Granularity
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
 
@@ -63,7 +64,7 @@ attribution_method_kwargs = {
         "noise_std": 0.001,
     },
     Saliency: {},
-    IntegratedGradients: {"n_perturbations": 3, "baseline": 0.0},
+    IntegratedGradients: {"n_perturbations": 3, "baseline": 0},
     SmoothGrad: {
         "n_perturbations": 3,
         "noise_std": 0.1,
@@ -144,16 +145,11 @@ def test_attribution_methods_with_text_long(model_name, attribution_explainer):
 @pytest.mark.parametrize(
     "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
 )
-@pytest.mark.parametrize(
-    "attribution_explainer",
-    [Occlusion, KernelShap, Lime, Sobol, GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
-)
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize(
     "granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE]
 )
 def test_attribution_methods_granularity(model_name, attribution_explainer, granularity):
-    if not _HAS_SPACY and granularity == Granularity.SENTENCE:
-        pytest.skip("spaCy not available – skipping SENTENCE granularity")
     evaluate_attribution_methods_with_text(
         model_name=model_name,
         attribution_explainer=attribution_explainer,
@@ -165,25 +161,20 @@ def test_attribution_methods_granularity(model_name, attribution_explainer, gran
 @pytest.mark.parametrize(
     "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
 )
-@pytest.mark.parametrize(
-    "attribution_explainer",
-    [GradientShap, IntegratedGradients, Saliency, SmoothGrad, SquareGrad, VarGrad],
-)
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize("granularity", [Granularity.WORD, Granularity.SENTENCE])
 @pytest.mark.parametrize(
     "aggregation_strategy",
     [
-        Granularity.aggregation_strategies.MAX,
-        Granularity.aggregation_strategies.MIN,
-        Granularity.aggregation_strategies.SUM,
-        Granularity.aggregation_strategies.SIGNED_MAX,
+        GranularityAggregationStrategy.MAX,
+        GranularityAggregationStrategy.MIN,
+        GranularityAggregationStrategy.SUM,
+        GranularityAggregationStrategy.SIGNED_MAX,
     ],
 )
 def test_attribution_methods_granularity_aggregation_strategy(
     model_name, attribution_explainer, granularity, aggregation_strategy
 ):
-    if not _HAS_SPACY and granularity == Granularity.SENTENCE:
-        pytest.skip("spaCy not available – skipping SENTENCE granularity")
     evaluate_attribution_methods_with_text(
         model_name=model_name,
         attribution_explainer=attribution_explainer,
@@ -216,55 +207,34 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
     )
 
     # we need to test both type of inputs: text, list_text, tokenized_text, tokenized_list_text:
-    text = "He is my best friend"
-    list_text = [
-        "Short",
-        "Medium sentence length",
-        "Much longer sentence length, because we need to test different length of sentences",
-        "Interpreto is magic",
+    list_texts = [
+        "I like this",
+        "Oh it's cool",
+        ["My dog is ", "this is very"],
+        "Interpreto is",
+        "This is two sentences. The goal is",
     ]
-    list_input_text_onlytext = [text, text, list_text, list_text]
-
-    list_input_text_onlytokenized = [
-        tokenizer(
-            input_text_onlytext, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
-        ).to(DEVICE)
-        for input_text_onlytext in [text, list_text]
+    list_tokenized_texts = [
+        tokenizer(text, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+        for text in list_texts
     ]
 
-    list_input_text = list_input_text_onlytext + list_input_text_onlytokenized
-
-    # we need to test with and without targets:
     if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
-        list_target = [
-            None,
-            "and I like him.",
-            None,
-            ["sentence", "for testing", "that is good practice", "try it."],
-            None,
-            None,
+        list_targets = ["video", "and I like it.", ["nice", "good"], "a great library", "to test."]
+        list_tokenized_targets = [
+            tokenizer(target, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+            for target in list_targets
         ]
+        list_texts_complete = list_texts + list_tokenized_texts + list_texts
+        list_targets_complete = list_targets + list_targets + list_tokenized_targets
     else:
-        list_target = [
-            None,
-            1,
-            None,
-            torch.tensor([[0, 1], [0, 1], [0, 1], [0, 1]]),
-            None,
-            [0, 0, 1, 0],
-        ]
+        list_targets = [None, 1, [0, 1], None, torch.tensor([[0, 1]])]
+        list_texts_complete = list_texts + list_tokenized_texts
+        list_targets_complete = list_targets + list_targets
 
-    for input_text, target in zip(list_input_text, list_target, strict=False):
-        # if we have a generative model, we need to give the max_length:
+    for input_text, target in zip(list_texts_complete, list_targets_complete, strict=False):
         try:
-            if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
-                attributions = explainer.explain(
-                    input_text,
-                    targets=target,
-                    max_length=35,
-                )
-            else:
-                attributions = explainer.explain(input_text, targets=target)
+            attributions = explainer.explain(input_text, targets=target)
         except IncompatibilityError:
             continue
 
@@ -290,24 +260,100 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
             len(attribution.elements) == (attribution.attributions).shape[-1] for attribution in attributions
         ), "In the AttributionOutput class, elements and attributions must have the same length."
 
+        if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
+            for att_output in attributions:
+                att = att_output.attributions
+                t, l = att.shape
+                assert l >= t, (
+                    "The attributions must have the shape (t, l) where l is l_in + t. "
+                    "Hence l must be greater than t. "
+                    f"Got {att.shape} for {att_output.elements}."
+                )
 
-# TODO: test granularity
+                # Example with l = 6 and t = 3
+                # [[ x, x, x, NaN, NaN, NaN],
+                #  [ x, x, x, x  , NaN, NaN],
+                #  [ x, x, x, x  , x  , NaN]]
+                # The number of NaNs corresponds to the sum of natural
+                assert att.isnan().sum() == t * (t + 1) / 2, (
+                    "In the case of generation attributions, only the upper triangular matrix should be filled with NaNs. "
+                    f"Got {att.isnan().sum()} for shape {att.shape}. "
+                    f"Expected {t * (t + 1) / 2}. "
+                    f"The matrix is {att}."
+                )
+        else:
+            for att_output in attributions:
+                assert att_output.attributions.isnan().sum().item() == 0, (
+                    "In the case of classification attributions, the attributions should not contain NaNs."
+                    f"Got {att_output.attributions.isnan()} for {att_output.elements}."
+                )
 
-# TODO: test inference_mode
+
+@pytest.mark.parametrize("method_class", [Lime, VarGrad])
+def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sentences):
+    explainer = method_class(model=bert_model, tokenizer=bert_tokenizer, batch_size=3, device=DEVICE)
+
+    attr_output = explainer.explain(sentences)
+
+    for s, ao in zip(sentences, attr_output, strict=True):
+        # (t, l)
+        assert ao.attributions.shape == (1, len(ao.elements)), (
+            "AttributionOutput: number of elements and attributions length mismatch"
+        )
+        assert math.prod(ao.attributions.shape) < 1000, "AttributionOutput: attributions tensor too large"
+
+        for key, value in ao.model_inputs_to_explain.items():
+            assert value.shape[0] == 1, (
+                f"AttributionOutput: model_inputs_to_explain[{key}] should only contain one sample, no batching or perturbations"
+            )
+            assert math.prod(value.shape) < len(s) * 100, (
+                f"AttributionOutput: model_inputs_to_explain[{key}] tensor too large"
+                f"shape: {value.shape}, sentence length: {len(s)}"
+            )
+
+        assert "inputs_embeds" not in ao.model_inputs_to_explain.keys(), (
+            "AttributionOutput: inputs_embeds should not be in model_inputs_to_explain"
+        )
+
 
 # TODO: test that targets are correctly processed
-
-# TODO: add qualitative testing:
-#       - for a custom classification model only using the first token, verify that the first token is the most important
-#       - for a custom model with a single dense layer (eye(l) times range(l, 0, -1)), verify that the importance order as the inputs
-#       - for a generation model, task it to copy the input text and verify that the important tokens are the ones that are copied
 
 # TODO: test batch size management with very different inputs, tensor mappings of shape: [(1, 10), (5, 10), (100, 10), (2, 10)...].
 #       test that the output shapes are correct for each case.
 #       There should be a counter wrapped around a model to verify that the number of calls to the model is correct.
 
 if __name__ == "__main__":
-    test_attribution_methods_with_text_short(
-        model_name="hf-internal-testing/tiny-random-bert",
-        attribution_explainer=Lime,
-    )
+    # test_attribution_methods_with_text_short(
+    #     model_name="hf-internal-testing/tiny-random-bert",
+    #     attribution_explainer=IntegratedGradients,
+    # )
+    # test_attribution_methods_with_text_short(
+    #     model_name="hf-internal-testing/tiny-random-gpt2",
+    #     attribution_explainer=Lime,
+    # )
+    # test_attribution_methods_granularity(
+    #     model_name="hf-internal-testing/tiny-random-bert",
+    #     attribution_explainer=Occlusion,
+    #     granularity=Granularity.WORD,
+    # )
+    # test_attribution_methods_granularity(
+    #     model_name="hf-internal-testing/tiny-random-gpt2",
+    #     attribution_explainer=Occlusion,
+    #     granularity=Granularity.WORD,
+    # )
+    # test_attribution_methods_granularity_aggregation_strategy(
+    #     model_name="hf-internal-testing/tiny-random-gpt2",
+    #     attribution_explainer=VarGrad,
+    #     granularity=Granularity.WORD,
+    #     aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
+    # )
+
+    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    sentences = [
+        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
+        "Interpreto is magical",
+        "Testing interpreto",
+    ]
+    test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
+    test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)

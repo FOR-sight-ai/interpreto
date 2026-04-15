@@ -28,11 +28,11 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int64, jaxtyped
 
-from interpreto.attributions.perturbations.base import Perturbator
+from interpreto.attributions.perturbations.base import EmbeddingsPerturbator
 from interpreto.typing import TensorBaseline, TensorMapping
 
 
-class LinearInterpolationPerturbator(Perturbator):
+class LinearInterpolationPerturbator(EmbeddingsPerturbator):
     """
     Perturbation using linear interpolation between a reference point (baseline) and the input.
     This class can serve as a base for different interpolation-based perturbators.
@@ -81,10 +81,12 @@ class LinearInterpolationPerturbator(Perturbator):
         # Shape: (batch_size, *input_shape)
         input_shape = inputs.shape[1:]
 
-        if baseline is None:
-            baseline = 0
+        # When all values are zero, the gradients are always NaN.
+        # To avoid this, we set the baseline to a small value.
+        if baseline is None or (isinstance(baseline, int | float) and baseline in [0, 0.0]):
+            baseline = 1e-6
 
-        if isinstance(baseline, (int, float)):  # noqa: UP038
+        if isinstance(baseline, int | float):
             return torch.full(input_shape, baseline, dtype=inputs.dtype, device=inputs.device)
         if not isinstance(baseline, torch.Tensor):
             raise TypeError(f"Expected baseline to be a torch.Tensor, int, or float, but got {type(baseline)}.")

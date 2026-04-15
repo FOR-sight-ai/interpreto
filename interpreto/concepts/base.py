@@ -32,15 +32,14 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from functools import wraps
 from textwrap import dedent
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Generic, TypeVar
 
 import torch
 from jaxtyping import Float
-from overcomplete.base import BaseDictionaryLearning
 from transformers.tokenization_utils_base import BatchEncoding
 
+from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
 from interpreto.attributions.base import AttributionExplainer
-from interpreto.concepts.interpretations.base import BaseConceptInterpretationMethod
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,
     GranularityAggregationStrategy,
@@ -209,60 +208,18 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         return self._sanitize_activations(activations)
 
     @check_fitted
-    def interpret(
-        self,
-        interpretation_method: type[BaseConceptInterpretationMethod],
-        concepts_indices: int | list[int] | Literal["all"],
-        inputs: list[str] | None = None,
-        latent_activations: dict[str, LatentActivations] | LatentActivations | None = None,
-        concepts_activations: ConceptsActivations | None = None,
-        **kwargs,
-    ) -> Mapping[int, Any]:
+    def interpret(self, *args, **kwargs) -> Mapping[int, Any]:  # TODO: 0.5.0 remove
+        """Deprecated API for concept interpretation.
+
+        Interpretation methods should now be instantiated directly with the
+        fitted concept explainer. For example:
+
+        ``TopKInputs(concept_explainer).interpret(inputs, latent_activations)``
+
+        This method is kept only for backwards compatibility and will always
+        raise a :class:`NotImplementedError`.
         """
-        Interpret the concepts dimensions in the latent space into a human-readable format.
-        The interpretation is a mapping between the concepts indices and an object allowing to interpret them.
-        It can be a label, a description, examples, etc.
-
-        Args:
-            interpretation_method: The interpretation method to use to interpret the concepts.
-            concepts_indices (int | list[int] | Literal["all"]): The indices of the concepts to interpret.
-                If "all", all concepts are interpreted.
-            inputs (list[str] | None): The inputs to use for the interpretation.
-                Necessary if the source is not `VOCABULARY`, as examples are extracted from the inputs.
-            latent_activations (LatentActivations | dict[str, LatentActivations] | None): The latent activations to use for the interpretation.
-                Necessary if the source is `LATENT_ACTIVATIONS`.
-                Otherwise, it is computed from the inputs or ignored if the source is `CONCEPT_ACTIVATIONS`.
-            concepts_activations (ConceptsActivations | None): The concepts activations to use for the interpretation.
-                Necessary if the source is not `CONCEPT_ACTIVATIONS`. Otherwise, it is computed from the latent activations.
-            **kwargs: Additional keyword arguments to pass to the interpretation method.
-
-        Returns:
-            Mapping[int, Any]: A mapping between the concepts indices and the interpretation of the concepts.
-        """
-        if concepts_indices == "all":
-            concepts_indices = list(range(self.concept_model.nb_concepts))
-
-        # verify
-        if latent_activations is not None:
-            split_latent_activations = self._sanitize_activations(latent_activations)
-        else:
-            split_latent_activations = None
-
-        # initialize the interpretation method
-        method = interpretation_method(
-            model_with_split_points=self.model_with_split_points,
-            split_point=self.split_point,
-            concept_model=self.concept_model,
-            **kwargs,
-        )
-
-        # compute the interpretation from inputs and activations
-        return method.interpret(
-            concepts_indices=concepts_indices,
-            inputs=inputs,
-            latent_activations=split_latent_activations,
-            concepts_activations=concepts_activations,
-        )
+        raise NotImplementedError("Use the new API: TopKInputs(concept_explainer).interpret(...).")
 
     @check_fitted
     def input_concept_attribution(
@@ -407,6 +364,24 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         """
         raise NotImplementedError("Concept-to-output attribution method is not implemented yet.")
 
+    def __normalize_gradients(self, gradients: Float[torch.Tensor, "t g c"]) -> Float[torch.Tensor, "t g c"]:
+        """
+        Normalize the gradients as described in parameter `normalization` of `concept_output_gradient`.
+        But for a single sample.
+
+        Args:
+            gradients (Float[torch.Tensor, "t g c"]):
+                The gradients to normalize.
+
+        Returns:
+            The normalized gradients.
+        """
+        # normalize the gradients
+        target_importance_sum: Float[torch.Tensor, "t 1 1"] = gradients.abs().sum(dim=-1).sum(dim=-1).view(-1, 1, 1)
+        normalized_gradients: Float[torch.Tensor, "t g c"] = gradients / target_importance_sum
+
+        return normalized_gradients
+
     @check_fitted
     def concept_output_gradient(
         self,
@@ -416,7 +391,8 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concepts_x_gradients: bool = True,
-        tqdm_bar: bool = True,
+        normalization: bool = True,
+        tqdm_bar: bool = False,
         batch_size: int | None = None,
     ) -> list[Float[torch.Tensor, "t g c"]]:
         """
@@ -471,7 +447,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
                     aggregate by sentences following the split defined by
                     :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.
-                    Requires `spacy` to be installed.
 
             aggregation_strategy:
                 Strategy to aggregate token activations into larger inputs granularities.
@@ -497,6 +472,13 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 If the resulting gradients should be multiplied by the concepts activations.
                 True by default (similarly to attributions), because of mathematical properties.
                 Therefore the out put is $C * \\nabla{f_{co}}(C)$.
+
+            normalization (bool):
+                Whether to normalize the gradients.
+                Gradients will be normalized on the concept (c) and sequence length (g) dimensions.
+                Such that for a given sample-target-granular pair,
+                the sum of the absolute values of the gradients is equal to 1.
+                (The granular elements depend on the :arg:`activation_granularity`).
 
             tqdm_bar (bool):
                 Whether to display a progress bar.
@@ -535,4 +517,8 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             tqdm_bar=tqdm_bar,
             batch_size=batch_size,
         )
+
+        # normalize the gradients if required
+        if normalization:
+            gradients = [self.__normalize_gradients(g) for g in gradients]
         return gradients

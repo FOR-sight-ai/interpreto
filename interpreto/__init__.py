@@ -49,7 +49,8 @@ from .lens import (
 from .model_wrapping import ModelWithSplitPoints
 from .visualizations import (
     AttributionVisualization,
-    ConceptHighlightVisualization,
+    plot_attributions,
+    plot_concepts,
 )
 
 
@@ -80,5 +81,6 @@ __all__ = [
     "VarGrad",
     "get_version",
     "AttributionVisualization",
-    "ConceptHighlightVisualization",
+    "plot_attributions",
+    "plot_concepts",
 ]

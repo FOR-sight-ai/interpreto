@@ -28,21 +28,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interpreto"
-version = "0.4.0"
+version = "0.4.20"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 keywords = []
 authors = [
-  {name = "FOR Team"},
-  {email = "fanny.jourdan@irt-saintexupery.com"}
+  { name = "FOR Team" },
+  { email = "fanny.jourdan@irt-saintexupery.com" },
 ]
 maintainers = [
-  {name = "Fanny Jourdan", email = "fanny.jourdan@irt-saintexupery.com"},
-  {name = "Antonin Poché", email = "antonin.poche@irt-saintexupery.com"},
-  {name = "Thomas Mullor", email = "thomas.mullor@irt-saintexupery.com"},
-  {name = "Gabriele Sarti", email = "gabriele.sarti996@gmail.com"},
+  { name = "Fanny Jourdan", email = "fanny.jourdan@irt-saintexupery.com" },
+  { name = "Antonin Poché", email = "antonin.poche@irt-saintexupery.com" },
+  { name = "Thomas Mullor", email = "thomas.mullor@irt-saintexupery.com" },
 ]
 # Pypi classifiers: https://pypi.org/classifiers/
 classifiers = [
@@ -60,19 +59,25 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Visualization",
-  "Typing :: Typed"
+  "Typing :: Typed",
 ]
 dependencies = [
-  "transformers[sentencepiece,tokenizers]>=4.22.0",
+  "transformers>=4.22.0",
+  "nltk",
   "torch>=2.0",
-  "overcomplete>=0.2.3",
-  "nnsight>=0.5.1",
+  "nnsight>=0.5.1,<0.6.0",
   "jaxtyping<=0.2.36",
   "beartype",
   "mknotebooks",
   "pymdown-extensions",
+  "bitsandbytes>=0.48.1",
+  "scipy",
+  "matplotlib",
+  "scikit-learn",
+  "einops",
   "nvidia-cublas-cu11>=11.10.3.66; sys_platform=='Linux'",
   "nvidia-cuda-cupti-cu11>=11.7.101; sys_platform=='Linux'",
   "nvidia-cuda-nvrtc-cu11>=11.7.99; sys_platform=='Linux'",
@@ -107,20 +112,13 @@ lint = [
   "ruff>=0.2.0",
   "virtualenv>=20.26.6",
   "networkx>=3.0.0",
-  "numpy>=2.2.0"
+  "numpy>=2.2.0",
 ]
-notebook = [
-  "ipykernel>=6.29.2",
-  "ipywidgets>=8.1.2"
-]
-spacy = [
-  "spacy>=3.8",
-  "pip"
-]
+notebook = ["ipykernel>=6.29.2", "ipywidgets>=8.1.2"]
 
 [project.urls]
 homepage = "https://github.com/FOR-sight-ai/interpreto"
-documentation = "https://github.com/FOR-sight-ai/interpreto" # TODO
+documentation = "https://github.com/FOR-sight-ai/interpreto"                    # TODO
 repository = "https://github.com/FOR-sight-ai/interpreto"
 changelog = "https://github.com/FOR-sight-ai/interpreto/blob/main/CHANGELOG.md"
 
@@ -135,30 +133,38 @@ strict = true
 # Directories that are not visited by pytest collector:
 testpaths = "tests"
 python_files = "test_*.py"
-norecursedirs =["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
-doctest_optionflags = ["NUMBER", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
-markers = [
-  "slow",
-  "require_cuda_gpu"
+norecursedirs = [
+  "hooks",
+  "*.egg",
+  ".eggs",
+  "dist",
+  "build",
+  "docs",
+  ".tox",
+  ".git",
+  "__pycache__",
+  "interpreto/_vendor",
 ]
+doctest_optionflags = [
+  "NUMBER",
+  "NORMALIZE_WHITESPACE",
+  "IGNORE_EXCEPTION_DETAIL",
+]
+markers = ["slow", "require_cuda_gpu"]
 addopts = [
   "--strict-markers",
   "--tb=short",
   "--doctest-modules",
   "--doctest-continue-on-failure",
   "--disable-pytest-warnings",
-  "--color=yes"
+  "--color=yes",
 ]
 
 
 [tool.coverage.run]
 parallel = true
-source = [
-    "interpreto",
-]
-omit = [
-    "*/__main__.py",
-]
+source = ["interpreto"]
+omit = ["*/__main__.py", "interpreto/_vendor/*"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -195,6 +201,7 @@ exclude = [
   "*.egg",
   "venv",
   ".venv",
+  "interpreto/_vendor",
 ]
 fix = true
 line-length = 119
@@ -203,21 +210,21 @@ extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
 external = [
-  "DOC",  # pydoclint
+  "DOC", # pydoclint
 ]
 ignore = [
-  "B006", # mutable default argument
-  "C901", # function too complex
-  "E501", # line too long (handled by format)
-  "E731", # do not assign a lambda expression, use a def
-  "E741", # ambiguous variable name
-  "F722", # syntax error in forward annotation (as used by jaxtyping)
-  "F821", # undefined name
+  "B006",    # mutable default argument
+  "C901",    # function too complex
+  "E501",    # line too long (handled by format)
+  "E731",    # do not assign a lambda expression, use a def
+  "E741",    # ambiguous variable name
+  "F722",    # syntax error in forward annotation (as used by jaxtyping)
+  "F821",    # undefined name
   "PLR2004", # unnamed numerical constants used
   "PLR0913", # too many arguments
   "PLR0915", # too many statements
-  "UP037", # invalid type annotation (incompatible with single dimension jaxtyping)
-  "W191", # indentation contains tabs (handled by format)
+  "UP037",   # invalid type annotation (incompatible with single dimension jaxtyping)
+  "W191",    # indentation contains tabs (handled by format)
 ]
 select = [
   "E", # pycodestyle errors
@@ -225,16 +232,21 @@ select = [
   "W", # pycodestyle warnings
   "C", # flake8-comprehensions
   #"D", # flake8-docstrings
-  "B", # flake8-bugbear
-  "I", # isort
-  "UP", # flake8-pyupgrade
+  "B",   # flake8-bugbear
+  "I",   # isort
+  "UP",  # flake8-pyupgrade
   "PLC", # flake8-pylint
   "PLE", # flake8-pylint
   "PLR", # flake8-pylint
   "PLW", # flake8-pylint
 ]
-per-file-ignores = { "__init__.py" = ["F401"], "**/examples/*" = ["B018", "E402"] }
-isort = { known-first-party = ["interpreto"], order-by-type = true}
+per-file-ignores = { "__init__.py" = [
+  "F401",
+], "**/examples/*" = [
+  "B018",
+  "E402",
+] }
+isort = { known-first-party = ["interpreto"], order-by-type = true }
 pylint = { max-branches = 22 }
 pyupgrade = { keep-runtime-typing = true }
 pydocstyle = { convention = "google" }
@@ -242,5 +254,9 @@ pydocstyle = { convention = "google" }
 
 [tool.pydoclint]
 style = 'google'
-exclude = '\.git|\.tox|tests/data|some_script\.py'
+exclude = '\.git|\.tox|tests/data|some_script\.py|interpreto/_vendor'
 require-return-section-when-returning-nothing = true
+
+
+[tool.pyright]
+exclude = ["interpreto/_vendor/"]
