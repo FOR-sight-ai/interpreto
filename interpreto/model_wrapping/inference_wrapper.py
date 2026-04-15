@@ -217,8 +217,7 @@ class InferenceWrapper(ABC):
         self.model.eval()
         self.gradients = gradients
         self.input_x_gradient = input_x_gradient
-        model_pad_token_id = getattr(model.config, "pad_token_id", None)
-        self.pad_token_id = model_pad_token_id if model_pad_token_id is not None else 0
+        self.pad_token_id = model.config.pad_token_id
 
         if device is None:
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -401,7 +400,7 @@ class InferenceWrapper(ABC):
             padded_inputs[key] = pad_sequence(
                 [elem[key] for elem in inputs],
                 batch_first=True,
-                padding_value=self.pad_token_id if key == "input_ids" and self.pad_token_id is not None else 0,
+                padding_value=self.pad_token_id if key == "input_ids" else 0,
                 padding_side=self.padding_side,
             ).to(self.device)
 

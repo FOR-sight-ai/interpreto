@@ -90,7 +90,7 @@ class EmbeddingsPerturbator(Perturbator):
             inputs_embedder: Model's module to convert input IDs to embeddings.
         """
         # Embedders is optional
-        self.inputs_embedder = inputs_embedder
+        self.inputs_embedder = deepcopy(inputs_embedder).cpu()
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         # very input_ids are present

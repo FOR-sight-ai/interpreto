@@ -42,7 +42,7 @@ from jaxtyping import Float, jaxtyped
 from transformers import BatchEncoding, PreTrainedTokenizer
 from transformers.modeling_utils import PreTrainedModel
 
-from interpreto.attributions.base import AttributionOutput, setup_tokenizer_for_perturbations
+from interpreto.attributions.base import AttributionOutput, setup_token_ids
 from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
     DeletionPerturbator,
     InsertionDeletionPerturbator,
@@ -95,7 +95,8 @@ class InsertionDeletionBase:
                 perturbed (i.e. only the 50% most important). This is useful to avoid perturbing too many elements with
                 low scores in long sequences.
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        self.tokenizer = tokenizer
+        replace_token_id = setup_token_ids(model, self.tokenizer)
 
         # perturbator
         self.perturbator = self._perturbator_class(
@@ -109,10 +110,6 @@ class InsertionDeletionBase:
         self.inference_wrapper = self._associated_inference_wrapper(
             model, batch_size=batch_size, device=device, mode=InferenceModes.SOFTMAX
         )  # type: ignore
-
-    def _set_tokenizer(self, model, tokenizer) -> tuple[PreTrainedModel, int]:
-        self.tokenizer = tokenizer
-        return setup_tokenizer_for_perturbations(model, self.tokenizer)
 
     @property
     def device(self) -> torch.device:

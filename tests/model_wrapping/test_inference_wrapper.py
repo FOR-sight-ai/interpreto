@@ -41,6 +41,7 @@ class CountingIdentityModel(nn.Module):
         self.forward_calls = 0
         self.register_buffer("_anchor", torch.zeros(1))
         self.batch_size = batch_size
+        self.config = SimpleNamespace(pad_token_id=0)
 
     @property
     def device(self) -> torch.device:

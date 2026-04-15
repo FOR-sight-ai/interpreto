@@ -40,7 +40,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     Kernels,
     LinearRegressionAggregator,
 )
-from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin
+from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.random_perturbation import RandomMaskedTokenPerturbator
 from interpreto.commons import Granularity, GranularityAggregationStrategy
 
@@ -107,10 +107,10 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
                 If None, the kernel width is computed using the `default_kernel_width_fn` function.
             device (torch.device): device on which the attribution method will be run
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        replace_token_id = setup_token_ids(model, tokenizer)
 
         perturbator = RandomMaskedTokenPerturbator(
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             n_perturbations=n_perturbations,
             replace_token_id=replace_token_id,
             granularity=granularity,
@@ -125,7 +125,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
 
         super().__init__(
             model=model,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             perturbator=perturbator,
             aggregator=aggregator,
             batch_size=batch_size,

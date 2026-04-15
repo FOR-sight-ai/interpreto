@@ -26,6 +26,7 @@ import pytest
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from interpreto.attributions.base import setup_token_ids
 from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
 from interpreto.typing import IncompatibilityError
 
@@ -60,6 +61,8 @@ def test_classification_wrapper(model_name):
     # Model preparation
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    setup_token_ids(model, tokenizer)
+    model.eval()
     embedder = model.get_input_embeddings()
     inference_wrapper = ClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
 

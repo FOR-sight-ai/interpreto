@@ -51,23 +51,72 @@ from interpreto.model_wrapping.inference_wrapper import InferenceModes, Inferenc
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
-def setup_tokenizer_for_perturbations(model: Any, tokenizer: PreTrainedTokenizer) -> tuple[Any, int]:
-    """Return a replacement token ID, preferring the tokenizer native mask token when available."""
+def setup_token_ids(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, require_mask_token: bool = True) -> int:
+    """
+    Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
+
+    Returns the mask token ID.
+    """
 
     resize_token_embeddings = False
 
-    if tokenizer.pad_token is None:
-        if tokenizer.eos_token_id is None:
-            tokenizer.add_special_tokens({"pad_token": "<pad>"})
-            resize_token_embeddings = True
-        else:
-            tokenizer.pad_token_id = tokenizer.eos_token_id
-        model.config.pad_token_id = tokenizer.pad_token_id
+    # ------------
+    # pad_token_id
+    generation_config = getattr(model, "generation_config", None)
+    vocab_size = getattr(model.config, "vocab_size", None)
 
+    resolved_pad_token_id = None
+    # list possible pad_token_id candidates
+    pad_token_id_candidates = [
+        getattr(tokenizer, "pad_token_id", None),
+        getattr(tokenizer, "eos_token_id", None),
+        getattr(generation_config, "pad_token_id", None),
+        getattr(model.config, "pad_token_id", None),
+        getattr(generation_config, "eos_token_id", None),
+        getattr(model.config, "eos_token_id", None),
+    ]
+
+    # check candidates in order
+    for candidate in pad_token_id_candidates:
+        if isinstance(candidate, (list, tuple)):
+            candidate = candidate[0] if candidate else None  # noqa: PLW2901 - normalized in place for brevity
+        if not isinstance(candidate, int):
+            continue
+        if candidate < 0:
+            continue
+        if vocab_size is not None and candidate >= vocab_size:
+            continue
+
+        resolved_pad_token_id = candidate
+        break
+
+    if resolved_pad_token_id is None:
+        # no valid pad_token_id found, create a new one
+        tokenizer.add_special_tokens({"pad_token": "<pad>"})
+        resize_token_embeddings = True
+        resolved_pad_token_id = tokenizer.pad_token_id
+    elif getattr(tokenizer, "eos_token", None) is not None and tokenizer.eos_token_id == resolved_pad_token_id:
+        # it is better to set the token than the
+        tokenizer.pad_token = tokenizer.eos_token
+    else:
+        # set the pad_token_id
+        tokenizer.pad_token_id = resolved_pad_token_id
+
+    # propagate the pad_token_id to the model
+    model.config.pad_token_id = resolved_pad_token_id
+    if generation_config is not None:
+        generation_config.pad_token_id = resolved_pad_token_id
+
+    if not require_mask_token:
+        return 0
+    # -------------
+    # mask_token_id
     mask_token_id = getattr(tokenizer, "mask_token_id", None)
     if mask_token_id is not None:
+        # use existing mask_token_id for replacement
         replace_token_id = mask_token_id
     else:
+        # create a new mask_token_id
         replace_token = "[REPLACE]"
         if replace_token not in tokenizer.get_vocab():
             tokenizer.add_tokens([replace_token])
@@ -80,7 +129,7 @@ def setup_tokenizer_for_perturbations(model: Any, tokenizer: PreTrainedTokenizer
     if resize_token_embeddings:
         model.resize_token_embeddings(len(tokenizer))
 
-    return model, int(replace_token_id)
+    return int(replace_token_id)
 
 
 class ModelTask(Enum):
@@ -222,8 +271,10 @@ class AttributionExplainer:
             input_x_gradient (bool, optional): If True and ``use_gradient`` is set, multiplies the input embeddings
                 with their gradients before reducing them. Defaults to ``True``.
         """
-        if not hasattr(self, "tokenizer"):
-            model, _ = self._set_tokenizer(model, tokenizer)
+        # set pad and mask tokens
+        setup_token_ids(model, tokenizer, require_mask_token=False)
+        self.tokenizer = tokenizer
+
         self.inference_wrapper = self._associated_inference_wrapper(
             model,
             gradients=use_gradient,
@@ -236,10 +287,6 @@ class AttributionExplainer:
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.granularity_aggregation_strategy = granularity_aggregation_strategy
-
-    def _set_tokenizer(self, model, tokenizer) -> tuple[PreTrainedModel, int]:
-        self.tokenizer = tokenizer
-        return setup_tokenizer_for_perturbations(model, self.tokenizer)
 
     @property
     def device(self) -> torch.device:
@@ -679,7 +726,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
             return_tensors="pt",
             truncation=True,
             add_special_tokens=False,
-        )["input_ids"].squeeze(dim=0)
+        )["input_ids"].squeeze(dim=0)  # type: ignore
         return normalized_target_ids
 
     @jaxtyped(typechecker=beartype)
@@ -704,7 +751,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
         if isinstance(targets, str):
             targets = self.tokenizer(
                 targets if targets.startswith(" ") else " " + targets, return_tensors="pt", truncation=True
-            )["input_ids"].squeeze(dim=0)
+            )["input_ids"].squeeze(dim=0)  # type: ignore
             return [targets]  # type: ignore
         if isinstance(targets, MutableMapping):  # TensorMapping cannot be used in isinstance
             targets = targets["input_ids"]  # type: ignore
@@ -729,7 +776,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
         self,
         model_inputs: list[TensorMapping],
         targets: GeneratedTarget,
-    ) -> tuple[list[BatchEncoding], list[Int[torch.Tensor, "t"]]]:
+    ) -> tuple[list[TensorMapping], list[Int[torch.Tensor, "t"]]]:
         """
         Processes the inputs and targets for the generative model.
         If targets are not provided, create them with model_inputs_to_explain. Otherwise, for each input-target pair:
@@ -769,7 +816,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
         ]
         model_inputs_to_explain = [
             self.tokenizer(
-                [model_inputs_to_explain_text],
+                [model_inputs_to_explain_text],  # type: ignore
                 return_tensors="pt",
                 return_offsets_mapping=True,
                 truncation=True,
@@ -777,7 +824,7 @@ class GenerationAttributionExplainer(AttributionExplainer):
             for model_inputs_to_explain_text in model_inputs_to_explain_text
         ]
 
-        return model_inputs_to_explain, sanitized_targets
+        return model_inputs_to_explain, sanitized_targets  # type: ignore
 
     def post_processing(self, contribution: Float[torch.Tensor, "t l"]):
         """

@@ -35,7 +35,7 @@ import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
-from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin
+from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.sobol_perturbation import (
     SequenceSamplers,
     SobolTokenPerturbator,
@@ -105,10 +105,10 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
             sampler (SequenceSamplers): Sobol sequence sampler, either `SOBOL`, `HALTON` or `LatinHypercube`.
             device (torch.device): device on which the attribution method will be run
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        replace_token_id = setup_token_ids(model, tokenizer)
 
         perturbator = SobolTokenPerturbator(
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             granularity=granularity,
             replace_token_id=replace_token_id,
             n_token_perturbations=n_token_perturbations,
@@ -122,7 +122,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
 
         super().__init__(
             model=model,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             perturbator=perturbator,
             aggregator=aggregator,
             batch_size=batch_size,

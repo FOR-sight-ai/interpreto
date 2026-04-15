@@ -26,6 +26,7 @@ import pytest
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from interpreto.attributions.base import setup_token_ids
 from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,8 +59,7 @@ def test_generation_wrapper(model_name):
     # Model preparation
     model = AutoModelForCausalLM.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    setup_token_ids(model, tokenizer)
     model.eval()
     embedder = model.get_input_embeddings()
     inference_wrapper = GenerationInferenceWrapper(model, batch_size=3, device=DEVICE)
