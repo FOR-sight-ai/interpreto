@@ -49,6 +49,12 @@ nav:
         - Dictionary Metrics: api/concepts/metrics/dictionary_metrics.md
         - Reconstruction Metrics: api/concepts/metrics/reconstruction_metrics.md
         - Sparsity: api/concepts/metrics/sparsity_metrics.md
+    - Visualizations: api/visualizations.md
+    - Lens:
+      - Overview: api/lens/overview.md
+      - Methods:
+        - Logit Lens: api/lens/methods/logit_lens.md
+        - Tuned Lens: api/lens/methods/tuned_lens.md
   - Roadmap: roadmap.md
   - Contributing: contributing.md
   - About: about.md
