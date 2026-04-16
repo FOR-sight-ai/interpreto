@@ -26,8 +26,12 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 import torch
+import interpreto.visualizations.lens as lens_visualizations
 from transformers import (
     AutoModelForCausalLM,
     AutoModelForMaskedLM,
@@ -40,9 +44,10 @@ from transformers import (
 from interpreto import LogitLens, ModelWithSplitPoints, TunedLens
 from interpreto.lens import LogitLens as LensLogitLens
 from interpreto.lens import TunedLens as LensTunedLens
-from interpreto.visualizations import render_lens_results
+from interpreto.visualizations import display_lens_results
 
 DEVICE = "cpu"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 CAUSAL_LANGUAGE_MODEL_CASES = [
     pytest.param(
@@ -99,6 +104,24 @@ def _tokenize_texts(tokenizer, texts: str | list[str]):
         padding=True,
         truncation=True,
     )
+
+
+def _get_model_module(model: torch.nn.Module, module_name: str) -> torch.nn.Module:
+    current_module = model
+    for path_element in module_name.split("."):
+        if path_element.isdigit():
+            current_module = current_module[int(path_element)]
+        else:
+            current_module = getattr(current_module, path_element)
+    return current_module
+
+
+def _capture_displayed_html(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    displayed_html: list[str] = []
+
+    monkeypatch.setattr(lens_visualizations, "HTML", lambda html: html)
+    monkeypatch.setattr(lens_visualizations, "display", displayed_html.append)
+    return displayed_html
 
 
 def test_lens_exports_are_available() -> None:
@@ -365,17 +388,29 @@ def test_logit_lens_rejects_unsupported_encoder_decoder_models() -> None:
         LogitLens(model_with_split_points)
 
 
-def test_logit_lens_prepares_text_inputs_locally(sentences: list[str]) -> None:
+def test_logit_lens_uses_existing_eos_token_for_padding_without_resizing(
+    monkeypatch: pytest.MonkeyPatch,
+    sentences: list[str],
+) -> None:
     model_with_split_points = _build_model_with_split_points(
         "hf-internal-testing/tiny-random-gpt2",
         AutoModelForCausalLM,
         "transformer.h.1.mlp",
     )
     lens = LogitLens(model_with_split_points, top_k=3)
+    resize_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def _forbid_resize(*args: object, **kwargs: object) -> None:
+        resize_calls.append((args, kwargs))
+        raise AssertionError("The lens methods should not resize token embeddings.")
+
+    monkeypatch.setattr(lens.model, "resize_token_embeddings", _forbid_resize)
 
     lens.explain(sentences[1])
 
     assert lens.tokenizer.pad_token is not None
+    assert lens.tokenizer.pad_token == lens.tokenizer.eos_token
+    assert not resize_calls
 
 
 def test_logit_lens_top_scores_match_softmax_top_k(sentences: list[str]) -> None:
@@ -387,14 +422,33 @@ def test_logit_lens_top_scores_match_softmax_top_k(sentences: list[str]) -> None
     )
     lens = LogitLens(model_with_split_points, top_k=3)
 
-    model_inputs = lens._prepare_inputs(sentences[1])
-    projection_inputs, _ = lens._capture_projection_inputs(
-        model_inputs,
-        [split_point],
-        differentiable=False,
-        include_reference_logits=False,
-    )
-    projected_logits = next(lens._iter_projected_logits(projection_inputs, [split_point]))[1]
+    model_inputs = _tokenize_texts(lens.tokenizer, sentences[1])
+    captured_hidden_states: dict[str, torch.Tensor] = {}
+
+    def _capture_hidden_states(
+        _module: torch.nn.Module,
+        _args: tuple[object, ...],
+        output: torch.Tensor | tuple[torch.Tensor, ...],
+    ) -> None:
+        captured_hidden_states["value"] = output[0] if isinstance(output, tuple) else output
+
+    split_module = _get_model_module(lens.model, split_point)
+    handle = split_module.register_forward_hook(_capture_hidden_states)
+    try:
+        with torch.no_grad():
+            lens.model(
+                input_ids=model_inputs["input_ids"].to(lens.model_device),
+                attention_mask=model_inputs["attention_mask"].to(lens.model_device),
+            )
+    finally:
+        handle.remove()
+
+    hidden_states = captured_hidden_states["value"].to(lens.model_device)
+    if lens.model_pre_head is not None:
+        hidden_states = lens.model_pre_head(hidden_states)
+    projected_logits = lens.model_head(hidden_states)
+    if isinstance(projected_logits, tuple):
+        projected_logits = projected_logits[0]
     expected_top_outputs = torch.topk(torch.softmax(projected_logits, dim=-1), k=3, dim=-1)
     expected_scores = expected_top_outputs.values.detach().cpu()
     expected_indices = expected_top_outputs.indices.detach().cpu()
@@ -405,6 +459,7 @@ def test_logit_lens_top_scores_match_softmax_top_k(sentences: list[str]) -> None
 
 
 def test_logit_lens_language_model_renderer_keeps_hover_friendly_tokens(
+    monkeypatch: pytest.MonkeyPatch,
     sentences: list[str],
 ) -> None:
     model_with_split_points = _build_model_with_split_points(
@@ -416,12 +471,15 @@ def test_logit_lens_language_model_renderer_keeps_hover_friendly_tokens(
 
     model_inputs = _tokenize_texts(lens.tokenizer, sentences[1])
     results = lens.explain(model_inputs)
-    html = render_lens_results(
+    displayed_html = _capture_displayed_html(monkeypatch)
+    display_lens_results(
         results,
         model_inputs,
         tokenizer=lens.tokenizer,
         task=lens.task,
     )
+    assert len(displayed_html) == 1
+    html = displayed_html[0]
     top_index = int(results["transformer.h.1.mlp"]["top_indices"][0, 0, 0])
     decoded_token = lens.tokenizer.convert_ids_to_tokens([top_index])[0]
     decoded_token = decoded_token.replace("Ġ", " ").replace("▁", " ").replace("</w>", "")
@@ -435,6 +493,7 @@ def test_logit_lens_language_model_renderer_keeps_hover_friendly_tokens(
 
 
 def test_logit_lens_sequence_classification_renderer_keeps_card_view(
+    monkeypatch: pytest.MonkeyPatch,
     sentences: list[str],
 ) -> None:
     model_with_split_points = _build_model_with_split_points(
@@ -446,12 +505,15 @@ def test_logit_lens_sequence_classification_renderer_keeps_card_view(
 
     model_inputs = _tokenize_texts(lens.tokenizer, sentences[1])
     results = lens.explain(model_inputs)
-    html = render_lens_results(
+    displayed_html = _capture_displayed_html(monkeypatch)
+    display_lens_results(
         results,
         model_inputs,
         tokenizer=lens.tokenizer,
         task=lens.task,
     )
+    assert len(displayed_html) == 1
+    html = displayed_html[0]
     top_label = str(int(results["bert.encoder.layer.1.output"]["top_indices"][0, 0]))
 
     assert "Current top class:" in html
@@ -462,6 +524,7 @@ def test_logit_lens_sequence_classification_renderer_keeps_card_view(
 
 
 def test_logit_lens_sequence_classification_renderer_accepts_explicit_label_names(
+    monkeypatch: pytest.MonkeyPatch,
     sentences: list[str],
 ) -> None:
     model_with_split_points = _build_model_with_split_points(
@@ -473,13 +536,16 @@ def test_logit_lens_sequence_classification_renderer_accepts_explicit_label_name
 
     model_inputs = _tokenize_texts(lens.tokenizer, sentences[1])
     results = lens.explain(model_inputs)
-    html = render_lens_results(
+    displayed_html = _capture_displayed_html(monkeypatch)
+    display_lens_results(
         results,
         model_inputs,
         tokenizer=lens.tokenizer,
         task=lens.task,
         label_names={0: "negative", 1: "positive"},
     )
+    assert len(displayed_html) == 1
+    html = displayed_html[0]
 
     assert "negative" in html
     assert "positive" in html
@@ -575,3 +641,23 @@ def test_tuned_lens_fits_for_sequence_classification(sentences: list[str]) -> No
     assert torch.isfinite(torch.tensor(history["loss"])).all()
     assert layer_output["top_indices"].shape == (1, 2)
     assert layer_output["top_scores"].shape == (1, 2)
+
+
+def test_lens_notebook_uses_a_generic_kernelspec() -> None:
+    notebook_path = REPOSITORY_ROOT / "docs/notebooks/lens_notebook.ipynb"
+    notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+
+    assert notebook["metadata"]["kernelspec"]["name"] == "python3"
+
+
+def test_lens_notebook_does_not_contain_error_outputs() -> None:
+    notebook_path = REPOSITORY_ROOT / "docs/notebooks/lens_notebook.ipynb"
+    notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+
+    for cell in notebook["cells"]:
+        for output in cell.get("outputs", []):
+            assert output.get("output_type") != "error"
+
+
+def test_fetch_head_is_not_tracked_with_the_lens_changes() -> None:
+    assert not (REPOSITORY_ROOT / "FETCH_HEAD").exists()

@@ -270,40 +270,13 @@ def _render_sequence_classification_html(
     return "".join(sections)
 
 
-def render_lens_results(
+def _render_lens_results_html(
     results: LensResults,
     model_inputs: BatchEncoding,
     tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
     task: LensTask,
     label_names: LabelNames | None = None,
 ) -> str:
-    """
-    Render lens outputs into notebook-friendly HTML.
-
-    Args:
-        results (dict[str, LensTopKOutput]): Output returned by `LogitLens.explain()` or
-            `TunedLens.explain()`.
-        model_inputs (BatchEncoding): Tokenized inputs corresponding to `results`.
-        tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast): Tokenizer used to decode
-            input tokens and language-model predictions.
-        task (Literal["language_model", "sequence_classification"]): Lens task used to select
-            the appropriate renderer.
-        label_names (Mapping[int | str, str] | list[str] | tuple[str, ...] | None): Optional
-            display names for sequence-classification labels. If `None`, raw label ids are shown.
-
-    Returns:
-        str: HTML string ready to be displayed in a notebook.
-
-    Examples:
-        >>> results = lens.explain("Interpreto is helpful.")
-        >>> model_inputs = tokenizer(["Interpreto is helpful."], return_tensors="pt", padding=True)
-        >>> html = render_lens_results(
-        ...     results,
-        ...     model_inputs,
-        ...     tokenizer=tokenizer,
-        ...     task=lens.task,
-        ... )
-    """
     if task == "language_model":
         return _render_language_model_html(results, model_inputs, tokenizer)
 
@@ -341,7 +314,7 @@ def display_lens_results(
     if HTML is None or display is None:
         return
 
-    html = render_lens_results(
+    html = _render_lens_results_html(
         results,
         model_inputs,
         tokenizer=tokenizer,

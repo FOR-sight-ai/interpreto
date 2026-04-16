@@ -398,8 +398,10 @@ class BaseLens:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             return
 
-        self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-        self.model.resize_token_embeddings(len(self.tokenizer))
+        raise ValueError(
+            "Raw text inputs require a tokenizer exposing a pad token or an eos token. "
+            "Please configure the wrapped tokenizer before calling the lens methods."
+        )
 
     def _prepare_inputs(self, inputs: LensInputs) -> BatchEncoding:
         if isinstance(inputs, BatchEncoding):

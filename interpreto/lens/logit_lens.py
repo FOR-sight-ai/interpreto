@@ -49,6 +49,8 @@ class LogitLens(BaseLens):
     can be used for causal language modeling, masked language modeling, and sequence classification.
     See the `ModelWithSplitPoints` documentation for split-point selection and activation extraction.
     Raw text inputs are tokenized internally by the lens methods with the wrapped tokenizer.
+    The wrapped tokenizer should already expose a pad token or an eos token, since the lens methods
+    do not resize model embeddings to introduce new special tokens.
 
     For sequence classification, the projection path falls into three cases:
     - a model-specific pooler or transform is resolved before a vector head

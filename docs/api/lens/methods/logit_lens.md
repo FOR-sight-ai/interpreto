@@ -17,7 +17,6 @@ When possible, prefer building the lens from a fully loaded Hugging Face model w
 [`ModelWithSplitPoints`](../../concepts/model_with_split_points.md). Tiny
 `hf-internal-testing` checkpoints are convenient fixtures, but they can expose meta-tensor
 loading paths that do not reflect the usual experimental workflow.
-Raw text inputs are tokenized internally by the lens methods with the wrapped tokenizer.
 
 ::: interpreto.LogitLens
     handler: python

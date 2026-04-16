@@ -32,6 +32,7 @@ explanations = lens.explain("Interpreto is useful.")
 The generated class pages document the constructor arguments and examples in detail.
 Both classes rely on [`ModelWithSplitPoints`](../concepts/model_with_split_points.md).
 Raw text inputs are tokenized internally by the lens methods with the wrapped tokenizer.
+The wrapped tokenizer should already expose a pad token or an eos token, since the lens methods do not resize model embeddings to introduce new special tokens.
 
 For sequence classification, three projection cases are supported:
 
@@ -56,8 +57,3 @@ display_lens_results(
 
 For sequence classification, readable class names should be passed explicitly through
 `label_names={...}` when displaying the results.
-
-The tiny `hf-internal-testing` checkpoints used in the documentation and tests are lightweight fixtures.
-They are useful for quick checks, but they may expose uninitialized heads or meta-tensor loading paths
-that are not representative of normal experimentation. The supported usage path for the lens methods
-remains a fully loaded Hugging Face model or a fully materialized `ModelWithSplitPoints`.
