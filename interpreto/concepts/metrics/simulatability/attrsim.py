@@ -34,23 +34,123 @@ from interpreto.concepts.metrics.simulatability.base import AutomatedSimulatabil
 
 
 class PromptSetting(NamedTuple):
-    """Low-level AttrSim prompt configuration."""
+    """
+    Low-level configuration of a AttrSim prompt.
+
+    Each flag enables one prompt block. `PromptTypes` exposes the common presets used in papers and
+    tests, while direct `PromptSetting(...)` instances let advanced users define custom ablations.
+
+    Attributes:
+        lp_samples: bool
+            Include learning-phase examples in the shared system prompt.
+        lp_attributions: bool
+            Add attribution explanations for each learning-phase example.
+        lp_contrastive_attributions: bool
+            Add contrastive attribution explanations for each learning-phase example.
+            Contrastive are shown for errors and classic contributions for correct predictions.
+            Incompatible with `lp_attributions`.
+        anonymize_classes: bool
+            Replace user-facing class names with `Class_i`.
+            Preventing the LLM from using knowledge on classes names.
+    """
 
     lp_samples: bool = True
     lp_attributions: bool = True
+    lp_contrastive_attributions: bool = False
     anonymize_classes: bool = False
+
+    def validate(
+        self,
+        *,
+        labels: torch.Tensor | list[int] | None,
+    ) -> None:
+        """
+        Validate internal consistency for a prompt setting.
+
+        This method only checks setting-level constraints, such as mutually exclusive options or
+        inputs required by a given prompt family. Tensor shape checks are handled separately in
+        `AttrSim._check_input_settings_correspondence` so callers fail before any prompt text is
+        rendered.
+
+        Arguments:
+            labels: torch.Tensor | list[int] | None
+                Gold labels aligned with the selected samples. Required for contrastive prompts.
+
+        Raises:
+            ValueError:
+                If the setting is inconsistent or requires missing inputs.
+        """
+        if self.lp_attributions and self.lp_contrastive_attributions:
+            raise ValueError(
+                "PromptSetting.lp_attributions and PromptSetting.lp_contrastive_attributions are mutually exclusive."
+            )
+
+        if not (self.lp_samples) and self.lp_attributions:
+            raise ValueError("PromptSetting.lp_attributions requires `lp_samples=True`.")
+
+        if not (self.lp_samples) and self.lp_contrastive_attributions:
+            raise ValueError("PromptSetting.lp_contrastive_attributions requires `lp_samples=True`.")
+
+        if self.lp_contrastive_attributions and labels is None:
+            raise ValueError(
+                "PromptSetting.lp_contrastive_attributions=True requires `labels` to be provided to AttrSim.construct_prompt()."
+            )
 
 
 class PromptTypes(Enum):
-    """Named AttrSim prompt presets."""
+    """
+    Named AttrSim prompt presets.
 
-    A1_attributions_with_lp = PromptSetting(lp_samples=True, lp_attributions=True)
+    Naming convention:
+        - `L*`: baselines without attribution explanations.
+        - `E*`: standard attribution explanations during learning phase.
+        - `C*`: contrastive attribution explanations during learning phase.
+        - `with_lp` / `without_lp`: whether learning-phase examples are included.
+
+    Each enum value is a `PromptSetting`. Use the enum for standard experiments and direct
+    `PromptSetting(...)` values for custom studies.
+    """
+
+    L1_baseline_without_lp = PromptSetting()
+    L2_baseline_with_lp = PromptSetting(lp_samples=True)
+
+    E1_attribution_with_lp = PromptSetting(lp_samples=True, lp_attributions=True)
+
+    C1_contrastive_attribution_with_lp = PromptSetting(lp_samples=True, lp_contrastive_attributions=True)
 
 
 class AttrSim(AutomatedSimulatability):
-    """Attribution-based simulatability prompt builder.
+    """
+    AttrSim prompt builder for attribution-based automated simulatability.
 
-    AttrSim mirrors ConSim but uses token-level attribution explanations instead of concept explanations.
+    AttrSim measures whether attribution explanations help a meta-predictor reproduce a classifier's
+    outputs. In this module, `AttrSim` is responsible only for AttrSim-specific prompt
+    design and validation. It does not compute model predictions, token/word/sentence-level attributions, or call the
+    LLM on its own.
+
+    Therefore, users need to compute model predictions and attribution explanations beforehand.
+
+    Typical workflow:
+        1. Instantiate `AttrSim(classes=...)`.
+        2. Call `select_examples(...)` on precomputed inputs, labels, and model predictions.
+        3. Use a fitted attribution explainer upstream to build the explanation artifacts required by
+           the chosen setting.
+        4. Call `construct_prompt(...)`.
+        5. Run the prompts through your LLM interface outside this class.
+        6. Compute responses with `llm_interface.batch_generate(...)`.
+        7. Score the returned responses with `score_from_responses(...)`.
+
+    Arguments:
+        classes: list[str]
+            Display names for class ids. Inherited from `AutomatedSimulatability`; `classes[i]`
+            must match class id `i`.
+
+    Attributes:
+        classes: list[str]
+            Display names for class ids.
+        prompt_types: type[PromptTypes]
+            Preset prompt configurations shipped with AttrSim.
+            These are prompt settings that can be passed to `AttrSim.construct_prompt()`.
     """
 
     prompt_types: type[PromptTypes] = PromptTypes
@@ -128,6 +228,8 @@ class AttrSim(AutomatedSimulatability):
                     lp_block.append(
                         f"\tAttributions: {self._format_attribution_for_pred(corresponding_attribution[i], pred_index)}"
                     )
+                if setting.lp_contrastive_attributions:
+                    raise NotImplementedError("Contrastive attribution formatting is not implemented yet.")
                 lp_blocks.append("\n".join(lp_block))
 
             system_prompt_parts.append("\n".join(lp_blocks))
