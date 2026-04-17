@@ -156,6 +156,10 @@ class AttrSim(AutomatedSimulatability):
     prompt_types: type[PromptTypes] = PromptTypes
 
     @staticmethod
+    def _resolve_prompt_setting(setting: PromptTypes | PromptSetting) -> PromptSetting:
+        return setting.value if isinstance(setting, PromptTypes) else setting
+
+    @staticmethod
     def _format_attribution_for_pred(
         attribution_output: AttributionOutput,
         pred_index: int,
@@ -170,6 +174,8 @@ class AttrSim(AutomatedSimulatability):
         attributions = attribution_output.attributions
         if attributions.ndim == 1:
             pred_attr = attributions
+        elif attributions.ndim == 2 and attributions.shape[0] == 1:
+            pred_attr = attributions[0]
         else:
             pred_attr = attributions[pred_index]
 
@@ -192,19 +198,19 @@ class AttrSim(AutomatedSimulatability):
         *,
         corresponding_attribution: list[AttributionOutput],
     ) -> tuple[str, list[str], list[str]]:
-        if isinstance(setting, PromptTypes):
-            setting = setting.value
+        setting = self._resolve_prompt_setting(setting)
+        self._check_input_settings_correspondence(
+            setting=setting,
+            interesting_samples=interesting_samples,
+            corresponding_predictions=corresponding_predictions,
+            corresponding_labels=corresponding_labels,
+            nb_learning_samples=nb_learning_samples,
+            corresponding_attribution=corresponding_attribution,
+        )
 
-        if len(interesting_samples) != len(corresponding_predictions):
-            raise ValueError("`interesting_samples` and `corresponding_predictions` must have the same length.")
-        if len(interesting_samples) != len(corresponding_labels):
-            raise ValueError("`interesting_samples` and `corresponding_labels` must have the same length.")
-        if len(interesting_samples) != len(corresponding_attribution):
-            raise ValueError("`interesting_samples` and `corresponding_attribution` must have the same length.")
-        if nb_learning_samples >= len(interesting_samples):
-            raise ValueError("`nb_learning_samples` must be smaller than number of provided samples.")
+        classes_ids = sorted(corresponding_predictions.unique().tolist())
+        classes = {class_id: self.classes[class_id] for class_id in classes_ids}
 
-        classes = {i: c for i, c in enumerate(self.classes)}
         if setting.anonymize_classes:
             classes = {i: f"Class_{i}" for i in classes.keys()}
 
@@ -243,3 +249,33 @@ class AttrSim(AutomatedSimulatability):
             model_predictions.append(classes[int(corresponding_predictions[i])])
 
         return system_prompt, user_prompts, model_predictions
+
+    def _check_input_settings_correspondence(
+        self,
+        setting: PromptSetting,
+        interesting_samples: list[str],
+        corresponding_predictions: torch.Tensor,
+        corresponding_labels: torch.Tensor,
+        nb_learning_samples: int,
+        corresponding_attribution: list[AttributionOutput] | None,
+    ) -> None:
+        setting.validate(labels=corresponding_labels)
+
+        if len(corresponding_predictions) != len(interesting_samples):
+            raise ValueError("`interesting_samples` and `corresponding_predictions` must have the same length.")
+
+        if len(corresponding_labels) != len(interesting_samples):
+            raise ValueError("`interesting_samples` and `corresponding_labels` must have the same length.")
+
+        if nb_learning_samples >= len(interesting_samples):
+            raise ValueError("`nb_learning_samples` must be smaller than number of provided samples.")
+
+        if corresponding_attribution is None:
+            if setting.lp_attributions or setting.lp_contrastive_attributions:
+                raise ValueError(
+                    "`corresponding_attribution` is required when using attribution-based learning prompts."
+                )
+            return
+
+        if len(corresponding_attribution) != len(interesting_samples):
+            raise ValueError("`interesting_samples` and `corresponding_attribution` must have the same length.")
