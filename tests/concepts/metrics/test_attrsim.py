@@ -87,7 +87,7 @@ def test_construct_prompt_with_enum_setting():
         corresponding_attribution=attributions,
     )
 
-    assert "Attributions:" in system_prompt
+    assert "Attributions for A:" in system_prompt
     assert len(user_prompts) == 2
     assert model_predictions == ["A", "B"]
 
@@ -120,6 +120,55 @@ def test_construct_prompt_rejects_too_many_learning_samples():
     with pytest.raises(ValueError, match="nb_learning_samples"):
         metric.construct_prompt(
             setting=AttrSim.prompt_types.E1_attribution_with_lp,
+            interesting_samples=samples,
+            corresponding_predictions=predictions,
+            corresponding_labels=labels,
+            nb_learning_samples=2,
+            corresponding_attribution=attributions,
+        )
+
+
+def test_construct_prompt_with_contrastive_attributions():
+    metric = AttrSim(classes=["A", "B"])
+    samples = ["s0", "s1", "s2", "s3"]
+    predictions = torch.tensor([0, 1, 0, 1])
+    labels = torch.tensor([0, 0, 1, 1])  # sample 1 and 2 are misclassified
+    attributions = [
+        _build_attribution_output(torch.tensor([[0.4, -0.1, 0.2], [0.1, 0.2, -0.3]])),
+        _build_attribution_output(torch.tensor([[0.2, -0.5, 0.1], [0.6, -0.1, -0.2]])),
+        _build_attribution_output(torch.tensor([[0.1, -0.3, 0.5], [-0.2, 0.7, 0.1]])),
+        _build_attribution_output(torch.tensor([[0.2, 0.2, -0.2], [0.3, -0.4, 0.1]])),
+    ]
+
+    system_prompt, user_prompts, model_predictions = metric.construct_prompt(
+        setting=AttrSim.prompt_types.C1_contrastive_attribution_with_lp,
+        interesting_samples=samples,
+        corresponding_predictions=predictions,
+        corresponding_labels=labels,
+        nb_learning_samples=2,
+        corresponding_attribution=attributions,
+    )
+
+    assert "Contrastive Attributions supporting B rather than A" in system_prompt
+    assert "Attributions for A" in system_prompt
+    assert len(user_prompts) == 2
+    assert model_predictions == ["A", "B"]
+
+
+def test_construct_prompt_contrastive_requires_classwise_attribution_for_miss():
+    metric = AttrSim(classes=["A", "B"])
+    samples = ["s0", "s1", "s2"]
+    predictions = torch.tensor([0, 1, 0])
+    labels = torch.tensor([0, 0, 1])  # one miss in LP when nb_learning_samples=2
+    attributions = [
+        _build_attribution_output(torch.tensor([[0.1, -0.2, 0.3]])),
+        _build_attribution_output(torch.tensor([[0.2, -0.5, 0.1]])),  # singleton axis, not classwise
+        _build_attribution_output(torch.tensor([[0.4, -0.1, 0.2]])),
+    ]
+
+    with pytest.raises(ValueError, match="require class-wise attributions"):
+        metric.construct_prompt(
+            setting=AttrSim.prompt_types.C1_contrastive_attribution_with_lp,
             interesting_samples=samples,
             corresponding_predictions=predictions,
             corresponding_labels=labels,

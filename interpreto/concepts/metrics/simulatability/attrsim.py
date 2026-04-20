@@ -160,35 +160,53 @@ class AttrSim(AutomatedSimulatability):
         return setting.value if isinstance(setting, PromptTypes) else setting
 
     @staticmethod
-    def _format_attribution_for_pred(
+    def _get_attr_vector(
         attribution_output: AttributionOutput,
-        pred_index: int,
+        class_index: int,
+    ) -> torch.Tensor:
+        attributions = attribution_output.attributions
+        if attributions.ndim == 1:
+            return attributions
+        elif attributions.ndim == 2 and attributions.shape[0] == 1:
+            return attributions[0]
+
+        if class_index >= attributions.shape[0]:
+            raise ValueError(
+                "Attribution tensor does not contain enough class-wise rows to format this sample. "
+                f"Requested class index {class_index}, but attributions has shape {tuple(attributions.shape)}."
+            )
+        return attributions[class_index]
+
+    @staticmethod
+    def _format_attr_vector(
+        elements: list[str] | torch.Tensor,
+        attr_vector: torch.Tensor,
         top_k: int = 6,
     ) -> str:
-        elements = attribution_output.elements
         if isinstance(elements, torch.Tensor):
             elements = [str(e.item()) for e in elements]
         else:
             elements = [str(e) for e in elements]
 
-        attributions = attribution_output.attributions
-        if attributions.ndim == 1:
-            pred_attr = attributions
-        elif attributions.ndim == 2 and attributions.shape[0] == 1:
-            pred_attr = attributions[0]
-        else:
-            pred_attr = attributions[pred_index]
-
-        top_k = min(top_k, pred_attr.shape[-1])
-        top_indices = torch.topk(pred_attr.abs(), k=top_k).indices.tolist()
+        top_k = min(top_k, attr_vector.shape[-1])
+        top_indices = torch.topk(attr_vector.abs(), k=top_k).indices.tolist()
 
         pieces = []
         for idx in top_indices:
             token = elements[idx] if idx < len(elements) else f"tok_{idx}"
-            pieces.append(f"{token}: {pred_attr[idx].item():+.3f}")
+            pieces.append(f"{token}: {attr_vector[idx].item():+.3f}")
         return "{" + ", ".join(pieces) + "}"
 
-    def construct_prompt(
+    @staticmethod
+    def _format_attribution_for_pred(
+        attribution_output: AttributionOutput,
+        pred_index: int,
+        top_k: int = 6,
+    ) -> str:
+        pred_attr = AttrSim._get_attr_vector(attribution_output, pred_index)
+        return AttrSim._format_attr_vector(attribution_output.elements, pred_attr, top_k=top_k)
+
+    def construct_prompt(  # type: ignore
         self,
         setting: PromptTypes | PromptSetting,
         interesting_samples: list[str],
@@ -232,10 +250,26 @@ class AttrSim(AutomatedSimulatability):
                 ]
                 if setting.lp_attributions:
                     lp_block.append(
-                        f"\tAttributions: {self._format_attribution_for_pred(corresponding_attribution[i], pred_index)}"
+                        f"\tAttributions for {classes[pred_index]}: {self._format_attribution_for_pred(corresponding_attribution[i], pred_index)}"
                     )
                 if setting.lp_contrastive_attributions:
-                    raise NotImplementedError("Contrastive attribution formatting is not implemented yet.")
+                    gold_index = int(corresponding_labels[i].item())
+                    pred_attr = self._get_attr_vector(corresponding_attribution[i], pred_index)
+                    pred_name = classes[pred_index]
+                    gold_name = classes[gold_index]
+
+                    if pred_index == gold_index:
+                        text = f"Attributions for {pred_name}"
+                        attr_to_show = pred_attr
+                    else:
+                        gold_attr = self._get_attr_vector(corresponding_attribution[i], gold_index)
+                        text = f"Contrastive Attributions supporting {pred_name} rather than {gold_name}"
+                        attr_to_show = pred_attr - gold_attr
+
+                    lp_block.append(
+                        f"\t{text}: {self._format_attr_vector(corresponding_attribution[i].elements, attr_to_show)}"
+                    )
+
                 lp_blocks.append("\n".join(lp_block))
 
             system_prompt_parts.append("\n".join(lp_blocks))
@@ -279,3 +313,25 @@ class AttrSim(AutomatedSimulatability):
 
         if len(corresponding_attribution) != len(interesting_samples):
             raise ValueError("`interesting_samples` and `corresponding_attribution` must have the same length.")
+
+        if setting.lp_contrastive_attributions:
+            for i in range(nb_learning_samples):
+                pred_index = int(corresponding_predictions[i].item())
+                gold_index = int(corresponding_labels[i].item())
+                attributions = corresponding_attribution[i].attributions
+
+                if pred_index == gold_index:
+                    continue
+
+                if attributions.ndim == 1 or (attributions.ndim == 2 and attributions.shape[0] == 1):
+                    raise ValueError(
+                        "Contrastive attribution prompts require class-wise attributions for misclassified samples. "
+                        "Please provide attributions with shape (nb_classes, sequence_length) for these samples."
+                    )
+
+                if max(pred_index, gold_index) >= attributions.shape[0]:
+                    raise ValueError(
+                        "Attribution tensor row dimension is smaller than required class indices for contrastive prompts. "
+                        f"Got shape {tuple(attributions.shape)} for sample index {i}, "
+                        f"but need rows for classes {pred_index} and {gold_index}."
+                    )
