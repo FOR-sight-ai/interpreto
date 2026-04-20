@@ -273,11 +273,6 @@ def test_build_example_prompt():
 
 @pytest.fixture
 def splitted_encoder() -> ModelWithSplitPoints:
-    # return ModelWithSplitPoints(
-    #     "hf-internal-testing/tiny-random-bert",
-    #     split_points=["bert.encoder.layer.1.output"],
-    #     automodel=AutoModelForMaskedLM,  # type: ignore
-    # )
     try:
         return ModelWithSplitPoints(
             "hf-internal-testing/tiny-random-bert",
@@ -289,7 +284,6 @@ def splitted_encoder() -> ModelWithSplitPoints:
 
 
 class LLMInterfaceMock(LLMInterface):
-    # def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
     def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
         _ = (system_prompt, user_prompt, generation_kwargs)
         return "mock answer"

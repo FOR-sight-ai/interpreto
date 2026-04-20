@@ -517,14 +517,6 @@ class ConSim(AutomatedSimulatability):
                 "The most important concepts and their importance for each class are:\n"
                 + "\n".join(
                     [
-                        # f"\t{class_name}: {
-                        #     ConSim._concepts_to_string(
-                        #         global_importances[class_index],
-                        #         concepts_interpretation,
-                        #         top_k=top_k,
-                        #         threshold=importance_threshold,
-                        #     )
-                        # }"
                         f"\t{class_name}: {
                             ConSim._concepts_to_string(
                                 global_importances[class_index],

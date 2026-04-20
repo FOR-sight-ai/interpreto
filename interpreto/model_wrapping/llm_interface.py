@@ -83,11 +83,6 @@ class HuggingFaceLLM(LLMInterface):
         self.tokenizer = AutoTokenizer.from_pretrained(model)
         self.tokenizer.padding_side = "left"
         self.tokenizer.truncation_side = "left"
-        # self.model = AutoModelForCausalLM.from_pretrained(
-        #     model,
-        #     torch_dtype="auto",
-        #     device_map=device,
-        # )
         try:
             self.model = AutoModelForCausalLM.from_pretrained(
                 model,
@@ -149,11 +144,6 @@ class HuggingFaceLLM(LLMInterface):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        # return self.tokenizer.apply_chat_template(
-        #     messages,
-        #     tokenize=False,
-        #     add_generation_prompt=True,
-        # )
         if getattr(self.tokenizer, "chat_template", None):
             return self.tokenizer.apply_chat_template(
                 messages,
