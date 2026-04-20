@@ -54,8 +54,8 @@ class PromptSetting(NamedTuple):
             Preventing the LLM from using knowledge on classes names.
     """
 
-    lp_samples: bool = True
-    lp_attributions: bool = True
+    lp_samples: bool = False
+    lp_attributions: bool = False
     lp_contrastive_attributions: bool = False
     anonymize_classes: bool = False
 
