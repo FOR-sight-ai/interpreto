@@ -234,7 +234,6 @@ class AttrSim(AutomatedSimulatability):
 
         system_prompt_parts = [
             "You are a classifier. Predict the class for each evaluation sample.",
-            "Use the provided learning examples and attribution explanations to infer the model behavior.",
             "Only return the class name, no additional text.",
             f"The classes are: [{', '.join(list(classes.values()))}]",
         ]
@@ -243,7 +242,14 @@ class AttrSim(AutomatedSimulatability):
             lp_blocks = []
             for i in range(nb_learning_samples):
                 pred_index = int(corresponding_predictions[i])
+                if setting.lp_attributions or setting.lp_contrastive_attributions:
+                    pretext = (
+                        "Use the provided learning examples and attribution explanations to infer the model behavior."
+                    )
+                else:
+                    pretext = "Use the provided learning examples to infer the model behavior."
                 lp_block = [
+                    pretext,
                     f"Sample_{i}:",
                     f"\tText: {interesting_samples[i]}",
                     f"\tLabel: {classes[pred_index]}",
