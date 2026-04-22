@@ -58,6 +58,8 @@ class PromptSetting(NamedTuple):
     lp_attributions: bool = False
     lp_contrastive_attributions: bool = False
     anonymize_classes: bool = False
+    attribution_top_k: int = 6
+    attribution_onlypositivevalues: bool = True
 
     def validate(
         self,
@@ -95,6 +97,8 @@ class PromptSetting(NamedTuple):
             raise ValueError(
                 "PromptSetting.lp_contrastive_attributions=True requires `labels` to be provided to AttrSim.construct_prompt()."
             )
+        if self.attribution_top_k <= 0:
+            raise ValueError("PromptSetting.attribution_top_k must be strictly positive.")
 
 
 class PromptTypes(Enum):
@@ -157,6 +161,15 @@ class AttrSim(AutomatedSimulatability):
 
     @staticmethod
     def _resolve_prompt_setting(setting: PromptTypes | PromptSetting) -> PromptSetting:
+        """
+        Normalize a prompt setting input to a concrete `PromptSetting`.
+
+        Args:
+            setting: Either a `PromptTypes` enum preset or a direct `PromptSetting`.
+
+        Returns:
+            PromptSetting: Resolved prompt setting.
+        """
         return setting.value if isinstance(setting, PromptTypes) else setting
 
     @staticmethod
@@ -164,6 +177,24 @@ class AttrSim(AutomatedSimulatability):
         attribution_output: AttributionOutput,
         class_index: int,
     ) -> torch.Tensor:
+        """
+        Extract the attribution vector associated with one class.
+
+        Handles three accepted attribution layouts:
+            - `(l,)`: single class vector.
+            - `(1, l)`: singleton class axis.
+            - `(c, l)`: class-wise vectors, indexed by `class_index`.
+
+        Args:
+            attribution_output: Attribution container for one sample.
+            class_index: Class index whose vector should be extracted.
+
+        Returns:
+            torch.Tensor: Attribution vector of shape `(l,)`.
+
+        Raises:
+            ValueError: If `class_index` is out of bounds for class-wise attributions.
+        """
         attributions = attribution_output.attributions
         if attributions.ndim == 1:
             return attributions
@@ -182,29 +213,86 @@ class AttrSim(AutomatedSimulatability):
         elements: list[str] | torch.Tensor,
         attr_vector: torch.Tensor,
         top_k: int = 6,
+        *,
+        select_by_abs: bool = True,
     ) -> str:
+        """
+        Format one attribution vector as a `{token: score}` string.
+
+        Scores are first normalized over the full sentence using L1 normalization
+        (`attr / sum(abs(attr))`). Then top-k elements are selected according to
+        `only_positive_values`.
+
+        Args:
+            elements: Tokens/elements aligned with attribution positions.
+            attr_vector: Attribution scores `(l,)`.
+            top_k: Number of elements to include.
+            only_positive_values:
+                - True: select top positive normalized scores.
+                - False: select by absolute normalized score.
+
+        Returns:
+            str: Rendered attribution dictionary string.
+        """
         if isinstance(elements, torch.Tensor):
             elements = [str(e.item()) for e in elements]
         else:
             elements = [str(e) for e in elements]
 
-        top_k = min(top_k, attr_vector.shape[-1])
-        top_indices = torch.topk(attr_vector.abs(), k=top_k).indices.tolist()
+        normalized_attr = AttrSim._normalize_attr_vector(attr_vector)
+        top_k = min(top_k, normalized_attr.shape[-1])
+        ranking_attr = normalized_attr.abs() if select_by_abs else normalized_attr
+        top_indices = torch.topk(ranking_attr, k=top_k).indices.tolist()
 
         pieces = []
         for idx in top_indices:
             token = elements[idx] if idx < len(elements) else f"tok_{idx}"
-            pieces.append(f"{token}: {attr_vector[idx].item():+.3f}")
+            pieces.append(f"{token}: {normalized_attr[idx].item():+.3f}")
         return "{" + ", ".join(pieces) + "}"
+
+    @staticmethod
+    def _normalize_attr_vector(attr_vector: torch.Tensor) -> torch.Tensor:
+        """
+        Normalize an attribution vector with sentence-level L1 normalization.
+
+        Args:
+            attr_vector: Raw attribution vector `(l,)`.
+
+        Returns:
+            torch.Tensor: Normalized vector. Returns all-zeros if denominator is zero.
+        """
+        denom = attr_vector.abs().sum()
+        if torch.isclose(denom, torch.tensor(0.0, device=attr_vector.device, dtype=attr_vector.dtype)):
+            return torch.zeros_like(attr_vector)
+        return attr_vector / denom
 
     @staticmethod
     def _format_attribution_for_pred(
         attribution_output: AttributionOutput,
         pred_index: int,
         top_k: int = 6,
+        *,
+        select_by_abs: bool = True,
     ) -> str:
+        """
+        Format attributions for one predicted class.
+
+        Args:
+            attribution_output: Attribution container for one sample.
+            pred_index: Predicted class index.
+            top_k: Number of elements to include.
+            only_positive_values: Top-k selection mode (positive-only vs absolute).
+
+        Returns:
+            str: Rendered attribution dictionary string.
+        """
         pred_attr = AttrSim._get_attr_vector(attribution_output, pred_index)
-        return AttrSim._format_attr_vector(attribution_output.elements, pred_attr, top_k=top_k)
+        return AttrSim._format_attr_vector(
+            attribution_output.elements,
+            pred_attr,
+            top_k=top_k,
+            select_by_abs=select_by_abs,
+        )
 
     def construct_prompt(  # type: ignore
         self,
@@ -216,6 +304,23 @@ class AttrSim(AutomatedSimulatability):
         *,
         corresponding_attribution: list[AttributionOutput],
     ) -> tuple[str, list[str], list[str]]:
+        """
+        Build AttrSim system and user prompts from selected examples.
+
+        Args:
+            setting: Prompt preset (`PromptTypes`) or explicit `PromptSetting`.
+            interesting_samples: Selected texts used for LP + evaluation phases.
+            corresponding_predictions: Model predictions aligned with samples.
+            corresponding_labels: Ground-truth labels aligned with samples.
+            nb_learning_samples: Number of first samples used in LP context.
+            corresponding_attribution: Attribution outputs aligned with samples.
+
+        Returns:
+            tuple[str, list[str], list[str]]:
+                - system prompt containing LP examples and explanations,
+                - user prompts for evaluation samples,
+                - expected model prediction labels for evaluation samples.
+        """
         setting = self._resolve_prompt_setting(setting)
         self._check_input_settings_correspondence(
             setting=setting,
@@ -255,9 +360,14 @@ class AttrSim(AutomatedSimulatability):
                     f"\tLabel: {classes[pred_index]}",
                 ]
                 if setting.lp_attributions:
-                    lp_block.append(
-                        f"\tAttributions for {classes[pred_index]}: {self._format_attribution_for_pred(corresponding_attribution[i], pred_index)}"
+                    formatted_attr = self._format_attribution_for_pred(
+                        corresponding_attribution[i],
+                        pred_index,
+                        top_k=setting.attribution_top_k,
+                        select_by_abs=setting.attribution_onlypositivevalues,
                     )
+
+                    lp_block.append(f"\tAttributions: {formatted_attr}")
                 if setting.lp_contrastive_attributions:
                     gold_index = int(corresponding_labels[i].item())
                     pred_attr = self._get_attr_vector(corresponding_attribution[i], pred_index)
@@ -272,9 +382,14 @@ class AttrSim(AutomatedSimulatability):
                         text = f"Contrastive Attributions supporting {pred_name} rather than {gold_name}"
                         attr_to_show = pred_attr - gold_attr
 
-                    lp_block.append(
-                        f"\t{text}: {self._format_attr_vector(corresponding_attribution[i].elements, attr_to_show)}"
+                    formatted_attr = self._format_attr_vector(
+                        corresponding_attribution[i].elements,
+                        attr_to_show,
+                        top_k=setting.attribution_top_k,
+                        select_by_abs=setting.attribution_onlypositivevalues,
                     )
+
+                    lp_block.append(f"\t{text}: {formatted_attr}")
 
                 lp_blocks.append("\n".join(lp_block))
 
@@ -299,6 +414,26 @@ class AttrSim(AutomatedSimulatability):
         nb_learning_samples: int,
         corresponding_attribution: list[AttributionOutput] | None,
     ) -> None:
+        """
+        Validate consistency between inputs and selected prompt setting.
+
+        This validates:
+            - lengths alignment across samples/predictions/labels/attributions,
+            - LP size constraints,
+            - required attribution presence for attribution-based settings,
+            - contrastive shape requirements when LP misclassifications exist.
+
+        Args:
+            setting: Resolved prompt setting.
+            interesting_samples: Selected texts.
+            corresponding_predictions: Predictions aligned with texts.
+            corresponding_labels: Labels aligned with texts.
+            nb_learning_samples: Number of LP samples.
+            corresponding_attribution: Optional attributions aligned with texts.
+
+        Raises:
+            ValueError: If an inconsistency is detected.
+        """
         setting.validate(labels=corresponding_labels)
 
         if len(corresponding_predictions) != len(interesting_samples):
