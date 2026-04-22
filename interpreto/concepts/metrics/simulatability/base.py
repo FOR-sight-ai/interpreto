@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import re
 import warnings
 from abc import abstractmethod
 from typing import NamedTuple
@@ -341,7 +342,22 @@ class AutomatedSimulatability:
             if llm_pred is None:
                 continue
 
-            if llm_pred.split(" ")[0].lower() == ref_pred.lower():
+            # if llm_pred.split(" ")[0].lower() == ref_pred.lower():
+            raw_prediction = llm_pred.strip().lower()
+            if not raw_prediction:
+                continue
+
+            first_token = raw_prediction.split(" ")[0]
+            first_token = re.sub(r"^[^a-z0-9_-]+|[^a-z0-9_-]+$", "", first_token)
+
+            if first_token == ref_pred.lower():
+                score += 1
+                continue
+
+            # Fallback: look for one explicit class name in the whole response.
+            # This keeps scoring tolerant to formats like "Label: positive".
+            class_hits = [class_name for class_name in set(model_predictions) if class_name.lower() in raw_prediction]
+            if len(class_hits) == 1 and class_hits[0].lower() == ref_pred.lower():
                 score += 1
 
         return score / len(responses)

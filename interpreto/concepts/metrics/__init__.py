@@ -29,11 +29,12 @@ from .reconstruction_metrics import (
     ReconstructionError,
     ReconstructionSpaces,
 )
-from .simulatability import ConSim
+from .simulatability import AttrSim, ConSim
 from .sparsity_metrics import Sparsity, SparsityRatio
 
 __all__ = [
     "ConceptMatchingAlgorithm",
+    "AttrSim",
     "ConSim",
     "Stability",
     "ReconstructionError",

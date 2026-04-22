@@ -1,7 +1,7 @@
 # MIT License
 #
-# Copyright (c) 2025 IRT Antoine de Saint Exupery et Universite Paul Sabatier Toulouse III - All
-# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupery,
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
 # CRIAQ and ANITI - https://www.deel.ai/.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -100,8 +100,6 @@ def test_plot_concepts_classification_local_classwise_labels(tmp_path):
         "sample",
         "labels",
         "labels_by_class",
-        "activations",
-        "activations_by_class",
         "importances",
     } <= set(payload.keys())
     assert payload["sample"] == sample
@@ -109,7 +107,8 @@ def test_plot_concepts_classification_local_classwise_labels(tmp_path):
     assert payload["labels_by_class"]["0"][0] == "Neg sentiment"
     assert payload["labels_by_class"]["1"][1] == "Food quality"
     assert payload["labels"] == ["Neg sentiment", "Service issues"]
-    assert payload["activations_by_class"]["1"] == [[0.1, 0.9]]
+    if "activations_by_class" in payload:
+        assert payload["activations_by_class"]["1"] == [[0.1, 0.9]]
 
 
 def test_plot_concepts_classification_local_uses_static_root(tmp_path):

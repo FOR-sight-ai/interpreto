@@ -120,6 +120,8 @@ The following list will **soon be available**:
 
 To evaluate attribution methods faithfulness, there are the [`Insertion`](https://for-sight-ai.github.io/interpreto/api/attributions/metrics/insertion/) and [`Deletion`](https://for-sight-ai.github.io/interpreto/api/attributions/metrics/deletion/) metrics.
 
+Attribution methods can also be evaluated globally via [`Automated Simulatability`](https://for-sight-ai.github.io/interpreto/api/attributions/metrics/attrsim/).
+
 **Evaluation Metrics for Concepts**
 
 Concept-based methods have several steps that can be evaluated together via [`ConSim`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/consim/).
