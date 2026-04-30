@@ -40,7 +40,6 @@ from jaxtyping import Float
 from transformers.tokenization_utils_base import BatchEncoding
 
 from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
-from interpreto.attributions.base import AttributionExplainer
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,
     GranularityAggregationStrategy,
@@ -52,7 +51,6 @@ from interpreto.typing import (
     ConceptsActivations,
     IncompatibilityError,
     LatentActivations,
-    ModelInputs,
 )
 
 ConceptModel = TypeVar("ConceptModel", bound=ConceptModelProtocol)
@@ -99,6 +97,12 @@ class ModelForInputsToConcepts:
             )
 
         self.concept_model = concept_explainer.concept_model
+        if self.concept_model.device != self.split_model.device:  # type: ignore  # TODO: add device to ConceptModelProtocol
+            self.concept_model.to(self.split_model.device)  # type: ignore
+            self.concept_model.device = (  # type: ignore
+                self.split_model.device
+            )  # Overcomplete models `.to()` method does not set the device
+
         self.nb_concepts = concept_explainer.concept_model.nb_concepts
 
         # Expose a minimal config so InferenceWrapper.__init__ and setup_token_ids can work
@@ -113,7 +117,7 @@ class ModelForInputsToConcepts:
 
     def resize_token_embeddings(self, new_num_tokens: int):
         """No-op: the concept model does not have token embeddings."""
-        pass
+        self.split_model._model.resize_token_embeddings(new_num_tokens)
 
     def __call__(self, **kwargs):
         """Run inputs → activations → concepts and return a BaseModelOutput-like object.
@@ -121,8 +125,12 @@ class ModelForInputsToConcepts:
         Returns:
             SimpleNamespace with a ``.logits`` attribute containing concept activations.
         """
-        activations = self.split_model.inputs_to_activations(kwargs)
+        activations: Float[torch.Tensor, "n d"] = self.split_model.inputs_to_activations(kwargs)
+
+        # TODO: use `encode_activations` which should be renamed `activations_to_concepts`
         concepts = self.concept_model.encode(activations)
+        if isinstance(concepts, tuple):
+            concepts = concepts[1]
         return SimpleNamespace(logits=concepts)
 
     @property
@@ -428,28 +436,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             torch.Tensor: A `torch.Tensor` containing the learned dictionary.
         """
         return self.concept_model.get_dictionary()  # type: ignore
-
-    @check_fitted
-    def concept_output_attribution(
-        self,
-        inputs: ModelInputs,
-        concepts: ConceptsActivations,
-        target: int,
-        attribution_method: type[AttributionExplainer],
-        **attribution_kwargs,
-    ) -> list[float]:
-        """Computes the attribution of each concept for the logit of a target output element.
-
-        Args:
-            inputs (ModelInputs): An input data-point for the model.
-            concepts (torch.Tensor): Concept activation tensor.
-            target (int): The target class for which the concept output attribution should be computed.
-            attribution_method: The attribution method to obtain importance scores for input elements.
-
-        Returns:
-            A list of attribution scores for each concept.
-        """
-        raise NotImplementedError("Concept-to-output attribution method is not implemented yet.")
 
     def __normalize_gradients(self, gradients: Float[torch.Tensor, "t g c"]) -> Float[torch.Tensor, "t g c"]:
         """
