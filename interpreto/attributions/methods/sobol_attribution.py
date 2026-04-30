@@ -41,6 +41,7 @@ from interpreto.attributions.perturbations.sobol_perturbation import (
     SobolTokenPerturbator,
 )
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 
 
 class Sobol(MultitaskExplainerMixin, AttributionExplainer):
@@ -73,7 +74,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
@@ -88,7 +89,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
             granularity (Granularity, optional): The level of granularity for the explanation.

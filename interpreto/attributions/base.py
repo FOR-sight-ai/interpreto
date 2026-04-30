@@ -45,6 +45,7 @@ from interpreto.attributions.perturbations.base import Perturbator
 from interpreto.commons import Granularity
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
 from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
@@ -52,7 +53,9 @@ from interpreto.model_wrapping.inputs_to_concepts_inference_wrapper import Input
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
-def setup_token_ids(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, require_mask_token: bool = True) -> int:
+def setup_token_ids(
+    model: PreTrainedModel | ModelForInputsToConcepts, tokenizer: PreTrainedTokenizer, require_mask_token: bool = True
+) -> int:
     """
     Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
 
@@ -234,7 +237,7 @@ class AttributionExplainer:
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         perturbator: Perturbator | None = None,
@@ -250,7 +253,7 @@ class AttributionExplainer:
         Initializes the AttributionExplainer.
 
         Args:
-            model (PreTrainedModel): The model to be explained.
+            model (PreTrainedModel | ModelForInputsToConcepts): The model to be explained.
             tokenizer (PreTrainedTokenizer): The tokenizer associated with the model.
             batch_size (int): The batch size used for model inference.
             perturbator (Perturbator, optional): Instance used to generate input perturbations.
@@ -278,7 +281,7 @@ class AttributionExplainer:
         self.tokenizer = tokenizer
 
         self.inference_wrapper = self._associated_inference_wrapper(
-            model,
+            model,  # type: ignore
             gradients=use_gradient,
             input_x_gradient=input_x_gradient,
             batch_size=batch_size,
@@ -881,7 +884,7 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
     _associated_inference_wrapper = InputsToConceptsInferenceWrapper
     inference_wrapper: InputsToConceptsInferenceWrapper
 
-    def process_inputs_to_explain_and_targets(
+    def process_inputs_to_explain_and_targets(  # type: ignore
         self,
         model_inputs: ModelInputs,
         targets: Iterable[int] | None = None,
@@ -907,16 +910,16 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
         sanitized_targets: list[Int[torch.Tensor, "t"]]
         if targets is None:
             # explain all concepts
-            input_wise_targets = torch.arange(self.inference_wrapper.model.nb_concepts)
-            sanitized_targets = [input_wise_targets] * len(model_inputs)
+            input_wise_targets = torch.arange(self.inference_wrapper.model.nb_concepts)  # type: ignore
+            sanitized_targets = [input_wise_targets] * len(model_inputs)  # type: ignore
         else:
             # targets are concept indices, shared across all inputs
             if isinstance(targets, torch.Tensor):
                 input_wise_targets = targets.long()
             else:
                 input_wise_targets = torch.tensor(list(targets), dtype=torch.long)
-            sanitized_targets = [input_wise_targets] * len(model_inputs)
-        return model_inputs, sanitized_targets
+            sanitized_targets = [input_wise_targets] * len(model_inputs)  # type: ignore
+        return model_inputs, sanitized_targets  # type: ignore
 
     def post_processing(self, contribution: Float[torch.Tensor, "t l"]):
         """
@@ -940,7 +943,7 @@ class FactoryGeneratedMeta(type):
     """
 
 
-class MultitaskExplainerMixin(AttributionExplainer):
+class MultitaskExplainerMixin:
     """
     Mixin class to generate the appropriate Explainer based on the model type.
     """
