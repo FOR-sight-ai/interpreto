@@ -69,8 +69,8 @@ Use `aggregation_strategy=ModelWithSplitPoints.aggregation_strategies.MEAN` to s
 
 The concept-based explainer is an object use to define the concept space.
 Interpreto supports many concept-based explainers by wrapping over `overcomplete`.
-See the following documentation for more details: [SAEs](./methods/sae.md);
-[Dictionary Learning](./methods/optim.md); [Cockatiel](./methods/cockatiel.md); and [Neurons as concepts](.methods/neurons_as_concepts.md).
+See the following documentation for more details: [SAEs](./concept_spaces/sae.md);
+[Dictionary Learning](./concept_spaces/optim.md); [Cockatiel](./concept_spaces/cockatiel.md); and [Neurons as concepts](./concept_spaces/neurons_as_concepts.md).
 
 They has few key parameters:
 
