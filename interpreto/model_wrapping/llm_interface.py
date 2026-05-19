@@ -25,125 +25,119 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from enum import Enum
 
-
-class Role(Enum):
-    SYSTEM = "system"
-    USER = "user"
-    ASSISTANT = "assistant"
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 class LLMInterface(ABC):
     @abstractmethod
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
+        pass
+
+    @abstractmethod
+    def batch_generate(self, system_prompt: str, user_prompts: list[str], **generation_kwargs) -> list[str | None]:
         pass
 
 
-# class HuggingFaceLLM(LLMInterface):  # TODO: use what we already have in nnsight
-#     def __init__(self, model_name: str, device: torch.device | str | None = None):
-#         try:
-#             from transformers import AutoModelForCausalLM, AutoTokenizer
-#         except ImportError as e:
-#             raise ImportError("Install transformers and torch to use HuggingFace models.") from e
-
-#         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-#         self.model = AutoModelForCausalLM.from_pretrained(model_name)
-#         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-#         self.model.to(self.device)
-
-#     def generate(self, system_prompt: str, user_prompt: str, max_new_tokens: int = 200) -> str:
-#         prompt = f"{system_prompt}\n\nUser: {user_prompt}\nAssistant:"
-#         inputs = self.tokenizer(prompt, return_tensors="pt", truncation=True).to(self.device)
-#         output_ids = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=True)
-#         output = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
-#         return output[len(prompt) :].strip()
-
-
 class OpenAILLM(LLMInterface):
-    def __init__(self, api_key: str, model: str = "gpt-4.1-nano", num_try: int = 5):
+    def __init__(self, api_key: str, model: str = "gpt-4.1-nano", default_generation_kwargs: dict | None = None):
         try:
-            import openai  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
+            import openai  # noqa: PLC0415
         except ImportError as e:
             raise ImportError("Install openai to use OpenAI API.") from e
 
         self.client = openai.OpenAI(api_key=api_key)
         self.model = model
-        self.num_try = num_try
+        self.default_generation_kwargs = default_generation_kwargs or {
+            "temperature": 0.0,
+            "max_output_tokens": 20,
+        }
 
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
-        messages: list[dict[str, str]] = []
-        for role, content in prompt:
-            if role == Role.SYSTEM:
-                messages.append({"role": "system", "content": content})
-            elif role == Role.USER:
-                messages.append({"role": "user", "content": content})
-            elif role == Role.ASSISTANT:
-                messages.append({"role": "assistant", "content": content})
-            else:
-                raise ValueError(f"Unknown role for openai api: {role}")
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
+        kwargs = {**self.default_generation_kwargs, **generation_kwargs}
+        try:
+            response = self.client.responses.create(
+                model=self.model,
+                prompt_cache_key="shared-system-prompt-v1",
+                input=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                **kwargs,
+            )
+            return response.output_text
+        except Exception:
+            return None
 
-        label = None
-        for _ in range(self.num_try):
+    def batch_generate(self, system_prompt: str, user_prompts: list[str], **generation_kwargs) -> list[str | None]:
+        return [self.generate(system_prompt, p, **generation_kwargs) for p in user_prompts]
+
+
+class HuggingFaceLLM(LLMInterface):
+    def __init__(self, model: str, batch_size: int = 8, device: str = "auto"):
+        self.model_name = model
+        self.batch_size = batch_size
+        self.device = device
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model,
+            torch_dtype="auto",
+            device_map=device,
+        )
+
+        if self.tokenizer.pad_token_id is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
+    def _format_prompt(self, system_prompt: str, user_prompt: str) -> str:
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        return self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str | None:
+        return self.batch_generate(system_prompt, [user_prompt], **generation_kwargs)[0]
+
+    def batch_generate(
+        self,
+        system_prompt: str,
+        user_prompts: list[str],
+        **generation_kwargs,
+    ) -> list[str | None]:
+        formatted_prompts = [self._format_prompt(system_prompt, p) for p in user_prompts]
+        outputs: list[str | None] = []
+
+        for i in range(0, len(formatted_prompts), self.batch_size):
+            batch_prompts = formatted_prompts[i : i + self.batch_size]
+
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,  # type : ignore
-                )
-                label = response.choices[0].message.content
-                break
-            except Exception as e:
-                print(e)
-        return label
+                inputs = self.tokenizer(
+                    batch_prompts,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                ).to(self.device)
 
+                with torch.no_grad():
+                    generated_ids = self.model.generate(
+                        **inputs,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        **generation_kwargs,
+                    )
 
-# class GoogleGeminiLLM(LLMInterface):
-#     def __init__(self, api_key: str, model: str = "gemini-pro"):
-#         try:
-#             import google.generativeai as genai
-#         except ImportError as e:
-#             raise ImportError("Install google-generativeai to use Google Gemini API.") from e
+                input_lengths = inputs["attention_mask"].sum(dim=1)
 
-#         genai.configure(api_key=api_key)
-#         self.model = genai.GenerativeModel(model)
+                for j, output_ids in enumerate(generated_ids):
+                    new_tokens = output_ids[input_lengths[j] :]
+                    text = self.tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+                    outputs.append(text)
+            except Exception:
+                outputs.extend([None] * len(batch_prompts))
 
-#     def generate(self, system_prompt: str, user_prompt: str) -> str:
-#         prompt = f"{system_prompt}\n\n{user_prompt}"
-#         response = self.model.generate_content(prompt)
-#         return response.text.strip()
-
-
-# class CohereLLM(LLMInterface):
-#     def __init__(self, api_key: str, model: str = "command"):
-#         try:
-#             import cohere
-#         except ImportError as e:
-#             raise ImportError("Install cohere to use Cohere API.") from e
-
-#         self.client = cohere.Client(api_key)
-#         self.model = model
-
-#     def generate(self, system_prompt: str, user_prompt: str) -> str:
-#         prompt = f"{system_prompt}\n\n{user_prompt}"
-#         response = self.client.generate(model=self.model, prompt=prompt)
-#         return response.generations[0].text.strip()
-
-
-# class AnthropicLLM(LLMInterface):
-#     def __init__(self, api_key: str, model: str = "claude-3-haiku-20240307"):
-#         try:
-#             import anthropic
-#         except ImportError as e:
-#             raise ImportError("Install anthropic to use Anthropic API.") from e
-
-#         self.client = anthropic.Anthropic(api_key=api_key)
-#         self.model = model
-
-#     def generate(self, system_prompt: str, user_prompt: str) -> str:
-#         response = self.client.messages.create(
-#             model=self.model,
-#             system=system_prompt,
-#             messages=[{"role": "user", "content": user_prompt}],
-#             max_tokens=1024,
-#         )
-#         return response.content[0].text.strip()
+        return outputs

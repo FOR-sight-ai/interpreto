@@ -1,3 +1,27 @@
+# MIT License
+#
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 
 import json
@@ -298,82 +322,6 @@ def _resolve_class_importances_row(
     return None
 
 
-def _resolve_class_activations_matrix(
-    activations: dict[Any, list[list[float]]],
-    class_key: Any,
-    class_name: Any,
-    class_index: int,
-) -> list[list[float]] | None:
-    for candidate in (
-        class_key,
-        class_name,
-        class_index,
-        str(class_key),
-        str(class_index),
-    ):
-        if candidate in activations:
-            return activations[candidate]
-    return None
-
-
-def _coerce_class_activations_local(
-    concepts_activations: Any,
-    sample_length: int,
-) -> tuple[list[list[float]], dict[Any, list[list[float]]] | None]:
-    if isinstance(concepts_activations, dict):
-        if not concepts_activations:
-            return [], {}
-        activations_map: dict[Any, list[list[float]]] = {}
-        expected_rows = None
-        expected_cols = None
-        for key, values in concepts_activations.items():
-            matrix = _to_list(values)
-            if not isinstance(matrix, list):
-                raise TypeError("concepts_activations must be a 2D list or tensor.")
-            if len(matrix) not in (1, sample_length):
-                raise ValueError("concepts_activations must have one row or one row per sample element.")
-            normalized = _coerce_matrix(
-                matrix,
-                len(matrix),
-                name="concepts_activations",
-                row_count_error=("concepts_activations must have one row or one row per sample element."),
-            )
-            if expected_rows is None:
-                expected_rows = len(normalized)
-            elif len(normalized) != expected_rows:
-                raise ValueError("concepts_activations rows must have consistent length.")
-            cols = len(normalized[0]) if normalized else 0
-            if expected_cols is None:
-                expected_cols = cols
-            elif cols != expected_cols:
-                raise ValueError("concepts_activations rows must have consistent length.")
-            activations_map[key] = normalized
-
-        aggregated = []
-        if expected_rows and expected_cols is not None:
-            aggregated = [[0.0] * expected_cols for _ in range(expected_rows)]
-            for matrix in activations_map.values():
-                for row_index in range(expected_rows):
-                    row = matrix[row_index]
-                    for concept_id in range(expected_cols):
-                        aggregated[row_index][concept_id] += abs(row[concept_id])
-
-        return aggregated, activations_map
-
-    raw_activations = _to_list(concepts_activations)
-    if not isinstance(raw_activations, list):
-        raise TypeError("concepts_activations must be a 2D list or tensor.")
-    if len(raw_activations) not in (1, sample_length):
-        raise ValueError("concepts_activations must have one row or one row per sample element.")
-    activations = _coerce_matrix(
-        raw_activations,
-        len(raw_activations),
-        name="concepts_activations",
-        row_count_error=("concepts_activations must have one row or one row per sample element."),
-    )
-    return activations, None
-
-
 def _render_visualization_html(
     body: str,
     *,
@@ -405,7 +353,7 @@ def plot_concepts(
 
     The mode is inferred from the inputs:
     - classification_global: sample is None and concepts_activations is None.
-    - classification_local: sample and concepts_activations provided, classes_names provided.
+    - classification_local: sample provided and classes_names provided.
     - generation_local: sample and concepts_activations provided, classes_names omitted.
 
     Args:
@@ -421,10 +369,8 @@ def plot_concepts(
             - generation_local: list/tuple/dict of labels.
         sample: Required for local modes. Full sequence tokens (inputs + outputs for generation).
         classes_names: Optional class display names. If omitted, the plot defaults to generation_local.
-        concepts_activations: Token-level concept activations.
-            - classification_local: tensor/list with shape (len(sample), nb_concepts) or
-              (1, nb_concepts); dicts may be keyed by class id/name.
-            - generation_local: tensor/list with shape (len(sample), nb_concepts).
+        concepts_activations: Token-level concept activations for generation_local with shape
+            (len(sample), nb_concepts).
         top_k: Number of concepts shown in classification lists, and for generation_local when no
             output token is selected.
         concept_color: Default concept color for ranking bars.
@@ -434,7 +380,7 @@ def plot_concepts(
         save_path: Optional path to save the HTML visualization.
 
     Raises:
-        ValueError: If sample and concepts_activations are not provided together, or top_k is invalid.
+        ValueError: If local mode inputs are incomplete, or top_k is invalid.
 
     Examples:
         >>> # classification global (from docs/notebooks/classification_demonstration.ipynb)
@@ -448,7 +394,6 @@ def plot_concepts(
         >>> plot_concepts(
         ...     sample=[example],
         ...     classes_names=classes_names,
-        ...     concepts_activations=concepts_activations,
         ...     concepts_importances=local_importance.squeeze(),
         ...     concepts_labels=concept_interpretations,
         ... )
@@ -482,14 +427,13 @@ def plot_concepts(
         )
         return
 
-    if has_sample != has_activations:
-        raise ValueError("sample and concepts_activations must be provided together for local modes.")
+    if not has_sample:
+        raise ValueError("sample must be provided for local modes.")
 
     if classes_names is not None:
         plot_classification_local_concepts(
             sample,  # type: ignore
             classes_names,
-            concepts_activations,
             concepts_importances,
             concepts_labels,
             top_k=resolved_top_k,
@@ -500,6 +444,9 @@ def plot_concepts(
             save_path=save_path,
         )
         return
+
+    if not has_activations:
+        raise ValueError("concepts_activations must be provided for generation_local mode.")
 
     plot_generation_local_concepts(
         concepts_labels,
@@ -533,7 +480,7 @@ def plot_classification_global_concepts(
     Args:
         classes_names: Display names for classes.
         concepts_labels: Either {concept_id: label} or {class_id/class_name: {concept_id: label}}.
-        concepts_importances: {class_name: [scores]} with scores in [0, 1] or a tensor.
+        concepts_importances: {class_name: [scores]} (can include positive and negative values) or a tensor.
         top_k: Number of concepts shown per class.
         default_colormap: Optional {id: color} override for class colors.
         onclick_colormap: (selected_color, hover_color) for active labels.
@@ -607,9 +554,7 @@ def plot_classification_global_concepts(
                 }
             )
 
-        concepts.sort(key=lambda item: item["importance"], reverse=True)
-        if top_k:
-            concepts = concepts[:top_k]
+        concepts.sort(key=lambda item: abs(item["importance"]), reverse=True)
         concepts_by_class.append(concepts)
 
     data = {
@@ -619,6 +564,7 @@ def plot_classification_global_concepts(
         "concept_color": concept_color,
         "default_colormap": {},
         "onclick_colormap": on_click_colors,
+        "concepts_are_classwise": classwise,
     }
 
     json_data = json.dumps(data, ensure_ascii=True, indent=2)
@@ -628,16 +574,20 @@ def plot_classification_global_concepts(
         f"<h3>Classes</h3>"
         f"<div class='line-style'><div id='classes-{unique_id}'></div></div>\n"
         f"<div id='concepts-wrapper-{unique_id}' class='is-hidden'>"
+        f"<div class='concepts-header'>"
         f"<h3>Concepts</h3>"
+        f"<div id='concepts-scale-{unique_id}' class='concepts-scale'></div>"
+        f"</div>"
         f"<div id='concepts-{unique_id}'></div>"
         f"</div>\n"
     )
     body += f"""
     <script>
-        var viz = new ClassificationConceptsVisualization(
+        var viz = new ClassificationConceptsBarPlotVisualization(
             'classes-{unique_id}',
             'concepts-{unique_id}',
             'concepts-wrapper-{unique_id}',
+            'concepts-scale-{unique_id}',
             {json.dumps(json_data)}
         );
         window.viz = viz;
@@ -649,7 +599,6 @@ def plot_classification_global_concepts(
 def plot_classification_local_concepts(
     sample: list[str],
     classes_names: list[str] | dict[int, str] | None,
-    concepts_activations: Any,
     concepts_importances: Any,
     concepts_labels: list[str | list[str]] | tuple[str | list[str], ...] | dict[int, str | list[str]],
     *,
@@ -661,20 +610,19 @@ def plot_classification_local_concepts(
     save_path: str | os.PathLike[str] | None = None,
 ) -> None:
     """
-    Display local concept activations for classification tasks.
+    Display local concept importances for classification tasks.
 
     Args:
         sample: Full sequence tokens.
         classes_names: Display names for classes.
-        concepts_activations: Tensor, list, or dict with shape (len(sample), nb_concepts) or
-            (1, nb_concepts). Dicts may be keyed by class id/name.
         concepts_importances: Tensor, list, or dict with shape (nb_classes, nb_concepts) or
             {class_id/class_name: [scores]}.
         concepts_labels: Either {concept_id: label}, a list of labels, or
             {class_id/class_name: {concept_id: label}} for class-wise labels.
-        top_k: Number of concepts shown in the concept list.
-        default_colormap: Optional {concept_id: color} override for concept colors.
-        onclick_colormap: (selected_color, hover_color) for active labels.
+        top_k: Number of concepts used to build the per-class concept selection.
+        concept_color: Legacy compatibility argument for this view.
+        default_colormap: Legacy compatibility argument for this view.
+        onclick_colormap: Legacy compatibility argument for this view.
     """
 
     if not isinstance(top_k, int) or top_k <= 0:
@@ -684,8 +632,6 @@ def plot_classification_local_concepts(
         raise TypeError("sample must be a list or tuple of strings.")
 
     sample_tokens = [str(token) for token in sample]
-
-    activations, activations_by_class = _coerce_class_activations_local(concepts_activations, len(sample_tokens))
 
     class_keys, importances_map = _coerce_class_importances_local(concepts_importances)
     class_entries = _resolve_class_entries(classes_names, class_keys)
@@ -701,12 +647,7 @@ def plot_classification_local_concepts(
         elif len(row) != expected_len:
             raise ValueError("concepts_importances rows must have consistent length.")
         importances.append(row)
-    nb_concepts = len(activations[0]) if activations else 0
-    if importances:
-        if nb_concepts and len(importances[0]) != nb_concepts:
-            raise ValueError("concepts_importances must have the same number of concepts as concepts_activations.")
-        if not nb_concepts:
-            nb_concepts = len(importances[0])
+    nb_concepts = len(importances[0]) if importances else 0
 
     class_key_set = set(class_keys) | {name for _, name in class_entries}
     if isinstance(classes_names, dict):
@@ -733,7 +674,7 @@ def plot_classification_local_concepts(
         labels = _normalize_concepts_labels(concepts_labels, nb_concepts)
 
     totals = [0.0] * nb_concepts
-    for row in activations:
+    for row in importances:
         for concept_id, value in enumerate(row):
             totals[concept_id] += abs(value)
     ordered_concept_ids = sorted(
@@ -744,22 +685,13 @@ def plot_classification_local_concepts(
     concept_color_map = _build_default_colormap(ordered_concept_ids, default_colormap)
     on_click_colors = list(_normalize_onclick_colormap(onclick_colormap))
 
-    activations_by_class_index = None
-    if activations_by_class is not None:
-        activations_by_class_index = {}
-        for class_index, (class_key, class_name) in enumerate(class_entries):
-            matrix = _resolve_class_activations_matrix(activations_by_class, class_key, class_name, class_index)
-            if matrix is None:
-                raise ValueError(f"Missing activations for class {class_name!r}.")
-            activations_by_class_index[class_index] = matrix
-
+    # The local classification renderer only needs class-level importances and labels,
+    # but the legacy color payload fields stay in place for API and payload compatibility.
     data = {
         "classes": classes_descriptions,
         "sample": sample_tokens,
         "labels": labels,
         "labels_by_class": labels_by_class,
-        "activations": activations,
-        "activations_by_class": activations_by_class_index,
         "importances": importances,
         "top_k": top_k,
         "concept_color": concept_color,
@@ -770,22 +702,11 @@ def plot_classification_local_concepts(
     json_data = json.dumps(data, ensure_ascii=True, indent=2)
 
     unique_id = f"{uuid.uuid4()}"
-    body = (
-        f"<h3>Classes</h3>"
-        f"<div class='line-style'><div id='classes-{unique_id}'></div></div>\n"
-        f"<div id='concepts-wrapper-{unique_id}'>"
-        f"<h3>Concepts</h3>"
-        f"<div id='concepts-{unique_id}'></div>"
-        f"</div>\n"
-        f"<h3>Sample</h3><div id='sample-{unique_id}'></div>\n"
-    )
+    body = f"<div id='classification-local-{unique_id}'></div>\n"
     body += f"""
     <script>
         var viz = new ClassificationLocalConceptsVisualization(
-            'classes-{unique_id}',
-            'concepts-{unique_id}',
-            'concepts-wrapper-{unique_id}',
-            'sample-{unique_id}',
+            'classification-local-{unique_id}',
             {json.dumps(json_data)}
         );
         window.viz = viz;

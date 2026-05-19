@@ -46,7 +46,7 @@ from interpreto.concepts.interpretations.llm_labels import (
     _sample_random,
     _sample_top,
 )
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
+from interpreto.model_wrapping.llm_interface import LLMInterface
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
