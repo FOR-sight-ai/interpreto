@@ -3,10 +3,12 @@
 ## Common API
 
 ```
-from interpreto import Method
+from interpreto import Method, plot_attributions
 
 explainer = Method(model, tokenizer, kwargs)
 explanation = explainer(inputs, targets)
+
+plot_attributions(explanation[0])
 ```
 
 The API have two steps:
@@ -30,6 +32,8 @@ For gradient-based attribution methods, granularity is not calculated at the per
 
 - `inputs`: the samples for which explanations are requested.
 - `targets`: specifies what to explain in the inputs. This can be a specific class or a set of classes (for classification tasks), or target texts (for generation tasks). If `targets=None`, the target is automatically inferred by performing a prediction on the input using the provided model.
+
+**Step 3:** Visualize the explanations with the `plot_attributions` function.
 
 ## Available methods
 

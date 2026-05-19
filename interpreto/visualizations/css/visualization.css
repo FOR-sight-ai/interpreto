@@ -1,11 +1,17 @@
 /*
-*   CSS styling for concepts visualization
+*   CSS styling for explanation visualizations
 */
 
 /* Light mode */
 :root {
   --default-background-color: white;
   --default-text-color: black;
+  --visualization-font-family: "IBM Plex Sans", "Fira Sans", "Segoe UI", sans-serif;
+  --visualization-font-size: 14px;
+  --visualization-token-font-size: 1.1em;
+  --visualization-heading-font-size: 1.15em;
+  --visualization-tooltip-font-size: 0.85em;
+  --visualization-line-height: 1.5;
 }
 
 /* Dark mode */
@@ -21,11 +27,12 @@
   * vscode theme if available, or on the current light/dark mode if in 
   * a browser
   */
-  --background-color: var(
-    --vscode-editor-background,
-    var(--default-background-color)
-  );
+  --background-color: var(--vscode-editor-background,
+      var(--default-background-color));
   --text-color: var(--vscode-editor-foreground, var(--default-text-color));
+
+  --positive-color: #ff0000;
+  --negative-color: #0000ff;
 
   /* Reversed colors  */
   --reversed-background-color: var(--text-color);
@@ -35,7 +42,33 @@
 .body-visualization {
   background-color: var(--background-color);
   color: var(--text-color);
-  font-family: sans-serif;
+  font-family: var(--visualization-font-family);
+  font-size: var(--visualization-font-size);
+  line-height: var(--visualization-line-height);
+  margin: 0;
+  padding: 0;
+}
+
+.body-visualization button,
+.body-visualization input,
+.body-visualization select,
+.body-visualization textarea {
+  font-family: var(--visualization-font-family);
+  font-size: inherit;
+}
+
+.body-visualization h3 {
+  font-size: var(--visualization-heading-font-size);
+  font-weight: 600;
+  margin: 0.8em 0 0.4em;
+}
+
+.body-visualization > :first-child {
+  margin-top: 0;
+}
+
+.body-visualization > :first-child > h3 {
+  margin-top: 0;
 }
 
 /* Style of the main element containing all the input sentences */
@@ -50,8 +83,10 @@
 
 /* Common style for all the words displayed (inputs, outputs, concepts) */
 .common-word-style {
-  font-family: inherit;
-  font-size: 1.2em;
+  font-family: var(--visualization-font-family) !important;
+  font-weight: inherit;
+  font-style: inherit;
+  font-size: var(--visualization-token-font-size);
   padding: 0;
   margin-right: 0.2em;
   white-space: pre-wrap;
@@ -62,23 +97,27 @@
   color: var(--text-color);
   z-index: 0;
 }
+
 /*
 * Styles of the highlighted words with attribution colors: the inputs and some of the outputs.
 */
 .highlighted-word-style {
-  position: relative; /* mandatory for the tooltip to be positioned correctly */
+  position: relative;
+  /* mandatory for the tooltip to be positioned correctly */
 }
+
 /* Highlighted words tooltips style */
 .highlighted-word-style .tooltiptext {
   visibility: hidden;
-  width: 3.5em;
-  height: 1em;
   text-align: center;
-  padding: 0.1em 0 0.7em 0;
+  padding: 0.2em 0.45em;
   border-radius: 0.5em;
-  /* reversed text colors (front & back) for the tooltips */
-  color: var(--reversed-text-color);
-  background-color: var(--reversed-background-color);
+  white-space: nowrap;
+  font-family: var(--visualization-font-family);
+  font-size: var(--visualization-tooltip-font-size);
+  line-height: 1.2;
+  color: #222;
+  background-color: #e6e6e6;
   /* Position of the tooltip w/r to the parent element */
   position: absolute;
   z-index: 1;
@@ -86,6 +125,7 @@
   bottom: 125%;
   transform: translateX(-50%);
 }
+
 .highlighted-word-style .tooltiptext::after {
   content: "";
   position: absolute;
@@ -96,9 +136,9 @@
   margin-left: -0.3em;
   border-width: 0.3em;
   border-style: solid;
-  border-color: var(--reversed-background-color) transparent transparent
-    transparent;
+  border-color: #e6e6e6 transparent transparent transparent;
 }
+
 .highlighted-word-style:hover .tooltiptext {
   visibility: visible;
 }
@@ -118,6 +158,14 @@
   outline: 2px solid red !important;
 }
 
+.is-emphasized {
+  font-weight: 600;
+}
+
+.is-hidden {
+  display: none;
+}
+
 /*
 * Style of the concepts in the concept menu.
 */
@@ -126,4 +174,23 @@
   padding-left: 0.25em;
   padding-right: 0.25em;
   outline: 2px solid transparent;
+}
+
+/*
+* Style of the class buttons/labels.
+*/
+.class-style {
+  margin-right: 0.75em;
+  padding-left: 0.25em;
+  padding-right: 0.25em;
+  outline: 2px solid transparent;
+  cursor: pointer;
+}
+
+/*
+* Style for class buttons with colored backgrounds (default multi-class view)
+*/
+.class-style-colored-border {
+  outline-width: 2px;
+  outline-style: solid;
 }

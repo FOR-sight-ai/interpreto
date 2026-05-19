@@ -669,6 +669,8 @@ def test_activations_and_gradients_on_models_long(model_name, sentences: list[st
 
 def evaluate_activations_and_gradients(model_name, sentences: list[str]):
     """Tests model with split points get activations and gradients with a large variety of models"""
+    if model_name == "hf-internal-testing/tiny-random-Gemma3ForCausalLM":
+        pytest.importorskip("sentencepiece")
 
     model = ALL_MODEL_LOADERS[model_name].from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)

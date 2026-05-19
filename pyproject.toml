@@ -28,7 +28,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interpreto"
-version = "0.4.15"
+version = "0.4.20"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -65,10 +65,10 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "transformers[sentencepiece,tokenizers]>=4.22.0",
+  "transformers>=4.22.0",
   "nltk",
   "torch>=2.0",
-  "nnsight>=0.5.1",
+  "nnsight>=0.5.1,<0.6.0",
   "jaxtyping<=0.2.36",
   "beartype",
   "mknotebooks",
@@ -115,7 +115,6 @@ lint = [
   "numpy>=2.2.0",
 ]
 notebook = ["ipykernel>=6.29.2", "ipywidgets>=8.1.2"]
-spacy = ["spacy>=3.8", "pip"]
 
 [project.urls]
 homepage = "https://github.com/FOR-sight-ai/interpreto"

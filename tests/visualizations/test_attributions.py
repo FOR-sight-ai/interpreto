@@ -1,149 +1,142 @@
-import os
+# MIT License
+#
+# Copyright (c) 2025 IRT Antoine de Saint Exupery et Universite Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupery,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+from __future__ import annotations
+
+import json
+import re
 
 import torch
-from matplotlib import pyplot as plt
 
 from interpreto.attributions.base import AttributionOutput, ModelTask
-from interpreto.visualizations.attributions import AttributionVisualization
-from interpreto.visualizations.concepts.concepts_highlight import (
-    ConceptHighlightVisualization,
-)
+from interpreto.visualizations import plot_attributions
 
 
-def test_attribution_monoclass():
-    # attributions (1 classe)
-    sentence = ["A", "B", "C", "one", "two", "three"]
-    attributions = torch.linspace(-10, 10, steps=len(sentence))
-    single_class_classification_output = AttributionOutput(
-        elements=sentence,
-        attributions=attributions,
-        model_task=ModelTask.SINGLE_CLASS_CLASSIFICATION,
-        classes=[0],
-        model_inputs_to_explain={},  # dummy, not used in visualization
-        targets=torch.Tensor(),  # dummy, not used in visualization
+def _extract_payload(html: str, viz_name: str) -> dict:
+    match = re.search(rf"new {viz_name}\((.*?)\);", html, re.DOTALL)
+    assert match, f"Expected {viz_name} call in HTML."
+    call_args = match.group(1)
+    json_literal_match = re.search(r'"(?:\\.|[^"\\])*"', call_args)
+    assert json_literal_match, "Expected JSON payload in visualization call."
+    json_string = json.loads(json_literal_match.group(0))
+    return json.loads(json_string)
+
+
+def _render_attributions_html(tmp_path, attribution_output: AttributionOutput, **kwargs: object) -> str:
+    save_path = tmp_path / "attributions.html"
+    plot_attributions(attribution_output, save_path=save_path, **kwargs)
+    return save_path.read_text(encoding="utf-8")
+
+
+def test_plot_attributions_classification_single_class_payload_keys(tmp_path):
+    attribution_output = AttributionOutput(
+        model_inputs_to_explain=None,
+        attributions=torch.tensor([[0.1, -0.2, 0.3]]),
+        elements=["1", "2", "3"],
+        targets=torch.tensor([[1]]),
+        model_task=ModelTask.CLASSIFICATION,
     )
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    output_file_path = os.path.join(current_dir, "test_attribution_monoclass.html")
+    html = _render_attributions_html(
+        tmp_path,
+        attribution_output,
+        classes_names={1: "positive"},
+    )
+    payload = _extract_payload(html, "ClassificationVisualization")
 
-    viz = AttributionVisualization(attribution_output=single_class_classification_output)
-
-    # remove the file if it already exists
-    if os.path.exists(output_file_path):
-        os.remove(output_file_path)
-
-    # generate the html file
-    viz.save(output_file_path)
-
-    # assert that the file has been created
-    assert os.path.exists(output_file_path)
-
-    os.remove(output_file_path)
+    assert {"classes", "inputs", "outputs", "custom_style", "onclick_colormap"} <= set(payload.keys())
+    assert payload["inputs"]["words"] == ["1", "2", "3"]
+    assert payload["outputs"]["words"] is None
+    assert payload["classes"][0]["id"] == 1
+    assert payload["classes"][0]["name"] == "positive"
+    assert payload["onclick_colormap"] == ["#ff0000", "#0000ff"]
 
 
-def test_attribution_multiclass():
-    # attributions (2 classes)
-    sentence = ["A", "B", "C", "one", "two", "three"]
-    nb_classes = 2
-
-    attributions = torch.rand(nb_classes, len(sentence))  # (c, l)
-    multi_class_classification_output = AttributionOutput(
-        elements=sentence,
-        attributions=attributions,
-        model_task=ModelTask.MULTI_CLASS_CLASSIFICATION,
-        classes=[0, 1],
-        model_inputs_to_explain={},  # dummy, not used in visualization
-        targets=torch.Tensor(),  # dummy, not used in visualization
+def test_plot_attributions_classification_multiclass_uses_targets(tmp_path):
+    attribution_output = AttributionOutput(
+        model_inputs_to_explain=None,
+        attributions=torch.tensor([[0.1, -0.2, 0.3], [0.2, 0.1, -0.1]]),
+        elements=["a", "b", "c"],
+        targets=torch.tensor([3, 5]),
+        model_task=ModelTask.CLASSIFICATION,
     )
 
-    viz = AttributionVisualization(
-        attribution_output=multi_class_classification_output,
-        class_names={0: "class1", 1: "class2"},
+    html = _render_attributions_html(
+        tmp_path,
+        attribution_output,
+        classes_names={3: "Class A", 5: "Class B"},
+    )
+    payload = _extract_payload(html, "ClassificationVisualization")
+
+    class_ids = [entry["id"] for entry in payload["classes"]]
+    assert class_ids == [3, 5]
+    assert [entry["name"] for entry in payload["classes"]] == ["Class A", "Class B"]
+    assert all("color" in entry for entry in payload["classes"])
+    assert len(payload["inputs"]["attributions"][0]) == len(attribution_output.elements)
+    assert len(payload["inputs"]["attributions"][0][0]) == 2
+
+
+def test_plot_attributions_classification_accepts_list_names(tmp_path):
+    attribution_output = AttributionOutput(
+        model_inputs_to_explain=None,
+        attributions=torch.tensor([[0.1, -0.2, 0.3], [0.2, 0.1, -0.1]]),
+        elements=["a", "b", "c"],
+        targets=torch.tensor([0, 1]),
+        model_task=ModelTask.CLASSIFICATION,
     )
 
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    output_file_path = os.path.join(current_dir, "test_attribution_multiclass.html")
+    html = _render_attributions_html(
+        tmp_path,
+        attribution_output,
+        classes_names=["negative", "positive"],
+    )
+    payload = _extract_payload(html, "ClassificationVisualization")
 
-    # remove the file if it already exists
-    if os.path.exists(output_file_path):
-        os.remove(output_file_path)
-
-    # generate the html file
-    viz.save(output_file_path)
-
-    # assert that the file has been created
-    assert os.path.exists(output_file_path)
-
-    os.remove(output_file_path)
+    assert [entry["name"] for entry in payload["classes"]] == ["negative", "positive"]
 
 
-def test_attribution_generation():
-    inputs_sentence = ["A", "B", "C", "one", "two", "three"]
-    outputs_sentence = ["do", "re", "mi"]
+def test_plot_attributions_generation_includes_nulls(tmp_path):
+    nan = float("nan")
+    attribution_output = AttributionOutput(
+        model_inputs_to_explain=None,
+        attributions=torch.tensor(
+            [
+                [0.1, nan, 0.2, nan],
+                [0.0, 0.3, nan, 0.4],
+            ]
+        ),
+        elements=["in1", "in2", "out1", "out2"],
+        targets=torch.tensor([0, 1]),
+        model_task=ModelTask.GENERATION,
+    )
 
-    def make_attributions_outputs(inputs, outputs):
-        attributions = torch.rand(len(outputs), len(inputs) + len(outputs))  # (l_g, l)
-        return AttributionOutput(
-            elements=inputs + outputs,
-            attributions=attributions,
-            model_task=ModelTask.GENERATION,
-            model_inputs_to_explain={},  # dummy, not used in visualization
-            targets=torch.Tensor(),  # dummy, not used in visualization
-        )
+    html = _render_attributions_html(tmp_path, attribution_output)
+    payload = _extract_payload(html, "GenerationVisualization")
 
-    generation_output = make_attributions_outputs(inputs_sentence, outputs_sentence)
-
-    viz = AttributionVisualization(attribution_output=generation_output)
-
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    output_file_path = os.path.join(current_dir, "test_attribution_generation.html")
-
-    # remove the file if it already exists
-    if os.path.exists(output_file_path):
-        os.remove(output_file_path)
-
-    # generate the html file
-    viz.save(output_file_path)
-
-    # assert that the file has been created
-    assert os.path.exists(output_file_path)
-
-    os.remove(output_file_path)
-
-
-def test_concepts():
-    # Concepts: 9 concepts (with inputs attributions for each output word)
-
-    inputs_sentence = ["A", "B", "C", "one", "two", "three"]
-    outputs_sentence = ["do", "re", "mi"]
-    nb_concepts = 9
-
-    def make_attributions_outputs(inputs, outputs):
-        attributions = torch.rand(len(inputs) + len(outputs), len(outputs), nb_concepts)  # (l, l_g, c)
-        return AttributionOutput(
-            elements=inputs + outputs,
-            attributions=attributions,
-            model_task=ModelTask.GENERATION,
-            model_inputs_to_explain={},  # dummy, not used in visualization
-            targets=torch.Tensor(),  # dummy, not used in visualization
-        )
-
-    generation_output = make_attributions_outputs(inputs_sentence, outputs_sentence)
-    colors_set1 = plt.get_cmap("Set1").colors
-
-    viz = ConceptHighlightVisualization(generation_output, concepts_colors=colors_set1)
-
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    output_file_path = os.path.join(current_dir, "test_concepts.html")
-
-    # remove the file if it already exists
-    if os.path.exists(output_file_path):
-        os.remove(output_file_path)
-
-    # generate the html file
-    viz.save(output_file_path)
-
-    # assert that the file has been created
-    assert os.path.exists(output_file_path)
-
-    os.remove(output_file_path)
+    assert {"classes", "inputs", "outputs", "custom_style"} <= set(payload.keys())
+    assert payload["inputs"]["words"] == ["in1", "in2"]
+    assert payload["outputs"]["words"] == ["out1", "out2"]
+    assert payload["classes"][0]["name"] == "None"
+    assert payload["inputs"]["attributions"][0][1][0] is None
+    assert payload["outputs"]["attributions"][0][1][0] is None

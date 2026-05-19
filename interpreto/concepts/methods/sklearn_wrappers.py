@@ -111,8 +111,10 @@ class ICAWrapper(SkLearnWrapper):
         self.to(device)
 
     @jaxtyped(typechecker=beartype)
-    def fit(self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False) -> FastICA | None:
-        ica = FastICA(n_components=self.nb_concepts, random_state=self.random_state, max_iter=500)
+    def fit(
+        self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
+    ) -> FastICA | None:
+        ica = FastICA(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
         ica.fit(x.detach().cpu().numpy())
 
         self.mean.data = torch.as_tensor(ica.mean_, dtype=torch.float32, device=self.mean.device)
