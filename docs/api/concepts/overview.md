@@ -89,11 +89,56 @@ This may take quite a long time depending on the number of concepts and the size
 
 ### Step 5: Interpret the obtained concepts
 
-After the fit, concepts are abstract direction in the middle of the model.
+After the fit, concepts are abstract directions in the middle of the model.
 To interpret the concepts, we need to communicate what they correspond to to the user.
-For now, the only method is [TopKInputs](./interpretations/topk_inputs.md),
-which associate each concept to the topk inputs that activates it the most.
+There are several interpretation methods available:
+
+#### TopKInputs (global interpretation)
+
+[TopKInputs](./interpretations/topk_inputs.md) associates each concept to the top-k inputs that activate it the most.
 These inputs can be tokens, words, sentences, or samples.
+
+```python
+from interpreto.concepts.interpretations import TopKInputs
+
+topk = TopKInputs(concept_explainer, k=5)
+topk_words = topk.interpret(inputs=dataset, concepts_indices="all")
+```
+
+#### LLM Labels
+
+[LLM Labels](./interpretations/llm_labels.md) uses a large language model to generate natural-language labels
+for each concept based on its top-k activating inputs.
+
+#### Input-to-concept attributions (local interpretation)
+
+[Concept Attributions](./interpretations/concept_attributions.md) reveal which **tokens in a specific input**
+are responsible for activating a given concept. This provides a **local** (per-sample) interpretation,
+complementing the global view offered by TopKInputs.
+
+This is done by combining the concept framework with perturbation-based attribution methods:
+
+```python
+from interpreto import Occlusion
+
+# Get the bridge model that maps inputs → concept activations
+explainer = Occlusion(
+    concept_explainer.inputs_to_concepts,
+    model_with_split_points.tokenizer,
+    batch_size=256,
+)
+
+# Explain all concepts (or pass targets=torch.arange(5) for specific concepts)
+results = explainer.explain(inputs)
+```
+
+> **Note:** Only perturbation-based methods (Occlusion, Lime, KernelShap, Sobol) are supported.
+> Gradient-based methods are not compatible with the input-to-concept pipeline.
+
+For classification models, use [`SplitSequenceClassification`](./split_sequence_classification.md)
+instead of `ModelWithSplitPoints` for a simpler setup.
+
+More details in the [Concept Attributions documentation](./interpretations/concept_attributions.md).
 
 ### Step 6: Evaluate concepts' contributions to the output
 
