@@ -165,7 +165,6 @@ class Granularity(Enum):
     PART_SENTENCE = "part_sentence"  # Part of sentences, split on ",", ";", ":", ".", "!", "?"
     # PARAGRAPH = "paragraph"  # Not supported yet, the "\n\n" characters are replaced by spaces in many tokenizers.
     DEFAULT = ALL_TOKENS
-    aggregation_strategies = GranularityAggregationStrategy
 
     # @jaxtyped(typechecker=beartype)
     def get_indices(
@@ -201,7 +200,7 @@ class Granularity(Enum):
 
         Args:
             inputs_mapping (BatchEncoding): Tokenized inputs, the output of
-                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True)`
+                `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
             tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast): Hugging-Face tokenizer used downstream.
 
         Raises:
@@ -300,7 +299,7 @@ class Granularity(Enum):
                 raise NotImplementedError(f"Granularity level {self} not implemented")
 
     @staticmethod
-    def __all_tokens_get_indices(tokens_ids) -> list[list[int]]:
+    def __all_tokens_get_indices(tokens_ids: torch.Tensor) -> list[list[int]]:
         """Indices for :pyattr:`ALL_TOKENS` – every position kept."""
         length = len(tokens_ids)
         return [[i] for i in range(length)]
@@ -606,8 +605,9 @@ class Granularity(Enum):
                     ``g`` is the padded sequence length in the specific granularity,
                     and ``lp`` is the padded sequence length.
         """
-        # get indices correspondence between granularity and ALL_TOKENS
-        indices_list: list[list[list[int]]] = self.get_indices(inputs, tokenizer)
+        if indices_list is None:
+            # get indices correspondence between granularity and ALL_TOKENS
+            indices_list = self.get_indices(inputs, tokenizer)
 
         # iterate over the samples
         assoc_matrix_list: list[Bool[torch.Tensor, g, lp]] = []

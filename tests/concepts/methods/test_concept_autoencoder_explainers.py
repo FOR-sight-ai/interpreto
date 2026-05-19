@@ -274,5 +274,5 @@ if __name__ == "__main__":
         activations_dict=activations_dict,
         sentences=sentences,
         method_class=SemiNMFConcepts,
-        granularity=ModelWithSplitPoints.activation_granularities.WORD,
+        granularity=ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
     )
