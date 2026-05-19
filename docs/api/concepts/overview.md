@@ -37,7 +37,7 @@ interpretation = TopKInputs(concept_explainer).interpret(dataset)
 concept_gradients = concept_explainer.concept_output_gradient(inputs=dataset)
 ```
 
-The API has five steps for now but will have 6 in the future:
+The API has five steps:
 
 ### Step 1: Load and split your model with `ModelWithSplitPoints`
 
@@ -48,6 +48,10 @@ The main method is thus `get_activations` which takes inputs and returns a dicti
 It can be initialized from the model repo id or from a model instance.
 
 More details in the [`ModelWithSplitPoints` documentation](./model_with_split_points.md).
+
+> **For classification models:** Use [`SplitSequenceClassification`](./split_sequence_classification.md)
+> instead. It automatically identifies the classification head as the split point, removing the need
+> to manually specify split points. It also enables the [input-to-concept attribution](./interpretations/concept_attributions.md) workflow.
 
 ### Step 2: Compute the model activations on the split_point
 
