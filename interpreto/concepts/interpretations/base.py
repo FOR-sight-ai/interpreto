@@ -31,7 +31,7 @@ from __future__ import annotations
 import warnings
 from abc import ABC, abstractmethod
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from functools import lru_cache
 from typing import Any, Literal
 
@@ -45,6 +45,7 @@ from nltk.tokenize import word_tokenize
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.model_wrapping.split_sequence_classification import SplitSequenceClassification
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -66,7 +67,7 @@ def _ensure_nltk_resources(lemmatize: bool) -> None:
 
 @jaxtyped(typechecker=beartype)
 def extract_ngrams(
-    inputs: list[str],
+    inputs: Iterable[str],
     n: int = 1,
     count_min_threshold: int = 1,
     return_counts: bool = False,
@@ -79,7 +80,7 @@ def extract_ngrams(
     If n=3, it extracts 1-grams, 2-grams, and 3-grams.
 
     Args:
-        inputs (list[str]):
+        inputs (Iterable[str]):
             The texts to extract n-grams from.
 
         n (int):
@@ -228,7 +229,7 @@ class BaseConceptInterpretationMethod(ABC):
     def __init__(
         self,
         concept_explainer: ConceptEncoderExplainer,
-        activation_granularity: ActivationGranularity,
+        activation_granularity: ActivationGranularity | None = None,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
@@ -236,7 +237,12 @@ class BaseConceptInterpretationMethod(ABC):
         unique_words_kwargs: dict = {},
         concept_model_device: torch.device | str | None = None,
     ):
-        if activation_granularity not in (
+        if activation_granularity is None:
+            if isinstance(concept_explainer.model_with_split_points, SplitSequenceClassification):
+                activation_granularity = ActivationGranularity.CLS_TOKEN
+            else:
+                activation_granularity = ActivationGranularity.TOKEN
+        elif activation_granularity not in (
             ActivationGranularity.CLS_TOKEN,
             ActivationGranularity.TOKEN,
             ActivationGranularity.WORD,
