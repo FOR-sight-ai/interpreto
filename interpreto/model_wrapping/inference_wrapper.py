@@ -404,6 +404,8 @@ class InferenceWrapper(ABC):
                 padding_side=self.padding_side,
             ).to(self.device)
 
+        padded_inputs.pop("offset_mapping", None)
+
         if for_gradients:
             # remove the input_ids key as we cannot provide it together with inputs_embeds
             padded_inputs.pop("input_ids", None)
