@@ -24,118 +24,77 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, MutableMapping
-from functools import singledispatchmethod
-
 import torch
+from beartype import beartype
+from jaxtyping import Float, Int, jaxtyped
 
 from interpreto.model_wrapping.inference_wrapper import InferenceWrapper
-from interpreto.typing import TensorMapping
-
-# TODO: make jaxtyping in the whole file!!
 
 
 class GenerationInferenceWrapper(InferenceWrapper):
-    PAD_LEFT = True
+    """
+    Inference wrapper for generation tasks.
+    """
 
-    @singledispatchmethod
-    def get_targeted_logits(self, model_inputs, targets, mode="logits"):
-        """Return the logits associated with the target tokens.
+    padding_side = "left"
 
-        Args:
-            model_inputs: Input mapping(s) used to compute the logits.
-            targets: Token IDs of the generated part.
-            mode (str): Post-processing mode applied on the logits.
-
-        Returns:
-            torch.Tensor | Iterable[torch.Tensor]: The logits selected for the target tokens.
+    def _prepare_inputs(self, inputs, for_gradients: bool = False):
         """
+        Add position ids after padding left-padded batches.
+
+        Decoder-only models usually infer correct positions from ``input_ids``, but
+        attribution gradients are computed from ``inputs_embeds`` and therefore lose
+        the tokenizer-level padding information. Recomputing positions from the
+        attention mask keeps batched ``input_ids`` and ``inputs_embeds`` aligned.
+        """
+        padded_inputs = super()._prepare_inputs(inputs, for_gradients=for_gradients)
+        if "position_ids" in padded_inputs:
+            return padded_inputs
+        if "attention_mask" not in padded_inputs:
+            return padded_inputs
+
+        position_ids = padded_inputs["attention_mask"].long().cumsum(dim=-1) - 1  # type: ignore[index]
+        position_ids.masked_fill_(padded_inputs["attention_mask"] == 0, 0)  # type: ignore[index]
+        padded_inputs["position_ids"] = position_ids
+        return padded_inputs
+
+    def _extract_targets_from_logits(self, logits):
         raise NotImplementedError(
-            f"type {type(model_inputs)} not supported for method get_targeted_logits in class {self.__class__.__name__}"
+            "GenerationInferenceWrapper does not support computing targets from logits."
+            "Text generation is left to the user, the generated text should then be provided as targets."
         )
 
-    @get_targeted_logits.register(MutableMapping)
-    def _get_targeted_logits_from_mapping(
-        self,
-        model_inputs: TensorMapping,
-        targets: torch.Tensor,
-    ) -> torch.Tensor:
-        """Retrieve logits for a single batch of inputs.
+    @jaxtyped(typechecker=beartype)
+    def _target_logits(
+        self, logits: Float[torch.Tensor, "b l v"], targets: Int[torch.Tensor, "t"]
+    ) -> Float[torch.Tensor, "b t"]:
+        """
+        For each output token of a chunk (as defined by `_call_batch`),
+        select the logits corresponding to the initially generated text.
+
+        The targets are shared between each element of a chunk,
+        as they correspond the perturbed versions of the same input.
 
         Args:
-            model_inputs (TensorMapping): Full sequences including both the
-                prompt and the generated continuation.
-            targets (torch.Tensor): Token IDs of the continuation part with
-                shape ``(batch_size, target_length)``.
+            logits (torch.Tensor):
+                The output logits of a generation model. (batch, seq_len, vocabulary).
+                The seq_len corresponds here to the initial inputs and targets concatenated.
+            targets (torch.Tensor):
+                Indices of the generated tokens in the vocabulary,
+                serves to extract the pertinent logits from the model's output.
+                It thus corresponds to the t last tokens of the logits.
 
         Returns:
-            selected_logits (torch.Tensor): Predicted logits of shape ``(batch_size, target_length)``
-            for the provided ``targets``.
+            targeted_logits (torch.Tensor):
+                The logits corresponding to the target text given as input to `explain`.
         """
-        # remove last target token from the model inputs
-        # to avoid using the last token in the generation process
-        model_inputs = {
-            key: value[..., :-1, :] if key == "inputs_embeds" else value[..., :-1]
-            for key, value in model_inputs.items()
-        }
+        t = targets.shape[0]
 
-        # Get complete logits regardless of the input's shape.
-        logits = self._get_logits_from_mapping(model_inputs)  # (l-1, v) | (n, l-1, v) | (n, p, l-1, v)
+        # Select the t last logits
+        # We shift the select output by one to the left as we used concatenated our targets to the inputs.
+        # Therefore, the last logit vector correspond to the token generated after our target.
+        # We can thus ignore it. TODO: see if we should do this modification before the forward
+        last_logits: Float[torch.Tensor, f"b {t} v"] = logits[:, -(t + 1) : -1]
 
-        target_length = targets.shape[-1]  # lt < l
-
-        # assume the sequence dimension is the second-to-last.
-        target_logits = logits[..., -target_length:, :]  # (n,lg,v)
-
-        # Apply post-processing depending on selected mode
-        target_logits = self.mode(target_logits)
-
-        extended_targets = targets.expand(logits.shape[0], -1)
-
-        if extended_targets.shape != target_logits.shape[:-1]:
-            raise ValueError(
-                "target logits shape without the vocabulary dimension must match the extended_targets inputs ids shape."
-                f"Got {target_logits.shape[:-1]} and {extended_targets.shape}."
-            )
-
-        # For a batch case, unsqueeze the targets so that they match the logits shape.
-        selected_logits = target_logits.gather(dim=-1, index=extended_targets.unsqueeze(-1)).squeeze(-1)
-
-        return selected_logits
-
-    @get_targeted_logits.register(Iterable)
-    def _(
-        self,
-        model_inputs: Iterable[TensorMapping],
-        targets: Iterable[torch.Tensor],
-    ):
-        """Retrieve logits for each pair of inputs and targets in ``model_inputs``.
-
-        Args:
-            model_inputs (Iterable[TensorMapping]): Iterable of full input
-                mappings.
-            targets (Iterable[torch.Tensor]): Iterable of target token ID
-                tensors.
-
-        Returns:
-            Iterable[torch.Tensor]: An iterator over the logits corresponding to
-            each element of ``targets``.
-        """
-        # remove last target token from the model inputs
-        # to avoid using the last token in the generation process
-        model_inputs = [
-            {key: value[..., :-1, :] if key == "inputs_embeds" else value[..., :-1] for key, value in elem.items()}
-            for elem in model_inputs
-        ]
-        all_logits = self._get_logits_from_iterable(model_inputs)
-
-        for logits, target in zip(all_logits, targets, strict=True):
-            target_length = target.shape[-1]
-            targeted_logits = logits[..., -target_length:, :]
-
-            targeted_logits = self.mode(targeted_logits)
-
-            extended_target = target.expand(logits.shape[0], -1).to(self.device)
-
-            selected_logits = targeted_logits.gather(dim=-1, index=extended_target.unsqueeze(-1)).squeeze(-1)
-            yield selected_logits
+        # apply indexing
+        return last_logits[:, torch.arange(t), targets]

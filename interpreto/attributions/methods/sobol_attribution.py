@@ -35,12 +35,13 @@ import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
-from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin
+from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.sobol_perturbation import (
     SequenceSamplers,
     SobolTokenPerturbator,
 )
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 
 
 class Sobol(MultitaskExplainerMixin, AttributionExplainer):
@@ -73,13 +74,13 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
-        n_token_perturbations: int = 16,
+        n_token_perturbations: int = 32,
         sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.FIRST_ORDER,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,
         device: torch.device | None = None,
@@ -88,7 +89,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
             granularity (Granularity, optional): The level of granularity for the explanation.
@@ -105,10 +106,10 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
             sampler (SequenceSamplers): Sobol sequence sampler, either `SOBOL`, `HALTON` or `LatinHypercube`.
             device (torch.device): device on which the attribution method will be run
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        replace_token_id = setup_token_ids(model, tokenizer)
 
         perturbator = SobolTokenPerturbator(
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             granularity=granularity,
             replace_token_id=replace_token_id,
             n_token_perturbations=n_token_perturbations,
@@ -122,7 +123,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
 
         super().__init__(
             model=model,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             perturbator=perturbator,
             aggregator=aggregator,
             batch_size=batch_size,

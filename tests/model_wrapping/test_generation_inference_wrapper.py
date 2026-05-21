@@ -26,134 +26,94 @@ import pytest
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from interpreto.attributions.base import setup_token_ids
 from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-SENTENCES = ["Hello, my dog is cute", "Hello, my cat is cute"]
-GENERATION_MODELS = ["hf-internal-testing/tiny-random-LlamaForCausalLM", "hf-internal-testing/tiny-random-gpt2"]
-TARGET_LENGTH = 2
+GENERATION_MODELS = [
+    "hf-internal-testing/tiny-random-gpt_neo",
+    "hf-internal-testing/tiny-random-gptj",
+    "hf-internal-testing/tiny-random-CodeGenForCausalLM",
+    "hf-internal-testing/tiny-random-FalconModel",
+    "hf-internal-testing/tiny-random-LlamaForCausalLM",
+    "hf-internal-testing/tiny-random-MistralForCausalLM",
+    "hf-internal-testing/tiny-random-Starcoder2ForCausalLM",
+]
 
 
-def prepare_generation_wrapper(model_name: str):
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "left"
-
-    model = AutoModelForCausalLM.from_pretrained(model_name).to(DEVICE)
-    model.eval()
-
-    inference_wrapper = GenerationInferenceWrapper(model, batch_size=5, device=DEVICE)
-    inference_wrapper.pad_token_id = tokenizer.pad_token_id
-
-    return model, tokenizer, inference_wrapper
+def test_generation_wrapper_fast():
+    """Test generation wrapper with a single model for fast tests."""
+    test_generation_wrapper("hf-internal-testing/tiny-random-gpt2")
 
 
-def compute_reference_targeted_logits(
-    model: AutoModelForCausalLM,
-    model_inputs,
-    targets: torch.Tensor,
-    mode,
-) -> torch.Tensor:
-    trimmed_inputs = {
-        key: value[..., :-1, :] if key == "inputs_embeds" else value[..., :-1] for key, value in model_inputs.items()
-    }
-
-    with torch.no_grad():
-        logits = model(**trimmed_inputs).logits
-
-    target_logits = logits[..., -targets.shape[-1] :, :]
-    target_logits = mode(target_logits)
-    expanded_targets = targets.expand(logits.shape[0], -1)
-    return target_logits.gather(dim=-1, index=expanded_targets.unsqueeze(-1)).squeeze(-1)
-
-
+@pytest.mark.slow
 @pytest.mark.parametrize("model_name", GENERATION_MODELS)
-def test_generation_inference_wrapper_single_sentence(model_name):
-    model, tokenizer, inference_wrapper = prepare_generation_wrapper(model_name)
-
-    tokens = tokenizer(SENTENCES[0], return_tensors="pt")
-    tokens.to(DEVICE)
-    targets = tokens["input_ids"][..., -TARGET_LENGTH:]
-
-    reference_scores = compute_reference_targeted_logits(
-        model,
-        tokens,
-        targets,
-        inference_wrapper.mode,
-    )
-
-    test_scores_mapping = inference_wrapper.get_targeted_logits(tokens.copy(), targets)
-    test_scores_iterable = next(inference_wrapper.get_targeted_logits([tokens.copy()], [targets]))
-
-    assert torch.allclose(reference_scores, test_scores_mapping, atol=1e-5)
-    assert torch.allclose(reference_scores, test_scores_iterable, atol=1e-5)
-
-
-@pytest.mark.parametrize("model_name", GENERATION_MODELS)
-def test_generation_inference_wrapper_multiple_sentences(model_name):
-    model, tokenizer, inference_wrapper = prepare_generation_wrapper(model_name)
-
-    batch_tokens = tokenizer(SENTENCES, return_tensors="pt", padding=True, truncation=True)
-    batch_tokens.to(DEVICE)
-    batch_targets = batch_tokens["input_ids"][..., -TARGET_LENGTH:]
-
-    reference_batch_scores = compute_reference_targeted_logits(
-        model,
-        batch_tokens,
-        batch_targets,
-        inference_wrapper.mode,
-    )
-    test_batch_scores = inference_wrapper.get_targeted_logits(batch_tokens.copy(), batch_targets)
-
-    assert torch.allclose(reference_batch_scores, test_batch_scores, atol=1e-5)
-
-    tokenized_sentences = [tokenizer(sentence, return_tensors="pt") for sentence in SENTENCES]
-    for tokens in tokenized_sentences:
-        tokens.to(DEVICE)
-
-    targets_list = [tokens["input_ids"][..., -TARGET_LENGTH:] for tokens in tokenized_sentences]
-    reference_iterable_scores = [
-        compute_reference_targeted_logits(model, tokens, targets, inference_wrapper.mode)
-        for tokens, targets in zip(tokenized_sentences, targets_list, strict=True)
+def test_generation_wrapper(model_name):
+    # sentences divided in two batches which we could see as different samples in interpreto
+    # for each sample there are several perturbed sentences
+    sentences = [
+        ["first sample with target"] * 2,
+        ["second sample, longer, with longer target"] * 4,
     ]
-    test_iterable_scores = list(
-        inference_wrapper.get_targeted_logits([tokens.copy() for tokens in tokenized_sentences], targets_list)
-    )
 
-    for reference_scores, test_scores in zip(reference_iterable_scores, test_iterable_scores, strict=True):
-        assert torch.allclose(reference_scores, test_scores, atol=1e-5)
+    # Model preparation
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    setup_token_ids(model, tokenizer)
+    model.eval()
+    embedder = model.get_input_embeddings()
+    inference_wrapper = GenerationInferenceWrapper(model, batch_size=3, device=DEVICE)
 
-
-@pytest.mark.parametrize("model_name", GENERATION_MODELS)
-def test_generation_inference_wrapper_with_inputs_embeds(model_name):
-    model, tokenizer, inference_wrapper = prepare_generation_wrapper(model_name)
-
-    tokens = tokenizer(SENTENCES[0], return_tensors="pt")
-    tokens.to(DEVICE)
-
+    # Construct inputs
     with torch.no_grad():
-        inputs_embeds = model.get_input_embeddings()(tokens["input_ids"])
+        tokens = [tokenizer(s, return_tensors="pt", padding=True, truncation=True).to(DEVICE) for s in sentences]
+        logits = [model(**t).logits for t in tokens]
+        embeddings = []
+        targets = []
+        targeted_logits = []
+        for token, l in zip(tokens, logits, strict=True):
+            # embeddings
+            e = token.copy()
+            input_ids = e.pop("input_ids")
+            e["inputs_embeds"] = embedder(input_ids)
+            embeddings.append(e)
 
-    model_inputs = {
-        "inputs_embeds": inputs_embeds,
-        "attention_mask": tokens["attention_mask"],
-    }
-    targets = tokens["input_ids"][..., -TARGET_LENGTH:]
+            # targets (only one target per sample, second half of the sequence)
+            t = input_ids[0, input_ids.shape[1] // 2 :]
+            targets.append(t)
 
-    reference_scores = compute_reference_targeted_logits(
-        model,
-        model_inputs,
-        targets,
-        inference_wrapper.mode,
-    )
-    test_scores = inference_wrapper.get_targeted_logits(model_inputs.copy(), targets)
+            # Reference values
+            start = l.shape[1] - t.shape[0] - 1
+            end = l.shape[1] - 1
+            targeted_logits.append(l[:, torch.arange(start, end), t])
 
-    assert torch.allclose(reference_scores, test_scores, atol=1e-5)
+    # Compute elements with the wrapper
+    test_targeted_logits = list(inference_wrapper(tokens, targets))
+    inference_wrapper.gradients = True
+    test_gradients = list(inference_wrapper(embeddings, targets))
+
+    for i in range(len(sentences)):
+        assert torch.allclose(targeted_logits[i], test_targeted_logits[i], atol=1e-5), (
+            "Generation targeted logits are not correct"
+        )
+        grads_shape = (
+            len(sentences[i]),
+            targets[i].shape[0],
+            embeddings[i]["inputs_embeds"].shape[1],
+        )  # (b, n_targets, seq_len) or (b, t, l)
+        assert grads_shape == test_gradients[i].shape, "Classification gradients have wrong shape."
+
+    with pytest.raises(ValueError):
+        # "inputs_embeds" are required for gradients
+        inference_wrapper.gradients = True
+        next(inference_wrapper(tokens, targets))
+
+    with pytest.raises(NotImplementedError):
+        # targets are required for generation
+        inference_wrapper.gradients = False
+        next(inference_wrapper(tokens))
 
 
-def test_generation_inference_wrapper_unsupported_input_type():
-    inference_wrapper = object.__new__(GenerationInferenceWrapper)
-
-    with pytest.raises(NotImplementedError, match="not supported"):
-        inference_wrapper.get_targeted_logits(1, torch.tensor([[0]]))
+if __name__ == "__main__":
+    test_generation_wrapper("hf-internal-testing/tiny-random-gpt2")
+    test_generation_wrapper("hf-internal-testing/tiny-random-LlamaForCausalLM")

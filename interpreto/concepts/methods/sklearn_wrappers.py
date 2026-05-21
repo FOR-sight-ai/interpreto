@@ -36,10 +36,10 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA, FastICA, TruncatedSVD
 from torch import nn
 
-from interpreto import ModelWithSplitPoints
 from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer
+from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
 
 __all__ = [
     "ICAConcepts",

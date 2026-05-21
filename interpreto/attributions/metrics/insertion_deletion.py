@@ -33,17 +33,16 @@ from __future__ import annotations
 
 import itertools
 from abc import abstractmethod
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from transformers import BatchEncoding
+from transformers import BatchEncoding, PreTrainedTokenizer
 from transformers.modeling_utils import PreTrainedModel
-from transformers.tokenization_utils import PreTrainedTokenizer
 
-from interpreto.attributions.base import AttributionOutput, setup_tokenizer_for_perturbations
+from interpreto.attributions.base import AttributionOutput, setup_token_ids
 from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
     DeletionPerturbator,
     InsertionDeletionPerturbator,
@@ -96,7 +95,8 @@ class InsertionDeletionBase:
                 perturbed (i.e. only the 50% most important). This is useful to avoid perturbing too many elements with
                 low scores in long sequences.
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        self.tokenizer = tokenizer
+        replace_token_id = setup_token_ids(model, self.tokenizer)
 
         # perturbator
         self.perturbator = self._perturbator_class(
@@ -110,12 +110,6 @@ class InsertionDeletionBase:
         self.inference_wrapper = self._associated_inference_wrapper(
             model, batch_size=batch_size, device=device, mode=InferenceModes.SOFTMAX
         )  # type: ignore
-        self.inference_wrapper.pad_token_id = self.tokenizer.pad_token_id
-        self.perturbator.to(self.device)
-
-    def _set_tokenizer(self, model, tokenizer) -> tuple[PreTrainedModel, int]:
-        self.tokenizer = tokenizer
-        return setup_tokenizer_for_perturbations(model, self.tokenizer)
 
     @property
     def device(self) -> torch.device:
@@ -139,6 +133,18 @@ class InsertionDeletionBase:
             device (torch.device): The device to which the model should be moved.
         """
         self.inference_wrapper.to(device)
+
+    def cpu(self):
+        """
+        Move the model to the CPU.
+        """
+        self.device = torch.device("cpu")
+
+    def cuda(self):
+        """
+        Move the model to the GPU.
+        """
+        self.device = torch.device("cuda")
 
     @property
     @abstractmethod
@@ -293,15 +299,15 @@ class InsertionDeletionBase:
         granularity_aggregation_strategy = self.__verify_and_set_granularity(attributions_outputs)
 
         # Perturb the inputs
-        sample_indices_generator: Iterable[int]
-        pert_generator: Iterable[BatchEncoding]
-        target_generator: Iterable[torch.Tensor | None]
+        sample_indices_generator: Iterator[int]
+        pert_generator: Iterator[BatchEncoding]
+        target_generator: Iterator[torch.Tensor | None]
         sample_indices_generator, pert_generator, target_generator = split_iterator(
             self.perturbation_generator(attributions_outputs)  # type: ignore
         )
 
         # Compute the score on perturbed inputs
-        scores: Iterable[torch.Tensor] = self.inference_wrapper.get_targeted_logits(pert_generator, target_generator)
+        scores: Iterator[torch.Tensor] = self.inference_wrapper(pert_generator, target_generator)
 
         # Aggregate scores
         auc, grouped_scores = InsertionDeletionBase.aggregate(
@@ -356,7 +362,7 @@ class ClassificationInsertionDeletionBase(InsertionDeletionBase):
                 pert = self.perturbator.perturb(
                     all_inputs, attributions=attrib, granularity_indices=granularity_indices
                 )
-                yield i, pert, target.to(self.device)
+                yield i, pert, target.unsqueeze(0)
 
 
 class GenerationInsertionDeletionBase(InsertionDeletionBase):
@@ -400,8 +406,9 @@ class GenerationInsertionDeletionBase(InsertionDeletionBase):
         # iterate over the samples
         for sample_index, a in enumerate(attributions_outputs):
             # get the granularity indices from input tokens
-            all_inputs: BatchEncoding = a.model_inputs_to_explain  # type: ignore
-            granularity_indices = self.granularity.get_indices(all_inputs, self.tokenizer)  # type: ignore
+            # there is always a single input, we create an `AttributionOutput` for each input
+            model_inputs: BatchEncoding = a.model_inputs_to_explain  # type: ignore
+            granularity_indices = self.granularity.get_indices(model_inputs, self.tokenizer)  # type: ignore
 
             if len(granularity_indices[0]) != a.attributions.shape[1]:
                 raise ValueError(
@@ -425,7 +432,7 @@ class GenerationInsertionDeletionBase(InsertionDeletionBase):
 
                 # cut the inputs at the right index
                 # we can convert to BatchEncoding like this because we do not need all the other information
-                current_inputs = BatchEncoding({k: v[:, :nb_current_inputs] for k, v in all_inputs.items()})
+                current_inputs = BatchEncoding({k: v[:, :nb_current_inputs] for k, v in model_inputs.items()})
 
                 # cut attributions to keep only input elements
                 current_attrib: SingleAttribution = attrib[:nb_current_input_granular_elements]
@@ -436,7 +443,7 @@ class GenerationInsertionDeletionBase(InsertionDeletionBase):
                 )
 
                 # targets correspond to the current granular element
-                targets = all_inputs["input_ids"][:, granularity_indices[0][nb_current_input_granular_elements - 1]]  # type: ignore
+                targets = model_inputs["input_ids"][0, granularity_indices[0][nb_current_input_granular_elements - 1]]  # type: ignore
 
                 yield (sample_index, pert, targets)
 

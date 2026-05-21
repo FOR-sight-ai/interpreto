@@ -37,9 +37,10 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     Kernels,
     LinearRegressionAggregator,
 )
-from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -68,7 +69,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
@@ -81,7 +82,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
             granularity (Granularity, optional): The level of granularity for the explanation.
@@ -99,10 +100,10 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
             kernel_width (float | Callable): kernel width used in the `similarity_kernel`
             device (torch.device): device on which the attribution method will be run
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        replace_token_id = setup_token_ids(model, tokenizer)
 
         perturbator = ShapTokenPerturbator(
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             granularity=granularity,
             replace_token_id=replace_token_id,
             n_perturbations=n_perturbations,
@@ -116,7 +117,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
 
         super().__init__(
             model=model,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             perturbator=perturbator,
             aggregator=aggregator,
             batch_size=batch_size,

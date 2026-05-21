@@ -35,13 +35,17 @@ nav:
     - Concept Explainers:
       - Overview: api/concepts/overview.md
       - ModelWithSplitPoints: api/concepts/model_with_split_points.md
-      - Methods:
-        - Base Classes: api/concepts/methods/base.md
-        - Cockatiel: api/concepts/methods/cockatiel.md
-        - Neurons as Concepts: api/concepts/methods/neurons_as_concepts.md
-        - Optimization Methods: api/concepts/methods/optim.md
-        - SAEs (Sparse AutoEncoders): api/concepts/methods/sae.md
-      - Concept Interpretations: api/concepts/concepts_interpretations.md
+      - SplitSequenceClassification: api/concepts/split_sequence_classification.md
+      - Concept Spaces:
+        - Base Classes: api/concepts/concept_spaces/base.md
+        - Cockatiel: api/concepts/concept_spaces/cockatiel.md
+        - Neurons as Concepts: api/concepts/concept_spaces/neurons_as_concepts.md
+        - Optimization Methods: api/concepts/concept_spaces/optim.md
+        - SAEs (Sparse AutoEncoders): api/concepts/concept_spaces/sae.md
+      - Interpretations:
+        - TopKInputs: api/concepts/interpretations/topk_inputs.md
+        - LLM Labels: api/concepts/interpretations/llm_labels.md
+        - Concept Attributions: api/concepts/interpretations/concept_attributions.md
       - Metrics:
         - Overview: api/concepts/metrics/overview.md
         - ConSim: api/concepts/metrics/consim.md

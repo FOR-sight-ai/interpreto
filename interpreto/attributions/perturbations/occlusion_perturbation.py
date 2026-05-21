@@ -50,7 +50,6 @@ class OcclusionPerturbator(IdsPerturbator):
 
         Args:
             tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model.
-            inputs_embedder (torch.nn.Module | None): Optional embedder used to obtain input embeddings from input IDs.
             granularity (Granularity): Level at which occlusion should be applied.
             replace_token_id (int): Token used to replace occluded elements.
         """

@@ -168,7 +168,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         self,
         *,
         concept_explainer: ConceptEncoderExplainer,
-        activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
+        activation_granularity: ActivationGranularity | None = None,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         llm_interface: LLMInterface,
         concept_encoding_batch_size: int = 1024,

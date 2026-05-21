@@ -29,18 +29,19 @@ Occlusion attribution method
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 import torch
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations.base import OcclusionAggregator
 from interpreto.attributions.base import (
     AttributionExplainer,
     MultitaskExplainerMixin,
+    setup_token_ids,
 )
 from interpreto.attributions.perturbations import OcclusionPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -67,7 +68,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: Any,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
@@ -79,7 +80,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
             granularity (Granularity, optional): The level of granularity for the explanation.
@@ -93,17 +94,17 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             device (torch.device): device on which the attribution method will be run
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        replace_token_id = setup_token_ids(model, tokenizer)
 
         perturbator = OcclusionPerturbator(
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             granularity=granularity,
             replace_token_id=replace_token_id,
         )
 
         super().__init__(
             model=model,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             batch_size=batch_size,
             device=device,
             perturbator=perturbator,

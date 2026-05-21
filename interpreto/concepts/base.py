@@ -32,6 +32,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from functools import wraps
 from textwrap import dedent
+from types import SimpleNamespace
 from typing import Any, Generic, TypeVar
 
 import torch
@@ -39,13 +40,18 @@ from jaxtyping import Float
 from transformers.tokenization_utils_base import BatchEncoding
 
 from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
-from interpreto.attributions.base import AttributionExplainer
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,
     GranularityAggregationStrategy,
     ModelWithSplitPoints,
 )
-from interpreto.typing import ConceptModelProtocol, ConceptsActivations, LatentActivations, ModelInputs
+from interpreto.model_wrapping.split_sequence_classification import SplitSequenceClassification
+from interpreto.typing import (
+    ConceptModelProtocol,
+    ConceptsActivations,
+    IncompatibilityError,
+    LatentActivations,
+)
 
 ConceptModel = TypeVar("ConceptModel", bound=ConceptModelProtocol)
 BDL = TypeVar("BDL", bound=BaseDictionaryLearning)
@@ -61,6 +67,104 @@ def check_fitted(func: Callable[..., MethodOutput]) -> Callable[..., MethodOutpu
         return func(self, *args, **kwargs)
 
     return wrapper
+
+
+class ModelForInputsToConcepts:
+    """Bridge model that maps raw inputs to concept activations.
+
+    Composes a ``SplitSequenceClassification`` (inputs → latent activations)
+    with a concept model encoder (latent activations → concept activations).
+
+    The goal is to return this as the concept_explainer.inputs_to_concepts property.
+    Which will then be used for in attribution methods.
+
+    The resulting object quacks enough like a ``PreTrainedModel`` to be usable
+    inside ``InputsToConceptsInferenceWrapper``: it exposes ``.eval()``,
+    ``.config.pad_token_id``, and ``__call__`` returns an object with a
+    ``.logits`` attribute.
+    """
+
+    def __init__(
+        self,
+        concept_explainer: ConceptEncoderExplainer,
+    ):
+        self.split_model: SplitSequenceClassification
+        self.split_model = concept_explainer.model_with_split_points  # type: ignore
+        if not isinstance(self.split_model, SplitSequenceClassification):
+            raise IncompatibilityError(
+                "The split model must be a SplitSequenceClassification model."
+                f" Got {self.split_model.__class__.__name__}."
+            )
+
+        self.concept_model = concept_explainer.concept_model
+        if self.concept_model.device != self.split_model.device:  # type: ignore  # TODO: add device to ConceptModelProtocol
+            self.concept_model.to(self.split_model.device)  # type: ignore
+            self.concept_model.device = (  # type: ignore
+                self.split_model.device
+            )  # Overcomplete models `.to()` method does not set the device
+
+        self.nb_concepts = concept_explainer.concept_model.nb_concepts
+
+        # Expose a minimal config so InferenceWrapper.__init__ and setup_token_ids can work
+        self.config = SimpleNamespace(
+            pad_token_id=self.split_model.tokenizer.pad_token_id,
+            vocab_size=getattr(self.split_model._model.config, "vocab_size", None),
+        )
+
+    def eval(self):
+        """No-op: the underlying models are already in eval mode via nnsight."""
+        return self
+
+    def resize_token_embeddings(self, new_num_tokens: int):
+        """No-op: the concept model does not have token embeddings."""
+        self.split_model._model.resize_token_embeddings(new_num_tokens)
+
+    def __call__(self, **kwargs):
+        """Run inputs → activations → concepts and return a BaseModelOutput-like object.
+
+        Returns:
+            SimpleNamespace with a ``.logits`` attribute containing concept activations.
+        """
+        activations: Float[torch.Tensor, "n d"] = self.split_model.inputs_to_activations(kwargs)
+
+        # TODO: use `encode_activations` which should be renamed `activations_to_concepts`
+        concepts = self.concept_model.encode(activations)
+        if isinstance(concepts, tuple):
+            concepts = concepts[1]
+        return SimpleNamespace(logits=concepts)
+
+    @property
+    def device(self) -> torch.device:
+        """
+        Returns:
+            torch.device: The device on which the model is loaded.
+        """
+        return self.split_model.device  # type: ignore
+
+    @device.setter
+    def device(self, device: torch.device):
+        """
+        Sets the device on which the model is loaded.
+
+        Args:
+            device (torch.device): wanted device (e.g., "cpu" or "cuda").
+        """
+        self.split_model.to(device)  # type: ignore
+        self.concept_model.to(device)  # type: ignore
+
+    def to(self, device: torch.device, dtype: torch.dtype | None = None):
+        """
+        Move the model to the specified device.
+
+        Args:
+            device (torch.device): The device to which the model should be moved.
+            dtype (torch.dtype | None): The desired data type of the model's parameters.
+        """
+        if dtype is not None:
+            self.split_model.to(device, dtype)  # type: ignore
+        else:
+            self.split_model.to(device)  # type: ignore
+        self.concept_model.to(device)  # type: ignore
 
 
 class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
@@ -221,27 +325,18 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """
         raise NotImplementedError("Use the new API: TopKInputs(concept_explainer).interpret(...).")
 
-    @check_fitted
-    def input_concept_attribution(
-        self,
-        inputs: ModelInputs,
-        concept: int,
-        attribution_method: type[AttributionExplainer],
-        **attribution_kwargs,
-    ) -> list[float]:
-        """Attributes model inputs for a selected concept.
+    @property
+    def inputs_to_concepts(self) -> ModelForInputsToConcepts:
+        """Returns a model that maps raw inputs to concept activations.
 
-        Args:
-            inputs (ModelInputs): The input data, which can be a string, a list of tokens/words/clauses/sentences
-                or a dataset.
-            concept (int): Index identifying the position of the concept of interest (score in the
-                `ConceptsActivations` tensor) for which relevant input elements should be retrieved.
-            attribution_method: The attribution method to obtain importance scores for input elements.
+        The model can be passed to an attribution method,
+        to obtain inputs to concepts attributions.
+        Which are ways to interpret the concepts.
 
         Returns:
-            A list of attribution scores for each input.
+            ModelForInputsToConcepts: A model that maps raw inputs to concept activations.
         """
-        raise NotImplementedError("Input-to-concept attribution method is not implemented yet.")
+        return ModelForInputsToConcepts(self)
 
 
 class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning], Generic[BDL]):
@@ -341,28 +436,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             torch.Tensor: A `torch.Tensor` containing the learned dictionary.
         """
         return self.concept_model.get_dictionary()  # type: ignore
-
-    @check_fitted
-    def concept_output_attribution(
-        self,
-        inputs: ModelInputs,
-        concepts: ConceptsActivations,
-        target: int,
-        attribution_method: type[AttributionExplainer],
-        **attribution_kwargs,
-    ) -> list[float]:
-        """Computes the attribution of each concept for the logit of a target output element.
-
-        Args:
-            inputs (ModelInputs): An input data-point for the model.
-            concepts (torch.Tensor): Concept activation tensor.
-            target (int): The target class for which the concept output attribution should be computed.
-            attribution_method: The attribution method to obtain importance scores for input elements.
-
-        Returns:
-            A list of attribution scores for each concept.
-        """
-        raise NotImplementedError("Concept-to-output attribution method is not implemented yet.")
 
     def __normalize_gradients(self, gradients: Float[torch.Tensor, "t g c"]) -> Float[torch.Tensor, "t g c"]:
         """

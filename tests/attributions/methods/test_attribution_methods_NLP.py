@@ -34,6 +34,7 @@ from transformers import (
     # AutoModelForQuestionAnswering,
     # AutoModelForTokenClassification,
     AutoTokenizer,
+    BatchEncoding,
 )
 
 from interpreto.attributions import (
@@ -192,7 +193,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
 
     model_loader = ALL_MODEL_LOADERS[model_name]
 
-    model = model_loader.from_pretrained(model_name).to(DEVICE)
+    model = model_loader.from_pretrained(model_name)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     assert model is not None, f"Model loading failed {model_name}"
@@ -233,6 +234,10 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
         list_targets_complete = list_targets + list_targets
 
     for input_text, target in zip(list_texts_complete, list_targets_complete, strict=False):
+        if isinstance(input_text, BatchEncoding) and input_text["input_ids"].shape[0] > 1:
+            # skip batch encoding with multiple rows
+            continue
+
         try:
             attributions = explainer.explain(input_text, targets=target)
         except IncompatibilityError:
@@ -316,6 +321,76 @@ def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sente
         )
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
+def test_attribution_methods_memory_management_classification(attribution_explainer):
+    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    model = AutoModelForSequenceClassification.from_pretrained(
+        "hf-internal-testing/tiny-random-bert",
+        num_labels=2048,
+        ignore_mismatched_sizes=True,
+    )
+    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
+    explainer = attribution_explainer(
+        model,
+        tokenizer=tokenizer,
+        batch_size=16,
+        device=DEVICE,
+        granularity=Granularity.ALL_TOKENS,
+        **explainer_kwargs,
+    )
+
+    samples = [f"token {i % 11} token {i % 7} token {i % 5}" for i in range(2048)]
+    targets = [1] * len(samples)
+
+    try:
+        # Warm-up pass: if this fails, batch size/model sizes should be adjusted.
+        explainer.explain(samples, targets=targets)
+    except IncompatibilityError:
+        pytest.skip(f"{attribution_explainer.__name__} is incompatible with this classification model.")
+
+    try:
+        explainer.explain(samples, targets=targets)
+    except RuntimeError as exc:
+        message = str(exc).lower()
+        if "out of memory" in message or "can't allocate memory" in message:
+            pytest.fail(f"OOM during classification stress test: {exc}")
+        raise
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
+def test_attribution_methods_memory_management_generation(attribution_explainer):
+    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+    model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
+    explainer = attribution_explainer(
+        model,
+        tokenizer=tokenizer,
+        batch_size=16,
+        device=DEVICE,
+        granularity=Granularity.ALL_TOKENS,
+        **explainer_kwargs,
+    )
+
+    samples = [f"token {i % 11} token {i % 7} token {i % 5}" for i in range(2048)]
+    targets = ["token token"] * len(samples)
+
+    try:
+        # Warm-up pass: if this fails, batch size/model sizes should be adjusted.
+        explainer.explain(samples, targets=targets)
+    except IncompatibilityError:
+        pytest.skip(f"{attribution_explainer.__name__} is incompatible with this generation model.")
+
+    try:
+        explainer.explain(samples, targets=targets)
+    except RuntimeError as exc:
+        message = str(exc).lower()
+        if "out of memory" in message or "can't allocate memory" in message:
+            pytest.fail(f"OOM during generation stress test: {exc}")
+        raise
+
+
 # TODO: test that targets are correctly processed
 
 # TODO: test batch size management with very different inputs, tensor mappings of shape: [(1, 10), (5, 10), (100, 10), (2, 10)...].
@@ -323,31 +398,35 @@ def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sente
 #       There should be a counter wrapped around a model to verify that the number of calls to the model is correct.
 
 if __name__ == "__main__":
-    # test_attribution_methods_with_text_short(
-    #     model_name="hf-internal-testing/tiny-random-bert",
-    #     attribution_explainer=IntegratedGradients,
-    # )
-    # test_attribution_methods_with_text_short(
-    #     model_name="hf-internal-testing/tiny-random-gpt2",
-    #     attribution_explainer=Lime,
-    # )
-    # test_attribution_methods_granularity(
-    #     model_name="hf-internal-testing/tiny-random-bert",
-    #     attribution_explainer=Occlusion,
-    #     granularity=Granularity.WORD,
-    # )
-    # test_attribution_methods_granularity(
-    #     model_name="hf-internal-testing/tiny-random-gpt2",
-    #     attribution_explainer=Occlusion,
-    #     granularity=Granularity.WORD,
-    # )
-    # test_attribution_methods_granularity_aggregation_strategy(
-    #     model_name="hf-internal-testing/tiny-random-gpt2",
-    #     attribution_explainer=VarGrad,
-    #     granularity=Granularity.WORD,
-    #     aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
-    # )
-
+    test_attribution_methods_with_text_short(
+        model_name="hf-internal-testing/tiny-random-t5",
+        attribution_explainer=IntegratedGradients,
+    )
+    test_attribution_methods_with_text_short(
+        model_name="hf-internal-testing/tiny-random-gpt2",
+        attribution_explainer=Lime,
+    )
+    test_attribution_methods_granularity(
+        model_name="hf-internal-testing/tiny-random-bert",
+        attribution_explainer=Occlusion,
+        granularity=Granularity.WORD,
+    )
+    test_attribution_methods_granularity(
+        model_name="hf-internal-testing/tiny-random-gpt2",
+        attribution_explainer=VarGrad,
+        granularity=Granularity.WORD,
+    )
+    test_attribution_methods_granularity(
+        model_name="hf-internal-testing/tiny-random-bert",
+        attribution_explainer=Saliency,
+        granularity=Granularity.ALL_TOKENS,
+    )
+    test_attribution_methods_granularity_aggregation_strategy(
+        model_name="hf-internal-testing/tiny-random-gpt2",
+        attribution_explainer=GradientShap,
+        granularity=Granularity.SENTENCE,
+        aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
+    )
     bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
     bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
     sentences = [
@@ -357,3 +436,5 @@ if __name__ == "__main__":
     ]
     test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
     test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
+    test_attribution_methods_memory_management_classification(IntegratedGradients)
+    test_attribution_methods_memory_management_generation(SmoothGrad)

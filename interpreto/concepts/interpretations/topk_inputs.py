@@ -221,7 +221,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         self,
         *,
         concept_explainer: ConceptEncoderExplainer,
-        activation_granularity: ActivationGranularity = ActivationGranularity.WORD,
+        activation_granularity: ActivationGranularity | None = None,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concept_encoding_batch_size: int = 1024,
         k: int = 5,

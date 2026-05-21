@@ -59,7 +59,6 @@ class InsertionDeletionPerturbator:
         n_perturbations (int): Number of perturbations to generate.
         max_percentage_perturbed (float): Maximum percentage of tokens in the sequence to be perturbed.
         replace_token_id (int): Token used to replace deleted elements.
-        device (torch.device): Device on which the perturbator will be run.
     """
 
     __slots__ = (
@@ -68,7 +67,6 @@ class InsertionDeletionPerturbator:
         "replace_token_id",
         "granularity",
         "max_percentage_perturbed",
-        "device",
     )
 
     granularity: Granularity
@@ -79,7 +77,6 @@ class InsertionDeletionPerturbator:
         n_perturbations: int = 100,
         max_percentage_perturbed: float = 1.0,
         replace_token_id: int = 0,
-        device: torch.device | None = None,
     ) -> None:
         if n_perturbations < 1:
             raise ValueError("The number of perturbations must be at least 1.")
@@ -93,11 +90,6 @@ class InsertionDeletionPerturbator:
         self.replace_token_id = replace_token_id
 
         self.max_percentage_perturbed = max_percentage_perturbed
-
-        self.device = device or torch.device("cpu")
-
-    def to(self, device: torch.device):
-        self.device = device
 
     @abstractmethod
     def _baseline_mask(self, dims) -> Float[torch.Tensor, "p l"]:
@@ -218,25 +210,21 @@ class InsertionDeletionPerturbator:
             )
 
         # compute association matrix between the granularity level and ALL_TOKENS
-        association_matrix: Int[torch.Tensor, "g l"] = (
-            self.granularity.get_association_matrix(model_inputs, self.tokenizer, indices_list=granularity_indices)[0]
-            .float()
-            .to(self.device)
-        )
+        association_matrix: Int[torch.Tensor, "g l"] = self.granularity.get_association_matrix(
+            model_inputs, self.tokenizer, indices_list=granularity_indices
+        )[0].float()
 
         # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)
-        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0], attributions).to(
-            self.device
-        )
+        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0], attributions)
 
         # compute real perturbation mask
         real_mask: Float[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, association_matrix)
 
         model_inputs["input_ids"] = (
             self.apply_mask(
-                inputs=input_ids.T.to(self.device),
+                inputs=input_ids.T,
                 mask=real_mask,
-                mask_value=torch.Tensor([self.replace_token_id]).to(self.device),
+                mask_value=torch.Tensor([self.replace_token_id]),
             )
             .squeeze(-1)
             .to(torch.int)
