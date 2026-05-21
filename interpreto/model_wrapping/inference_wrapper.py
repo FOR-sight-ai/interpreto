@@ -204,6 +204,8 @@ class InferenceWrapper(ABC):
             It should be either "right" or "left".
     """
 
+    padding_side: str
+
     def __init__(
         self,
         model: PreTrainedModel,
@@ -263,16 +265,6 @@ class InferenceWrapper(ABC):
     @dtype.setter
     def dtype(self, dtype: torch.dtype):
         self.model.to(dtype=dtype)  # type: ignore
-
-    @property
-    @abstractmethod
-    def padding_side(self) -> str:
-        """
-        Returns:
-            str: The padding side to use for batching inputs.
-            It should be either "right" or "left".
-        """
-        raise NotImplementedError(f"padding_side not implemented for {self.__class__.__name__}.")
 
     @abstractmethod
     def _extract_targets_from_logits(self, logits: torch.Tensor):
