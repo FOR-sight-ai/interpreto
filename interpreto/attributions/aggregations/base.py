@@ -43,8 +43,7 @@ def cast_input_to_dtype(func):
 
     def wrapper(self, results: torch.Tensor, mask: torch.Tensor | None, *args, **kwargs) -> torch.Tensor:
         if mask is not None:
-            mask = mask.to(self.dtype)
-            mask = mask.to(results.device)
+            mask = mask.to(device=results.device, dtype=self.dtype)
         return func(self, results.to(self.dtype), mask, *args, **kwargs)
 
     return wrapper

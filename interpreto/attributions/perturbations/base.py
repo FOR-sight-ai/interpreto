@@ -246,7 +246,7 @@ class IdsPerturbator(Perturbator):
         gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0])
 
         # compute real perturbation mask
-        real_mask: Float[torch.Tensor, "p l"] = torch.einsum("pg,gl->pl", gran_mask, association_matrix)
+        real_mask: Float[torch.Tensor, "p l"] = gran_mask @ association_matrix
 
         model_inputs["input_ids"] = (
             self.apply_mask(
