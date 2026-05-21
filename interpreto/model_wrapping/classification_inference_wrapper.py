@@ -36,9 +36,7 @@ class ClassificationInferenceWrapper(InferenceWrapper):
     Inference wrapper for classification tasks.
     """
 
-    @property
-    def padding_side(self):
-        return "right"
+    padding_side = "right"
 
     @jaxtyped(typechecker=beartype)
     def _extract_targets_from_logits(self, logits: Float[torch.Tensor, "b c"]) -> Int[torch.Tensor, "b 1"]:

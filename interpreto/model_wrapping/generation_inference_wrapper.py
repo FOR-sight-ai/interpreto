@@ -36,9 +36,7 @@ class GenerationInferenceWrapper(InferenceWrapper):
     Inference wrapper for generation tasks.
     """
 
-    @property
-    def padding_side(self):
-        return "left"
+    padding_side = "left"
 
     def _prepare_inputs(self, inputs, for_gradients: bool = False):
         """
