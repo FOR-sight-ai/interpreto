@@ -22,70 +22,60 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .base import ConceptAutoEncoderExplainer, ConceptEncoderExplainer
-from .interpretations import LLMLabels, TopKInputs
-from .methods import (
-    BatchTopKSAEConcepts,
-    Cockatiel,
-    ConvexNMFConcepts,
-    DictionaryLearningConcepts,
-    ICAConcepts,
-    JumpReLUSAEConcepts,
-    KMeansConcepts,
-    MpSAEConcepts,
-    NeuronsAsConcepts,
-    NMFConcepts,
-    PCAConcepts,
-    SAELossClasses,
-    SemiNMFConcepts,
-    SparsePCAConcepts,
-    SVDConcepts,
-    TopKSAEConcepts,
-    VanillaSAEConcepts,
-)
-from .probes import (
+"""
+Probe models for concept-based interpretability.
+
+This package provides lightweight torch-based probe models that map latent
+activations to concept scores. All probes follow the
+[ConceptModelProtocol][interpreto.typing.ConceptModelProtocol] interface (structurally) and
+support `state_dict` serialization for reproducibility.
+
+Probe families:
+    - **Centroid probes** ([centroid][interpreto.concepts.probes.centroid]):
+      assign concept scores based on distances to learned centroids.
+    - **Linear probes** ([linear][interpreto.concepts.probes.linear]):
+      learn a linear mapping from activations to concept scores.
+    - **Sklearn probes** ([sklearn][interpreto.concepts.probes.sklearn]):
+      wrap scikit-learn classifiers for single-concept experiments.
+
+Supporting modules:
+    - [normalizations][interpreto.concepts.probes.normalizations]: input normalization layers.
+    - [bias_calibrators][interpreto.concepts.probes.bias_calibrators]: post-hoc bias calibration functions.
+"""
+
+from .base import ProbeExplainer
+from .bias_calibrators import bce_bias, fpr_bias, lda_shared_var_bias, midpoint_bias, prevalence_bias
+from .centroid import (
     CosineCentroidProbe,
     DiagonalMahalanobisCentroidProbe,
     DotProductCentroidProbe,
+    SqL2CentroidProbe,
+    SVDDCentroidProbe,
+)
+from .linear import (
     LinearRegressionProbe,
     LinearSVMProbe,
     LogisticRegressionProbe,
     MeansDiffProbe,
-    ProbeExplainer,
-    SqL2CentroidProbe,
-    SVDDCentroidProbe,
 )
+from .normalizations import Standardization, Whitening
 
 __all__ = [
-    "BatchTopKSAEConcepts",
-    "Cockatiel",
-    "ConceptAutoEncoderExplainer",
-    "ConceptEncoderExplainer",
-    "ConvexNMFConcepts",
+    "bce_bias",
+    "fpr_bias",
+    "lda_shared_var_bias",
+    "midpoint_bias",
+    "prevalence_bias",
     "CosineCentroidProbe",
     "DiagonalMahalanobisCentroidProbe",
-    "DictionaryLearningConcepts",
     "DotProductCentroidProbe",
-    "ICAConcepts",
-    "JumpReLUSAEConcepts",
-    "KMeansConcepts",
-    "LLMLabels",
+    "SqL2CentroidProbe",
+    "SVDDCentroidProbe",
+    "ProbeExplainer",
     "LinearRegressionProbe",
     "LinearSVMProbe",
     "LogisticRegressionProbe",
     "MeansDiffProbe",
-    "MpSAEConcepts",
-    "NeuronsAsConcepts",
-    "NMFConcepts",
-    "PCAConcepts",
-    "ProbeExplainer",
-    "SAELossClasses",
-    "SemiNMFConcepts",
-    "SparsePCAConcepts",
-    "SqL2CentroidProbe",
-    "SVDConcepts",
-    "SVDDCentroidProbe",
-    "TopKInputs",
-    "TopKSAEConcepts",
-    "VanillaSAEConcepts",
+    "Standardization",
+    "Whitening",
 ]
