@@ -2,7 +2,7 @@
 
 ## Common API
 
-```
+```python
 from interpreto import Method, plot_attributions
 
 explainer = Method(model, tokenizer, kwargs)
@@ -66,7 +66,7 @@ Please check how we did it with the implemented method. If you have any question
 
 Once you succeed, please make a pull request. We welcome your method and contributions to the library.
 
-```
+```python
 perturbator = Perturbator(inputs_embedder)
 aggregator = Aggregator()
 explainer = AttributionExplainer(model, tokenizer, batch_size, perturbator, aggregator, device)

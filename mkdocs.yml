@@ -165,9 +165,10 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - footnotes
-  - extra
   - admonition
-  - codehilite
+  - tables
+  - abbr
+  - md_in_html
   - markdown.extensions.attr_list
   - toc:
       baselevel: 1
