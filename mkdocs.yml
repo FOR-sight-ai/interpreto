@@ -36,7 +36,8 @@ nav:
       - Overview: api/concepts/overview.md
       - ModelWithSplitPoints: api/concepts/model_with_split_points.md
       - SplitSequenceClassification: api/concepts/split_sequence_classification.md
-      - Concept Spaces:
+      - Probes (Supervised): api/concepts/probes.md
+      - Concept Spaces (Unsupervised):
         - Base Classes: api/concepts/concept_spaces/base.md
         - Cockatiel: api/concepts/concept_spaces/cockatiel.md
         - Neurons as Concepts: api/concepts/concept_spaces/neurons_as_concepts.md

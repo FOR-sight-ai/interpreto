@@ -112,8 +112,8 @@ and which concepts drive which predictions.
       show_root_heading: true
       show_source: true
       members:
-        - **init**
-        - **call**
+        - __init__
+        - __call__
 
 ::: interpreto.attributions.base.InputsToConceptsAttributionsExplainer
     handler: python
