@@ -38,6 +38,7 @@ from interpreto.attributions.aggregations.base import OcclusionAggregator
 from interpreto.attributions.base import (
     AttributionExplainer,
     MultitaskExplainerMixin,
+    setup_token_ids,
 )
 from interpreto.attributions.perturbations import OcclusionPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
@@ -93,17 +94,17 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             device (torch.device): device on which the attribution method will be run
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        replace_token_id = setup_token_ids(model, tokenizer)
 
         perturbator = OcclusionPerturbator(
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             granularity=granularity,
             replace_token_id=replace_token_id,
         )
 
         super().__init__(
             model=model,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             batch_size=batch_size,
             device=device,
             perturbator=perturbator,

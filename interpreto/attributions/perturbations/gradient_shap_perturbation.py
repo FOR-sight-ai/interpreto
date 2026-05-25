@@ -41,7 +41,7 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
 
     def __init__(
         self,
-        inputs_embedder: torch.nn.Module | None = None,
+        inputs_embedder: torch.nn.Module,
         baseline: TensorBaseline = None,
         n_perturbations: int = 10,
         std: float = 0.1,
@@ -50,7 +50,7 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
         Initializes the GradientShapPerturbator.
 
         Args:
-            inputs_embedder (torch.nn.Module, optional): Optional module to transform inputs into embeddings. Defaults to None.
+            inputs_embedder (torch.nn.Module): Module to transform inputs into embeddings. Defaults to None.
             baseline (TensorBaseline, optional): The reference embedding (can be a tensor, float, int, or None). Defaults to None.
             n_perturbations (int, optional): Number of random samples for interpolation. Defaults to 10.
             std (float, optional): Standard deviation of the Gaussian noise added to the baseline. Defaults to 0.1.
@@ -68,8 +68,7 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
         baseline = self.adjust_baseline(self.baseline, embeddings)
         baseline = baseline.to(embeddings.device)
 
-        baseline = baseline.unsqueeze(0).expand(1, *baseline.shape)  # (1, l, d)
-        baseline = baseline.unsqueeze(0).repeat(self.n_perturbations, 1, 1, 1)  # (p, 1, l, d)
+        baseline = baseline.unsqueeze(0).repeat(self.n_perturbations, 1, 1)  # (p, l, d)
         baseline += torch.randn_like(baseline) * self.std  # noise
 
         return baseline
@@ -78,4 +77,4 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
         """
         Generates random interpolation coefficients (alphas) for GradientSHAP.
         """
-        return torch.rand(self.n_perturbations, 1, 1, 1, device=device)
+        return torch.rand(self.n_perturbations, 1, 1, device=device)

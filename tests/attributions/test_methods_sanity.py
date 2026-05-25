@@ -265,6 +265,7 @@ class ShiftCopyForCausalLM(nn.Module):
         input_ids: torch.Tensor | None = None,
         inputs_embeds: torch.Tensor | None = None,
         attention_mask: torch.Tensor | None = None,
+        **kwargs,
     ) -> CausalLMOutput:
         if inputs_embeds is None:
             if input_ids is None:
@@ -298,10 +299,9 @@ def set_seed(seed: int = SEED) -> None:
 
 
 def build_repeat_example(sequence: list[str]) -> tuple[str, str]:
-    target = "".join(sequence)
+    prompt = "".join(sequence)
     # The trailing separator aligns the last prompt position with the first copied token under the 10-step shift.
-    prompt = target + SEPARATOR_TOKEN
-    return prompt, target
+    return prompt, SEPARATOR_TOKEN + prompt
 
 
 @pytest.fixture(scope="module")
@@ -335,7 +335,7 @@ def test_generation_attribution_methods_detect_copied_token(shift_copy_model, me
     # sample a sequence of the shift length (i.e. "abcde")
     sequence = random.sample(REPEAT_SEQUENCE_ALPHABET, COPY_SHIFT)
 
-    # construct the prompt and the target (i.e. in: "abcde ", out: "abcdef")
+    # construct the prompt and the target (i.e. in: "abcde", out: " abcdef")
     prompt, target = build_repeat_example(sequence)
 
     model, tokenizer = shift_copy_model
@@ -347,7 +347,7 @@ def test_generation_attribution_methods_detect_copied_token(shift_copy_model, me
     [attribution_output] = explainer.explain(prompt, target)
 
     generated_tokens = [tokenizer.decode([token_id]) for token_id in attribution_output.targets.tolist()]
-    assert generated_tokens == sequence, (
+    assert generated_tokens == [SEPARATOR_TOKEN] + sequence, (
         f"Shift copy model generated {generated_tokens!r} instead of {sequence!r} for prompt {prompt!r}."
     )
 
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     model = AutoModelForSequenceClassification.from_pretrained(MODEL_ID).to(DEVICE)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=True)
     model.eval()
-    test_classification_attribution_methods_detect_emotion_word((model, tokenizer, None), Sobol)
+    test_classification_attribution_methods_detect_emotion_word((model, tokenizer, None), Saliency)
     # tokenizer = LetterTokenizer()
     # model = ShiftCopyForCausalLM(vocab_size=len(tokenizer)).to(DEVICE)
     # model.eval()
