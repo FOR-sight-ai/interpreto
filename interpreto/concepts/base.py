@@ -382,7 +382,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 split point of `model_with_split_points` if a single one is defined.
         """
         self.concept_model: BaseDictionaryLearning
-        super().__init__(model_with_split_points, concept_model, split_point)
+        super().__init__(model_with_split_points, concept_model, split_point)  # type: ignore
 
     @property
     def is_fitted(self) -> bool:
@@ -575,7 +575,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             )
 
         # put everything on device
-        self.concept_model.to(self.model_with_split_points.device)
+        self.concept_model.to(self.model_with_split_points.device)  # type: ignore
 
         # forward all computations to
         gradients = self.model_with_split_points._get_concept_output_gradients(

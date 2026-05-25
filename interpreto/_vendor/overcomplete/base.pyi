@@ -1,0 +1,16 @@
+from abc import ABC
+
+import torch
+from torch import nn
+
+class BaseDictionaryLearning(ABC, nn.Module):
+    nb_concepts: int
+    device: str | torch.device
+    fitted: bool
+
+    def __init__(self, nb_concepts: int, device: str | torch.device = "cpu") -> None: ...
+    def encode(self, x: torch.Tensor) -> torch.Tensor: ...
+    def decode(self, z: torch.Tensor) -> torch.Tensor: ...
+    def fit(self, x: torch.Tensor) -> None: ...
+    def get_dictionary(self) -> torch.Tensor: ...
+    def to(self, device: str | torch.device) -> "BaseDictionaryLearning": ...  # type: ignore[override]
