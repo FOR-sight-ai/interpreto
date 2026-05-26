@@ -47,11 +47,7 @@ def sentences():
 def multi_split_model() -> ModelWithSplitPoints:
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=[
-            "cls.predictions.transform.LayerNorm",
-            "bert.encoder.layer.1",
-            "bert.encoder.layer.3.attention.self.query",
-        ],
+        split_point="bert.encoder.layer.1",
         automodel=AutoModelForMaskedLM,  # type: ignore
         batch_size=4,
     )
@@ -62,7 +58,7 @@ def splitted_encoder_ml() -> ModelWithSplitPoints:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForSequenceClassification,  # type: ignore
         batch_size=4,
         device_map=device,

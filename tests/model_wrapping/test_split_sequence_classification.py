@@ -64,14 +64,14 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
 
     # correct module name
     split_model = SSC(bert_model, classification_head_name="classifier", tokenizer=bert_tokenizer)
-    assert split_model.split_points == ["classifier"], (
-        f"split_points mismatch: got {split_model.split_points}, expected ['classifier']"
+    assert split_model.split_point == "classifier", (
+        f"split_point mismatch: got {split_model.split_point}, expected 'classifier'"
     )
 
     # no module name
     split_model = SSC("hf-internal-testing/tiny-random-bert")
-    assert split_model.split_points == ["classifier"], (
-        f"split_points mismatch: got {split_model.split_points}, expected ['classifier']"
+    assert split_model.split_point == "classifier", (
+        f"split_point mismatch: got {split_model.split_point}, expected 'classifier'"
     )
 
 

@@ -71,17 +71,34 @@ AGGREGATIONS = [
 ]
 
 
-def test_order_split_points(multi_split_model: MWSP):
-    """
-    Test the sort_paths method upon split assignment
-    """
-    multi_split_model.split_points = BERT_SPLIT_POINTS  # type: ignore
-    # Assert the ordered split points match expected order
-    assert multi_split_model.split_points == BERT_SPLIT_POINTS_SORTED, (
-        f"Failed for split points: {BERT_SPLIT_POINTS}\n"
-        f"Expected: {BERT_SPLIT_POINTS_SORTED}\n"
-        f"Got:      {multi_split_model.split_points}"
-    )
+def test_deprecated_split_points_alias_guides_to_split_point(bert_model, bert_tokenizer):
+    """The old split_points API still works temporarily, but guides users to split_point."""
+    with pytest.warns(DeprecationWarning, match="Multiple split points are deprecated"):
+        model = MWSP(
+            bert_model,
+            split_points=["bert.encoder.layer.1", "bert.encoder.layer.3.attention.self.query"],
+            tokenizer=bert_tokenizer,
+        )
+
+    assert model.split_point == "bert.encoder.layer.1"
+
+    with pytest.warns(DeprecationWarning, match="Please use `split_point`"):
+        assert model.split_points == ["bert.encoder.layer.1"]
+
+    with pytest.warns(DeprecationWarning, match="`split_points` is deprecated"):
+        model.split_points = "bert.encoder.layer.3.attention.self.query"
+
+    assert model.split_point == "bert.encoder.layer.3.attention.self.query"
+
+
+def test_split_point_and_split_points_are_mutually_exclusive():
+    with pytest.raises(ValueError, match="Specify only one"):
+        MWSP(
+            "hf-internal-testing/tiny-random-bert",
+            split_point="bert.encoder.layer.1",
+            split_points="bert.encoder.layer.2",
+            automodel=AutoModelForMaskedLM,
+        )
 
 
 def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer):
@@ -93,18 +110,18 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
     # Load model with split points
     with pytest.raises(ValueError):  # tokenizer is not set
         MWSP(bert_model, "bert.encoder.layer.1")
-    model_with_split_points = MWSP(bert_model, split_points="bert.encoder.layer.1", tokenizer=bert_tokenizer)
-    assert model_with_split_points.split_points == ["bert.encoder.layer.1"], (
-        f"split_points mismatch: got {model_with_split_points.split_points}, expected ['bert.encoder.layer.1']"
+    model_with_split_points = MWSP(bert_model, split_point="bert.encoder.layer.1", tokenizer=bert_tokenizer)
+    assert model_with_split_points.split_point == "bert.encoder.layer.1", (
+        f"split_point mismatch: got {model_with_split_points.split_point}, expected 'bert.encoder.layer.1'"
     )
     # Load model without split points
     model_without_split_points = MWSP(
         "bert-base-cased",
         automodel=AutoModelForMaskedLM,  # type: ignore
-        split_points="bert.encoder.layer.1",
+        split_point="bert.encoder.layer.1",
     )
-    assert model_without_split_points.split_points == ["bert.encoder.layer.1"], (
-        f"split_points mismatch: got {model_without_split_points.split_points}, expected ['bert.encoder.layer.1']"
+    assert model_without_split_points.split_point == "bert.encoder.layer.1", (
+        f"split_point mismatch: got {model_without_split_points.split_point}, expected 'bert.encoder.layer.1'"
     )
 
     # ----
@@ -112,18 +129,18 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
     # Load model with split points
     with pytest.raises(ValueError):  # tokenizer is not set
         MWSP(gpt2_model, "transformer.h.1")
-    model_with_split_points = MWSP(gpt2_model, split_points="transformer.h.1", tokenizer=gpt2_tokenizer)
-    assert model_with_split_points.split_points == ["transformer.h.1"], (
-        f"split_points mismatch: got {model_with_split_points.split_points}, expected ['transformer.h.1']"
+    model_with_split_points = MWSP(gpt2_model, split_point="transformer.h.1", tokenizer=gpt2_tokenizer)
+    assert model_with_split_points.split_point == "transformer.h.1", (
+        f"split_point mismatch: got {model_with_split_points.split_point}, expected 'transformer.h.1'"
     )
     # Load model without split points
     model_without_split_points = MWSP(
         "gpt2",
         automodel=AutoModelForCausalLM,  # type: ignore
-        split_points="transformer.h.1",
+        split_point="transformer.h.1",
     )
-    assert model_without_split_points.split_points == ["transformer.h.1"], (
-        f"split_points mismatch: got {model_without_split_points.split_points}, expected ['transformer.h.1']"
+    assert model_without_split_points.split_point == "transformer.h.1", (
+        f"split_point mismatch: got {model_without_split_points.split_point}, expected 'transformer.h.1'"
     )
 
     with pytest.raises(InitializationError):
@@ -150,7 +167,7 @@ def test_manage_output_tuple():
     """Ensure ``_manage_output_tuple`` extracts the 3-D tensor from a tuple."""
     model = MWSP(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForSequenceClassification,  # type: ignore
     )
     tensor = torch.zeros(1, 2, 3)
@@ -166,17 +183,17 @@ def test_manage_output_tuple():
 
 
 def test_get_split_activations(splitted_encoder_ml: MWSP, sentences: list[str]):
-    """Test activation extraction for a specific split."""
+    """Test activation extraction for the model's split point."""
     acts = splitted_encoder_ml.get_activations(sentences, activation_granularity=AG.ALL_TOKENS)
     assert acts is not None, "get_activations returned None"
-    split = splitted_encoder_ml.split_points[0]
+    split = splitted_encoder_ml.split_point
     assert split in acts, f"Split '{split}' not found in activations dict"
-    extracted = splitted_encoder_ml.get_split_activations(acts, split)
+    extracted = splitted_encoder_ml.get_split_activations(acts)
     assert extracted is not None, "get_split_activations returned None"
     assert torch.equal(extracted, acts[split]), "Extracted activations do not match activations dict at split"  # type: ignore
 
     with pytest.raises(ValueError):
-        splitted_encoder_ml.get_split_activations({}, "unknown")  # type: ignore
+        splitted_encoder_ml.get_split_activations({})  # type: ignore
 
     with pytest.raises(TypeError):
         splitted_encoder_ml.get_split_activations(42)  # type: ignore
@@ -191,7 +208,7 @@ def test_get_latent_shape(splitted_encoder_ml: MWSP, sentences: list[str]):
 
     assert shapes is not None, "get_latent_shape returned None"
     assert acts_dict is not None, "get_activations returned None"
-    for sp in splitted_encoder_ml.split_points:
+    for sp in [splitted_encoder_ml.split_point]:
         assert sp in shapes, f"Split '{sp}' missing in shapes"
         assert sp in acts_dict, f"Split '{sp}' missing in activations"
         acts = torch.stack(acts_dict[sp])
@@ -283,7 +300,7 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
     mwsp = MWSP(
         model,
         tokenizer=tokenizer,
-        split_points=[split_point],
+        split_point=split_point,
         automodel=type(model),
         batch_size=2,
     )
@@ -442,7 +459,7 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
     mwsp = MWSP(
         model,
         tokenizer=tokenizer,
-        split_points=[split_point],
+        split_point=split_point,
         automodel=type(model),
         batch_size=2,
         device_map=device,
@@ -552,7 +569,7 @@ def test_activation_equivalence_batched_text_token_inputs(multi_split_model: MWS
     """
     Test the equivalence of activations for text and token inputs
     """
-    multi_split_model.split_points = BERT_SPLIT_POINTS  # type: ignore
+    multi_split_model.split_point = "bert.encoder.layer.1"
     inputs_str = ["Hello, my dog is cute", "The cat is on the [MASK]"]
     inputs_tensor = multi_split_model.tokenizer(
         inputs_str, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
@@ -586,13 +603,9 @@ def test_batching(splitted_encoder_ml: MWSP, huge_text: list[str], strategy: Act
 
 def test_index_by_layer_idx(multi_split_model: MWSP):
     """Test indexing by layer idx"""
-    split_points_with_layer_idx: list = list(BERT_SPLIT_POINTS)
-    split_points_with_layer_idx[1] = 1  # instead of bert.encoder.layer.1
-    multi_split_model.split_points = split_points_with_layer_idx
-    assert multi_split_model.split_points == BERT_SPLIT_POINTS_SORTED, (
-        f"Failed for split_points: {BERT_SPLIT_POINTS}\n"
-        f"Expected: {BERT_SPLIT_POINTS_SORTED}\n"
-        f"Got:      {multi_split_model.split_points}"
+    multi_split_model.split_point = 1  # instead of "bert.encoder.layer.1"
+    assert multi_split_model.split_point == "bert.encoder.layer.1", (
+        f"Expected 'bert.encoder.layer.1', got '{multi_split_model.split_point}'"
     )
 
 
@@ -683,7 +696,7 @@ def evaluate_activations_and_gradients(model_name, sentences: list[str]):
     splitted_model = MWSP(
         model,
         tokenizer=tokenizer,
-        split_points=ALL_MODEL_SPLIT_POINTS[model_name],
+        split_point=ALL_MODEL_SPLIT_POINTS[model_name][0],
         automodel=ALL_MODEL_LOADERS[model_name],
         device_map=device,
         batch_size=8,
@@ -732,7 +745,7 @@ if __name__ == "__main__":
 
     splitted_encoder_ml = MWSP(
         "gpt2",
-        split_points=2,
+        split_point=2,
         automodel=AutoModelForCausalLM,  # type: ignore
         device_map="auto",
         batch_size=4,
@@ -740,18 +753,14 @@ if __name__ == "__main__":
 
     splitted_encoder_ml = MWSP(
         "bert-base-uncased",
-        split_points=["bert.encoder.layer.2.output"],
+        split_point="bert.encoder.layer.2.output",
         automodel=AutoModelForSequenceClassification,  # type: ignore
         device_map="cuda",
         batch_size=4,
     )
     multi_split_model = MWSP(
         "bert-base-uncased",
-        split_points=[
-            "cls.predictions.transform.LayerNorm",
-            "bert.encoder.layer.1",
-            "bert.encoder.layer.3.attention.self.query",
-        ],
+        split_point="bert.encoder.layer.1",
         automodel=AutoModelForMaskedLM,  # type: ignore
         device_map="cuda",
         batch_size=4,
@@ -762,7 +771,6 @@ if __name__ == "__main__":
     gpt2_model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
     gpt2_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
 
-    test_order_split_points(multi_split_model)
     test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer)
     test_activation_equivalence_batched_text_token_inputs(multi_split_model)
     test_batching(splitted_encoder_ml, sentences * 10, AG.CLS_TOKEN)
