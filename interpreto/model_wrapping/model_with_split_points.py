@@ -47,7 +47,6 @@ from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.splitting_utils import (
     get_layer_by_idx,
-    sort_paths,
     validate_path,
     walk_modules,
 )
@@ -139,15 +138,17 @@ class ModelWithSplitPoints(LanguageModel):
             * A preloaded `transformers.PreTrainedModel` object.
             If a string is provided, a automodel should also be provided.
 
-        split_points (str | Sequence[str] | int | Sequence[int]): One or more to split locations inside the model.
+        split_point (str | int): The split location inside the model.
             Either one of the following:
 
             * A `str` corresponding to the path of a split point inside the model.
             * An `int` corresponding to the n-th layer.
-            * A `Sequence[str]` or `Sequence[int]` corresponding to multiple split points.
 
-            Example: `split_points='cls.predictions.transform.LayerNorm'` correspond to a split
+            Example: `split_point='cls.predictions.transform.LayerNorm'` correspond to a split
             after the LayerNorm layer in the MLM head (assuming a `BertForMaskedLM` model in input).
+
+        split_points (str | int | list[str] | list[int], deprecated): Backward-compatible alias for
+            `split_point`. If a list/tuple is provided, only the first element is used.
 
         automodel (type[AutoModel]): Huggingface [AutoClass](https://huggingface.co/docs/transformers/en/model_doc/auto#natural-language-processing)
             corresponding to the desired type of model (e.g. `AutoModelForSequenceClassification`).
@@ -191,9 +192,6 @@ class ModelWithSplitPoints(LanguageModel):
 
         repo_id (str): Either the model id in the HF Hub, or the path from which the model was loaded.
 
-        split_points (list[str]): Getter/setters for model paths corresponding to split points inside the loaded model.
-            Automatically handle validation, sorting and resolving int paths to strings.
-
         tokenizer (PreTrainedTokenizer): Tokenizer for the loaded model, either given by the user or loaded from the repo_id.
 
         _model (transformers.PreTrainedModel): Huggingface transformers model wrapped by NNSight.
@@ -204,7 +202,7 @@ class ModelWithSplitPoints(LanguageModel):
         >>> from interpreto import ModelWithSplitPoints
         >>> model_with_split_points = ModelWithSplitPoints(
         ...     "gpt2",
-        ...     split_points=10,  # split at the 10th layer
+        ...     split_point=10,  # split at the 10th layer
         ...     automodel=AutoModelForCausalLM,
         ...     device_map="auto",
         ... )
@@ -220,7 +218,7 @@ class ModelWithSplitPoints(LanguageModel):
         >>> # load and split the model
         >>> model_with_split_points = ModelWithSplitPoints(
         ...     "bert-base-uncased",
-        ...     split_points="bert.encoder.layer.1.output",
+        ...     split_point="bert.encoder.layer.1.output",
         ...     automodel=AutoModelForSequenceClassification,
         ...     batch_size=64,
         ...     device_map="cuda" if torch.cuda.is_available() else "cpu",
@@ -244,7 +242,7 @@ class ModelWithSplitPoints(LanguageModel):
         >>> model_with_split_points = MWSP(
         ...     model,
         ...     tokenizer=tokenizer,
-        ...     split_points=10,  # split at the 10th layer
+        ...     split_point=10,  # split at the 10th layer
         ...     batch_size=16,
         ...     device_map="auto",
         ... )
@@ -265,8 +263,9 @@ class ModelWithSplitPoints(LanguageModel):
     def __init__(
         self,
         model_or_repo_id: str | PreTrainedModel,
-        split_points: str | int | list[str] | list[int] | tuple[str] | tuple[int],
+        split_point: str | int | list[str] | list[int] | tuple[str, ...] | tuple[int, ...] | None = None,
         *args: tuple[Any],
+        split_points: str | int | list[str] | list[int] | tuple[str, ...] | tuple[int, ...] | None = None,
         automodel: type[AutoModel] | None = None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         config: PretrainedConfig | None = None,
@@ -285,6 +284,15 @@ class ModelWithSplitPoints(LanguageModel):
             ValueError: If the `device_map` is set to 'auto' and the model is not a generation model.
             TypeError: If the `model_or_repo_id` is not a `str` or a `transformers.PreTrainedModel`.
         """
+        if split_point is not None and split_points is not None:
+            raise ValueError("Specify only one of `split_point` or deprecated `split_points`.")
+        if split_points is not None:
+            split_point = self._deprecated_split_points_to_split_point(split_points)
+        elif isinstance(split_point, list | tuple):
+            split_point = self._deprecated_split_points_to_split_point(split_point)
+        if split_point is None:
+            raise TypeError("Missing required argument `split_point`.")
+
         if isinstance(model_or_repo_id, PreTrainedModel):
             if tokenizer is None:
                 raise InitializationError(
@@ -315,9 +323,9 @@ class ModelWithSplitPoints(LanguageModel):
             **kwargs,
         )
 
-        # set split points
+        # set split point
         self._model_paths = list(walk_modules(self._model))
-        self.split_points = split_points  # this uses the setter which handles validation
+        self.split_point = split_point  # this uses the setter which handles validation
         self._model: PreTrainedModel  # specify type of `_model` attribute from NNsight
         if self.repo_id is None:
             self.repo_id = self._model.config.name_or_path  # type: ignore  (under specification from NNsight)
@@ -341,31 +349,73 @@ class ModelWithSplitPoints(LanguageModel):
             raise ValueError("Tokenizer is not set. When providing a model instance, the tokenizer must be set.")
         self.output_tuple_index = output_tuple_index
 
+    @staticmethod
+    def _deprecated_split_points_to_split_point(
+        split_points: str | int | list[str] | list[int] | tuple[str, ...] | tuple[int, ...],
+    ) -> str | int:
+        """Convert the deprecated `split_points` API to the singular `split_point` API."""
+        if isinstance(split_points, list | tuple):
+            if len(split_points) == 0:
+                raise ValueError("At least one split point must be provided.")
+            warnings.warn(
+                "Multiple split points are deprecated. Only a single split point is supported. "
+                f"Using the first element: '{split_points[0]}'. "
+                "`split_points` will be removed in version 0.6.0. "
+                "Please update your code to pass `split_point` instead.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            return split_points[0]
+
+        warnings.warn(
+            "`split_points` is deprecated and will be removed in version 0.6.0. "
+            "Please update your code to pass `split_point` instead.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return split_points
+
+    @property
+    def split_point(self) -> str:
+        """The split point of the model."""
+        return self._split_point
+
+    @split_point.setter
+    def split_point(self, split_point: str | int) -> None:
+        """Split point setter.
+
+        Args:
+            split_point (str | int): The split location inside the model.
+                Either a `str` path or an `int` layer index.
+        """
+        # Handle conversion of layer idx to full path
+        if isinstance(split_point, int):
+            str_split = get_layer_by_idx(split_point, model_paths=self._model_paths)
+        else:
+            str_split = split_point
+
+        # Validate whether the split exists in the model
+        validate_path(self._model, str_split)
+
+        self._split_point: str = str_split
+
     @property
     def split_points(self) -> list[str]:
-        return self._split_points
+        """Deprecated alias returning the split point as a single-element list."""
+        warnings.warn(
+            "`split_points` is deprecated and will be removed in version 0.6.0. Please use `split_point` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return [self._split_point]
 
     @split_points.setter
-    def split_points(self, split_points: str | int | list[str] | list[int] | tuple[str] | tuple[int]) -> None:
-        """Split points are automatically validated and sorted upon setting"""
-        # sanitize split points to a list of strings and ints
-        pre_conversion_split_points = split_points if isinstance(split_points, list | tuple) else [split_points]
-
-        # convert layer idx to full path
-        post_conversion_split_points: list[str] = []
-        for split in pre_conversion_split_points:
-            # Handle conversion of layer idx to full path
-            if isinstance(split, int):
-                str_split = get_layer_by_idx(split, model_paths=self._model_paths)
-            else:
-                str_split = split
-            post_conversion_split_points.append(str_split)
-
-            # Validate whether the split exists in the model
-            validate_path(self._model, str_split)
-
-        # Sort split points to match execution order
-        self._split_points: list[str] = sort_paths(post_conversion_split_points, model_paths=self._model_paths)
+    def split_points(
+        self,
+        split_points: str | int | list[str] | list[int] | tuple[str, ...] | tuple[int, ...],
+    ) -> None:
+        """Deprecated alias for setting `split_point`."""
+        self.split_point = self._deprecated_split_points_to_split_point(split_points)
 
     @staticmethod
     def _pad_and_concat(
@@ -858,9 +908,8 @@ class ModelWithSplitPoints(LanguageModel):
                 Additional keyword arguments passed to the model forward pass.
 
         Returns:
-            (dict[str, LatentActivations]) Dictionary having one key, value pair for each split point defined for the model. Keys correspond to split
-                names in `self.split_points`, while values correspond to the extracted activations for the split point
-                for the given `inputs`.
+            (dict[str, LatentActivations]) Dictionary with the split point path as key and the extracted activations
+                as value for the given `inputs`.
         """
         # set default pad side value and catch unsupported cases
         if self._model.__class__.__name__.endswith("ForSequenceClassification"):
@@ -910,8 +959,8 @@ class ModelWithSplitPoints(LanguageModel):
 
         # initialize activations dictionary
         activations: dict = {}
-        for split_point in self.split_points + ["predictions"]:
-            activations[split_point] = []
+        activations[self._split_point] = []
+        activations["predictions"] = []
 
         # iterate over batch of inputs
         with torch.no_grad():
@@ -954,8 +1003,8 @@ class ModelWithSplitPoints(LanguageModel):
                     # all model calls use trace with nnsight
                     # call model forward pass and save split point outputs
                     with self.trace(tokenized_inputs, **model_forward_kwargs) as tracer:
-                        # nnsight quick way to obtain the activations for all split points
-                        batch_activations = tracer.cache(modules=[self.get(sp) for sp in self.split_points])  # type: ignore  (under specification from NNsight)
+                        # nnsight quick way to obtain the activations for the split point
+                        batch_activations = tracer.cache(modules=[self.get(self._split_point)])  # type: ignore
 
                         # for classification optionally compute and save the predictions
                         if include_predicted_classes:
@@ -968,29 +1017,27 @@ class ModelWithSplitPoints(LanguageModel):
 
                     # ------------------------------------------------------------------------------
                     # apply granularity selection and aggregation of activations and predictions
-                    for sp in self.split_points:
-                        # extracting the activations for the current split point
-                        sp_module = batch_activations["model." + sp]
-                        output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
-                        batch_outputs = getattr(sp_module, output_name)
+                    sp = self._split_point
+                    # extracting the activations for the split point
+                    sp_module = batch_activations["model." + sp]
+                    output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
+                    batch_outputs = getattr(sp_module, output_name)
 
-                        # manage the output tuple and extract the (n, l, d) activations from it
-                        batch_sp_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
-                            batch_outputs, sp
-                        )
+                    # manage the output tuple and extract the (n, l, d) activations from it
+                    batch_sp_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(batch_outputs, sp)
 
-                        # select relevant activations with respect to the granularity strategy
-                        # potentially aggregate activations over the granularity elements
-                        # this merges the `n` and `g` dimensions with `g` a subset of `n`
-                        # shape (n, l, d) only for `ALL` granularity, thus raw activations
-                        granular_activations: list[Float[torch.Tensor, "g d"]] = self._apply_selection_strategy(
-                            activations=batch_sp_activations,
-                            granularity_indices=granularity_indices,
-                            activation_granularity=activation_granularity,
-                            aggregation_strategy=aggregation_strategy,
-                        )
+                    # select relevant activations with respect to the granularity strategy
+                    # potentially aggregate activations over the granularity elements
+                    # this merges the `n` and `g` dimensions with `g` a subset of `n`
+                    # shape (n, l, d) only for `ALL` granularity, thus raw activations
+                    granular_activations: list[Float[torch.Tensor, "g d"]] = self._apply_selection_strategy(
+                        activations=batch_sp_activations,
+                        granularity_indices=granularity_indices,
+                        activation_granularity=activation_granularity,
+                        aggregation_strategy=aggregation_strategy,
+                    )
 
-                        activations[sp].extend(granular_activations)
+                    activations[sp].extend(granular_activations)
 
                     if include_predicted_classes:
                         if not flatten_activations:
@@ -1014,10 +1061,9 @@ class ModelWithSplitPoints(LanguageModel):
 
         # ------------------------------------------------------------------------------------------
         # concat activation batches and validate that activations have the expected type
-        for split_point in self.split_points:
-            if flatten_activations:
-                # two dimensional tensor (n*g, d)
-                activations[split_point] = torch.cat(activations[split_point], dim=0)
+        if flatten_activations:
+            # two dimensional tensor (n*g, d)
+            activations[self._split_point] = torch.cat(activations[self._split_point], dim=0)
 
         if include_predicted_classes:
             if flatten_activations:
@@ -1042,7 +1088,6 @@ class ModelWithSplitPoints(LanguageModel):
         encode_activations: Callable[[LatentActivations], ConceptsActivations],
         decode_concepts: Callable[[ConceptsActivations], LatentActivations],
         targets: list[int] | None = None,
-        split_point: str | None = None,
         activation_granularity: ActivationGranularity = AG.TOKEN,
         aggregation_strategy: GranularityAggregationStrategy | None = GranularityAggregationStrategy.MEAN,
         concepts_x_gradients: bool = False,
@@ -1135,19 +1180,6 @@ class ModelWithSplitPoints(LanguageModel):
         # the `targets` parameter need to be loaded in self for nnsight to allow its access inside the trace context
         self.targets = targets
 
-        # manage the split point
-        if split_point is not None:
-            local_split_point: str = split_point
-        elif not self.split_points:
-            raise ValueError(
-                "The activations cannot correspond to `model_with_split_points` model. "
-                "The `model_with_split_points` model do not have `split_point` defined. "
-            )
-        elif len(self.split_points) > 1:
-            raise ValueError("Cannot determine the split point with multiple `model_with_split_points` split points. ")
-        else:
-            local_split_point: str = self.split_points[0]
-
         # batch inputs
         grad_batch_size = batch_size or self.batch_size
         if isinstance(inputs, BatchEncoding):
@@ -1211,14 +1243,14 @@ class ModelWithSplitPoints(LanguageModel):
 
                 # all model calls use trace with nnsight
                 with self.trace(tokenized_inputs, **model_forward_kwargs):
-                    curr_module = self.get(local_split_point)
+                    curr_module = self.get(self._split_point)
                     # Handle case in which module has .output attribute, and .nns_output gets overridden instead
                     module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
 
                     # get activations
                     layer_outputs = getattr(curr_module, module_out_name)
                     raw_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
-                        layer_outputs, local_split_point
+                        layer_outputs, self._split_point
                     )
                     n, l, d = raw_activations.shape  # number of samples, sequence length, and model dimension
                     ng = sum([len(indices) for indices in granularity_indices])  # number of granularity elements
@@ -1335,29 +1367,25 @@ class ModelWithSplitPoints(LanguageModel):
     def get_split_activations(
         self,
         activations: dict[str, LatentActivations] | dict[str, list[LatentActivations]],
-        split_point: str | None = None,
     ) -> LatentActivations | list[LatentActivations]:
         """
-        Extract activations for the specified split point.
-        If no split point is specified, it works if and only if the `model_with_split_points` has only one split point.
-        Verify that the given activations are valid for the `model_with_split_points` and `split_point`.
+        Extract activations for the model's split point.
+        Verify that the given activations are valid for the `model_with_split_points`.
         Cases in which the activations are not valid include:
 
         * Activations are not a valid dictionary.
-        * Specified split point does not exist in the activations.
+        * The split point does not exist in the activations.
 
         Args:
             activations (dict[str, LatentActivations]): A dictionary with model paths as keys and the corresponding
                 tensors as values.
-            split_point (str | None): The split point to extract activations from.
-                If None, the `split_point` of the explainer is used.
 
         Returns:
-            (LatentActivations): The activations for the explainer split point.
+            (LatentActivations): The activations for the split point.
 
         Examples:
             >>> from interpreto import ModelWithSplitPoints as MWSP
-            >>> model = ModelWithSplitPoints("bert-base-uncased", split_points=4,
+            >>> model = ModelWithSplitPoints("bert-base-uncased", split_point=4,
             >>>                              automodel=AutoModelForSequenceClassification)
             >>> activations_dict: dict[str, LatentActivations] = model.get_activations(
             ...     "interpreto is magic",
@@ -1367,22 +1395,9 @@ class ModelWithSplitPoints(LanguageModel):
             torch.Size([1, 12, 768])
 
         Raises:
-            ValueError: If not split point is specified and the `model_with_split_points` has more than one split point.
             TypeError: If the activations are not a valid dictionary.
-            ValueError: If the specified split point is not found in the activations.
+            ValueError: If the split point is not found in the activations.
         """
-        if split_point is not None:
-            local_split_point: str = split_point
-        elif not self.split_points:
-            raise ValueError(
-                "The activations cannot correspond to `model_with_split_points` model. "
-                "The `model_with_split_points` model do not have `split_point` defined. "
-            )
-        elif len(self.split_points) > 1:
-            raise ValueError("Cannot determine the split point with multiple `model_with_split_points` split points. ")
-        else:
-            local_split_point: str = self.split_points[0]
-
         act_is_dict_of_tensors = isinstance(activations, dict) and all(
             isinstance(act, torch.Tensor) for act in activations.values()
         )
@@ -1396,41 +1411,41 @@ class ModelWithSplitPoints(LanguageModel):
                 "or a dictionary of model paths and list of torch.Tensor activations. "
                 f"Got: '{type(activations)}'"
             )
-        activations_split_points: list[str] = list(activations.keys())  # type: ignore
-        if local_split_point not in activations_split_points:
+        activations_keys: list[str] = list(activations.keys())  # type: ignore
+        if self._split_point not in activations_keys:
             raise ValueError(
-                f"Fitted split point '{local_split_point}' not found in activations.\n"
-                f"Available split_points: {', '.join(activations_split_points)}."
+                f"Split point '{self._split_point}' not found in activations.\n"
+                f"Available keys: {', '.join(activations_keys)}."
             )
 
-        return activations[local_split_point]  # type: ignore
+        return activations[self._split_point]  # type: ignore
 
     def get_latent_shape(
         self,
         inputs: str | list[str] | BatchEncoding | None = None,
     ) -> dict[str, torch.Size]:
-        """Get the shape of the latent activations at the specified split point.
+        """Get the shape of the latent activations at the split point.
 
         Use the `scan` operation from NNsight to get the shape of the activations.
-        It basically builds the computation graph, but it it much quicker than a forward.
+        It basically builds the computation graph, but it is much quicker than a forward.
 
         Args:
             inputs (str | list[str] | BatchEncoding | None): Inputs to the model forward pass before or after tokenization.
                 In the case of a `torch.Tensor`, we assume a batch dimension and token ids.
 
         Returns:
-            dict[str, torch.Size]: Dictionary with the shape of the activations for each split point.
+            dict[str, torch.Size]: Dictionary with the shape of the activations for the split point.
         """
         sizes = {}
         with self.scan(self._example_input if inputs is None else inputs):
-            for split_point in self.split_points:
-                curr_module = self.get(split_point)
-                module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
-                module = getattr(curr_module, module_out_name)
-                if isinstance(module, tuple):
-                    for candidate in module:
-                        if candidate.dim() == 3:
-                            module = candidate
-                            break
-                sizes[split_point] = module.shape  # type: ignore  (under specification from NNsight)
+            split_point = self._split_point
+            curr_module = self.get(split_point)
+            module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
+            module = getattr(curr_module, module_out_name)
+            if isinstance(module, tuple):
+                for candidate in module:
+                    if candidate.dim() == 3:
+                        module = candidate
+                        break
+            sizes[split_point] = module.shape  # type: ignore  (under specification from NNsight)
         return sizes

@@ -55,16 +55,13 @@ class SplitSequenceClassification(ModelWithSplitPoints):
     the CLS-token representations fed into that head.
     """
 
-    @ModelWithSplitPoints.split_points.setter
-    def split_points(self, split_points):
-        """Override to store split points directly without walk_modules validation.
+    @ModelWithSplitPoints.split_point.setter
+    def split_point(self, split_point):
+        """Override to store split point directly without walk_modules validation.
 
         The classification head is validated separately via the classification_head_name setter.
         """
-        if isinstance(split_points, (list, tuple)):
-            self._split_points = [str(s) for s in split_points]
-        else:
-            self._split_points = [str(split_points)]
+        self._split_point = str(split_point)
 
     def __init__(
         self,
@@ -119,12 +116,12 @@ class SplitSequenceClassification(ModelWithSplitPoints):
                     "Please provide a model that inherits from `transformers.ForSequenceClassification`."
                 )
 
-        # Pass a placeholder split_points; our overridden setter skips walk_modules validation.
+        # Pass a placeholder split_point; our overridden setter skips walk_modules validation.
         # The real split point is resolved after super().__init__() loads the model,
         # because the classification_head_name setter needs access to self._model.
         super().__init__(
             model_or_repo_id,
-            split_points=["placeholder"],
+            split_point="placeholder",
             config=config,
             tokenizer=tokenizer,
             automodel=AutoModelForSequenceClassification,  # type: ignore
@@ -133,9 +130,9 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             **kwargs,
         )
 
-        # Now self._model is available; resolve the classification head and update split_points.
+        # Now self._model is available; resolve the classification head and update split_point.
         self.classification_head_name = classification_head_name  # setter auto-detects if None
-        self.split_points = [self.classification_head_name]
+        self.split_point = self.classification_head_name
 
     @property
     def classification_head_name(self) -> str:
