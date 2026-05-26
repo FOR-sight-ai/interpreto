@@ -24,5 +24,6 @@
 
 from .distances import DistanceFunctions
 from .granularity import Granularity, GranularityAggregationStrategy
+from .image_granularity import ImageGranularity
 
-__all__ = ["DistanceFunctions", "Granularity", "GranularityAggregationStrategy"]
+__all__ = ["DistanceFunctions", "Granularity", "GranularityAggregationStrategy", "ImageGranularity"]
