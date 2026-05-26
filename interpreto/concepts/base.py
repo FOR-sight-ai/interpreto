@@ -62,7 +62,7 @@ MethodOutput = TypeVar("MethodOutput")
 def check_fitted(func: Callable[..., MethodOutput]) -> Callable[..., MethodOutput]:
     @wraps(func)
     def wrapper(self: ConceptEncoderExplainer, *args, **kwargs) -> MethodOutput:
-        if not self.is_fitted or self.split_point is None:
+        if not self.is_fitted:
             raise RuntimeError("Concept encoder is not fitted yet. Use the .fit() method to fit the explainer.")
         return func(self, *args, **kwargs)
 
@@ -176,8 +176,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
 
     Attributes:
         model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-            It should have at least one split point on which `concept_model` can be fitted.
-        split_point (str): The split point used to train the `concept_model`.
+            The split point is determined by the model's `split_point` attribute.
         concept_model (ConceptModelProtocol): The model used to extract concepts from the activations of
             `model_with_split_points`. The only assumption for classes inheriting from this class is that
             the `concept_model` can encode activations into concepts with `encode_activations`.
@@ -192,18 +191,15 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         self,
         model_with_split_points: ModelWithSplitPoints,
         concept_model: ConceptModelProtocol,
-        split_point: str | None = None,
     ):
         """Initializes the concept explainer with a given splitted model.
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+                Its `split_point` attribute determines where activations are extracted.
             concept_model (ConceptModelProtocol): The model used to extract concepts from
                 the activations of `model_with_split_points`.
                 The `ConceptModelProtocol` is defined in `interpreto.typing`. It is basically a `torch.nn.Module` with an `encode` method.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
         """
         if not isinstance(model_with_split_points, ModelWithSplitPoints):
             raise TypeError(
@@ -211,7 +207,6 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
             )
         self.model_with_split_points: ModelWithSplitPoints = model_with_split_points
         self._concept_model = concept_model
-        self.split_point = split_point  # Verified by `split_point.setter`
         self.__is_fitted: bool = False
 
     @property
@@ -227,15 +222,6 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
     @property
     def is_fitted(self) -> bool:
         return self.__is_fitted
-
-    def __repr__(self):
-        return dedent(f"""\
-            {self.__class__.__name__}(
-                split_point={self.split_point},
-                concept_model={type(self.concept_model).__name__},
-                is_fitted={self.is_fitted},
-                has_differentiable_concept_encoder={self.has_differentiable_concept_encoder},
-            )""")
 
     @abstractmethod
     def fit(self, activations: LatentActivations | dict[str, LatentActivations], *args, **kwargs) -> Any:
@@ -261,28 +247,6 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
             A `torch.Tensor` of encoded activations produced by the fitted concept encoder.
         """
         pass
-
-    @property
-    def split_point(self) -> str:
-        return self._split_point
-
-    @split_point.setter
-    def split_point(self, split_point: str | None) -> None:
-        if split_point is None and len(self.model_with_split_points.split_points) > 1:
-            raise ValueError(
-                "If the model has more than one split point, a split point for fitting the concept model should "
-                f"be specified. Got split point: '{split_point}' with model split points: "
-                f"{', '.join(self.model_with_split_points.split_points)}."
-            )
-        if split_point is None:
-            self._split_point: str = self.model_with_split_points.split_points[0]
-        if split_point is not None:
-            if split_point not in self.model_with_split_points.split_points:
-                raise ValueError(
-                    f"Split point '{split_point}' not found in model split points: "
-                    f"{', '.join(self.model_with_split_points.split_points)}."
-                )
-            self._split_point: str = split_point
 
     def _sanitize_activations(
         self,
@@ -353,8 +317,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
 
     Attributes:
         model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-            It should have at least one split point on which `concept_model` can be fitted.
-        split_point (str): The split point used to train the `concept_model`.
+            The split point is determined by the model's `split_point` attribute.
         concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from the
             activations of  `model_with_split_points`. The only assumption for classes inheriting from this class is
             that the `concept_model` can encode activations into concepts with `encode_activations`.
@@ -369,34 +332,21 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         self,
         model_with_split_points: ModelWithSplitPoints,
         concept_model: BaseDictionaryLearning,
-        split_point: str | None = None,
     ):
         """Initializes the concept explainer with a given splitted model.
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+                Its `split_point` attribute determines where activations are extracted.
             concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from
                 the activations of `model_with_split_points`.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
         """
         self.concept_model: BaseDictionaryLearning
-        super().__init__(model_with_split_points, concept_model, split_point)  # type: ignore
+        super().__init__(model_with_split_points, concept_model)  # type: ignore
 
     @property
     def is_fitted(self) -> bool:
         return self.concept_model.fitted
-
-    def __repr__(self):
-        return dedent(f"""\
-            {self.__class__.__name__}(
-                split_point={self.split_point},
-                concept_model={type(self.concept_model).__name__},
-                is_fitted={self.is_fitted},
-                has_differentiable_concept_encoder={self.has_differentiable_concept_encoder},
-                has_differentiable_concept_decoder={self.has_differentiable_concept_decoder},
-            )""")
 
     @check_fitted
     def encode_activations(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
@@ -460,7 +410,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         self,
         inputs: torch.Tensor | list[str] | BatchEncoding,
         targets: list[int] | None = None,
-        split_point: str | None = None,
         activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concepts_x_gradients: bool = True,
@@ -495,10 +444,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 Note that $f_{co}$ often has several outputs, by default gradients are computed for each output.
                 The `t` dimension of the returned tensor is equal to the number of selected targets.
                 (For classification, those are the classes logits and for generation, those are the most probable tokens probabilities).
-
-            split_point (str | None):
-                The split point used to train the `concept_model`.
-                If None, tries to use the split point of `model_with_split_points` if a single one is defined.
 
             activation_granularity (ActivationGranularity):
                 The granularity of the activations to use for the attribution.
@@ -583,7 +528,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             targets=targets,
             encode_activations=self.encode_activations,
             decode_concepts=self.decode_concepts,
-            split_point=split_point,
             activation_granularity=activation_granularity,
             aggregation_strategy=aggregation_strategy,
             concepts_x_gradients=concepts_x_gradients,
