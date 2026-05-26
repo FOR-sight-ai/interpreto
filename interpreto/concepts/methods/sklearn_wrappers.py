@@ -338,7 +338,6 @@ class SkLearnWrapperExplainer(DictionaryLearningExplainer[SkLearnWrapper], Gener
         model_with_split_points: ModelWithSplitPoints,
         *,
         nb_concepts: int,
-        split_point: str | None = None,
         device: torch.device | str = "cpu",
         **kwargs,
     ):
@@ -347,27 +346,22 @@ class SkLearnWrapperExplainer(DictionaryLearningExplainer[SkLearnWrapper], Gener
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+                Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
             device (torch.device | str): Device to use for the `concept_module`.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.
                 See the sklearn documentation of the provided `concept_model_class` for more details.
         """
         self.model_with_split_points = model_with_split_points
-        self.split_point: str = split_point  # type:ignore[assignment]
         shapes = model_with_split_points.get_latent_shape()
 
         concept_model = self.concept_model_class(
-            input_size=shapes[self.split_point][-1],
+            input_size=shapes[model_with_split_points.split_point][-1],
             nb_concepts=nb_concepts,
             device=device,
             **kwargs,
         )
-        ConceptAutoEncoderExplainer.__init__(
-            self, model_with_split_points, concept_model=concept_model, split_point=split_point
-        )
+        ConceptAutoEncoderExplainer.__init__(self, model_with_split_points, concept_model=concept_model)
 
 
 class PCAConcepts(SkLearnWrapperExplainer[PCAWrapper]):

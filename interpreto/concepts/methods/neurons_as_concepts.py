@@ -120,27 +120,22 @@ class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
-        split_point: str | None = None,
     ):
         """
         Initializes the concept explainer with a given splitted model.
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
+                Its `split_point` attribute determines where activations are extracted.
         """
         # extract the input size from the model activations
         self.model_with_split_points = model_with_split_points
-        self.split_point: str = split_point  # type: ignore
-        input_size = self.model_with_split_points.get_latent_shape()[self.split_point][-1]
+        input_size = self.model_with_split_points.get_latent_shape()[self.model_with_split_points.split_point][-1]
 
         # initialize
         super().__init__(
             model_with_split_points=model_with_split_points,
             concept_model=IdentityConceptModel(input_size),
-            split_point=self.split_point,
         )
         self.has_differentiable_concept_encoder = True
         self.has_differentiable_concept_decoder = True

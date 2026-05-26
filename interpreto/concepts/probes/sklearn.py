@@ -93,7 +93,6 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
 
     Args:
         model_with_split_points (ModelWithSplitPoints): Wrapped transformer model.
-        split_point (str | None): Layer name to extract activations from.
         sklearn_class (Any): Scikit-learn estimator class (default: `SVC`).
         sklearn_kwargs (dict[str, Any]): Arguments forwarded to the sklearn estimator.
     """
@@ -101,7 +100,6 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
-        split_point: str | None = None,
         sklearn_class: Any = SVC,
         sklearn_kwargs: dict[str, Any] = {},
     ):
@@ -110,7 +108,6 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
         super().__init__(
             model_with_split_points=model_with_split_points,
             concept_model=concept_model,
-            split_point=split_point,
         )
 
     @property

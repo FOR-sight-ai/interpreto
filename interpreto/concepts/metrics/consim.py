@@ -222,7 +222,7 @@ class ConSim:
         >>> # Load a model and wrap it
         >>> model_with_split_points = ModelWithSplitPoints(
         ...     "textattack/bert-base-uncased-ag-news",
-        ...     split_points=["bert.encoder.layer.10.output"],
+        ...     split_point="bert.encoder.layer.10.output",
         ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
         ...     batch_size=4,
         ... )
@@ -269,27 +269,11 @@ class ConSim:
         user_llm: LLMInterface | None,
         activation_granularity: ActivationGranularity,
         classes: list[str] | None = None,
-        split_point: str | None = None,
     ):
         """
         Initialize the ConSim metric.
         """
         self.model_with_split_points = model_with_split_points
-        if split_point is None:
-            if len(self.model_with_split_points.split_points) > 1:
-                raise ValueError(
-                    "If the model has more than one split point, a split point for fitting the concept model should "
-                    f"be specified. Got split point: '{split_point}' with model split points: "
-                    f"{', '.join(self.model_with_split_points.split_points)}."
-                )
-            split_point = self.model_with_split_points.split_points[0]
-
-        if split_point not in self.model_with_split_points.split_points:
-            raise ValueError(
-                f"Split point '{split_point}' not found in model split points: {', '.join(self.model_with_split_points.split_points)}."
-            )
-
-        self.split_point: str = split_point
         self.activation_granularity: ActivationGranularity = activation_granularity
         self.user_llm: LLMInterface | None = user_llm
         self.classes: list[str] | None = classes
@@ -1272,23 +1256,6 @@ class ConSim:
         """
         local_importances: torch.Tensor | None = None
         if concept_explainer is not None:
-            # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
-            if concept_explainer.split_point not in self.model_with_split_points.split_points:
-                raise ValueError(
-                    "The split point used in the provided `concept_explainer` should be one of the `model_with_split_points` ones."
-                    f"Got split point: '{concept_explainer.split_point}' with model split points: "
-                    f"{', '.join(self.model_with_split_points.split_points)}."
-                )
-            if (
-                concept_explainer.model_with_split_points._model.config.name_or_path
-                != self.model_with_split_points._model.config.name_or_path
-            ):
-                raise ValueError(
-                    "The model used in the provided `concept_explainer` should be the same as the one used in the `model_with_split_points`."
-                    f"Got (concept_explainer) model name or path: '{concept_explainer.model_with_split_points._model.config.name_or_path}'"
-                    f"and (model_with_split_points) model name or path: '{self.model_with_split_points._model.config.name_or_path}'."
-                )
-
             # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
             # For now we force gradient-input
             # TODO: precise shapes with jaxtyping
@@ -1302,7 +1269,6 @@ class ConSim:
                     samples_to_explain = interesting_samples
                 local_importances_list = concept_explainer.concept_output_gradient(
                     inputs=samples_to_explain,
-                    split_point=self.split_point,
                     activation_granularity=self.activation_granularity,
                     concepts_x_gradients=True,
                     tqdm_bar=False,

@@ -355,9 +355,7 @@ class BaseConceptInterpretationMethod(ABC):
                     aggregation_strategy=self.aggregation_strategy,
                 )
             )  # type: ignore
-            latent_activations = self.concept_explainer.model_with_split_points.get_split_activations(
-                activations_dict, split_point=self.concept_explainer.split_point
-            )  # type: ignore
+            latent_activations = self.concept_explainer.model_with_split_points.get_split_activations(activations_dict)  # type: ignore
             return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
         raise ValueError(
@@ -432,7 +430,7 @@ class BaseConceptInterpretationMethod(ABC):
 
         # compute the vocabulary's concepts activations
         latent_activations: LatentActivations = self.concept_explainer.model_with_split_points.get_split_activations(
-            activations_dict, split_point=self.concept_explainer.split_point
+            activations_dict
         )  # type: ignore
         concepts_activations = self.concept_explainer.encode_activations(latent_activations)
         return inputs, concepts_activations

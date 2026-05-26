@@ -103,7 +103,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         >>> # load and split the the GPT2 model
         >>> mwsp = ModelWithSplitPoints(
         ...     "gpt2",
-        ...     split_points=[11],           # split at the 12th layer
+        ...     split_point=11,           # split at the 12th layer
         ...     automodel=AutoModelForCausalLM,
         ...     device_map="auto",
         ...     batch_size=2048,
@@ -140,7 +140,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         >>> # load and split an IMDB classification model
         >>> mwsp = ModelWithSplitPoints(
         ...     "textattack/bert-base-uncased-imdb",
-        ...     split_points=[11],              # split at the last layer
+        ...     split_point=11,              # split at the last layer
         ...     automodel=AutoModelForSequenceClassification,
         ...     device_map="cuda",
         ...     batch_size=64,
@@ -186,7 +186,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         >>> # load and split the the GPT2 model
         >>> mwsp = ModelWithSplitPoints(
         ...     "Qwen/Qwen3-0.6B",
-        ...     split_points=[9],              # split at the 10th layer
+        ...     split_point=9,              # split at the 10th layer
         ...     automodel=AutoModelForCausalLM,
         ...     device_map="auto",
         ...     batch_size=16,

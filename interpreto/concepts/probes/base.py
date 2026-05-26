@@ -215,14 +215,12 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
         self,
         model_with_split_points: ModelWithSplitPoints,
         concept_model: Probe,
-        split_point: str | None = None,
     ):
         if not isinstance(concept_model, Probe):
             raise TypeError(f"concept_model must be a Probe instance, got {type(concept_model).__name__}.")
         super().__init__(
             model_with_split_points=model_with_split_points,
             concept_model=concept_model,
-            split_point=split_point,
         )
 
     @property

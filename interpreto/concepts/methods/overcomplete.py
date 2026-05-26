@@ -142,7 +142,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         ...
         >>> # 1. Split your model in two parts
         >>> splitted_model = ModelWithSplitPoints(
-        >>>     model, tokenizer=tokenizer, split_points=[5],
+        >>>     model, tokenizer=tokenizer, split_point=5,
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
@@ -188,7 +188,6 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         model_with_split_points: ModelWithSplitPoints,
         *,
         nb_concepts: int,
-        split_point: str | None = None,
         encoder_module: nn.Module | str | None = None,
         dictionary_params: dict | None = None,
         device: str = "cpu",
@@ -199,10 +198,8 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+                Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
             encoder_module (nn.Module | str | None): Encoder module to use to construct the SAE, see [Overcomplete SAE documentation](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/).
             dictionary_params (dict | None): Dictionary parameters to use to construct the SAE, see [Overcomplete SAE documentation](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/).
             device (torch.device | str): Device to use for the `concept_module`.
@@ -215,19 +212,18 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
                 "Use `interpreto.concepts.methods.SAEExplainerClasses` to get the list of available SAE methods."
             )
         self.model_with_split_points = model_with_split_points
-        self.split_point: str = split_point  # type: ignore
 
         # TODO: this will be replaced with a scan and a better way to select how to pick activations based on model class
         shapes = self.model_with_split_points.get_latent_shape()
         concept_model = self.concept_model_class(
-            input_shape=shapes[self.split_point][-1],
+            input_shape=shapes[self.model_with_split_points.split_point][-1],
             nb_concepts=nb_concepts,
             encoder_module=encoder_module,
             dictionary_params=dictionary_params,
             device=device,
             **kwargs,
         )
-        super().__init__(model_with_split_points, concept_model, self.split_point)
+        super().__init__(model_with_split_points, concept_model)
 
     @property
     def device(self) -> torch.device:
@@ -378,7 +374,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         ...
         >>> # 1. Split your model in two parts
         >>> splitted_model = ModelWithSplitPoints(
-        >>>     model, tokenizer=tokenizer, split_points=[5],
+        >>>     model, tokenizer=tokenizer, split_point=5,
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
@@ -421,7 +417,6 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         model_with_split_points: ModelWithSplitPoints,
         *,
         nb_concepts: int,
-        split_point: str | None = None,
         device: torch.device | str = "cpu",
         **kwargs,
     ):
@@ -430,10 +425,8 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+                Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
             device (torch.device | str): Device to use for the `concept_module`.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.
                 See the Overcomplete documentation of the provided `concept_model_class` for more details.
@@ -443,7 +436,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
             device=device,  # type: ignore
             **kwargs,
         )
-        super().__init__(model_with_split_points, concept_model, split_point)
+        super().__init__(model_with_split_points, concept_model)
 
     def fit(self, activations: LatentActivations | dict[str, LatentActivations], *, overwrite: bool = False, **kwargs):
         """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
@@ -573,7 +566,6 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
         model_with_split_points: ModelWithSplitPoints,
         *,
         nb_concepts: int,
-        split_point: str | None = None,
         device: torch.device | str = "cpu",
         force_relu: bool = False,
         **kwargs,
@@ -583,10 +575,8 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+                Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
             device (torch.device | str): Device to use for the `concept_module`.
             force_relu (bool): Whether to force the activations to be positive.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.
@@ -595,7 +585,6 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
         super().__init__(
             model_with_split_points,
             nb_concepts=nb_concepts,
-            split_point=split_point,
             device=device,
             **kwargs,
         )
@@ -687,7 +676,6 @@ class ConvexNMFConcepts(DictionaryLearningExplainer[oc_opt.ConvexNMF]):
         model_with_split_points: ModelWithSplitPoints,
         *,
         nb_concepts: int,
-        split_point: str | None = None,
         device: torch.device | str = "cpu",
         **kwargs,
     ):
@@ -696,10 +684,8 @@ class ConvexNMFConcepts(DictionaryLearningExplainer[oc_opt.ConvexNMF]):
 
         Args:
             model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+                Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
             device (torch.device | str): Device to use for the `concept_module`.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.
                 See the Overcomplete documentation of the provided `concept_model_class` for more details.
@@ -708,7 +694,6 @@ class ConvexNMFConcepts(DictionaryLearningExplainer[oc_opt.ConvexNMF]):
         super().__init__(
             model_with_split_points=model_with_split_points,
             nb_concepts=nb_concepts,
-            split_point=split_point,
             device=device,
             **kwargs,
         )
