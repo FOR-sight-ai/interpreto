@@ -43,9 +43,9 @@ def test_sparsity(splitted_encoder_ml: ModelWithSplitPoints):
     d = 32
     sparsity_ratio = 0.1  # should make an integer through 1 / sparsity_ratio
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
+    splitted_encoder_ml.split_point = split
 
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
     activations = torch.arange(n * d, device=DEVICE).reshape(n, d)
     sparse_activations = activations * (activations % (1 / sparsity_ratio) == 0).float()
 

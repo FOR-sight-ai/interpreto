@@ -73,14 +73,6 @@ ALL_CONCEPT_METHODS = [
 ]
 
 
-def test_cbe_fit_failure_cases(multi_split_model: ModelWithSplitPoints):
-    """Test failure cases in matching the CBE with a ModelWithSplitPoints"""
-
-    # Raise when no split is provided and the model has more than one split
-    with pytest.raises(ValueError, match="If the model has more than one split point"):
-        _ = Cockatiel(multi_split_model, nb_concepts=3)
-
-
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
 def test_overcomplete_cbe(
     splitted_encoder_ml: ModelWithSplitPoints,
@@ -124,7 +116,6 @@ def test_overcomplete_cbe(
     )
     assert cbe.concept_model.fitted, f"Concept model in {method_class.__name__} not fitted"
     assert cbe.is_fitted, f"Explainer {method_class.__name__} reports not fitted"
-    assert cbe.split_point == split, f"Split point mismatch: expected {split}, got {cbe.split_point}"
     assert hasattr(cbe, "has_differentiable_concept_encoder"), (
         f"Explainer {method_class.__name__} missing 'has_differentiable_concept_encoder'"
     )
@@ -257,7 +248,7 @@ if __name__ == "__main__":
     ]
     splitted_encoder_ml: ModelWithSplitPoints = ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForMaskedLM,  # type: ignore
         device_map=DEVICE,
     )

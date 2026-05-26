@@ -70,14 +70,14 @@ def test_dictionary_metrics_with_dict_and_ce(splitted_encoder_ml: ModelWithSplit
     Test the dictionary metric give similar results via dictionaries and concept explainers
     """
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
+    splitted_encoder_ml.split_point = split
 
     rand1 = torch.rand(32, 32)
-    concept_explainer1 = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    concept_explainer1 = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
     concept_explainer1.get_dictionary = lambda: rand1
 
     rand2 = torch.rand(32, 32)
-    concept_explainer2 = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    concept_explainer2 = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
     concept_explainer2.get_dictionary = lambda: rand2
 
     for metric in [Stability]:

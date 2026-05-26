@@ -244,7 +244,7 @@ def bert_split_model() -> ModelWithSplitPoints:
 
     return ModelWithSplitPoints(
         "bert-base-uncased",
-        split_points=["bert.encoder.layer.6"],
+        split_point="bert.encoder.layer.6",
         automodel=AutoModelForSequenceClassification,  # type: ignore
         batch_size=16,
         device_map=DEVICE,

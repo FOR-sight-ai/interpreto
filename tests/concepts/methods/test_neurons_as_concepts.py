@@ -44,10 +44,9 @@ def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activati
     split, activations = next(iter(activations_dict.items()))  # dictionary with only one element
     d = activations.shape[1]
 
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     assert concept_explainer.is_fitted is True  # splitted_model has a single split so it is fitted
-    assert concept_explainer.split_point == split
     assert hasattr(concept_explainer, "has_differentiable_concept_encoder")
     assert hasattr(concept_explainer, "has_differentiable_concept_decoder")
     assert concept_explainer.concept_model.nb_concepts == d

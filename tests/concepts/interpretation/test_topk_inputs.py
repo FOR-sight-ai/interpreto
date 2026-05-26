@@ -102,8 +102,8 @@ def test_topk_inputs_from_activations(splitted_encoder_ml: ModelWithSplitPoints)
 
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    splitted_encoder_ml.split_point = split
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     # initializing the interpreter
     interpretation_method = TopKInputs(
@@ -169,8 +169,8 @@ def test_topk_inputs_granularity(
     """
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    splitted_encoder_ml.split_point = split
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     # getting the activations
     activations = splitted_encoder_ml.get_activations(huge_text, activation_granularity=activation_granularity)[split]
@@ -217,8 +217,8 @@ def test_topk_inputs_concepts_selection(splitted_encoder_ml: ModelWithSplitPoint
 
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    splitted_encoder_ml.split_point = split
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     # getting the activations
     activations = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
@@ -287,8 +287,8 @@ def test_topk_inputs_sources(splitted_encoder_ml: ModelWithSplitPoints):
 
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    splitted_encoder_ml.split_point = split
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     # getting the activations
     activations = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
@@ -335,8 +335,8 @@ def test_topk_inputs_from_vocabulary(splitted_encoder_ml: ModelWithSplitPoints):
 
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    splitted_encoder_ml.split_point = split
+    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     top_k_vocabulary = TopKInputs(
         concept_explainer=concept_explainer,
@@ -367,12 +367,11 @@ def test_topk_inputs_from_ngrams(splitted_encoder_ml: ModelWithSplitPoints, n: i
     data = ["A B C D E F A B C D E F A B C D E F", "A B C D E F A B C D E F", "A B C D E F", "A B C"]
 
     split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_points = split
+    splitted_encoder_ml.split_point = split
     concept_model = ConceptModelCounter()
     concept_explainer = DummyConceptExplainer(
         model_with_split_points=splitted_encoder_ml,
         concept_model=concept_model,
-        split_point=split,
     )
     concept_explainer._ConceptEncoderExplainer__is_fitted = True
     assert concept_model.count == 0
@@ -522,7 +521,7 @@ if __name__ == "__main__":
 
     splitted_encoder_ml = ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForMaskedLM,  # type: ignore
     )
     sentences = [
