@@ -58,7 +58,7 @@ from interpreto.concepts.probes import CosineCentroidProbe
 
 model = ModelWithSplitPoints(
     "gpt2",
-    split_points="transformer.h.6",
+    split_point="transformer.h.6",
     device_map="cuda",
 )
 

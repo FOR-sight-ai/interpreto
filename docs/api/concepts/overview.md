@@ -17,7 +17,7 @@ from interpreto.concepts.interpretations import TopKInputs
 # 1. Load and split your model
 model_with_split_points = ModelWithSplitPoints(
     "your_model_id",
-    split_points="your_split_point",
+    split_point="your_split_point",
     automodel="your_automodel",
     nb_concepts=50,
     device_map="cuda"
@@ -51,7 +51,7 @@ More details in the [`ModelWithSplitPoints` documentation](./model_with_split_po
 
 > **For classification models:** Use [`SplitSequenceClassification`](./split_sequence_classification.md)
 > instead. It automatically identifies the classification head as the split point, removing the need
-> to manually specify split points. It also enables the [input-to-concept attribution](./interpretations/concept_attributions.md) workflow.
+> to manually specify a split point. It also enables the [input-to-concept attribution](./interpretations/concept_attributions.md) workflow.
 
 ### Step 2: Compute the model activations on the split_point
 
@@ -81,7 +81,7 @@ See the following documentation for more details: [SAEs](./concept_spaces/sae.md
 
 They has few key parameters:
 
-- `model_with_split_points`: the model with split points.
+- `model_with_split_points`: the model wrapper with a split point.
 - `nb_concepts`: the number of concepts to use.
 - `device`: the device for training and inference for SAEs
 

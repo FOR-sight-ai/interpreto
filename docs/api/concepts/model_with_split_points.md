@@ -2,6 +2,9 @@
 icon: material/code-json
 ---
 
+`ModelWithSplitPoints` now uses the singular `split_point` argument/property because only one split point is supported.
+The previous `split_points` argument/property remains temporarily available as a deprecated compatibility alias and emits a `DeprecationWarning` guiding users to `split_point`. It will be removed in version `0.6.0`.
+
 ::: interpreto.ModelWithSplitPoints
     handler: python
     options:

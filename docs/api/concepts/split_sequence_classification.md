@@ -13,7 +13,7 @@ classification head as the split point and the granularity as the [CLS] token.
 Use `SplitSequenceClassification` instead of `ModelWithSplitPoints` when:
 
 - Your model is a Hugging Face `*ForSequenceClassification` model.
-- You want to extract CLS-token activations without manually specifying split points.
+- You want to extract CLS-token activations without manually specifying a split point.
 - You want a cleaner, faster concept pipeline for classification tasks.
 
 ## Additional Gain
