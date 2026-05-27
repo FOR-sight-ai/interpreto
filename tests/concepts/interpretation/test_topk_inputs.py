@@ -173,7 +173,7 @@ def test_topk_inputs_granularity(
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     # getting the activations
-    activations = splitted_encoder_ml.get_activations(huge_text, activation_granularity=activation_granularity)[split]
+    activations, _ = splitted_encoder_ml.get_activations(huge_text, activation_granularity=activation_granularity)
 
     # initializing the interpreter
     interpretation_method = TopKInputs(
@@ -221,7 +221,7 @@ def test_topk_inputs_concepts_selection(splitted_encoder_ml: ModelWithSplitPoint
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     # getting the activations
-    activations = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
+    activations, _ = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
 
     # extracting concept interpretations
     interpretation = TopKInputs(
@@ -291,7 +291,7 @@ def test_topk_inputs_sources(splitted_encoder_ml: ModelWithSplitPoints):
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     # getting the activations
-    activations = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
+    activations, _ = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
 
     # getting the top k tokens
     interpretation_method = TopKInputs(
@@ -311,7 +311,7 @@ def test_topk_inputs_sources(splitted_encoder_ml: ModelWithSplitPoints):
     top_k_concept = interpretation_method.interpret(
         concepts_indices="all",
         inputs=joined_tokens_list,
-        concepts_activations=activations[split],
+        concepts_activations=activations,
     )
 
     assert list(range(hidden_size)) == list(top_k_latent.keys())
@@ -415,15 +415,10 @@ def test_topk_inputs_from_ngrams(splitted_encoder_ml: ModelWithSplitPoints, n: i
     assert len(top_k_ngram_letters[0].keys()) == len(set(top_k_ngram_letters[0].keys()))
 
 
-def test_topk_inputs_error_raising(
-    splitted_encoder_ml: ModelWithSplitPoints, activations_dict: dict[str, torch.Tensor]
-):
+def test_topk_inputs_error_raising(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
     """
     Test that the `TopKInputs` class raises an error when needed
     """
-    # getting the activations
-    activations = next(iter(activations_dict.values()))  # dictionary with only one element
-
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
 
     some_texts_for_interpretation = ["a sentence", "another sentence", "yet another sentence"]
@@ -529,7 +524,7 @@ if __name__ == "__main__":
         "Interpreto is magical",
         "Testing interpreto",
     ]
-    activation_dict = splitted_encoder_ml.get_activations(sentences, activation_granularity=AG.TOKEN)
+    activations, _ = splitted_encoder_ml.get_activations(sentences, activation_granularity=AG.TOKEN)
 
     test_extract_ngrams()
     test_extract_ngrams_edge_cases()
@@ -537,5 +532,5 @@ if __name__ == "__main__":
     test_topk_inputs_from_vocabulary(splitted_encoder_ml)
     test_topk_inputs_concepts_selection(splitted_encoder_ml)
     test_topk_inputs_sources(splitted_encoder_ml)
-    test_topk_inputs_error_raising(splitted_encoder_ml, activation_dict)  # type: ignore
+    test_topk_inputs_error_raising(splitted_encoder_ml, activations)  # type: ignore
     test_topk_inputs_granularity(splitted_encoder_ml, sentences * 10, AG.SAMPLE)

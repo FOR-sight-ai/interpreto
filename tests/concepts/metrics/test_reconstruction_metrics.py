@@ -35,21 +35,17 @@ from interpreto.concepts.metrics import (
     ReconstructionSpaces,
 )
 from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
-from interpreto.typing import LatentActivations
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def test_reconstruction_error(
-    splitted_encoder_ml: ModelWithSplitPoints, activations_dict: dict[str, LatentActivations]
-):
+def test_reconstruction_error(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
     """
     Test the reconstruction error metrics
     """
 
     neurons_concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
     pca_concept_explainer = PCAConcepts(model_with_split_points=splitted_encoder_ml, nb_concepts=5)
-    activations = next(iter(activations_dict.values()))
     pca_concept_explainer.fit(activations)
 
     for metric_class in [MSE, FID]:
@@ -65,15 +61,12 @@ def test_reconstruction_error(
             raise AssertionError(f"Error with {metric_class.__name__}") from e
 
 
-def test_latent_activations_reconstruction_error(
-    splitted_encoder_ml: ModelWithSplitPoints, activations_dict: dict[str, LatentActivations]
-):
+def test_latent_activations_reconstruction_error(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
     """
     Test the latent activations reconstruction error metrics
     """
 
     pca_concept_explainer = PCAConcepts(model_with_split_points=splitted_encoder_ml, nb_concepts=5)
-    activations = next(iter(activations_dict.values()))  # dictionary with only one element
     pca_concept_explainer.fit(activations)
 
     base_metric = ReconstructionError(
@@ -88,12 +81,11 @@ def test_latent_activations_reconstruction_error(
     assert score == base_score
 
 
-def test_fid(splitted_encoder_ml: ModelWithSplitPoints, activations_dict: dict[str, LatentActivations]):
+def test_fid(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
     """
     Test the fid metrics
     """
     pca_concept_explainer = PCAConcepts(model_with_split_points=splitted_encoder_ml, nb_concepts=5)
-    activations = next(iter(activations_dict.values()))
     pca_concept_explainer.fit(activations)
 
     base_metric = ReconstructionError(

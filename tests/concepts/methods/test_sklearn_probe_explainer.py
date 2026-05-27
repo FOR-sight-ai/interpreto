@@ -64,14 +64,12 @@ SKLEARN_CONFIGS = [
 )
 def test_sklearn_probe_explainer_fit_and_encode(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
     name: str,
     sklearn_class: type,
     sklearn_kwargs: dict,
 ):
     """Fit a SklearnProbeExplainer and verify encode_activations output shape."""
-    split_name = list(activations_dict.keys())[0]
-    activations = activations_dict[split_name]
     n = activations.shape[0]
 
     # Binary labels for single concept
@@ -105,15 +103,12 @@ def test_sklearn_probe_explainer_fit_and_encode(
 )
 def test_sklearn_probe_explainer_encode_before_fit(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
     name: str,
     sklearn_class: type,
     sklearn_kwargs: dict,
 ):
     """Encoding before fitting should raise RuntimeError."""
-    split_name = list(activations_dict.keys())[0]
-    activations = activations_dict[split_name]
-
     explainer = SklearnProbeExplainer(
         model_with_split_points=splitted_encoder_ml,
         sklearn_class=sklearn_class,
@@ -124,13 +119,11 @@ def test_sklearn_probe_explainer_encode_before_fit(
         explainer.encode_activations(activations)
 
 
-def test_sklearn_probe_explainer_with_dict_activations(
+def test_sklearn_probe_explainer_with_tensor_activations(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
 ):
-    """Fit accepts a dict of activations (keyed by split point)."""
-    split_name = list(activations_dict.keys())[0]
-    activations = activations_dict[split_name]
+    """Fit accepts latent activation tensors returned by get_activations."""
     n = activations.shape[0]
 
     torch.manual_seed(7)
@@ -142,8 +135,7 @@ def test_sklearn_probe_explainer_with_dict_activations(
         sklearn_kwargs={"kernel": "linear"},
     )
 
-    # Pass the full dict — explainer should extract the right split
-    explainer.fit(activations_dict, labels)
+    explainer.fit(activations, labels)
     assert explainer.is_fitted
 
     concepts = explainer.encode_activations(activations)

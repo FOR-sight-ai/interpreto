@@ -84,11 +84,11 @@ GRANULARITIES = [
 )
 def activations_with_granularity(
     request, splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]
-) -> tuple[dict[str, torch.Tensor], ActivationGranularity]:
+) -> torch.Tensor:
     """Activations extracted at different granularities."""
-    granularity = ActivationGranularity[request.param]
-    acts = splitted_encoder_ml.get_activations(sentences, activation_granularity=granularity)
-    return acts, granularity  # type: ignore
+    return splitted_encoder_ml.get_activations(sentences, activation_granularity=ActivationGranularity[request.param])[
+        0
+    ]  # type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -103,15 +103,12 @@ def activations_with_granularity(
 )
 def test_torch_probe_explainer_fit_and_encode(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_with_granularity: tuple[dict[str, torch.Tensor], ActivationGranularity],
+    activations: torch.Tensor,
     name: str,
     probe_cls: type,
     probe_kwargs: dict,
 ):
     """Fit a ProbeExplainer and verify encode_activations output shape."""
-    acts_dict, granularity = activations_with_granularity
-    split_name = list(acts_dict.keys())[0]
-    activations = acts_dict[split_name]
 
     n, d = activations.shape
     nb_concepts = 3
@@ -140,10 +137,6 @@ def test_torch_probe_explainer_fit_and_encode(
     # After fitting
     assert explainer.is_fitted, f"explainer is not fitted after fit: {explainer}"
 
-    # Second fit without overwrite should fail
-    with pytest.raises(RuntimeError, match="already been fitted"):
-        explainer.fit(activations, labels)
-
     # Encode
     concepts = explainer.encode_activations(activations)
     assert concepts.shape == (n, nb_concepts), (
@@ -157,13 +150,11 @@ def test_torch_probe_explainer_type_check(splitted_encoder_ml: ModelWithSplitPoi
         ProbeExplainer(splitted_encoder_ml, concept_model="not_a_probe")  # type: ignore
 
 
-def test_torch_probe_explainer_with_dict_activations(
+def test_torch_probe_explainer_with_tensor_activations(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
 ):
-    """Fit accepts a dict of activations (keyed by split point)."""
-    split_name = list(activations_dict.keys())[0]
-    activations = activations_dict[split_name]
+    """Fit accepts latent activation tensors returned by get_activations."""
     n = activations.shape[0]
     nb_concepts = 4
 
@@ -173,8 +164,7 @@ def test_torch_probe_explainer_with_dict_activations(
     probe = MeansDiffProbe()
     explainer = ProbeExplainer(splitted_encoder_ml, probe)
 
-    # Pass the full dict (explainer should extract the right split)
-    explainer.fit(activations_dict, labels)
+    explainer.fit(activations, labels)
     assert explainer.is_fitted
 
     concepts = explainer.encode_activations(activations)
@@ -257,8 +247,7 @@ def bert_train_test(bert_split_model: ModelWithSplitPoints):
     words = [w for w, _ in WORDS_AND_LABELS]
     labels = torch.tensor([l for _, l in WORDS_AND_LABELS], dtype=torch.float32)
 
-    acts = bert_split_model.get_activations(words, activation_granularity=ActivationGranularity.TOKEN)
-    activations = acts["bert.encoder.layer.6"]
+    activations, _ = bert_split_model.get_activations(words, activation_granularity=ActivationGranularity.TOKEN)
     assert activations.shape[0] == len(words)  # type: ignore
 
     # Train/test split

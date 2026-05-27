@@ -133,7 +133,7 @@ def inputs_to_concepts_attributions(
     if concepts_explainer_class != NeuronsAsConcepts:
         kwargs = {} if concepts_explainer_class != NMFConcepts else {"force_relu": True}
         concepts_explainer = concepts_explainer_class(split_model, nb_concepts=3, **kwargs)  # type: ignore
-        activations = split_model.get_activations(sentences)
+        activations, _ = split_model.get_activations(sentences)
         concepts_explainer.fit(activations)
     else:
         concepts_explainer = NeuronsAsConcepts(split_model)  # type: ignore

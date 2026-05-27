@@ -333,7 +333,6 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
     ],
 )
 def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity):
-    split = "bert.encoder.layer.1.output"
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder)
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
@@ -347,7 +346,7 @@ def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activati
         "This is a test. This is another sentence. And yet another one.",
         "This is a second test. This is another sentence. And yet another one.",
     ]
-    activations = splitted_encoder.get_activations(texts, activation_granularity=activation_granularity)[split]
+    activations, _ = splitted_encoder.get_activations(texts, activation_granularity=activation_granularity)
 
     # just verify that everything works, not the content of the labels
     labels = interpretation_method.interpret(
@@ -376,7 +375,6 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
     larger_input = " ".join(["test" for _ in range(2 * n_tokens)])
     joined_tokens_list.append(larger_input)
 
-    split = "bert.encoder.layer.1.output"
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder)
 
     interpretation_method = LLMLabels(
@@ -388,9 +386,9 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
     )
 
     # getting the activations
-    activations = splitted_encoder.get_activations(
+    activations, _ = splitted_encoder.get_activations(
         inputs=joined_tokens_list, activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN
-    )[split]
+    )
 
     # From input
     labels = interpretation_method.interpret(

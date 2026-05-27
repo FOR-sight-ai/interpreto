@@ -37,11 +37,10 @@ from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoin
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activations_dict: dict[str, torch.Tensor]):
+def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
     """
     Test that the concept encoding and decoding of the `NeuronsAsConcepts` is the identity
     """
-    split, activations = next(iter(activations_dict.items()))  # dictionary with only one element
     d = activations.shape[1]
 
     concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)

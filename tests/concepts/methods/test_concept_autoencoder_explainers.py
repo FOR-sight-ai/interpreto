@@ -77,11 +77,10 @@ ALL_CONCEPT_METHODS = [
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
 def test_overcomplete_cbe(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
     method_class: type[ConceptAutoEncoderExplainer],
 ):
     """Test SAEExplainer and DictionaryLearningExplainer"""
-    split, activations = next(iter(activations_dict.items()))  # dictionary with only one element
     n = activations.shape[0]
     d = activations.shape[1]
     nb_concepts = 3
@@ -167,12 +166,11 @@ def test_overcomplete_cbe(
 )
 def test_concept_output_gradient(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
     sentences: list[str],
     method_class: type[ConceptAutoEncoderExplainer],
     granularity: ActivationGranularity,
 ):
-    split, activations = next(iter(activations_dict.items()))
     nb_concepts = 3
 
     if method_class == NeuronsAsConcepts:
@@ -253,17 +251,17 @@ if __name__ == "__main__":
         automodel=AutoModelForMaskedLM,  # type: ignore
         device_map=DEVICE,
     )
-    activations_dict: dict[str, torch.Tensor] = splitted_encoder_ml.get_activations(
+    activations, _ = splitted_encoder_ml.get_activations(
         sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
-    )  # type: ignore
+    )
     test_overcomplete_cbe(
         splitted_encoder_ml=splitted_encoder_ml,
-        activations_dict=activations_dict,
+        activations=activations,  # type: ignore
         method_class=KMeansConcepts,
     )
     test_concept_output_gradient(
         splitted_encoder_ml=splitted_encoder_ml,
-        activations_dict=activations_dict,
+        activations=activations,  # type: ignore
         sentences=sentences,
         method_class=SemiNMFConcepts,
         granularity=ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
