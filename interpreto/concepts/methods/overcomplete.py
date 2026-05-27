@@ -146,7 +146,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
-        >>> activations = splitted_model.get_activations(
+        >>> activations, _ = splitted_model.get_activations(
         >>>     dataset, activation_granularity=WORD
         >>> )
         ...
@@ -214,9 +214,9 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         self.model_with_split_points = model_with_split_points
 
         # TODO: this will be replaced with a scan and a better way to select how to pick activations based on model class
-        shapes = self.model_with_split_points.get_latent_shape()
+        shape = self.model_with_split_points.get_latent_shape()
         concept_model = self.concept_model_class(
-            input_shape=shapes[self.model_with_split_points.split_point][-1],
+            input_shape=shape[-1],
             nb_concepts=nb_concepts,
             encoder_module=encoder_module,
             dictionary_params=dictionary_params,
@@ -237,7 +237,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
 
     def fit(
         self,
-        activations: LatentActivations | dict[str, LatentActivations],
+        activations: LatentActivations,
         *,
         use_amp: bool = False,
         batch_size: int = 1024,
@@ -252,13 +252,11 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         monitoring: int | None = None,
         device: torch.device | str | None = None,
         max_nan_fallbacks: int | None = 5,
-        overwrite: bool = False,
     ) -> dict:
         """Fit an Overcomplete SAE model on the given activations.
 
         Args:
-            activations (torch.Tensor | dict[str, torch.Tensor]): The activations used for fitting the `concept_model`.
-                If a dictionary is provided, the activation corresponding to `split_point` will be used.
+            activations (torch.Tensor): The activations used for fitting the `concept_model`.
             use_amp (bool): Whether to use automatic mixed precision for fitting.
             criterion (interpreto.concepts.SAELoss): Loss criterion for the training of the `concept_model`.
             optimizer_class (type[torch.optim.Optimizer]): Optimizer for the training of the `concept_model`.
@@ -273,16 +271,15 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             device (torch.device | str): Device to use for the training of the `concept_model`.
             max_nan_fallbacks (int | None): Maximum number of fallbacks to use when NaNs are encountered during
                 training. Ignored if use_amp is False.
-            overwrite (bool): Whether to overwrite the current model if it has already been fitted.
-                Default: False.
 
         Returns:
             A dictionary with training history logs.
         """
         if device is None:
             device = self.device
-        split_activations = self._prepare_fit(activations, overwrite=overwrite)
-        dataloader = DataLoader(TensorDataset(split_activations.detach()), batch_size=batch_size, shuffle=True)
+        if len(activations.shape) != 2:
+            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        dataloader = DataLoader(TensorDataset(activations.detach()), batch_size=batch_size, shuffle=True)
         optimizer_kwargs.update({"lr": lr})
         optimizer = optimizer_class(self.concept_model.parameters(), **optimizer_kwargs)  # type: ignore
         train_params = {
@@ -378,7 +375,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
-        >>> activations = splitted_model.get_activations(
+        >>> activations, _ = splitted_model.get_activations(
         >>>     dataset, activation_granularity=WORD
         >>> )
         ...
@@ -438,19 +435,17 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         )
         super().__init__(model_with_split_points, concept_model)
 
-    def fit(self, activations: LatentActivations | dict[str, LatentActivations], *, overwrite: bool = False, **kwargs):
+    def fit(self, activations: LatentActivations, **kwargs):
         """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
 
         Args:
-            activations (torch.Tensor | dict[str, torch.Tensor]): The activations used for fitting the `concept_model`.
-                If a dictionary is provided, the activation corresponding to `split_point` will be used.
-            overwrite (bool): Whether to overwrite the current model if it has already been fitted.
-                Default: False.
+            activations (torch.Tensor): The activations used for fitting the `concept_model`.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_model`.
                 See the Overcomplete documentation of the provided `concept_model` for more details.
         """
-        split_activations = self._prepare_fit(activations, overwrite=overwrite)
-        self.concept_model.fit(split_activations, **kwargs)
+        if len(activations.shape) != 2:
+            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        self.concept_model.fit(activations, **kwargs)
 
 
 class VanillaSAEConcepts(SAEExplainer[oc_sae.SAE]):
@@ -590,27 +585,23 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
         )
         self.force_relu = force_relu
 
-    def fit(self, activations: LatentActivations | dict[str, LatentActivations], *, overwrite: bool = False, **kwargs):
+    def fit(self, activations: LatentActivations, **kwargs):
         """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
 
         Args:
-            activations (torch.Tensor | dict[str, torch.Tensor]): The activations used for fitting the `concept_model`.
-                If a dictionary is provided, the activation corresponding to `split_point` will be used.
-            overwrite (bool): Whether to overwrite the current model if it has already been fitted.
-                Default: False.
+            activations (torch.Tensor): The activations used for fitting the `concept_model`.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_model`.
                 See the Overcomplete documentation of the provided `concept_model` for more details.
         """
-        split_activations = self._prepare_fit(activations, overwrite=overwrite)
-        if (split_activations < 0).any():
+        if (activations < 0).any():
             if self.force_relu:
-                split_activations = torch.nn.functional.relu(split_activations)
+                activations = torch.nn.functional.relu(activations)
             else:
                 raise ValueError(
                     "The activations should be positive. If you want to force the activations to be positive, "
                     "use the `NMFConcepts(..., force_relu=True)`."
                 )
-        self.concept_model.fit(split_activations, **kwargs)
+        self.concept_model.fit(activations, **kwargs)
 
     @check_fitted
     def encode_activations(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
@@ -622,7 +613,6 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
         Returns:
             The encoded concept activations.
         """
-        self._sanitize_activations(activations)
         if (activations < 0).any():
             if self.force_relu:
                 activations = torch.nn.functional.relu(activations)

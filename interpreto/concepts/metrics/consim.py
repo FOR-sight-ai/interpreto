@@ -231,7 +231,7 @@ class ConSim:
         >>> # Load a dataset and compute activations
         >>> dataset = datasets.load_dataset("fancyzhx/ag_news")
         >>> classes = ["World", "Sports", "Business", "Sci/Tech"]
-        >>> activations = model_with_split_points.get_activations(dataset["train"]["text"])
+        >>> activations, _ = model_with_split_points.get_activations(dataset["train"]["text"])
         >>>
         >>> # -------------------------
         >>> # Fit the concept explainer

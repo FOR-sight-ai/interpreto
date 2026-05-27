@@ -235,30 +235,26 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
 
     def fit(
         self,
-        activations: LatentActivations | dict[str, LatentActivations],
+        activations: LatentActivations,
         labels: Float[torch.Tensor, "n c"],
-        *,
-        overwrite: bool = False,
     ):
         """Fit the probe on activations and multi-label targets.
 
         Args:
-            activations: Latent activations (2D tensor) or a dict from
-                [ModelWithSplitPoints.get_activations][interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations].
+            activations: Latent activations (2D tensor).
             labels: Binary multi-label targets of shape `(n, c)`.
                 This should be a matrix can be an extended vector `(n, 1)` for a single concept.
                 However, we allow and recommend to train several probes simultaneously.
-            overwrite: If `True`, allow refitting an already fitted probe.
         """
-        split_activations = self._prepare_fit(activations, overwrite)
-
-        if split_activations.shape[0] != labels.shape[0]:
+        if len(activations.shape) != 2:
+            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        if activations.shape[0] != labels.shape[0]:
             raise ValueError(
                 "Activations and labels must have the same number of samples, "
-                f"got {split_activations.shape[0]} and {labels.shape[0]}."
+                f"got {activations.shape[0]} and {labels.shape[0]}."
             )
 
-        self.concept_model.fit(split_activations, labels)
+        self.concept_model.fit(activations, labels)
 
     @check_fitted
     def encode_activations(self, activations: LatentActivations) -> ConceptsActivations:

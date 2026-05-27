@@ -271,7 +271,7 @@ class BaseConceptInterpretationMethod(ABC):
         self,
         concepts_indices: int | list[int],
         inputs: list[str] | None = None,
-        latent_activations: dict[str, LatentActivations] | LatentActivations | None = None,
+        latent_activations: LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, Any]:
         """
@@ -287,7 +287,7 @@ class BaseConceptInterpretationMethod(ABC):
                 The inputs to use for the interpretation.
                 Necessary if not `use_vocab`,as examples are extracted from the inputs.
 
-            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+            latent_activations (Float[torch.Tensor, "nl d"] | None):
                 The latent activations matching the inputs. If not provided,
                 it is computed from the inputs.
 
@@ -348,14 +348,11 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if inputs is not None:
-            activations_dict: dict[str, LatentActivations] = (
-                self.concept_explainer.model_with_split_points.get_activations(
-                    inputs,
-                    activation_granularity=self.activation_granularity,
-                    aggregation_strategy=self.aggregation_strategy,
-                )
-            )  # type: ignore
-            latent_activations = self.concept_explainer.model_with_split_points.get_split_activations(activations_dict)  # type: ignore
+            latent_activations, _ = self.concept_explainer.model_with_split_points.get_activations(
+                inputs,
+                activation_granularity=self.activation_granularity,
+                aggregation_strategy=self.aggregation_strategy,
+            )
             return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
         raise ValueError(
@@ -390,12 +387,10 @@ class BaseConceptInterpretationMethod(ABC):
 
         if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
             # compute the vocabulary's latent activations
-            activations_dict: dict[str, LatentActivations] = (
-                self.concept_explainer.model_with_split_points.get_activations(
-                    input_ids,
-                    activation_granularity=ActivationGranularity.ALL_TOKENS,
-                )
-            )  # type: ignore
+            latent_activations, _ = self.concept_explainer.model_with_split_points.get_activations(
+                input_ids,
+                activation_granularity=ActivationGranularity.ALL_TOKENS,
+            )
         else:
             # we need to add the CLS token and maybe the EOS token to the ids
             # so that we can get correct CLS activations
@@ -421,17 +416,12 @@ class BaseConceptInterpretationMethod(ABC):
             repeated_template_ids[:, 1] = input_ids[:, 0]
 
             # compute the vocabulary's latent activations
-            activations_dict: dict[str, LatentActivations] = (
-                self.concept_explainer.model_with_split_points.get_activations(
-                    repeated_template_ids,
-                    activation_granularity=self.activation_granularity,
-                )
-            )  # type: ignore
+            latent_activations, _ = self.concept_explainer.model_with_split_points.get_activations(
+                repeated_template_ids,
+                activation_granularity=self.activation_granularity,
+            )
 
         # compute the vocabulary's concepts activations
-        latent_activations: LatentActivations = self.concept_explainer.model_with_split_points.get_split_activations(
-            activations_dict
-        )  # type: ignore
         concepts_activations = self.concept_explainer.encode_activations(latent_activations)
         return inputs, concepts_activations
 
@@ -486,7 +476,7 @@ class BaseConceptInterpretationMethod(ABC):
         self,
         concepts_indices: int | list[int] | Literal["all"],
         inputs: list[str] | None = None,
-        latent_activations: dict[str, LatentActivations] | LatentActivations | None = None,
+        latent_activations: LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> tuple[list[int], list[str], Float[torch.Tensor, "nl cpt"], list[int]]:
         """
@@ -500,7 +490,7 @@ class BaseConceptInterpretationMethod(ABC):
                 The inputs to use for the interpretation.
                 Necessary if not `use_vocab`,as examples are extracted from the inputs.
 
-            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+            latent_activations (Float[torch.Tensor, "nl d"] | None):
                 The latent activations matching the inputs. If not provided,
                 it is computed from the inputs.
 
@@ -527,10 +517,6 @@ class BaseConceptInterpretationMethod(ABC):
         """
         if concepts_indices == "all":
             concepts_indices = list(range(self.concept_explainer.concept_model.nb_concepts))
-
-        # verify
-        if latent_activations is not None:
-            latent_activations = self.concept_explainer._sanitize_activations(latent_activations)
 
         # compute the concepts activations from the provided source, can also create inputs from the vocabulary
         if self.use_vocab:

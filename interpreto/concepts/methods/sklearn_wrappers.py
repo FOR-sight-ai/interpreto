@@ -38,7 +38,6 @@ from torch import nn
 
 from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer
 from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
 
@@ -354,10 +353,10 @@ class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Gener
                 See the sklearn documentation of the provided `concept_model_class` for more details.
         """
         self.model_with_split_points = model_with_split_points
-        shapes = model_with_split_points.get_latent_shape()
+        shape = model_with_split_points.get_latent_shape()
 
         concept_model = self.concept_model_class(
-            input_size=shapes[model_with_split_points.split_point][-1],
+            input_size=shape[-1],
             nb_concepts=nb_concepts,
             device=device,
             **kwargs,

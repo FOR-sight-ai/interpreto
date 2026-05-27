@@ -148,7 +148,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         >>>
         >>> # load the IMDB dataset and compute a dataset of [CLS] token activations
         >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
-        >>> activations = mwsp.get_activations(imdb, activation_granularity=CLS_TOKEN)
+        >>> activations, _ = mwsp.get_activations(imdb, activation_granularity=CLS_TOKEN)
         >>>
         >>> # Load an fit a concept-based explainer
         >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=20)
@@ -194,7 +194,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         >>>
         >>> # load the IMDB dataset and compute a dataset of words activations
         >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
-        >>> activations = mwsp.get_activations(imdb, activation_granularity=WORD)
+        >>> activations, _ = mwsp.get_activations(imdb, activation_granularity=WORD)
         >>>
         >>> # Load an fit a concept-based explainer
         >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=10)
@@ -247,7 +247,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         self,
         concepts_indices: int | list[int] | Literal["all"] = "all",
         inputs: list[str] | None = None,
-        latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
+        latent_activations: LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, Any]:
         """
@@ -267,7 +267,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
                 The inputs to use for the interpretation.
                 Necessary if not `use_vocab`,as examples are extracted from the inputs.
 
-            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+            latent_activations (Float[torch.Tensor, "nl d"] | None):
                 The latent activations matching the inputs. If not provided,
                 it is computed from the inputs.
 

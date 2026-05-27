@@ -130,7 +130,7 @@ class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
         """
         # extract the input size from the model activations
         self.model_with_split_points = model_with_split_points
-        input_size = self.model_with_split_points.get_latent_shape()[self.model_with_split_points.split_point][-1]
+        input_size = self.model_with_split_points.get_latent_shape()[-1]
 
         # initialize
         super().__init__(

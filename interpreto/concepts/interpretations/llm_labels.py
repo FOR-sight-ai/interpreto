@@ -227,7 +227,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         self,
         concepts_indices: int | list[int] | Literal["all"],
         inputs: list[str] | None = None,
-        latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
+        latent_activations: LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, str | None]:
         """
@@ -244,7 +244,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 The inputs to use for the interpretation.
                 Necessary if not `use_vocab`,as examples are extracted from the inputs.
 
-            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+            latent_activations (Float[torch.Tensor, "nl d"] | None):
                 The latent activations matching the inputs. If not provided,
                 it is computed from the inputs.
 

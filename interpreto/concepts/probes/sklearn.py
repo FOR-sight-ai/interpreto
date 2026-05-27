@@ -117,21 +117,19 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
 
     def fit(
         self,
-        activations: LatentActivations | dict[str, LatentActivations],
+        activations: LatentActivations,
         labels: torch.Tensor,
     ):
         """Fit the concept model."""
-        split_activations = self._sanitize_activations(activations)
-
-        if len(split_activations.shape) != 2:
-            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {split_activations.shape}")
-        if split_activations.shape[0] != labels.shape[0]:
+        if len(activations.shape) != 2:
+            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        if activations.shape[0] != labels.shape[0]:
             raise ValueError(
                 "Expected activations and labels to have the same number of rows, "
-                f"got {split_activations.shape[0]} and {labels.shape[0]}"
+                f"got {activations.shape[0]} and {labels.shape[0]}"
             )
 
-        self.concept_model.fit(split_activations, labels)
+        self.concept_model.fit(activations, labels)
 
     def encode_activations(self, activations: LatentActivations) -> ConceptsActivations:
         return self.concept_model.encode(activations)

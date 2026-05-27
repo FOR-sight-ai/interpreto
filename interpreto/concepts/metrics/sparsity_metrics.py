@@ -49,18 +49,16 @@ class Sparsity:
         self.concept_explainer = concept_explainer
         self.epsilon = epsilon
 
-    def compute(self, latent_activations: LatentActivations | dict[str, LatentActivations]) -> float:
+    def compute(self, latent_activations: LatentActivations) -> float:
         """Compute the metric.
 
         Args:
-            latent_activations (LatentActivations | dict[str, LatentActivations]): The latent activations.
+            latent_activations (LatentActivations): The latent activations.
 
         Returns:
             float: The metric.
         """
-        split_latent_activations: LatentActivations = self.concept_explainer._sanitize_activations(latent_activations)
-
-        concepts_activations: ConceptsActivations = self.concept_explainer.encode_activations(split_latent_activations)
+        concepts_activations: ConceptsActivations = self.concept_explainer.encode_activations(latent_activations)
 
         return torch.mean(torch.abs(concepts_activations) > self.epsilon, dtype=torch.float32).item()
 
@@ -80,11 +78,11 @@ class SparsityRatio(Sparsity):
         epsilon (float): The threshold used to compute the sparsity.
     """
 
-    def compute(self, latent_activations: LatentActivations | dict[str, LatentActivations]) -> float:
+    def compute(self, latent_activations: LatentActivations) -> float:
         """Compute the metric.
 
         Args:
-            latent_activations (LatentActivations | dict[str, LatentActivations]): The latent activations.
+            latent_activations (LatentActivations): The latent activations.
 
         Returns:
             float: The metric.
