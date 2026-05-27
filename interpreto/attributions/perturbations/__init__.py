@@ -25,6 +25,7 @@
 from .base import EmbeddingsPerturbator, IdsPerturbator, Perturbator
 from .gaussian_noise_perturbation import GaussianNoisePerturbator
 from .gradient_shap_perturbation import GradientShapPerturbator
+from .image_base import ImagePerturbator
 from .insertion_deletion_perturbation import DeletionPerturbator, InsertionPerturbator
 from .linear_interpolation_perturbation import LinearInterpolationPerturbator
 from .occlusion_perturbation import OcclusionPerturbator
@@ -35,6 +36,7 @@ from .sobol_perturbation import SobolTokenPerturbator
 __all__ = [
     "EmbeddingsPerturbator",
     "IdsPerturbator",
+    "ImagePerturbator",
     "Perturbator",
     "GaussianNoisePerturbator",
     "GradientShapPerturbator",

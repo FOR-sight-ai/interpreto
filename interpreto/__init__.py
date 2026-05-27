@@ -29,6 +29,7 @@
 
 from .attributions import (
     GradientShap,
+    ImageSaliency,
     IntegratedGradients,
     KernelShap,
     Lime,
@@ -41,6 +42,7 @@ from .attributions import (
 )
 from .commons import (
     Granularity,
+    ImageGranularity,
 )
 from .model_wrapping import ModelWithSplitPoints
 from .visualizations import (
@@ -63,6 +65,8 @@ def get_version() -> str:
 __all__ = [
     "GradientShap",
     "Granularity",
+    "ImageGranularity",
+    "ImageSaliency",
     "IntegratedGradients",
     "KernelShap",
     "Lime",

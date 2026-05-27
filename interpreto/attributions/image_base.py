@@ -42,6 +42,7 @@ from transformers.modeling_utils import PreTrainedModel
 from interpreto.attributions.aggregations.base import Aggregator
 from interpreto.attributions.base import ClassificationAttributionExplainer, ModelTask
 from interpreto.attributions.perturbations.base import Perturbator
+from interpreto.attributions.perturbations.image_base import ImagePerturbator
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.commons.image_granularity import ImageGranularity
@@ -161,7 +162,7 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
             device=device,
             mode=inference_mode,
         )  # type: ignore
-        self.perturbator = perturbator or Perturbator()
+        self.perturbator = perturbator or ImagePerturbator()
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.granularity_aggregation_strategy = granularity_aggregation_strategy
