@@ -78,6 +78,13 @@ class ImageAttributionOutput:
             The output of `image_processor(image, return_tensors="pt")` (a `BatchFeature`,
             satisfies `TensorMapping`). Holds `pixel_values` of shape `(1, 3, H, W)`.
 
+        raw_image (PIL.Image | np.ndarray | torch.Tensor | None):
+            The user's pre-processing input, preserved so visualization can show an
+            honest underlying image (the `pixel_values` above are post-normalization
+            and not directly displayable). `None` when the user supplied an already-
+            processed `BatchFeature` or when `preprocess=False` (input was already
+            normalized — no raw form to recover).
+
         targets (torch.Tensor):
             The target class(es).
 
@@ -107,6 +114,7 @@ class ImageAttributionOutput:
     granularity: ImageGranularity = ImageGranularity.DEFAULT
     granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN
     inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
+    raw_image: PILImage | np.ndarray | torch.Tensor | None = None
 
 
 class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer):
@@ -267,6 +275,21 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
             targets,  # type: ignore
         )
 
+        # Preserve each user-supplied raw image alongside its sanitized BatchFeature so
+        # the per-sample ImageAttributionOutput can carry it for visualization. The
+        # post-normalization pixel_values in model_inputs_to_explain are not directly
+        # displayable. None for samples that came in as BatchFeature or under preprocess=False.
+        raw_images: list[PILImage | np.ndarray | torch.Tensor | None]
+        if isinstance(model_inputs, list):
+            raw_images = [
+                m if self.preprocess and isinstance(m, (PILImage, np.ndarray, torch.Tensor)) else None
+                for m in model_inputs
+            ]
+        elif self.preprocess and isinstance(model_inputs, (PILImage, np.ndarray, torch.Tensor)):
+            raw_images = [model_inputs]
+        else:
+            raw_images = [None] * len(model_inputs_to_explain)
+
         # Perturbations + scores: same flow as text. The default Perturbator() yields
         # the input unchanged with a None mask, which is what gradient methods need.
         pert_generator: Iterator[TensorMapping]
@@ -318,11 +341,12 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
         granular_inputs_coords: list[list[tuple[int, int]]] = [shared_coords for _ in model_inputs_to_explain]
 
         results: list[ImageAttributionOutput] = []
-        for contribution, model_input, elements, target in zip(
+        for contribution, model_input, elements, target, raw_image in zip(
             granular_contributions,
             model_inputs_to_explain,
             granular_inputs_coords,
             sanitized_targets,
+            raw_images,
             strict=True,
         ):
             model_task, clean_contribution = self.post_processing(contribution)
@@ -336,6 +360,7 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
                 granularity=self.granularity,
                 granularity_aggregation_strategy=self.granularity_aggregation_strategy,
                 inference_mode=self.inference_wrapper.mode,
+                raw_image=raw_image,
             )
             results.append(attribution_output)
         return results

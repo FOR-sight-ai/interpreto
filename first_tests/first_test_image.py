@@ -1,6 +1,7 @@
 from PIL import Image
 from interpreto import *
 from interpreto.attributions import ImageSaliency
+from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor
 import torch
 
@@ -11,7 +12,8 @@ cat_image = Image.open("../cat.jpg")
 print(model.config)
 method = ImageSaliency(
     model=model,
-    image_processor=processor
+    image_processor=processor,
+    granularity=ImageGranularity.PIXEL
 )
 
 output = method.explain(cat_image)[0]
@@ -27,3 +29,5 @@ with torch.no_grad():
 expected = logits.argmax(dim=-1)
 
 print(f"expected={expected}, got={output.targets}, match={torch.equal(expected, output.targets)}")
+output.raw_image.show()
+
