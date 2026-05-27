@@ -29,9 +29,8 @@ Bases Classes for Concept-based Explainers
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from functools import wraps
-from textwrap import dedent
 from types import SimpleNamespace
 from typing import Any, Generic, TypeVar
 
@@ -224,12 +223,11 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         return self.__is_fitted
 
     @abstractmethod
-    def fit(self, activations: LatentActivations | dict[str, LatentActivations], *args, **kwargs) -> Any:
+    def fit(self, activations: LatentActivations, *args, **kwargs) -> Any:
         """Fits `concept_model` on the given activations.
 
         Args:
-            activations (torch.Tensor | dict[str, torch.Tensor]): A dictionary with model paths as keys and the corresponding
-                tensors as values.
+            activations (torch.Tensor): The latent activations used to fit the concept model.
 
         Returns:
             `None`, `concept_model` is fitted in-place, `is_fitted` is set to `True` and `split_point` is set.
@@ -247,47 +245,6 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
             A `torch.Tensor` of encoded activations produced by the fitted concept encoder.
         """
         pass
-
-    def _sanitize_activations(
-        self,
-        activations: LatentActivations | dict[str, LatentActivations],
-    ) -> LatentActivations:
-        if isinstance(activations, dict):
-            split_activations: LatentActivations = self.model_with_split_points.get_split_activations(activations)  # type: ignore
-        else:
-            split_activations = activations
-        assert len(split_activations.shape) == 2, (
-            f"Input activations should be a 2D tensor of shape (batch_size, n_features) but got {split_activations.shape}. "
-            + "If you use `ModelWithSplitPoints.get_activations()`, "
-            + "make sure to set `activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS` to get a 2D activation tensor."
-        )
-        return split_activations
-
-    def _prepare_fit(
-        self,
-        activations: LatentActivations | dict[str, LatentActivations],
-        overwrite: bool,
-    ) -> LatentActivations:
-        if self.is_fitted and not overwrite:
-            raise RuntimeError(
-                "Concept explainer has already been fitted. Refitting will overwrite the current model."
-                "If this is intended, use `overwrite=True` in fit(...)."
-            )
-        return self._sanitize_activations(activations)
-
-    @check_fitted
-    def interpret(self, *args, **kwargs) -> Mapping[int, Any]:  # TODO: 0.5.0 remove
-        """Deprecated API for concept interpretation.
-
-        Interpretation methods should now be instantiated directly with the
-        fitted concept explainer. For example:
-
-        ``TopKInputs(concept_explainer).interpret(inputs, latent_activations)``
-
-        This method is kept only for backwards compatibility and will always
-        raise a :class:`NotImplementedError`.
-        """
-        raise NotImplementedError("Use the new API: TopKInputs(concept_explainer).interpret(...).")
 
     @property
     def inputs_to_concepts(self) -> ModelForInputsToConcepts:
