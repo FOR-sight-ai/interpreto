@@ -31,6 +31,7 @@ from enum import Enum
 from math import ceil
 from typing import Any
 
+import nnsight
 import torch
 import torch.nn.functional as F
 from beartype import beartype
@@ -206,7 +207,7 @@ class ModelWithSplitPoints(LanguageModel):
         ...     automodel=AutoModelForCausalLM,
         ...     device_map="auto",
         ... )
-        >>> activations_dict = model_with_split_points.get_activations(
+        >>> activations, _ = model_with_split_points.get_activations(
         ...     inputs="interpreto is magic",
         ...     activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN,  # highly recommended for generation
         ... )
@@ -225,7 +226,7 @@ class ModelWithSplitPoints(LanguageModel):
         ... )
         >>> # get activations
         >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> activations_dict = model_with_split_points.get_activations(
+        >>> activations, _ = model_with_split_points.get_activations(
         ...     dataset,
         ...     activation_granularity=ModelWithSplitPoints.activation_granularities.CLS_TOKEN,  # highly recommended for classification
         ... )
@@ -248,14 +249,13 @@ class ModelWithSplitPoints(LanguageModel):
         ... )
         >>> # get activations at the word granularity
         >>> dataset = load_dataset("cornell-movie-review-data/rotten_tomatoes")["train"]["text"]
-        >>> activations = model_with_split_points.get_activations(
+        >>> activations, _ = model_with_split_points.get_activations(
         ...     dataset,
         ...     activation_granularity=MWSP.activation_granularities.WORD,
         ...     aggregation_strategy=MWSP.aggregation_strategies.MEAN,  # average tokens activations by words
         ... )
     """
 
-    _example_input = "hello"  # placeholder input for the nnsight `scan` method
     # attributes to easily allow users to access the ENUMs
     activation_granularities = ActivationGranularity
     aggregation_strategies = GranularityAggregationStrategy
@@ -812,12 +812,12 @@ class ModelWithSplitPoints(LanguageModel):
         include_predicted_classes: bool = False,
         flatten_activations: bool = True,
         model_forward_kwargs: dict[str, Any] = {},
-    ) -> dict[str, LatentActivations] | dict[str, list[LatentActivations]]:
+    ) -> tuple[LatentActivations, torch.Tensor | None] | tuple[list[LatentActivations], list[torch.Tensor] | None]:
         """
 
-        Get intermediate activations for all model split points on the given `inputs`.
+        Get intermediate activations for the model split point on the given `inputs`.
 
-        Also include the model predictions in the returned activations dictionary.
+        Optionally include the model predictions in the returned tuple.
 
         Args:
             inputs list[str] | torch.Tensor | BatchEncoding:
@@ -893,23 +893,25 @@ class ModelWithSplitPoints(LanguageModel):
                 Whether to display a progress bar.
 
             include_predicted_classes (bool):
-                Whether to include the predicted classes in the output dictionary.
+                Whether to include the predicted classes in the output tuple.
                 Only applicable for classification models.
 
             flatten_activations (bool):
                 Whether to flatten the activations tensors.
 
                 - If True, the activations will be flattened from (n, l, d) to (n x l, d).
-                    It allows stocking the activations for a given layer in a single tensor.
+                    It allows storing the activations for the split point in a single tensor.
 
-                - If False, for each layer, a list of sample-wise activations will be returned.
+                - If False, a list of sample-wise activations will be returned.
 
             model_forward_kwargs (dict):
                 Additional keyword arguments passed to the model forward pass.
 
         Returns:
-            (dict[str, LatentActivations]) Dictionary with the split point path as key and the extracted activations
-                as value for the given `inputs`.
+            activations (LatentActivations | [list[LatentActivations]:
+                The extracted activations either in a sample-wise list are flattened.
+            predictions (torch.Tensor | list[torch.Tensor] | None):
+                The predicted classes, if requested.
         """
         # set default pad side value and catch unsupported cases
         if self._model.__class__.__name__.endswith("ForSequenceClassification"):
@@ -957,10 +959,9 @@ class ModelWithSplitPoints(LanguageModel):
             disable=not tqdm_bar,
         )
 
-        # initialize activations dictionary
-        activations: dict = {}
-        activations[self._split_point] = []
-        activations["predictions"] = []
+        # initialize activation and prediction storage
+        activations: list[LatentActivations] = []
+        predictions: list[torch.Tensor] = []
 
         # iterate over batch of inputs
         with torch.no_grad():
@@ -1037,11 +1038,11 @@ class ModelWithSplitPoints(LanguageModel):
                         aggregation_strategy=aggregation_strategy,
                     )
 
-                    activations[sp].extend(granular_activations)
+                    activations.extend(granular_activations)
 
                     if include_predicted_classes:
                         if not flatten_activations:
-                            activations["predictions"].extend(
+                            predictions.extend(
                                 list(batch_predictions)  # type: ignore  (ignore possibly unbound)
                             )
                         else:
@@ -1057,29 +1058,25 @@ class ModelWithSplitPoints(LanguageModel):
                                 repeats,
                                 dim=0,
                             )
-                            activations["predictions"].append(repeated_predictions)
+                            predictions.append(repeated_predictions)
 
         # ------------------------------------------------------------------------------------------
         # concat activation batches and validate that activations have the expected type
         if flatten_activations:
             # two dimensional tensor (n*g, d)
-            activations[self._split_point] = torch.cat(activations[self._split_point], dim=0)
+            flattened_activations = torch.cat(activations, dim=0)
 
-        if include_predicted_classes:
-            if flatten_activations:
-                activations["predictions"] = torch.cat(activations["predictions"], dim=0)
-        else:
-            activations.pop("predictions", None)
+            if include_predicted_classes:
+                return flattened_activations, torch.cat(predictions, dim=0)
+            return flattened_activations, None
 
         # validate that activations have the expected type
-        for layer, act in activations.items():
-            act_is_tensor = isinstance(act, torch.Tensor)
-            act_is_list_of_tensors = isinstance(act, list) and all(isinstance(a, torch.Tensor) for a in act)
-            if not (act_is_tensor or act_is_list_of_tensors):
-                raise RuntimeError(
-                    f"Invalid output for layer '{layer}'. Expected torch.Tensor activation, got {type(act)}: {act}"
-                )
-        return activations  # type: ignore
+        if not all(isinstance(act, torch.Tensor) for act in activations):
+            raise RuntimeError("Invalid output. Expected a list of torch.Tensor activations.")
+
+        if include_predicted_classes:
+            return activations, predictions
+        return activations, None
 
     @jaxtyped(typechecker=beartype)
     def _get_concept_output_gradients(  # noqa: PLR0912  # ignore too many branches
@@ -1364,82 +1361,18 @@ class ModelWithSplitPoints(LanguageModel):
 
         return gradients_list
 
-    def get_split_activations(
-        self,
-        activations: dict[str, LatentActivations] | dict[str, list[LatentActivations]],
-    ) -> LatentActivations | list[LatentActivations]:
-        """
-        Extract activations for the model's split point.
-        Verify that the given activations are valid for the `model_with_split_points`.
-        Cases in which the activations are not valid include:
-
-        * Activations are not a valid dictionary.
-        * The split point does not exist in the activations.
-
-        Args:
-            activations (dict[str, LatentActivations]): A dictionary with model paths as keys and the corresponding
-                tensors as values.
-
-        Returns:
-            (LatentActivations): The activations for the split point.
-
-        Examples:
-            >>> from interpreto import ModelWithSplitPoints as MWSP
-            >>> model = ModelWithSplitPoints("bert-base-uncased", split_point=4,
-            >>>                              automodel=AutoModelForSequenceClassification)
-            >>> activations_dict: dict[str, LatentActivations] = model.get_activations(
-            ...     "interpreto is magic",
-            ... )
-            >>> activations: LatentActivations = model.get_split_activations(activations_dict)
-            >>> activations.shape
-            torch.Size([1, 12, 768])
-
-        Raises:
-            TypeError: If the activations are not a valid dictionary.
-            ValueError: If the split point is not found in the activations.
-        """
-        act_is_dict_of_tensors = isinstance(activations, dict) and all(
-            isinstance(act, torch.Tensor) for act in activations.values()
-        )
-        act_is_dict_of_list_of_tensors = isinstance(activations, dict) and all(
-            isinstance(act, list) and all(isinstance(a, torch.Tensor) for a in act) for act in activations.values()
-        )
-        if not (act_is_dict_of_tensors or act_is_dict_of_list_of_tensors):
-            raise TypeError(
-                "Invalid activations for the concept explainer. "
-                "Activations should be a dictionary of model paths and torch.Tensor activations, "
-                "or a dictionary of model paths and list of torch.Tensor activations. "
-                f"Got: '{type(activations)}'"
-            )
-        activations_keys: list[str] = list(activations.keys())  # type: ignore
-        if self._split_point not in activations_keys:
-            raise ValueError(
-                f"Split point '{self._split_point}' not found in activations.\n"
-                f"Available keys: {', '.join(activations_keys)}."
-            )
-
-        return activations[self._split_point]  # type: ignore
-
-    def get_latent_shape(
-        self,
-        inputs: str | list[str] | BatchEncoding | None = None,
-    ) -> dict[str, torch.Size]:
+    def get_latent_shape(self) -> torch.Size:
         """Get the shape of the latent activations at the split point.
 
         Use the `scan` operation from NNsight to get the shape of the activations.
         It basically builds the computation graph, but it is much quicker than a forward.
 
-        Args:
-            inputs (str | list[str] | BatchEncoding | None): Inputs to the model forward pass before or after tokenization.
-                In the case of a `torch.Tensor`, we assume a batch dimension and token ids.
-
         Returns:
-            dict[str, torch.Size]: Dictionary with the shape of the activations for the split point.
+            torch.Size: Shape of the activations for the split point.
         """
-        sizes = {}
-        with self.scan(self._example_input if inputs is None else inputs):
-            split_point = self._split_point
-            curr_module = self.get(split_point)
+        shape = None
+        with self.scan("scan"):
+            curr_module = self.get(self._split_point)
             module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
             module = getattr(curr_module, module_out_name)
             if isinstance(module, tuple):
@@ -1447,5 +1380,5 @@ class ModelWithSplitPoints(LanguageModel):
                     if candidate.dim() == 3:
                         module = candidate
                         break
-            sizes[split_point] = module.shape  # type: ignore  (under specification from NNsight)
-        return sizes
+            shape = nnsight.save(module.shape)
+        return shape  # type: ignore  (under specification from NNsight)

@@ -244,7 +244,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
         **kwargs,  # not used, just to support the `model_with_split_points` interface
-    ) -> dict[str, LatentActivations]:
+    ) -> tuple[LatentActivations, torch.Tensor]:
         """Extract CLS-token activations and predictions for a dataset of inputs.
 
         Iterates over the inputs in batches, extracting the activations at the
@@ -259,10 +259,8 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             **kwargs: Unused, kept for API compatibility with ``ModelWithSplitPoints``.
 
         Returns:
-            dict[str, LatentActivations]: A dictionary with:
-                - ``self.classification_head_name``: Activations tensor of shape
-                  ``(n_samples, hidden_dim)``.
-                - ``"predictions"``: Predicted class indices of shape ``(n_samples,)``.
+            tuple[LatentActivations, torch.Tensor]: The activations tensor of shape
+                ``(n_samples, hidden_dim)`` and predicted class indices of shape ``(n_samples,)``.
         """
         activations = []
         predictions = []
@@ -298,7 +296,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         # free memory
         torch.cuda.empty_cache()
         gc.collect()
-        return {self.classification_head_name: activations, "predictions": predictions}
+        return activations, predictions
 
     def _get_concept_output_gradients(  # type: ignore
         self,
@@ -399,26 +397,15 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         gc.collect()
         return gradients_list
 
-    def get_split_activations(  # type: ignore
-        self,
-        activations: dict[str, LatentActivations],
-        **kwargs,  # not used, just to support the `model_with_split_points` interface
-    ) -> LatentActivations:
-        """Extract activations for the specified split point."""
-        return activations[self.classification_head_name]
-
-    def get_latent_shape(  # type: ignore
-        self,
-        **kwargs,  # not used, just to support the `model_with_split_points` interface
-    ) -> dict[str, torch.Size]:
+    def get_latent_shape(self) -> torch.Size:
         """Get the shape of the latent activations at the specified split point.
 
         Uses a quick trace with a dummy input to determine the classifier input shape.
 
         Returns:
-            dict[str, torch.Size]: Dictionary with the shape of the activations for each split point.
+            torch.Size: Shape of the activations at the classification head input.
         """
-        with self.trace(self._example_input) as tracer:
+        with self.trace("scan") as tracer:
             shape = getattr(self, self.classification_head_name).input.shape.save()
             tracer.stop()
-        return {self.classification_head_name: shape}
+        return shape
