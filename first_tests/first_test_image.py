@@ -2,8 +2,11 @@ from PIL import Image
 from interpreto.attributions import ImageSaliency
 from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor
+from interpreto.visualizations import plot_image_attribution
 import torch
-
+import matplotlib.pyplot as plt 
+import matplotlib
+matplotlib.use("Qt5Agg")
 
 processor = AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
 model = AutoModelForImageClassification.from_pretrained("hf-internal-testing/tiny-random-vit")
@@ -28,5 +31,9 @@ with torch.no_grad():
 expected = logits.argmax(dim=-1)
 
 print(f"expected={expected}, got={output.targets}, match={torch.equal(expected, output.targets)}")
-output.raw_image.show()
+#output.raw_image.show()
 
+fig,axes = plot_image_attribution(output,alpha=0.5)
+
+fig.savefig("heatmap.png")
+plt.show()
