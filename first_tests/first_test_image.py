@@ -1,5 +1,4 @@
 from PIL import Image
-from interpreto import *
 from interpreto.attributions import ImageSaliency
 from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor
