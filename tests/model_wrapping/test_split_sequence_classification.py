@@ -77,12 +77,9 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
 
 def test_get_latent_shape(split_seq_cls: SSC):
     """Shapes returned by ``get_latent_shape`` match activation shapes."""
-    shapes = split_seq_cls.get_latent_shape()
-    assert "classifier" in shapes, "Missing 'classifier' in latent shapes"
+    shape = split_seq_cls.get_latent_shape()
     expected_shape = (1, split_seq_cls._model.config.hidden_size)
-    assert shapes["classifier"] == expected_shape, (
-        f"Latent shape mismatch: got {shapes['classifier']}, expected {expected_shape}"
-    )
+    assert shape == expected_shape, f"Latent shape mismatch: got {shape}, expected {expected_shape}"
 
 
 @pytest.mark.parametrize("repo_id", REPO_IDS)
@@ -97,8 +94,6 @@ def test_get_activation_and_gradient(repo_id, sentences):
         batch_size=2,
         device_map=DEVICE,
     )
-    classification_head_name = split_model.classification_head_name
-
     # -----------------------------------------------------------
     # Define expected shapes for the different granularity levels
     batch = len(sentences)
@@ -118,12 +113,8 @@ def test_get_activation_and_gradient(repo_id, sentences):
     # ---------------
     # Get activations
     # activations
-    activations_dict = split_model.get_activations(sentences)
-    assert activations_dict is not None, "get_activations returned None"
-    assert classification_head_name in activations_dict, (
-        f"Missing activations in output, expected {classification_head_name}, got {activations_dict.keys()}"
-    )
-    activations = activations_dict[classification_head_name]
+    activations, predictions = split_model.get_activations(sentences)
+    assert activations is not None, "get_activations returned None"
     assert activations is not None, "Activations are None"
     assert activations.shape == expected_activations_shape, (  # type: ignore
         f"Activations shape mismatch: got {tuple(activations.shape)}, "  # type: ignore
@@ -131,7 +122,6 @@ def test_get_activation_and_gradient(repo_id, sentences):
     )
 
     # predictions
-    predictions = activations_dict["predictions"]
     assert predictions is not None, "Predictions are None"
     assert predictions.shape[0] == expected_activations_shape[0], (  # type: ignore
         f"Predictions batch mismatch: got {predictions.shape[0]}, "  # type: ignore

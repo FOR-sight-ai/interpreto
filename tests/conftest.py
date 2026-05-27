@@ -66,10 +66,11 @@ def splitted_encoder_ml() -> ModelWithSplitPoints:
 
 
 @fixture(scope="session")
-def activations_dict(splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]) -> dict[str, LatentActivations]:
-    return splitted_encoder_ml.get_activations(
+def activations(splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]) -> LatentActivations:
+    latent_activations, _ = splitted_encoder_ml.get_activations(
         sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN
-    )  # type: ignore
+    )
+    return latent_activations
 
 
 @fixture(scope="session")
