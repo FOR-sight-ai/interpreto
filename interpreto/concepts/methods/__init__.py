@@ -45,6 +45,7 @@ from .sklearn_wrappers import (
     ICAConcepts,
     KMeansConcepts,
     PCAConcepts,
+    SkLearnWrapperExplainer,
     SVDConcepts,
 )
 
@@ -68,6 +69,7 @@ __all__ = [
     "ICAConcepts",
     "KMeansConcepts",
     "DictionaryLearningConcepts",
+    "SkLearnWrapperExplainer",
     "SparsePCAConcepts",
     "SVDConcepts",
 ]

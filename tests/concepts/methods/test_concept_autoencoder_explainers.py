@@ -50,6 +50,7 @@ from interpreto.concepts import (
     VanillaSAEConcepts,
 )
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer, SAEExplainer
+from interpreto.concepts.methods.sklearn_wrappers import SkLearnWrapperExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -99,7 +100,7 @@ def test_overcomplete_cbe(
     elif issubclass(method_class, SAEExplainer):
         cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
         cbe.fit(activations, nb_epochs=1, batch_size=1, device=DEVICE)
-    elif issubclass(method_class, DictionaryLearningExplainer):
+    elif issubclass(method_class, (DictionaryLearningExplainer, SkLearnWrapperExplainer)):
         cbe = method_class(
             splitted_encoder_ml,
             nb_concepts=nb_concepts,
@@ -190,7 +191,7 @@ def test_concept_output_gradient(
         cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
         cbe.fit(activations, nb_epochs=1, batch_size=1, device=DEVICE)
         concepts_dim = nb_concepts
-    elif issubclass(method_class, DictionaryLearningExplainer):
+    elif issubclass(method_class, (DictionaryLearningExplainer, SkLearnWrapperExplainer)):
         cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
         cbe.fit(activations)
         concepts_dim = nb_concepts

@@ -40,6 +40,7 @@ from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLear
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer
 from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.typing import LatentActivations
 
 __all__ = [
     "ICAConcepts",
@@ -309,7 +310,7 @@ class KMeansWrapper(SkLearnWrapper):
 _SkLearnWrapper_co = TypeVar("_SkLearnWrapper_co", bound=SkLearnWrapper, covariant=True)
 
 
-class SkLearnWrapperExplainer(DictionaryLearningExplainer[SkLearnWrapper], Generic[_SkLearnWrapper_co]):
+class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Generic[_SkLearnWrapper_co]):
     """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/sklearn_wrappers.py)
 
     Implementation of a concept explainer using wrappers around sklearn decompositions as `concept_model`.
@@ -362,6 +363,18 @@ class SkLearnWrapperExplainer(DictionaryLearningExplainer[SkLearnWrapper], Gener
             **kwargs,
         )
         ConceptAutoEncoderExplainer.__init__(self, model_with_split_points, concept_model=concept_model)
+
+    def fit(self, activations: LatentActivations, **kwargs):
+        """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
+
+        Args:
+            activations (torch.Tensor): The activations used for fitting the `concept_model`.
+            **kwargs (dict): Additional keyword arguments to pass to the `concept_model`.
+                See the Overcomplete documentation of the provided `concept_model` for more details.
+        """
+        if len(activations.shape) != 2:
+            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        self.concept_model.fit(activations, **kwargs)
 
 
 class PCAConcepts(SkLearnWrapperExplainer[PCAWrapper]):
