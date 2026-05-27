@@ -36,7 +36,7 @@ split_model = SplitSequenceClassification(
 )
 
 # 2. Fit a concept explainer
-activations = split_model.get_activations(train_texts, tqdm_bar=True)
+activations, predictions = split_model.get_activations(train_texts, tqdm_bar=True)
 concept_explainer = SemiNMFConcepts(split_model, nb_concepts=20, device="cuda")
 concept_explainer.fit(activations)
 

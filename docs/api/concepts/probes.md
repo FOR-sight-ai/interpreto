@@ -28,7 +28,7 @@ from interpreto.concepts.probes import LinearRegressionProbe
 model = SplitSequenceClassification("textattack/bert-base-uncased-imdb")
 
 # 2. Extract CLS-token activations — shape (n, d)
-activations = model.get_activations(texts)
+activations, predictions = model.get_activations(texts)
 
 # 3. Instantiate probe and explainer
 probe = LinearRegressionProbe()
@@ -63,7 +63,7 @@ model = ModelWithSplitPoints(
 )
 
 # Aggregate all tokens into one vector per sample — shape (n, d)
-activations = model.get_activations(
+activations, _ = model.get_activations(
     texts,
     activation_granularity=model.activation_granularities.SAMPLE,
     aggregation_strategy=model.aggregation_strategies.MEAN, # MAX and LAST are also often compared in the literature
@@ -71,7 +71,7 @@ activations = model.get_activations(
 
 probe = CosineCentroidProbe()
 explainer = ProbeExplainer(model, concept_model=probe)
-explainer.fit(activations["transformer.h.6"], labels)
+explainer.fit(activations, labels)
 ```
 
 #### Strategy B: Per-token activations (flattened)
@@ -82,7 +82,7 @@ removed, then flattened). This is appropriate when concepts are local properties
 
 ```python
 # One vector per token, flattened across all samples — shape (n*l, d)
-activations = model.get_activations(
+activations, _ = model.get_activations(
     texts,
     activation_granularity=model.activation_granularities.TOKEN,
 )
@@ -90,7 +90,7 @@ activations = model.get_activations(
 # labels must also be flattened to match: shape (n*l, c)
 probe = LinearRegressionProbe()
 explainer = ProbeExplainer(model, concept_model=probe)
-explainer.fit(activations["transformer.h.6"], token_labels)
+explainer.fit(activations, token_labels)
 ```
 
 !!! tip "Choosing a granularity"

@@ -31,8 +31,8 @@ split_model = SplitSequenceClassification(
     device_map="cuda",
 )
 
-# Compute activations on a dataset
-activations = split_model.get_activations(texts, tqdm_bar=True)
+# Compute activations and predictions on a dataset
+activations, predictions = split_model.get_activations(texts, tqdm_bar=True)
 ```
 
 ## API Reference
@@ -48,5 +48,4 @@ activations = split_model.get_activations(texts, tqdm_bar=True)
         - inputs_to_activations
         - activations_to_outputs
         - get_activations
-        - get_split_activations
         - get_latent_shape

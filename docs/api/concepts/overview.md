@@ -24,7 +24,7 @@ model_with_split_points = ModelWithSplitPoints(
 )
 
 # 2. Compute the model activations on the split_point
-activations = model_with_split_points.get_activations(dataset)
+activations, predictions = model_with_split_points.get_activations(dataset)
 
 # 3. Instantiate and fit the concept-based explainer on the activations
 concept_explainer = ICAConcepts(model_with_split_points)
@@ -43,7 +43,7 @@ The API has five steps:
 
 `ModelWithSplitPoints` is a wrapper around your model to split it into different parts.
 It allows to obtain activations on a specific split point.
-The main method is thus `get_activations` which takes inputs and returns a dictionary of activations.
+The main method is thus `get_activations` which takes inputs and returns `(activations, predictions)`.
 
 It can be initialized from the model repo id or from a model instance.
 

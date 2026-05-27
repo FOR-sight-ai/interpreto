@@ -15,7 +15,7 @@ The previous `split_points` argument/property remains temporarily available as a
         - activation_granularities
         - aggregation_strategies
         - get_activations
-        - get_split_activations
+        - get_latent_shape
 
 ::: interpreto.model_wrapping.model_with_split_points.ActivationGranularity
     handler: python
