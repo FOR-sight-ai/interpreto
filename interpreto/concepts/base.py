@@ -39,6 +39,7 @@ from jaxtyping import Float
 from transformers.tokenization_utils_base import BatchEncoding
 
 from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
+from interpreto.model_wrapping.base_splitter import BaseSplitter
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,
     GranularityAggregationStrategy,
@@ -188,23 +189,23 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        model_with_split_points: BaseSplitter,
         concept_model: ConceptModelProtocol,
     ):
         """Initializes the concept explainer with a given splitted model.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            model_with_split_points (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             concept_model (ConceptModelProtocol): The model used to extract concepts from
                 the activations of `model_with_split_points`.
                 The `ConceptModelProtocol` is defined in `interpreto.typing`. It is basically a `torch.nn.Module` with an `encode` method.
         """
-        if not isinstance(model_with_split_points, ModelWithSplitPoints):
+        if not isinstance(model_with_split_points, BaseSplitter):
             raise TypeError(
                 f"The given model should be a ModelWithSplitPoints, but {type(model_with_split_points)} was given."
             )
-        self.model_with_split_points: ModelWithSplitPoints = model_with_split_points
+        self.model_with_split_points: BaseSplitter = model_with_split_points
         self._concept_model = concept_model
         self.__is_fitted: bool = False
 
@@ -287,13 +288,13 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        model_with_split_points: BaseSplitter,
         concept_model: BaseDictionaryLearning,
     ):
         """Initializes the concept explainer with a given splitted model.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            model_with_split_points (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from
                 the activations of `model_with_split_points`.

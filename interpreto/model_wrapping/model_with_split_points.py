@@ -33,41 +33,22 @@ from typing import Any
 
 import nnsight
 import torch
-import torch.nn.functional as F
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from nnsight.modeling.language import LanguageModel
 from tqdm import tqdm
-from transformers import AutoModel, T5ForConditionalGeneration
-from transformers.configuration_utils import PretrainedConfig
-from transformers.modeling_utils import PreTrainedModel
-from transformers.tokenization_utils import PreTrainedTokenizer
-from transformers.tokenization_utils_base import BatchEncoding
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from transformers import (
+    AutoModel,
+    BatchEncoding,
+    PretrainedConfig,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+    PreTrainedTokenizerFast,
+    T5ForConditionalGeneration,
+)
 
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
-from interpreto.model_wrapping.splitting_utils import (
-    get_layer_by_idx,
-    validate_path,
-    walk_modules,
-)
+from interpreto.model_wrapping.base_splitter import BaseSplitter, InitializationError  # noqa: F401
 from interpreto.typing import ConceptsActivations, LatentActivations
-
-# Prevents:
-# UserWarning: Module ... of type ... has pre-defined a `output` attribute.
-# nnsight access for `output` will be mounted at `.nns_output` instead of `.output` for this module only.
-# This error message is raised by `nnsight` but it is treated by interpreto with the following line:
-# `output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"`
-warnings.filterwarnings(
-    "ignore",
-    category=UserWarning,
-    module="nnsight.intervention.envoy",
-    message=r".*has pre-defined a `output` attribute.*",
-)
-
-
-class InitializationError(ValueError):
-    """Raised to signal a problem with model initialization."""
 
 
 class ActivationGranularity(Enum):
@@ -115,7 +96,7 @@ class ActivationGranularity(Enum):
 AG = ActivationGranularity
 
 
-class ModelWithSplitPoints(LanguageModel):
+class ModelWithSplitPoints(BaseSplitter):
     """Code: [:octicons-mark-github-24: model_wrapping/model_with_split_points.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/model_wrapping/model_with_split_points.py)
 
     The `ModelWithSplitPoints` is a wrapper around your HuggingFace model.
@@ -277,13 +258,15 @@ class ModelWithSplitPoints(LanguageModel):
         # For parameters list, see class docstring. It was moved to change the order in the documentation.
         """Initialize a ModelWithSplitPoints object.
 
-        Most of the work is forwarded to the `LanguageModel` class initialization from NNsight.
+        Most of the work is forwarded to the `BaseSplitter` class initialization.
+        Which is in turn a wrapper around the `nnsight.LanguageModel` class.
 
         Raises:
             InitializationError (ValueError): If the model cannot be loaded, because of a missing `tokenizer` or `automodel`.
             ValueError: If the `device_map` is set to 'auto' and the model is not a generation model.
             TypeError: If the `model_or_repo_id` is not a `str` or a `transformers.PreTrainedModel`.
         """
+        # Handle deprecated `split_points` parameter
         if split_point is not None and split_points is not None:
             raise ValueError("Specify only one of `split_point` or deprecated `split_points`.")
         if split_points is not None:
@@ -293,61 +276,19 @@ class ModelWithSplitPoints(LanguageModel):
         if split_point is None:
             raise TypeError("Missing required argument `split_point`.")
 
-        if isinstance(model_or_repo_id, PreTrainedModel):
-            if tokenizer is None:
-                raise InitializationError(
-                    "Tokenizer is not set. When providing a model instance, the tokenizer must be set."
-                )
-        elif isinstance(model_or_repo_id, str):  # Repository ID
-            if automodel is None:
-                raise InitializationError(
-                    "Model autoclass not found.\n"
-                    "The model class can be omitted if a pre-loaded model is passed to `model_or_repo_id` "
-                    "param.\nIf an HF Hub ID is used, the corresponding autoclass must be specified in `automodel`.\n"
-                    "Example: ModelWithSplitPoints('bert-base-uncased', automodel=AutoModelForMaskedLM, ...)"
-                )
-        else:
-            raise TypeError(
-                f"Invalid model_or_repo_id type: {type(model_or_repo_id)}. "
-                "Expected `str` or `transformers.PreTrainedModel`."
-            )
-
-        # Handles model loading through nnsight.LanguageModel._load
+        # Delegate to BaseSplitter (handles validation, loading, split point, device, tokenizer)
         super().__init__(
             model_or_repo_id,
+            split_point,
             *args,
+            automodel=automodel,
+            tokenizer=tokenizer,
             config=config,
-            tokenizer=tokenizer,  # type: ignore (under specification from NNsight)
-            automodel=automodel,  # type: ignore (under specification from NNsight)
+            batch_size=batch_size,
             device_map=device_map,
+            output_tuple_index=output_tuple_index,
             **kwargs,
         )
-
-        # set split point
-        self._model_paths = list(walk_modules(self._model))
-        self.split_point = split_point  # this uses the setter which handles validation
-        self._model: PreTrainedModel  # specify type of `_model` attribute from NNsight
-        if self.repo_id is None:
-            self.repo_id = self._model.config.name_or_path  # type: ignore  (under specification from NNsight)
-        self.batch_size = batch_size
-
-        if not isinstance(model_or_repo_id, str):
-            # `device_map` is ignored by `nnsight` in this case, hence we manage it manually
-            if device_map is not None:
-                if device_map == "auto":
-                    raise ValueError(
-                        "'auto' device_map is only supported when loading a generation model from a repository id. "
-                        "Please specify a device_map, e.g. 'cuda' or 'cpu'."
-                    )
-                    # pass the provided model to the specified device
-                self.to(device_map)  # type: ignore  (under specification from NNsight)
-            else:
-                # we leave the model on its device
-                pass
-
-        if self.tokenizer is None:
-            raise ValueError("Tokenizer is not set. When providing a model instance, the tokenizer must be set.")
-        self.output_tuple_index = output_tuple_index
 
     @staticmethod
     def _deprecated_split_points_to_split_point(
@@ -376,30 +317,6 @@ class ModelWithSplitPoints(LanguageModel):
         return split_points
 
     @property
-    def split_point(self) -> str:
-        """The split point of the model."""
-        return self._split_point
-
-    @split_point.setter
-    def split_point(self, split_point: str | int) -> None:
-        """Split point setter.
-
-        Args:
-            split_point (str | int): The split location inside the model.
-                Either a `str` path or an `int` layer index.
-        """
-        # Handle conversion of layer idx to full path
-        if isinstance(split_point, int):
-            str_split = get_layer_by_idx(split_point, model_paths=self._model_paths)
-        else:
-            str_split = split_point
-
-        # Validate whether the split exists in the model
-        validate_path(self._model, str_split)
-
-        self._split_point: str = str_split
-
-    @property
     def split_points(self) -> list[str]:
         """Deprecated alias returning the split point as a single-element list."""
         warnings.warn(
@@ -416,46 +333,6 @@ class ModelWithSplitPoints(LanguageModel):
     ) -> None:
         """Deprecated alias for setting `split_point`."""
         self.split_point = self._deprecated_split_points_to_split_point(split_points)
-
-    @staticmethod
-    def _pad_and_concat(
-        tensor_list: list[Float[torch.Tensor, "n_i l_i d"]],
-        pad_side: str,
-        pad_value: float,
-    ) -> Float[torch.Tensor, "sum(n_i) max_l d"]:
-        """
-        Concatenates a list of 3D tensors along dim=0 after padding their second dimension to the same length.
-
-        Args:
-            tensor_list (List[Tensor]): List of tensors with shape (n_i, l_i, d)
-            pad_side (str): 'left' or 'right' — side on which to apply padding along dim=1
-            pad_value (float): Value to use for padding
-
-        Returns:
-            Tensor: Tensor of shape (sum(n_i), max_l, d)
-        """
-        if pad_side not in ("left", "right"):
-            raise ValueError("pad_side must be either 'left' or 'right'")
-
-        max_l = max(t.shape[1] for t in tensor_list)
-        padded = []
-
-        for t in tensor_list:
-            n, l, d = t.shape
-            pad_len = max_l - l
-
-            if pad_len == 0:
-                padded_tensor = t
-            else:
-                if pad_side == "right":
-                    pad = (0, 0, 0, pad_len)  # pad dim=1 on the right
-                else:  # pad_side == 'left'
-                    pad = (0, 0, pad_len, 0)  # pad dim=1 on the left
-                padded_tensor = F.pad(t, pad, value=pad_value)
-
-            padded.append(padded_tensor)
-
-        return torch.cat(padded, dim=0)
 
     def _get_granularity_indices(
         self,
@@ -618,7 +495,7 @@ class ModelWithSplitPoints(LanguageModel):
 
                     # aggregate activations for SAMPLE strategy
                     if activation_granularity == AG.SAMPLE:
-                        selected_activations = aggregation_strategy.aggregate(
+                        selected_activations = aggregation_strategy.aggregate(  # type: ignore
                             selected_activations,
                             dim=-2,
                         )
@@ -750,61 +627,10 @@ class ModelWithSplitPoints(LanguageModel):
             case _:
                 raise ValueError(f"Invalid activation selection strategy: {activation_granularity}")
 
-    def _manage_output_tuple(self, activations: torch.Tensor | tuple[torch.Tensor], split_point: str) -> torch.Tensor:
-        """
-        Handles the case in which the model has a tuple of outputs,
-        and we need to know which element is the hidden state.
-
-        The hypothesis is that the hidden state has three dimensions (n, l, d).
-        Therefore, in the case of a tuple of tensors,
-        this function returns the tensor with three dimensions.
-
-        Args:
-            activations (torch.Tensor | tuple[torch.Tensor]): The activations to manage.
-            split_point (str): The split point for interpretable error messages.
-
-        Returns:
-            torch.Tensor: The managed activations.
-            int | None: The index of the hidden state in the tuple.
-
-        Raises:
-            TypeError: If the activations are not a `torch.tensor` or a valid tuple.
-            RuntimeError: If the activations are a tuple, but we were not able to determine which element is the hidden state.
-        """
-        if isinstance(activations, torch.Tensor):
-            if activations.dim() != 3:
-                raise ValueError(
-                    f"Invalid activations for split point '{split_point}'. "
-                    f"Expected a 3D tensor of shape (n, l, d), "
-                    f"got a tensor of shape {activations.shape}. "
-                    "It is recommended to look for another split point."
-                )
-            return activations
-
-        if not isinstance(activations, tuple):
-            raise TypeError(
-                f"Failed to manipulate activations for split point '{split_point}'. "
-                f"Wrong type of activations. Expected torch.Tensor or tuple[torch.Tensor], got {type(activations)}: {activations}"
-            )
-
-        if self.output_tuple_index is not None:
-            return activations[self.output_tuple_index]
-
-        for i, candidate in enumerate(activations):
-            if candidate.dim() == 3:
-                self.output_tuple_index: int | None = i
-                return candidate
-
-        raise RuntimeError(
-            f"Failed to manipulate activations for split point '{split_point}'. "
-            "Activations are tuples, and no tensor with three dimensions was found. "
-            f"Found tensors of shape: {(t.shape for t in activations)}. "
-            "It is recommended to look for another split point."
-        )
-
     def get_activations(  # noqa: PLR0912  # ignore too many branches  # too many special cases
         self,
         inputs: list[str] | torch.Tensor | BatchEncoding,
+        *,
         activation_granularity: ActivationGranularity,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         pad_side: str | None = None,
@@ -966,99 +792,98 @@ class ModelWithSplitPoints(LanguageModel):
         # iterate over batch of inputs
         with torch.no_grad():
             # several call of the same model should be grouped in an nnsight session
-            with self.session():
-                for batch_inputs in tqdm_wrapped_batch_generator:
-                    # ------------------------------------------------------------------------------
-                    # prepare inputs and compute granular indices
-                    if isinstance(batch_inputs, list):
-                        # tokenize text inputs for granularity selection
-                        # include "offsets_mapping" for sentence selection strategy
-                        tokenized_inputs = self.tokenizer(
-                            batch_inputs,
-                            return_tensors="pt",
-                            padding=True,
-                            truncation=True,
-                            return_offsets_mapping=True,
+            for batch_inputs in tqdm_wrapped_batch_generator:
+                # ------------------------------------------------------------------------------
+                # prepare inputs and compute granular indices
+                if isinstance(batch_inputs, list):
+                    # tokenize text inputs for granularity selection
+                    # include "offsets_mapping" for sentence selection strategy
+                    tokenized_inputs = self.tokenizer(
+                        batch_inputs,
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
+                        return_offsets_mapping=True,
+                    )
+
+                    # special case for T5 in a generation setting
+                    if isinstance(self.args[0], T5ForConditionalGeneration):
+                        # TODO: find a way for this not to be necessary
+                        tokenized_inputs["decoder_input_ids"] = tokenized_inputs["input_ids"]
+                else:
+                    # the input was already tokenized
+                    tokenized_inputs = batch_inputs
+
+                # get granularity indices
+                granularity_indices: list[list[list[int]]] = self._get_granularity_indices(
+                    tokenized_inputs, activation_granularity
+                )
+
+                # extract offset mapping not supported by forward but was necessary for sentence selection strategy
+                if isinstance(tokenized_inputs, (BatchEncoding, dict)):  # noqa: UP038
+                    tokenized_inputs.pop("offset_mapping", None)
+
+                # ------------------------------------------------------------------------------
+                # model forward pass with nnsight to extract activations and predictions
+
+                # all model calls use trace with nnsight
+                # call model forward pass and save split point outputs
+                with self.trace(tokenized_inputs, **model_forward_kwargs) as tracer:
+                    # nnsight quick way to obtain the activations for the split point
+                    batch_activations = tracer.cache(modules=[self.get(self._split_point)])  # type: ignore
+
+                    # for classification optionally compute and save the predictions
+                    if include_predicted_classes:
+                        batch_predictions: Float[torch.Tensor, "n"] = (
+                            self.output.logits.argmax(dim=-1).cpu().save()  # type: ignore  (under specification from NNsight)
                         )
 
-                        # special case for T5 in a generation setting
-                        if isinstance(self.args[0], T5ForConditionalGeneration):
-                            # TODO: find a way for this not to be necessary
-                            tokenized_inputs["decoder_input_ids"] = tokenized_inputs["input_ids"]
+                # free memory after each batch, necessary with nnsight, overwise, memory piles up
+                torch.cuda.empty_cache()
+
+                # ------------------------------------------------------------------------------
+                # apply granularity selection and aggregation of activations and predictions
+                sp = self._split_point
+                # extracting the activations for the split point
+                sp_module = batch_activations["model." + sp]
+                output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
+                batch_outputs = getattr(sp_module, output_name)
+
+                # manage the output tuple and extract the (n, l, d) activations from it
+                batch_sp_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(batch_outputs, sp)
+
+                # select relevant activations with respect to the granularity strategy
+                # potentially aggregate activations over the granularity elements
+                # this merges the `n` and `g` dimensions with `g` a subset of `n`
+                # shape (n, l, d) only for `ALL` granularity, thus raw activations
+                granular_activations: list[Float[torch.Tensor, "g d"]] = self._apply_selection_strategy(
+                    activations=batch_sp_activations,
+                    granularity_indices=granularity_indices,
+                    activation_granularity=activation_granularity,
+                    aggregation_strategy=aggregation_strategy,
+                )
+
+                activations.extend(granular_activations)
+
+                if include_predicted_classes:
+                    if not flatten_activations:
+                        predictions.extend(
+                            list(batch_predictions)  # type: ignore  (ignore possibly unbound)
+                        )
                     else:
-                        # the input was already tokenized
-                        tokenized_inputs = batch_inputs
+                        # adapt predictions to match the granularity indices
+                        repeats: Float[torch.Tensor, "ng"] = torch.tensor(
+                            [len(indices) for indices in granularity_indices]
+                        )
 
-                    # get granularity indices
-                    granularity_indices: list[list[list[int]]] = self._get_granularity_indices(
-                        tokenized_inputs, activation_granularity
-                    )
-
-                    # extract offset mapping not supported by forward but was necessary for sentence selection strategy
-                    if isinstance(tokenized_inputs, (BatchEncoding, dict)):  # noqa: UP038
-                        tokenized_inputs.pop("offset_mapping", None)
-
-                    # ------------------------------------------------------------------------------
-                    # model forward pass with nnsight to extract activations and predictions
-
-                    # all model calls use trace with nnsight
-                    # call model forward pass and save split point outputs
-                    with self.trace(tokenized_inputs, **model_forward_kwargs) as tracer:
-                        # nnsight quick way to obtain the activations for the split point
-                        batch_activations = tracer.cache(modules=[self.get(self._split_point)])  # type: ignore
-
-                        # for classification optionally compute and save the predictions
-                        if include_predicted_classes:
-                            batch_predictions: Float[torch.Tensor, "n"] = (
-                                self.output.logits.argmax(dim=-1).cpu().save()  # type: ignore  (under specification from NNsight)
-                            )
-
-                    # free memory after each batch, necessary with nnsight, overwise, memory piles up
-                    torch.cuda.empty_cache()
-
-                    # ------------------------------------------------------------------------------
-                    # apply granularity selection and aggregation of activations and predictions
-                    sp = self._split_point
-                    # extracting the activations for the split point
-                    sp_module = batch_activations["model." + sp]
-                    output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
-                    batch_outputs = getattr(sp_module, output_name)
-
-                    # manage the output tuple and extract the (n, l, d) activations from it
-                    batch_sp_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(batch_outputs, sp)
-
-                    # select relevant activations with respect to the granularity strategy
-                    # potentially aggregate activations over the granularity elements
-                    # this merges the `n` and `g` dimensions with `g` a subset of `n`
-                    # shape (n, l, d) only for `ALL` granularity, thus raw activations
-                    granular_activations: list[Float[torch.Tensor, "g d"]] = self._apply_selection_strategy(
-                        activations=batch_sp_activations,
-                        granularity_indices=granularity_indices,
-                        activation_granularity=activation_granularity,
-                        aggregation_strategy=aggregation_strategy,
-                    )
-
-                    activations.extend(granular_activations)
-
-                    if include_predicted_classes:
-                        if not flatten_activations:
-                            predictions.extend(
-                                list(batch_predictions)  # type: ignore  (ignore possibly unbound)
-                            )
-                        else:
-                            # adapt predictions to match the granularity indices
-                            repeats: Float[torch.Tensor, "ng"] = torch.tensor(
-                                [len(indices) for indices in granularity_indices]
-                            )
-
-                            # predictions have a shape (n,), which we convert to (ng,)
-                            # by repeating each predicted class as many times as the number of granularity elements in a sample
-                            repeated_predictions = torch.repeat_interleave(
-                                batch_predictions,  # type: ignore  (ignore possibly unbound)
-                                repeats,
-                                dim=0,
-                            )
-                            predictions.append(repeated_predictions)
+                        # predictions have a shape (n,), which we convert to (ng,)
+                        # by repeating each predicted class as many times as the number of granularity elements in a sample
+                        repeated_predictions = torch.repeat_interleave(
+                            batch_predictions,  # type: ignore  (ignore possibly unbound)
+                            repeats,
+                            dim=0,
+                        )
+                        predictions.append(repeated_predictions)
 
         # ------------------------------------------------------------------------------------------
         # concat activation batches and validate that activations have the expected type
@@ -1201,163 +1026,162 @@ class ModelWithSplitPoints(LanguageModel):
         )
 
         gradients_list: list[Float[torch.Tensor, "ng c"]] = []
-        with self.session():
-            # iterate over batch of inputs
-            for batch_inputs in tqdm_wrapped_batch_generator:
-                # --------------------------------------------------------------------------------------
-                # prepare inputs and compute granular indices
-                # tokenize text inputs
-                if isinstance(batch_inputs, list):
-                    if activation_granularity == AG.CLS_TOKEN:
-                        self.tokenizer.padding_side = "right"
-                    tokenized_inputs = self.tokenizer(
-                        batch_inputs,
-                        return_tensors="pt",
-                        padding=True,
-                        truncation=True,
-                        return_offsets_mapping=True,
-                    )
-                    if isinstance(self.args[0], T5ForConditionalGeneration):
-                        # TODO: find a way for this not to be necessary
-                        tokenized_inputs["decoder_input_ids"] = tokenized_inputs["input_ids"]
-                else:
-                    tokenized_inputs = batch_inputs
+        # iterate over batch of inputs
+        for batch_inputs in tqdm_wrapped_batch_generator:
+            # --------------------------------------------------------------------------------------
+            # prepare inputs and compute granular indices
+            # tokenize text inputs
+            if isinstance(batch_inputs, list):
+                if activation_granularity == AG.CLS_TOKEN:
+                    self.tokenizer.padding_side = "right"
+                tokenized_inputs = self.tokenizer(
+                    batch_inputs,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    return_offsets_mapping=True,
+                )
+                if isinstance(self.args[0], T5ForConditionalGeneration):
+                    # TODO: find a way for this not to be necessary
+                    tokenized_inputs["decoder_input_ids"] = tokenized_inputs["input_ids"]
+            else:
+                tokenized_inputs = batch_inputs
 
-                granularity_indices: list[list[list[int]]] = self._get_granularity_indices(  # type: ignore  (cannot be None with given activation granularity)
-                    tokenized_inputs, activation_granularity
+            granularity_indices: list[list[list[int]]] = self._get_granularity_indices(  # type: ignore  (cannot be None with given activation granularity)
+                tokenized_inputs, activation_granularity
+            )
+
+            # extract offset mapping not supported by forward but necessary for word/sentence selection strategy
+            if isinstance(tokenized_inputs, (BatchEncoding, dict)):  # noqa: UP038
+                tokenized_inputs.pop("offset_mapping", None)
+
+            # TODO: test if we can use `with model.edit():` from nnsight
+            # in theory, it would be much faster
+
+            # --------------------------------------------------------------------------------------
+            # model forward pass with nnsight to compute concepts activations and predictions
+            # then backward from the predictions to the concepts activations (gradients)
+
+            # all model calls use trace with nnsight
+            with self.trace(tokenized_inputs, **model_forward_kwargs):
+                curr_module = self.get(self._split_point)
+                # Handle case in which module has .output attribute, and .nns_output gets overridden instead
+                module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
+
+                # get activations
+                layer_outputs = getattr(curr_module, module_out_name)
+                raw_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
+                    layer_outputs, self._split_point
+                )
+                n, l, d = raw_activations.shape  # number of samples, sequence length, and model dimension
+                ng = sum([len(indices) for indices in granularity_indices])  # number of granularity elements
+
+                # apply selection strategy
+                selected_activations: list[Float[torch.Tensor, "g {d}"]]
+                selected_activations = self._apply_selection_strategy(
+                    activations=raw_activations,  # use the last batch of activations
+                    granularity_indices=granularity_indices,
+                    activation_granularity=activation_granularity,
+                    aggregation_strategy=aggregation_strategy,
+                )
+                # concatenate the selected activations into a single tensor
+                flattened_activations: Float[torch.Tensor, ng, d] = torch.cat(selected_activations, dim=0)
+
+                # encode activations into concepts
+                concept_activations: Float[torch.Tensor, "{ng} c"] = encode_activations(flattened_activations)
+                del selected_activations, flattened_activations
+                c = concept_activations.shape[-1]
+
+                # decode concepts back into activations
+                decoded_activations: Float[torch.Tensor, ng, d] = decode_concepts(concept_activations)
+
+                # reintegrate decoded activations into the original activations
+                reconstructed_activations: Float[torch.Tensor, n, l, d] = self._reintegrate_selected_activations(
+                    initial_activations=raw_activations,
+                    new_activations=decoded_activations,
+                    granularity_indices=granularity_indices,
+                    activation_granularity=activation_granularity,
+                    aggregation_strategy=aggregation_strategy,
+                )
+                del decoded_activations, raw_activations
+
+                # reintegrate the reconstructed activations into the original layer outputs
+                if isinstance(layer_outputs, tuple):
+                    layer_outputs = list(layer_outputs)
+                    layer_outputs[self.output_tuple_index] = reconstructed_activations  # type: ignore
+                else:
+                    layer_outputs = reconstructed_activations
+
+                # assign the new outputs to the module output
+                if hasattr(curr_module, "nns_output"):
+                    curr_module.nns_output = layer_outputs  # type: ignore  (under specification from NNsight)
+                else:
+                    curr_module.output = layer_outputs  # type: ignore  (under specification from NNsight)
+
+                # ----------------------------------------------------------------------------------
+                # Manipulate logits and targets to prepare gradients computation
+                # get logits
+                logits: Float[torch.Tensor, "{n} t_all"]  # number of samples and number of possible targets
+                all_logits = self.output.logits
+
+                if len(all_logits.shape) == 3:  # generation (n, l, v)
+                    # in the case of a generation model, take the maximum logits over the vocabulary dimension
+                    logits, _ = all_logits.max(dim=-1)  # (n, l)
+                else:  # classification (n, nb_classes)
+                    logits = all_logits
+
+                # sum over samples to batch gradients calls (it has no impact on the final gradients)
+                logits: Float[torch.Tensor, "t_all"] = logits.sum(dim=0)
+
+                # compute gradients for each target
+                if self.targets is None:
+                    current_targets: Iterable[int] = range(logits.shape[0])
+                else:
+                    current_targets: Iterable[int] = self.targets
+
+                t = len(current_targets)  # number of targets
+
+                # TODO: find a way to compute gradients for all targets simultaneously
+
+                # ----------------------------------------------------------------------------------
+                # compute gradients for each target separately
+                targets_gradients_list: list[Float[torch.Tensor, ng, c]] = []
+                for t in current_targets:
+                    # sum over samples but compute the gradients for each target separately
+                    with logits[t].backward(retain_graph=True):  # type: ignore
+                        # compute the gradient of the concept activations
+                        concept_activations_grad: Float[torch.Tensor, ng, c] = concept_activations.grad.clone()  # type: ignore
+
+                        # clean gradient for following operations
+                        concept_activations.grad.zero_()  # type: ignore
+
+                        # for gradient x concepts, multiply by concepts
+                        if concepts_x_gradients:
+                            concept_activations_grad *= concept_activations
+                    targets_gradients_list.append(concept_activations_grad)
+
+                targets_gradients: Float[torch.Tensor, t, ng, d] = (
+                    torch.stack(targets_gradients_list, dim=0).detach().cpu().save()  # type: ignore  (nnsight under specification)
+                )
+                del (
+                    targets_gradients_list,
+                    concept_activations,
+                    concept_activations_grad,  # type: ignore (possibly unbound grad),
+                    logits,
+                    all_logits,
                 )
 
-                # extract offset mapping not supported by forward but necessary for word/sentence selection strategy
-                if isinstance(tokenized_inputs, (BatchEncoding, dict)):  # noqa: UP038
-                    tokenized_inputs.pop("offset_mapping", None)
+                # split gradients for each input sentence from (t, ng, d) to n * (t, g, d)
+                start = 0
+                for indices_list in granularity_indices:
+                    end = start + len(indices_list)
+                    gradients_list.append(targets_gradients[:, start:end, :])
+                    start = end
 
-                # TODO: test if we can use `with model.edit():` from nnsight
-                # in theory, it would be much faster
+                gc.collect()
 
-                # --------------------------------------------------------------------------------------
-                # model forward pass with nnsight to compute concepts activations and predictions
-                # then backward from the predictions to the concepts activations (gradients)
-
-                # all model calls use trace with nnsight
-                with self.trace(tokenized_inputs, **model_forward_kwargs):
-                    curr_module = self.get(self._split_point)
-                    # Handle case in which module has .output attribute, and .nns_output gets overridden instead
-                    module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
-
-                    # get activations
-                    layer_outputs = getattr(curr_module, module_out_name)
-                    raw_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
-                        layer_outputs, self._split_point
-                    )
-                    n, l, d = raw_activations.shape  # number of samples, sequence length, and model dimension
-                    ng = sum([len(indices) for indices in granularity_indices])  # number of granularity elements
-
-                    # apply selection strategy
-                    selected_activations: list[Float[torch.Tensor, "g {d}"]]
-                    selected_activations = self._apply_selection_strategy(
-                        activations=raw_activations,  # use the last batch of activations
-                        granularity_indices=granularity_indices,
-                        activation_granularity=activation_granularity,
-                        aggregation_strategy=aggregation_strategy,
-                    )
-                    # concatenate the selected activations into a single tensor
-                    flattened_activations: Float[torch.Tensor, ng, d] = torch.cat(selected_activations, dim=0)
-
-                    # encode activations into concepts
-                    concept_activations: Float[torch.Tensor, "{ng} c"] = encode_activations(flattened_activations)
-                    del selected_activations, flattened_activations
-                    c = concept_activations.shape[-1]
-
-                    # decode concepts back into activations
-                    decoded_activations: Float[torch.Tensor, ng, d] = decode_concepts(concept_activations)
-
-                    # reintegrate decoded activations into the original activations
-                    reconstructed_activations: Float[torch.Tensor, n, l, d] = self._reintegrate_selected_activations(
-                        initial_activations=raw_activations,
-                        new_activations=decoded_activations,
-                        granularity_indices=granularity_indices,
-                        activation_granularity=activation_granularity,
-                        aggregation_strategy=aggregation_strategy,
-                    )
-                    del decoded_activations, raw_activations
-
-                    # reintegrate the reconstructed activations into the original layer outputs
-                    if isinstance(layer_outputs, tuple):
-                        layer_outputs = list(layer_outputs)
-                        layer_outputs[self.output_tuple_index] = reconstructed_activations  # type: ignore
-                    else:
-                        layer_outputs = reconstructed_activations
-
-                    # assign the new outputs to the module output
-                    if hasattr(curr_module, "nns_output"):
-                        curr_module.nns_output = layer_outputs  # type: ignore  (under specification from NNsight)
-                    else:
-                        curr_module.output = layer_outputs  # type: ignore  (under specification from NNsight)
-
-                    # ----------------------------------------------------------------------------------
-                    # Manipulate logits and targets to prepare gradients computation
-                    # get logits
-                    logits: Float[torch.Tensor, "{n} t_all"]  # number of samples and number of possible targets
-                    all_logits = self.output.logits
-
-                    if len(all_logits.shape) == 3:  # generation (n, l, v)
-                        # in the case of a generation model, take the maximum logits over the vocabulary dimension
-                        logits, _ = all_logits.max(dim=-1)  # (n, l)
-                    else:  # classification (n, nb_classes)
-                        logits = all_logits
-
-                    # sum over samples to batch gradients calls (it has no impact on the final gradients)
-                    logits: Float[torch.Tensor, "t_all"] = logits.sum(dim=0)
-
-                    # compute gradients for each target
-                    if self.targets is None:
-                        current_targets: Iterable[int] = range(logits.shape[0])
-                    else:
-                        current_targets: Iterable[int] = self.targets
-
-                    t = len(current_targets)  # number of targets
-
-                    # TODO: find a way to compute gradients for all targets simultaneously
-
-                    # ----------------------------------------------------------------------------------
-                    # compute gradients for each target separately
-                    targets_gradients_list: list[Float[torch.Tensor, ng, c]] = []
-                    for t in current_targets:
-                        # sum over samples but compute the gradients for each target separately
-                        with logits[t].backward(retain_graph=True):  # type: ignore
-                            # compute the gradient of the concept activations
-                            concept_activations_grad: Float[torch.Tensor, ng, c] = concept_activations.grad.clone()  # type: ignore
-
-                            # clean gradient for following operations
-                            concept_activations.grad.zero_()  # type: ignore
-
-                            # for gradient x concepts, multiply by concepts
-                            if concepts_x_gradients:
-                                concept_activations_grad *= concept_activations
-                        targets_gradients_list.append(concept_activations_grad)
-
-                    targets_gradients: Float[torch.Tensor, t, ng, d] = (
-                        torch.stack(targets_gradients_list, dim=0).detach().cpu().save()  # type: ignore  (nnsight under specification)
-                    )
-                    del (
-                        targets_gradients_list,
-                        concept_activations,
-                        concept_activations_grad,  # type: ignore (possibly unbound grad),
-                        logits,
-                        all_logits,
-                    )
-
-                    # split gradients for each input sentence from (t, ng, d) to n * (t, g, d)
-                    start = 0
-                    for indices_list in granularity_indices:
-                        end = start + len(indices_list)
-                        gradients_list.append(targets_gradients[:, start:end, :])
-                        start = end
-
-                    gc.collect()
-
-                # free memory after each batch, necessary with nnsight, overwise, memory piles up
-                torch.cuda.empty_cache()
+            # free memory after each batch, necessary with nnsight, overwise, memory piles up
+            torch.cuda.empty_cache()
 
         return gradients_list
 
@@ -1380,5 +1204,5 @@ class ModelWithSplitPoints(LanguageModel):
                     if candidate.dim() == 3:
                         module = candidate
                         break
-            shape = nnsight.save(module.shape)
-        return shape  # type: ignore  (under specification from NNsight)
+            shape = nnsight.save(module.shape)  # type: ignore  (under specification from NNsight)
+        return shape

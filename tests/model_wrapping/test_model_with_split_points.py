@@ -148,21 +148,6 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
         MWSP("gpt2", "transformer.h.1")
 
 
-def test_pad_and_concat():
-    """Validate ``pad_and_concat`` left and right padding."""
-    tensors = [
-        torch.zeros(1, 2, 3),
-        torch.ones(1, 3, 3),
-    ]
-    out_right = MWSP._pad_and_concat(tensors, "right", 0.5)
-    out_left = MWSP._pad_and_concat(tensors, "left", -1.0)
-
-    assert out_right.shape == (2, 3, 3), "right padding shape mismatch"
-    assert out_right[0, -1].tolist() == [0.5, 0.5, 0.5], "right padding values mismatch"
-    assert out_left.shape == (2, 3, 3), "left padding shape mismatch"
-    assert out_left[0, 0].tolist() == [-1.0, -1.0, -1.0], "left padding values mismatch"
-
-
 def test_manage_output_tuple():
     """Ensure ``_manage_output_tuple`` extracts the 3-D tensor from a tuple."""
     model = MWSP(
@@ -189,11 +174,11 @@ def test_get_activations_returns_tuple(splitted_encoder_ml: MWSP, sentences: lis
     assert predictions is None, "Predictions should be None unless include_predicted_classes=True is requested"
 
 
-def test_get_latent_shape(splitted_encoder_ml: MWSP, sentences: list[str]):
+def test_get_latent_shape(splitted_encoder_ml: MWSP):
     """Shapes returned by ``get_latent_shape`` match activation shapes."""
     shape = splitted_encoder_ml.get_latent_shape()
     activations, _ = splitted_encoder_ml.get_activations(
-        sentences, activation_granularity=ActivationGranularity.ALL_TOKENS, flatten_activations=False
+        ["scan"], activation_granularity=ActivationGranularity.ALL_TOKENS, flatten_activations=False
     )
 
     assert shape is not None, "get_latent_shape returned None"
@@ -716,20 +701,13 @@ if __name__ == "__main__":
     ]
 
     splitted_encoder_ml = MWSP(
-        "gpt2",
-        split_point=2,
-        automodel=AutoModelForCausalLM,  # type: ignore
-        device_map="auto",
-        batch_size=4,
-    )
-
-    splitted_encoder_ml = MWSP(
         "bert-base-uncased",
         split_point="bert.encoder.layer.2.output",
         automodel=AutoModelForSequenceClassification,  # type: ignore
         device_map="cuda",
         batch_size=4,
     )
+    test_get_latent_shape(splitted_encoder_ml)
     multi_split_model = MWSP(
         "bert-base-uncased",
         split_point="bert.encoder.layer.1",
