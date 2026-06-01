@@ -25,7 +25,7 @@
 import pytest
 import torch
 
-from interpreto import SplitSequenceClassification as SSC
+from interpreto import SplitterForClassification as SSC
 from interpreto.attributions import (
     KernelShap,
     Lime,

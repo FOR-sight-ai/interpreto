@@ -43,9 +43,8 @@ from interpreto.model_wrapping.base_splitter import BaseSplitter
 from interpreto.model_wrapping.model_with_split_points import (
     ActivationGranularity,
     GranularityAggregationStrategy,
-    ModelWithSplitPoints,
 )
-from interpreto.model_wrapping.split_sequence_classification import SplitSequenceClassification
+from interpreto.model_wrapping.splitter_for_classification import SplitterForClassification
 from interpreto.typing import (
     ConceptModelProtocol,
     ConceptsActivations,
@@ -72,7 +71,7 @@ def check_fitted(func: Callable[..., MethodOutput]) -> Callable[..., MethodOutpu
 class ModelForInputsToConcepts:
     """Bridge model that maps raw inputs to concept activations.
 
-    Composes a ``SplitSequenceClassification`` (inputs → latent activations)
+    Composes a ``SplitterForClassification`` (inputs → latent activations)
     with a concept model encoder (latent activations → concept activations).
 
     The goal is to return this as the concept_explainer.inputs_to_concepts property.
@@ -88,11 +87,11 @@ class ModelForInputsToConcepts:
         self,
         concept_explainer: ConceptEncoderExplainer,
     ):
-        self.split_model: SplitSequenceClassification
+        self.split_model: SplitterForClassification
         self.split_model = concept_explainer.model_with_split_points  # type: ignore
-        if not isinstance(self.split_model, SplitSequenceClassification):
+        if not isinstance(self.split_model, SplitterForClassification):
             raise IncompatibilityError(
-                "The split model must be a SplitSequenceClassification model."
+                "The split model must be a SplitterForClassification model."
                 f" Got {self.split_model.__class__.__name__}."
             )
 
@@ -203,7 +202,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """
         if not isinstance(model_with_split_points, BaseSplitter):
             raise TypeError(
-                f"The given model should be a ModelWithSplitPoints, but {type(model_with_split_points)} was given."
+                f"The given model should be a BaseSplitter (or subclass), but {type(model_with_split_points)} was given."
             )
         self.model_with_split_points: BaseSplitter = model_with_split_points
         self._concept_model = concept_model

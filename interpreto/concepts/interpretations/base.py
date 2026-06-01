@@ -45,7 +45,7 @@ from nltk.tokenize import word_tokenize
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
-from interpreto.model_wrapping.split_sequence_classification import SplitSequenceClassification
+from interpreto.model_wrapping.splitter_for_classification import SplitterForClassification
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -238,7 +238,7 @@ class BaseConceptInterpretationMethod(ABC):
         concept_model_device: torch.device | str | None = None,
     ):
         if activation_granularity is None:
-            if isinstance(concept_explainer.model_with_split_points, SplitSequenceClassification):
+            if isinstance(concept_explainer.model_with_split_points, SplitterForClassification):
                 activation_granularity = ActivationGranularity.CLS_TOKEN
             else:
                 activation_granularity = ActivationGranularity.TOKEN

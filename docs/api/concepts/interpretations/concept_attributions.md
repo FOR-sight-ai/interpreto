@@ -25,11 +25,11 @@ The result is a per-token attribution for each selected concept.
 
 ```python
 import torch
-from interpreto import Occlusion, SplitSequenceClassification
+from interpreto import Occlusion, SplitterForClassification
 from interpreto.concepts import SemiNMFConcepts
 
 # 1. Setup the split model
-split_model = SplitSequenceClassification(
+split_model = SplitterForClassification(
     "nateraw/bert-base-uncased-emotion",
     batch_size=32,
     device_map="cuda",
@@ -60,7 +60,7 @@ results = explainer.explain("Some text.", targets=torch.arange(5))
 
 The `inputs_to_concepts` property returns a `ModelForInputsToConcepts` object that:
 
-1. Passes inputs through the model backbone via `SplitSequenceClassification.inputs_to_activations`
+1. Passes inputs through the model backbone via `SplitterForClassification.inputs_to_activations`
    to obtain CLS-token representations.
 2. Encodes those latent activations into concept space using the fitted concept model's encoder.
 3. Returns concept activations as pseudo-logits, which the attribution method treats as outputs.

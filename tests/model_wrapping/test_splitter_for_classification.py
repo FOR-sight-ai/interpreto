@@ -25,7 +25,7 @@
 import pytest
 import torch
 
-from interpreto import SplitSequenceClassification as SSC
+from interpreto import SplitterForClassification as SSC
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -56,14 +56,14 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
     """
     # wrong module name
     with pytest.raises(ValueError):
-        SSC(bert_model, classification_head_name="wrong.module.name", tokenizer=bert_tokenizer)
+        SSC(bert_model, split_point="wrong.module.name", tokenizer=bert_tokenizer)
 
     # no tokenizer
     with pytest.raises(ValueError):
         SSC(bert_model)
 
     # correct module name
-    split_model = SSC(bert_model, classification_head_name="classifier", tokenizer=bert_tokenizer)
+    split_model = SSC(bert_model, split_point="classifier", tokenizer=bert_tokenizer)
     assert split_model.split_point == "classifier", (
         f"split_point mismatch: got {split_model.split_point}, expected 'classifier'"
     )

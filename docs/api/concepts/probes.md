@@ -14,18 +14,18 @@ methods, but the `fit` step requires both activations **and** binary concept lab
 
 ## Usage Guide
 
-### Classification Model (SplitSequenceClassification)
+### Classification Model (SplitterForClassification)
 
-The simplest setup for classification models. `SplitSequenceClassification` automatically
+The simplest setup for classification models. `SplitterForClassification` automatically
 detects the classification head and uses CLS-token activations.
 
 ```python
-from interpreto import SplitSequenceClassification
+from interpreto import SplitterForClassification
 from interpreto.concepts import ProbeExplainer
 from interpreto.concepts.probes import LinearRegressionProbe
 
 # 1. Wrap your classification model
-model = SplitSequenceClassification("textattack/bert-base-uncased-imdb")
+model = SplitterForClassification("textattack/bert-base-uncased-imdb")
 
 # 2. Extract CLS-token activations — shape (n, d)
 activations, predictions = model.get_activations(texts)
@@ -41,7 +41,7 @@ explainer.fit(activations, labels)
 concept_scores = explainer.encode_activations(new_activations)
 ```
 
-### Generation Model (ModelWithSplitPoints)
+### Generation Model (SplitterForGeneration or ModelWithSplitPoints)
 
 For generation models, you must choose how to aggregate the sequence of token-level
 activations into a fixed-size representation. Two common strategies:
@@ -79,6 +79,8 @@ explainer.fit(activations, labels)
 Use `activation_granularity=TOKEN` to get one activation per token (special tokens
 removed, then flattened). This is appropriate when concepts are local properties
 (e.g., named-entity type, part-of-speech) and labels are provided per-token.
+
+This is the behavior of `SplitterForGeneration`, which can be seen as a special case of `ModelWithSplitPoints`.
 
 ```python
 # One vector per token, flattened across all samples — shape (n*l, d)

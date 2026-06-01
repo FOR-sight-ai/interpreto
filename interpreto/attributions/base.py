@@ -869,10 +869,10 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
 
     Example:
         ```python
-        from interpreto import Occlusion, SplitSequenceClassification
+        from interpreto import Occlusion, SplitterForClassification
         from interpreto.concepts import SemiNMFConcepts
 
-        split_model = SplitSequenceClassification("model_id", device_map="cuda")
+        split_model = SplitterForClassification("model_id", device_map="cuda")
         concept_explainer = SemiNMFConcepts(split_model, nb_concepts=20)
         concept_explainer.fit(activations)
 

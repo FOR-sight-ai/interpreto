@@ -22,6 +22,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+Simplified model splitter for sequence classification models.
+
+``SplitterForClassification`` wraps a HuggingFace ``ForSequenceClassification``
+model and always splits at the classification head. Activations are the
+CLS-token representations fed into the head.
+"""
+
 from __future__ import annotations
 
 import gc
@@ -40,12 +48,12 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.model_wrapping.base_splitter import BaseSplitter
 from interpreto.typing import LatentActivations
 
 
-class SplitSequenceClassification(ModelWithSplitPoints):
-    """A ModelWithSplitPoints specialization for sequence classification models.
+class SplitterForClassification(BaseSplitter):
+    """A BaseSplitter specialization for sequence classification models.
 
     Provides optimized implementations of activation extraction and concept gradient
     computation by exploiting the known structure of classification models:
@@ -55,25 +63,17 @@ class SplitSequenceClassification(ModelWithSplitPoints):
     the CLS-token representations fed into that head.
     """
 
-    @ModelWithSplitPoints.split_point.setter
-    def split_point(self, split_point):
-        """Override to store split point directly without walk_modules validation.
-
-        The classification head is validated separately via the classification_head_name setter.
-        """
-        self._split_point = str(split_point)
-
     def __init__(
         self,
         model_or_repo_id: str | PreTrainedModel,
+        split_point: str | None = None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
-        classification_head_name: str | None = None,
         **kwargs,
     ):
-        """Initialize a SplitSequenceClassification model wrapper.
+        """Initialize a SplitterForClassification model wrapper.
 
         The wrapper loads a sequence classification model and automatically identifies
         its classification head as the split point. This simplifies the concept pipeline
@@ -83,16 +83,19 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         Args:
             model_or_repo_id (str | PreTrainedModel): A Hugging Face model ID or a pre-loaded
                 ``PreTrainedModel`` instance. Must be a sequence classification model.
+            split_point (str | None): Name of the classification head module.
+                If None, auto-detected by searching for common names (``"classifier"``,
+                ``"classification_head"``, ``"score"``).
+                For most models, one can trust the auto-detection.
+                Nonetheless, there is a difference with other splitter,
+                Here we use the input of the split_point not its output.
             tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): The tokenizer
                 associated with the model. If None, it is loaded from the model repo.
             config (PretrainedConfig | None): Model configuration. If None, loaded automatically.
             batch_size (int): Batch size for activation extraction and gradient computation.
             device_map (torch.device | str | None): Device on which to load the model
                 (e.g., ``"cuda"`` or ``"cpu"``).
-            classification_head_name (str | None): Name of the classification head module.
-                If None, auto-detected by searching for common names (``"classifier"``,
-                ``"classification_head"``, ``"score"``).
-            **kwargs: Additional keyword arguments forwarded to ``ModelWithSplitPoints``.
+            **kwargs: Additional keyword arguments forwarded to ``BaseSplitter``.
 
         Raises:
             ValueError: If ``model_or_repo_id`` is a PreTrainedModel that is not a
@@ -100,9 +103,9 @@ class SplitSequenceClassification(ModelWithSplitPoints):
 
         Example:
             ```python
-            from interpreto import SplitSequenceClassification
+            from interpreto import SplitterForClassification
 
-            split_model = SplitSequenceClassification(
+            split_model = SplitterForClassification(
                 "nateraw/bert-base-uncased-emotion",
                 batch_size=32,
                 device_map="cuda",
@@ -118,10 +121,10 @@ class SplitSequenceClassification(ModelWithSplitPoints):
 
         # Pass a placeholder split_point; our overridden setter skips walk_modules validation.
         # The real split point is resolved after super().__init__() loads the model,
-        # because the classification_head_name setter needs access to self._model.
+        # because the split_point setter needs access to self._model.
         super().__init__(
             model_or_repo_id,
-            split_point="placeholder",
+            split_point=split_point,
             config=config,
             tokenizer=tokenizer,
             automodel=AutoModelForSequenceClassification,  # type: ignore
@@ -130,24 +133,20 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             **kwargs,
         )
 
-        # Now self._model is available; resolve the classification head and update split_point.
-        self.classification_head_name = classification_head_name  # setter auto-detects if None
-        self.split_point = self.classification_head_name
-
     @property
-    def classification_head_name(self) -> str:
-        return self._classification_head_name
+    def split_point(self) -> str:
+        return self._split_point
 
-    @classification_head_name.setter
-    def classification_head_name(self, classification_head_name: str | None) -> None:
-        """Set the classification head name.
+    @split_point.setter
+    def split_point(self, split_point: str | int | None) -> None:
+        """Set the split_point corresponding to the classification head name.
 
         Args:
-            classification_head_name (str | None): Name of the classification head.
+            split_point (str | None): Name of the classification head.
                 If None, the first classification head is used.
         """
         sub_modules = list(self._model._modules.keys())
-        if classification_head_name is None:
+        if split_point is None:
             resolved = None
             for candidate in ["classifier", "classification_head", "score"]:
                 if candidate in sub_modules:
@@ -156,16 +155,16 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             if resolved is None:
                 raise ValueError(
                     "No classification head found in the model. "
-                    "Please specify the classification head name using the `classification_head_name` parameter."
+                    "Please specify the classification head name using the `split_point` parameter."
                 )
-            self._classification_head_name = resolved
+            self._split_point = resolved
         else:
-            if classification_head_name not in sub_modules:
+            if split_point not in sub_modules:
                 raise ValueError(
-                    f"The provided classification head name '{classification_head_name}' is not valid. "
+                    f"The provided classification head name '{split_point}' is not valid. "
                     f"Existing model modules are: {', '.join(sub_modules)}."
                 )
-            self._classification_head_name = classification_head_name
+            self._split_point = str(split_point)
 
     def __extract_cls_token(self, activations: Float[torch.Tensor, "n l d"]) -> Float[torch.Tensor, "n d"]:
         """
@@ -210,7 +209,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             raise ValueError("Either inputs or kwargs must be provided.")
 
         with self.trace(inputs, **kwargs) as tracer:
-            activations = getattr(self, self.classification_head_name).input.save()
+            activations = getattr(self, self.split_point).input.save()
             tracer.stop()  # we only needed the CLS token, no need to complete the forward pass
 
         # force two dimensions
@@ -236,14 +235,13 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             Float[torch.Tensor, "n cls"]: Classification logits of shape
                 ``(n_samples, n_classes)``.
         """
-        return getattr(self, self.classification_head_name)(activations).logits
+        return getattr(self, self.split_point)(activations).logits
 
-    def get_activations(  # type: ignore
+    def get_activations(
         self,
         inputs: list[str] | Int[torch.Tensor, "n l"],
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
-        **kwargs,  # not used, just to support the `model_with_split_points` interface
     ) -> tuple[LatentActivations, torch.Tensor]:
         """Extract CLS-token activations and predictions for a dataset of inputs.
 
@@ -264,7 +262,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         """
         activations = []
         predictions = []
-        classification_head = getattr(self, self.classification_head_name)
+        classification_head = getattr(self, self.split_point)
 
         self._model.eval()
         with torch.no_grad():
@@ -298,7 +296,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         gc.collect()
         return activations, predictions
 
-    def _get_concept_output_gradients(  # type: ignore
+    def _get_concept_output_gradients(
         self,
         inputs: list[str] | Float[torch.Tensor, "n d"],
         encode_activations: Callable[[Float[torch.Tensor, "n d"]], Float[torch.Tensor, "n c"]],
@@ -308,13 +306,12 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         tqdm_bar: bool = False,
         batch_size: int | None = None,
         forward_kwargs: dict[str, Any] = {},
-        **kwargs,  # not used, just to support the `model_with_split_points` interface
     ) -> list[Float[torch.Tensor, "t 1 c"]]:
         """Compute gradients of model outputs w.r.t. concept activations.
 
         For each input, encodes it into the concept space and computes the gradient
         of the specified target logits with respect to the concept activations.
-        Optionally multiplies gradients by the concept activations (concepts × gradients).
+        Optionally multiplies gradients by the concept activations (concepts x gradients).
 
         Args:
             inputs (list[str] | Float[torch.Tensor, "n d"]): Raw text inputs or
@@ -334,7 +331,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             list[Float[torch.Tensor, "t 1 c"]]: A list of gradient tensors,
                 one per sample, each of shape ``(n_targets, 1, n_concepts)``.
         """
-        classification_head = getattr(self, self.classification_head_name)
+        classification_head = getattr(self, self.split_point)
         if batch_size is None:
             batch_size = self.batch_size
 
@@ -390,7 +387,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
                 batch_gradients_list.append(target_wise_grads.cpu())
             batch_gradients: Float[torch.Tensor, "b t c"] = torch.stack(batch_gradients_list, dim=1)
             del batch_gradients_list
-            gradients_list.extend(list(batch_gradients.unsqueeze(2)))  # (b, t, c) -> list of (b, 1, c)
+            gradients_list.extend(list(batch_gradients.unsqueeze(2)))  # (b, t, c) -> list of (t, 1, c)
 
         # free memory
         torch.cuda.empty_cache()
@@ -406,6 +403,6 @@ class SplitSequenceClassification(ModelWithSplitPoints):
             torch.Size: Shape of the activations at the classification head input.
         """
         with self.trace("scan") as tracer:
-            shape = getattr(self, self.classification_head_name).input.shape.save()
+            shape = getattr(self, self.split_point).input.shape.save()
             tracer.stop()
         return shape
