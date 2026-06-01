@@ -23,7 +23,10 @@
 # SOFTWARE.
 
 from .gradient_shap import GradientShap
+from .image_gradient_shap import ImageGradientShap
+from .image_integrated_gradients import ImageIntegratedGradients
 from .image_saliency import ImageSaliency
+from .image_smooth_grad import ImageSmoothGrad
 from .integrated_gradients import IntegratedGradients
 from .kernel_shap import KernelShap
 from .lime import Lime
@@ -36,7 +39,10 @@ from .var_grad import VarGrad
 
 __all__ = [
     "GradientShap",
+    "ImageGradientShap",
+    "ImageIntegratedGradients",
     "ImageSaliency",
+    "ImageSmoothGrad",
     "IntegratedGradients",
     "KernelShap",
     "Lime",

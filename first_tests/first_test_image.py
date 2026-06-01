@@ -1,10 +1,11 @@
 from PIL import Image
-from interpreto.attributions import ImageSaliency
+from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad
 from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor
 from interpreto.visualizations import plot_image_attribution
+import numpy as np
 import torch
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Qt5Agg")
 
@@ -12,28 +13,45 @@ processor = AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-
 model = AutoModelForImageClassification.from_pretrained("hf-internal-testing/tiny-random-vit")
 cat_image = Image.open("../cat.jpg")
 print(model.config)
-method = ImageSaliency(
-    model=model,
-    image_processor=processor,
-    granularity=ImageGranularity.PIXEL
-)
 
-output = method.explain(cat_image)[0]
-targets = output.targets
-elements = output.elements 
-attributions = output.attributions
-print(targets)
-print(elements)
-print(attributions)
+methods = [ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad]
 
-with torch.no_grad():
-    logits = model(**output.model_inputs_to_explain).logits
-expected = logits.argmax(dim=-1)
+rendered = []  # (name, RGB array) per method
+for method_cls in methods:
+    method = method_cls(
+        model=model,
+        image_processor=processor,
+        granularity=ImageGranularity.PIXEL,
+    )
 
-print(f"expected={expected}, got={output.targets}, match={torch.equal(expected, output.targets)}")
-#output.raw_image.show()
+    output = method.explain(cat_image)[0]
+    targets = output.targets
+    elements = output.elements
+    attributions = output.attributions
+    print(targets)
+    print(elements)
+    print(attributions)
 
-fig,axes = plot_image_attribution(output,alpha=0.5)
+    with torch.no_grad():
+        logits = model(**output.model_inputs_to_explain).logits
+    expected = logits.argmax(dim=-1)
 
-fig.savefig("heatmap.png")
+    print(f"{method_cls.__name__}: expected={expected}, got={output.targets}, "
+          f"match={torch.equal(expected, output.targets)}")
+
+    # Use the real plotting function, then rasterize its figure to an RGB array.
+    method_fig, _ = plot_image_attribution(output, alpha=0.5)
+    method_fig.canvas.draw()
+    rgb = np.asarray(method_fig.canvas.buffer_rgba())
+    rendered.append((method_cls.__name__, rgb))
+    plt.close(method_fig)  # avoid leaving each method's figure open
+
+# Composite every method's rendered figure side by side in one displayer.
+fig, axes = plt.subplots(1, len(rendered), figsize=(4 * len(rendered), 4), squeeze=False)
+for ax, (name, rgb) in zip(axes[0], rendered):
+    ax.imshow(rgb)
+    ax.set_title(name)
+    ax.axis("off")
+
+fig.tight_layout()
 plt.show()

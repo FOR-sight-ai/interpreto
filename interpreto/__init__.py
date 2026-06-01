@@ -29,7 +29,10 @@
 
 from .attributions import (
     GradientShap,
+    ImageGradientShap,
+    ImageIntegratedGradients,
     ImageSaliency,
+    ImageSmoothGrad,
     IntegratedGradients,
     KernelShap,
     Lime,
@@ -66,7 +69,10 @@ __all__ = [
     "GradientShap",
     "Granularity",
     "ImageGranularity",
+    "ImageGradientShap",
+    "ImageIntegratedGradients",
     "ImageSaliency",
+    "ImageSmoothGrad",
     "IntegratedGradients",
     "KernelShap",
     "Lime",

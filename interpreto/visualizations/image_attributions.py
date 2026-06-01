@@ -199,7 +199,9 @@ def plot_image_attribution(
             **plot_kwargs,
         )
 
-        
+        # TODO: pair class index with its human-readable label (model.config.id2label).
+        # Needs the id2label mapping plumbed in — either as a kwarg to this function
+        # or stored on ImageAttributionOutput at explain() time.
         ax.set_title(f"target {int(targets_tensor[t_idx].item())}")
         ax.axis("off")
 

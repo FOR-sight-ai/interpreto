@@ -1,0 +1,119 @@
+# MIT License
+#
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+Image-side GradientSHAP method for ViT-family classification models.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+
+import torch
+from transformers.image_processing_utils import BaseImageProcessor
+from transformers.modeling_utils import PreTrainedModel
+
+from interpreto.attributions.aggregations import MeanAggregator
+from interpreto.attributions.image_base import ImageClassificationAttributionExplainer
+from interpreto.attributions.perturbations import GradientShapImagePerturbator
+from interpreto.commons.granularity import GranularityAggregationStrategy
+from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.model_wrapping.inference_wrapper import InferenceModes
+
+
+class ImageGradientShap(ImageClassificationAttributionExplainer):
+    """
+    GradientSHAP for image-classification models (ViT-family).
+
+    Gradient-based Shapley value estimator: averages integrated gradients over
+    randomly sampled interpolation coefficients and noisy baselines in pixel
+    space. Image-side analog of text `GradientShap`: `tokenizer` ->
+    `image_processor`, no `MultitaskExplainerMixin`, and the noisy
+    interpolation happens directly on `pixel_values` (no `inputs_embedder`
+    indirection).
+
+    **Reference:**
+    Lundberg and Lee (2017). *A Unified Approach to Interpreting Model Predictions.*
+    [Paper](https://arxiv.org/abs/1705.07874)
+
+    Examples:
+        >>> from interpreto import ImageGradientShap
+        >>> method = ImageGradientShap(model, image_processor, batch_size=4,
+        >>>                            n_perturbations=20, baseline=0, noise_std=0.1)
+        >>> explanations = method.explain(image)
+    """
+
+    def __init__(
+        self,
+        model: PreTrainedModel,
+        image_processor: BaseImageProcessor,
+        batch_size: int = 4,
+        granularity: ImageGranularity = ImageGranularity.DEFAULT,
+        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        device: torch.device | None = None,
+        inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
+        input_x_gradient: bool = True,
+        n_perturbations: int = 10,
+        baseline: torch.Tensor | float | None = None,
+        noise_std: float = 0.1,
+        preprocess: bool = True,
+    ):
+        """
+        Initialize the attribution method.
+
+        Args:
+            model (PreTrainedModel): model to explain (ViT-family).
+            image_processor (BaseImageProcessor): Hugging Face image processor associated with the model.
+            batch_size (int): batch size for the attribution method.
+            granularity (ImageGranularity, optional): granularity level (`PIXEL`, `PATCH`).
+                Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
+            granularity_aggregation_strategy (GranularityAggregationStrategy, optional): how to
+                aggregate per-pixel gradients into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
+            device (torch.device, optional): device on which the attribution method will be run.
+            inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
+            input_x_gradient (bool, optional): if True, multiply `pixel_values` by their gradients
+                before the channel-collapse step. Defaults to True.
+            n_perturbations (int): number of random interpolation samples.
+            baseline (torch.Tensor | float | None): baseline pixel values for the interpolation path.
+            noise_std (float): standard deviation of the Gaussian noise added to the baseline.
+            preprocess (bool, optional): if True, raw inputs are routed through `image_processor`.
+                Defaults to True.
+        """
+        perturbator = GradientShapImagePerturbator(
+            baseline=baseline, n_perturbations=n_perturbations, std=noise_std
+        )
+        super().__init__(
+            model=model,
+            image_processor=image_processor,
+            batch_size=batch_size,
+            perturbator=perturbator,
+            aggregator=MeanAggregator(),
+            device=device,
+            granularity=granularity,
+            granularity_aggregation_strategy=granularity_aggregation_strategy,
+            inference_mode=inference_mode,
+            use_gradient=True,
+            input_x_gradient=input_x_gradient,
+            preprocess=preprocess,
+        )
