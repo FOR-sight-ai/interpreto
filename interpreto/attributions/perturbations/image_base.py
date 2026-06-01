@@ -29,7 +29,10 @@ no-op but keyed on `pixel_values` instead of `input_ids`.
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 import torch
+from jaxtyping import Float
 
 from interpreto.attributions.perturbations.base import Perturbator
 from interpreto.typing import TensorMapping
@@ -57,3 +60,48 @@ class ImagePerturbator(Perturbator):
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         return model_inputs, None
+
+
+class ImageEmbeddingsPerturbator(ImagePerturbator):
+    """
+    Image-side analog of `EmbeddingsPerturbator`.
+
+    Operates directly on `pixel_values` of shape `(1, 3, H, W)`. Despite the
+    "Embeddings" name (kept for naming symmetry with the text side), this
+    works in raw pixel space — there is no IDs-to-embeddings indirection like
+    `inputs_embedder` on the text side, because `pixel_values` is already a
+    float tensor straight from the image processor.
+
+    Subclasses override `perturb_embeds` to produce a `(p, 3, H, W)` batch.
+    The returned mask is `None`; granularity is applied post-hoc by the
+    aggregator via `granularity_score_aggregation(..., aggregate_inputs=True)`.
+    Used by gradient-style methods (Saliency, SmoothGrad, IntegratedGradient).
+    """
+
+    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+        if "pixel_values" not in model_inputs:
+            raise ValueError("model_inputs should contain 'pixel_values'")
+
+        inputs = deepcopy(model_inputs)
+        pixel_values: Float[torch.Tensor, "1 3 H W"] = inputs["pixel_values"]
+
+        perturbed_embeds: Float[torch.Tensor, "p 3 H W"]
+        mask: Float[torch.Tensor, "p g"] | None
+        perturbed_embeds, mask = self.perturb_embeds(pixel_values)
+
+        inputs["pixel_values"] = perturbed_embeds
+        return inputs, mask
+
+    def perturb_embeds(
+        self, pixel_values: Float[torch.Tensor, "1 3 H W"]
+    ) -> tuple[Float[torch.Tensor, "p 3 H W"], Float[torch.Tensor, "p g"] | None]:
+        """
+        Default no-op: subclasses override to apply noise / interpolation / etc.
+
+        Args:
+            pixel_values: Shape (1, 3, H, W).
+        Returns:
+            perturbed_embeds: Shape (p, 3, H, W).
+            mask: (p, g) or None.
+        """
+        return pixel_values, None
