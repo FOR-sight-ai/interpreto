@@ -39,35 +39,52 @@ concept_gradients = concept_explainer.concept_output_gradient(inputs=dataset)
 
 The API has five steps:
 
-### Step 1: Load and split your model with `ModelWithSplitPoints`
+### Step 1: Load and split your model with a splitter
 
-`ModelWithSplitPoints` is a wrapper around your model to split it into different parts.
-It allows to obtain activations on a specific split point.
-The main method is thus `get_activations` which takes inputs and returns `(activations, predictions)`.
+Determine from which point of your model the activations should be extracted.
 
-It can be initialized from the model repo id or from a model instance.
+There are three splitters depending on you use-case:
 
-More details in the [`ModelWithSplitPoints` documentation](./model_with_split_points.md).
+> **For classification models:** Use [`SplitterForClassification`](./split_sequence_classification.md)
+> It automatically detects the classification head of your classifier in most cases.
+> Then, it considers the [CLS] token (the input of this head as the activations).
+> Which means that there is one activation vector for each sample. (n, d)
+> Thus `inputs_to_activations` is the encoder and `activations_to_outputs` is the head.
 
-> **For classification models:** Use [`SplitSequenceClassification`](./split_sequence_classification.md)
-> instead. It automatically identifies the classification head as the split point, removing the need
-> to manually specify a split point. It also enables the [input-to-concept attribution](./interpretations/concept_attributions.md) workflow.
+> **For causal language models:** Use [`SplitterForGeneration`](./splitter_for_generation.md)
+> Here you need to specify split point manually. It can, be the number of the layer
+> or the name of the layer.
+> Then we consider each token latent activations as activations. (n * l, d).
+
+> **For more complex cases:** Use [`ModelWithSplitPoints`](./model_with_split_points.md)
+> It is more versatile, but also more complex.
+> One needs to specify a split point manually and consider the granularity (see below).
+> Thus it covers the two other splitter cases but less optimally.
+> This can be useful for word-level probing for example.
+> Or to split classifiers elsewhere.
 
 ### Step 2: Compute the model activations on the split_point
 
-At this step, there are two important parameters:
+This step rely on the `.get_activations` method of the splitter.
+The idea is to compute a dataset of activations.
+To latter fit the concept model on.
+
+The function is quite simple for `SplitterForClassification` and `SplitterForGeneration`.
+However, for `ModelWithSplitPoints`, at this step, one needs to specify:
 
 - `activation_granularity`: specifies which of the `(n, l, d)` activations to return.
 It can be one of `CLS_TOKEN`, `ALL_TOKENS`, `TOKEN`, `WORD`, `SENTENCE`, or `SAMPLE`.
 Use `activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN` to specify it.
-
-> **Recommendations:**
-> If you are using a classification model, you can use `CLS_TOKEN` to get the first token activation.
-> In the case of a generation model, you can use `TOKEN` to get the most probable token activation.
-
-- `aggregation_strategy`: the mode used for inference.
+- `aggregation_strategy`: how activations should be aggregated (ignored for some granularities).
 It can be one of `SUM`, `MEAN`, `MAX`, or `SIGNED_MAX`.
 Use `aggregation_strategy=ModelWithSplitPoints.aggregation_strategies.MEAN` to specify it.
+
+!!! tip
+    The larger the activations dataset, the more accurate the concept model will be.
+    However, the more expensive it is to compute.
+
+!!! warning
+    The dataset used has a huge impact on the resulting concepts.
 
 ### Step 3: Instantiate the concept-based explainer
 
@@ -156,7 +173,7 @@ results = explainer.explain(inputs)
 > **Note:** Only perturbation-based methods (Occlusion, Lime, KernelShap, Sobol) are supported.
 > Gradient-based methods are not compatible with the input-to-concept pipeline.
 
-For classification models, use [`SplitSequenceClassification`](./split_sequence_classification.md)
+For classification models, use [`SplitterForClassification`](./split_sequence_classification.md)
 instead of `ModelWithSplitPoints` for a simpler setup.
 
 More details in the [Concept Attributions documentation](./interpretations/concept_attributions.md).
