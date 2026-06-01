@@ -22,7 +22,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from .base_splitter import BaseSplitter
 from .model_with_split_points import ModelWithSplitPoints
-from .split_sequence_classification import SplitSequenceClassification
+from .splitter_for_classification import SplitterForClassification
+from .splitter_for_generation import SplitterForGeneration
 
-__all__ = ["ModelWithSplitPoints", "SplitSequenceClassification"]
+__all__ = [
+    "BaseSplitter",
+    "ModelWithSplitPoints",
+    "SplitterForClassification",
+    "SplitterForGeneration",
+]

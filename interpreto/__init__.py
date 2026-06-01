@@ -42,7 +42,7 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
-from .model_wrapping import ModelWithSplitPoints, SplitSequenceClassification
+from .model_wrapping import BaseSplitter, ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 from .visualizations import (
     AttributionVisualization,
     plot_attributions,
@@ -61,6 +61,7 @@ def get_version() -> str:
 
 
 __all__ = [
+    "BaseSplitter",
     "GradientShap",
     "Granularity",
     "IntegratedGradients",
@@ -71,7 +72,8 @@ __all__ = [
     "SquareGrad",
     "Saliency",
     "SmoothGrad",
-    "SplitSequenceClassification",
+    "SplitterForClassification",
+    "SplitterForGeneration",
     "Sobol",
     "VarGrad",
     "get_version",
