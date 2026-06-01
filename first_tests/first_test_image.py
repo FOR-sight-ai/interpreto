@@ -1,5 +1,6 @@
 from PIL import Image
 from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad
+from interpreto.attributions import *
 from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor
 from interpreto.visualizations import plot_image_attribution
@@ -14,7 +15,7 @@ model = AutoModelForImageClassification.from_pretrained("hf-internal-testing/tin
 cat_image = Image.open("../cat.jpg")
 print(model.config)
 
-methods = [ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad]
+methods = [ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, ImageKernelShap, ImageLime, ImageSobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad]
 
 rendered = []  # (name, RGB array) per method
 for method_cls in methods:

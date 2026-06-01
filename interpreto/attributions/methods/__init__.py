@@ -25,8 +25,14 @@
 from .gradient_shap import GradientShap
 from .image_gradient_shap import ImageGradientShap
 from .image_integrated_gradients import ImageIntegratedGradients
+from .image_kernel_shap import ImageKernelShap
+from .image_lime import ImageLime
+from .image_occlusion import ImageOcclusion
 from .image_saliency import ImageSaliency
 from .image_smooth_grad import ImageSmoothGrad
+from .image_sobol_attribution import ImageSobol
+from .image_square_grad import ImageSquareGrad
+from .image_var_grad import ImageVarGrad
 from .integrated_gradients import IntegratedGradients
 from .kernel_shap import KernelShap
 from .lime import Lime
@@ -41,8 +47,14 @@ __all__ = [
     "GradientShap",
     "ImageGradientShap",
     "ImageIntegratedGradients",
+    "ImageKernelShap",
+    "ImageLime",
+    "ImageOcclusion",
     "ImageSaliency",
     "ImageSmoothGrad",
+    "ImageSobol",
+    "ImageSquareGrad",
+    "ImageVarGrad",
     "IntegratedGradients",
     "KernelShap",
     "Lime",

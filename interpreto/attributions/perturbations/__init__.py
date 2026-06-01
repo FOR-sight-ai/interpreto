@@ -27,19 +27,24 @@ from .gaussian_noise_image_perturbation import GaussianNoiseImagePerturbator
 from .gaussian_noise_perturbation import GaussianNoisePerturbator
 from .gradient_shap_image_perturbation import GradientShapImagePerturbator
 from .gradient_shap_perturbation import GradientShapPerturbator
-from .image_base import ImageEmbeddingsPerturbator, ImagePerturbator
+from .image_base import ImageEmbeddingsPerturbator, ImageMaskPerturbator, ImagePerturbator
 from .insertion_deletion_perturbation import DeletionPerturbator, InsertionPerturbator
 from .linear_interpolation_image_perturbation import LinearInterpolationImagePerturbator
 from .linear_interpolation_perturbation import LinearInterpolationPerturbator
+from .occlusion_image_perturbation import OcclusionImagePerturbator
 from .occlusion_perturbation import OcclusionPerturbator
+from .random_masked_image_perturbation import RandomMaskedImagePerturbator
 from .random_perturbation import RandomMaskedTokenPerturbator
+from .shap_image_perturbation import ShapImagePerturbator
 from .shap_perturbation import ShapTokenPerturbator
+from .sobol_image_perturbation import SobolImagePerturbator
 from .sobol_perturbation import SobolTokenPerturbator
 
 __all__ = [
     "EmbeddingsPerturbator",
     "IdsPerturbator",
     "ImageEmbeddingsPerturbator",
+    "ImageMaskPerturbator",
     "ImagePerturbator",
     "Perturbator",
     "GaussianNoiseImagePerturbator",
@@ -50,8 +55,12 @@ __all__ = [
     "DeletionPerturbator",
     "LinearInterpolationImagePerturbator",
     "LinearInterpolationPerturbator",
+    "OcclusionImagePerturbator",
     "OcclusionPerturbator",
+    "RandomMaskedImagePerturbator",
     "RandomMaskedTokenPerturbator",
+    "ShapImagePerturbator",
     "ShapTokenPerturbator",
+    "SobolImagePerturbator",
     "SobolTokenPerturbator",
 ]
