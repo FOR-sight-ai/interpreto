@@ -3,11 +3,12 @@ from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageInteg
 from interpreto.attributions import *
 from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor, ViTModel
-from interpreto.visualizations import plot_image_attribution
+from interpreto.visualizations import plot_image_attribution, plot_image_attributions_comparison
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
 import matplotlib
+import functools 
 matplotlib.use("Qt5Agg")
 import requests
 
@@ -17,12 +18,25 @@ image = Image.open("../cat.jpg")
 model = AutoModelForImageClassification.from_pretrained('akahana/vit-base-cats-vs-dogs')
 processor = AutoImageProcessor.from_pretrained('akahana/vit-base-cats-vs-dogs')
 
-cat_image = Image.open("../cat.jpg")
+#cat_image = Image.open("../cat.jpg")
+#dog_image = Image.open("../dog.jpg")
+cat_and_dog_image = Image.open("../cat and dog.jpg")
+image = cat_and_dog_image
 print(model.config)
 
-methods = [ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, ImageKernelShap, ImageLime, ImageSobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad]
+test_imagekernelshap = functools.partial(ImageKernelShap, n_perturbations=20)
+test_imagesobol = functools.partial(ImageSobol, n_token_perturbations=10)
 
-rendered = []  # (name, RGB array) per method
+methods = [ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, test_imagekernelshap, ImageLime, test_imagesobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad]
+
+
+def method_name(method_cls):
+    # functools.partial has no __name__; the wrapped class lives on .func
+    target = getattr(method_cls, "func", method_cls)
+    return target.__name__
+
+outputs = []  # one ImageAttributionOutput per method
+labels = []   # matching method names
 for method_cls in methods:
     method = method_cls(
         model=model,
@@ -30,7 +44,7 @@ for method_cls in methods:
         granularity=ImageGranularity.PATCH,
     )
 
-    output = method.explain(cat_image)[0]
+    output = method.explain(model_inputs=image,targets = [1])[0]
     targets = output.targets
     elements = output.elements
     attributions = output.attributions
@@ -42,22 +56,26 @@ for method_cls in methods:
         logits = model(**output.model_inputs_to_explain).logits
     expected = logits.argmax(dim=-1)
 
-    print(f"{method_cls.__name__}: expected={expected}, got={output.targets}, "
+    print(f"{method_name(method_cls)}: expected={expected}, got={output.targets}, "
           f"match={torch.equal(expected, output.targets)}")
 
-    # Use the real plotting function, then rasterize its figure to an RGB array.
-    method_fig, _ = plot_image_attribution(output, alpha=0.5)
-    method_fig.canvas.draw()
-    rgb = np.asarray(method_fig.canvas.buffer_rgba())
-    rendered.append((method_cls.__name__, rgb))
-    plt.close(method_fig)  # avoid leaving each method's figure open
+    # target_idx=0 is the target the comparison plot draws; turn its class
+    # index into the model's human-readable label.
+    target_class = int(output.targets[0].item())
+    target_label = model.config.id2label[target_class]
 
-# Composite every method's rendered figure side by side in one displayer.
-fig, axes = plt.subplots(1, len(rendered), figsize=(4 * len(rendered), 4), squeeze=False)
-for ax, (name, rgb) in zip(axes[0], rendered):
-    ax.imshow(rgb)
-    ax.set_title(name)
-    ax.axis("off")
+    # The probability isn't stored on the output (it only carries attribution
+    # scores), so derive it from the logits of the explained pixel_values above.
+    target_prob = logits.softmax(dim=-1)[0, target_class].item()
 
-fig.tight_layout()
+    outputs.append(output)
+    labels.append(f"{method_name(method_cls)}\n{target_label} ({target_prob:.1%})")
+
+# Compare every method on the same image, each panel with its own score legend.
+fig, axes = plot_image_attributions_comparison(
+    outputs,
+    labels=labels,
+    image=image,
+    alpha=0.5,
+)
 plt.show()

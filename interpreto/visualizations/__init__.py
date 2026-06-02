@@ -1,3 +1,3 @@
 from .attributions import AttributionVisualization, plot_attributions
 from .concepts import plot_concepts
-from .image_attributions import plot_image_attribution
+from .image_attributions import plot_image_attribution, plot_image_attributions_comparison

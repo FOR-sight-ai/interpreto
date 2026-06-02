@@ -83,7 +83,14 @@ def _prepare_heatmap(
 ) -> np.ndarray:
     """
     Reshape flat `attributions[target_idx]` (shape `(l,)`) into a 2D heatmap using
-    `elements` to recover the grid shape, then normalize to [0,/co 1].
+    `elements` to recover the grid shape.
+
+    The heatmap is returned in the **real attribution-score scale** (after the
+    optional abs + percentile clip). It is deliberately NOT rescaled to [0, 1]:
+    color normalization is left to `imshow`'s vmin/vmax at draw time so each
+    panel's `colorbar` shows genuine scores. Rescaling here would collapse every
+    method's legend to a meaningless 0->1 axis and make cross-method comparison
+    impossible.
     """
     row = attribution_output.attributions[target_idx].detach().cpu()
     if row.dtype is torch.bfloat16:
@@ -102,10 +109,45 @@ def _prepare_heatmap(
     if clip_percentile is not None:
         heatmap = _clip_percentile(heatmap, clip_percentile)
 
-    lo, hi = heatmap.min(), heatmap.max()
-    if hi > lo:
-        heatmap = (heatmap - lo) / (hi - lo)
     return heatmap
+
+
+def _draw_attribution_on_ax(
+    ax,
+    img_disp: np.ndarray,
+    heatmap: np.ndarray,
+    *,
+    cmap: str,
+    alpha: float,
+    interpolation: str,
+    colorbar: bool,
+    fig,
+    **plot_kwargs,
+):
+    """
+    Draw one image + heatmap pair onto `ax` as a live mappable and (optionally)
+    attach a per-axes colorbar showing the heatmap's real score range.
+
+    Centralizing the draw here keeps the single-method and multi-method entry
+    points pixel-for-pixel identical, and — crucially — keeps each panel's
+    colorbar tied to that panel's own vmin/vmax, so every method keeps its own
+    legend.
+    """
+    H_img, W_img = img_disp.shape[:2]
+    ax.imshow(img_disp)
+    im = ax.imshow(
+        heatmap,
+        extent=(0, W_img, H_img, 0),
+        cmap=cmap,
+        alpha=alpha,
+        interpolation=interpolation,
+        vmin=float(heatmap.min()),
+        vmax=float(heatmap.max()),
+        **plot_kwargs,
+    )
+    if colorbar:
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    return im
 
 
 def plot_image_attribution(
@@ -119,6 +161,7 @@ def plot_image_attribution(
     interpolation: str = "nearest",
     img_size: float = 3.0,
     cols: int = 4,
+    colorbar: bool = True,
     **plot_kwargs,
 ):
     """
@@ -144,6 +187,7 @@ def plot_image_attribution(
         interpolation: Passed to `imshow` for the heatmap.
         img_size: Subplot side length in inches.
         cols: Max columns when laying out multiple targets in a grid.
+        colorbar: If True, attach a per-target colorbar showing the real score range.
         **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
 
     Returns:
@@ -182,20 +226,21 @@ def plot_image_attribution(
     if image is None:
         raise ValueError("There is no image in ImageAttributionOutput, which should not happen")
     img_disp = _to_displayable(image)
-    H_img, W_img = img_disp.shape[:2]
     targets_tensor = attribution_output.targets
 
     for i, t_idx in enumerate(target_indices):
         ax = axes[i // actual_cols][i % actual_cols]
         heatmap = _prepare_heatmap(attribution_output, t_idx, clip_percentile, absolute_value)
 
-        ax.imshow(img_disp)
-        ax.imshow(
+        _draw_attribution_on_ax(
+            ax,
+            img_disp,
             heatmap,
-            extent=(0, W_img, H_img, 0),
             cmap=cmap,
             alpha=alpha,
             interpolation=interpolation,
+            colorbar=colorbar,
+            fig=fig,
             **plot_kwargs,
         )
 
@@ -203,6 +248,118 @@ def plot_image_attribution(
         # Needs the id2label mapping plumbed in — either as a kwarg to this function
         # or stored on ImageAttributionOutput at explain() time.
         ax.set_title(f"target {int(targets_tensor[t_idx].item())}")
+        ax.axis("off")
+
+    # Hide unused cells in the last row.
+    for j in range(n_plots, n_rows * actual_cols):
+        axes[j // actual_cols][j % actual_cols].axis("off")
+
+    fig.tight_layout()
+    return fig, axes
+
+
+def plot_image_attributions_comparison(
+    attribution_outputs: Iterable[ImageAttributionOutput],
+    labels: Iterable[str] | None = None,
+    image: PILImage | np.ndarray | torch.Tensor | None = None,
+    target_idx: int = 0,
+    cmap: str = "jet",
+    alpha: float = 0.5,
+    clip_percentile: float | None = 0.1,
+    absolute_value: bool = False,
+    interpolation: str = "nearest",
+    img_size: float = 3.0,
+    cols: int = 4,
+    colorbar: bool = True,
+    **plot_kwargs,
+):
+    """
+    Compare several attribution methods on the SAME image, side by side.
+
+    Each method's heatmap is drawn as a **live mappable** into a shared grid of
+    subplots — not a rasterized snapshot of a separate figure. This is what lets
+    every panel carry its own colorbar in its own real score scale, so you can
+    read and compare the magnitude each method assigns, not just the spatial
+    pattern. (Rasterizing each method to RGB and tiling, the old approach, threw
+    the score scale away and produced static images with no legend.)
+
+    All outputs are expected to come from explaining the same image at the same
+    granularity, so their heatmaps share a grid shape; only the scores differ.
+
+    Args:
+        attribution_outputs: One `ImageAttributionOutput` per method to compare.
+        labels: Optional per-method titles (e.g. method names). If None, panels
+            are titled "method 0", "method 1", ... Must match the number of outputs.
+        image: Underlying image to overlay. If None, falls back to each output's
+            `raw_image`.
+        target_idx: Which target to plot for every method (single int — the point
+            is to compare methods, holding the target fixed).
+        cmap: Matplotlib colormap for the heatmaps.
+        alpha: Heatmap opacity over the image (0-1).
+        clip_percentile: Clip at (p, 100-p) to suppress outliers. None disables.
+        absolute_value: If True, take abs() before plotting (magnitude only).
+        interpolation: Passed to `imshow` for the heatmap.
+        img_size: Subplot side length in inches.
+        cols: Max columns when laying out the methods in a grid.
+        colorbar: If True, attach a per-method colorbar showing its real score range.
+        **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
+
+    Returns:
+        (fig, axes) — matplotlib Figure and 2D Axes array.
+    """
+    outputs = list(attribution_outputs)
+    if not outputs:
+        raise ValueError("attribution_outputs is empty — pass at least one output.")
+
+    if labels is None:
+        label_list: list[str] = [f"method {i}" for i in range(len(outputs))]
+    else:
+        label_list = list(labels)
+        if len(label_list) != len(outputs):
+            raise ValueError(
+                f"labels has {len(label_list)} entries but there are {len(outputs)} outputs."
+            )
+
+    n_plots = len(outputs)
+    actual_cols = min(cols, n_plots)
+    n_rows = ceil(n_plots / actual_cols)
+    fig, axes = plt.subplots(
+        n_rows,
+        actual_cols,
+        figsize=(actual_cols * img_size, n_rows * img_size),
+        squeeze=False,
+    )
+
+    for i, (output, label) in enumerate(zip(outputs, label_list, strict=True)):
+        ax = axes[i // actual_cols][i % actual_cols]
+
+        img = image if image is not None else output.raw_image
+        if img is None:
+            raise ValueError(
+                f"No image to overlay for '{label}': pass `image=` or ensure the "
+                "output carries a `raw_image`."
+            )
+        img_disp = _to_displayable(img)
+
+        n_targets = output.attributions.shape[0]
+        if not 0 <= target_idx < n_targets:
+            raise IndexError(
+                f"target_idx {target_idx} out of range for '{label}' ({n_targets} targets)."
+            )
+
+        heatmap = _prepare_heatmap(output, target_idx, clip_percentile, absolute_value)
+        _draw_attribution_on_ax(
+            ax,
+            img_disp,
+            heatmap,
+            cmap=cmap,
+            alpha=alpha,
+            interpolation=interpolation,
+            colorbar=colorbar,
+            fig=fig,
+            **plot_kwargs,
+        )
+        ax.set_title(label)
         ax.axis("off")
 
     # Hide unused cells in the last row.
