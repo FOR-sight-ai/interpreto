@@ -1,6 +1,5 @@
 from PIL import Image
 from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, ImageKernelShap, ImageLime, ImageSobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad
-from interpreto.attributions import *
 from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor
 from interpreto.visualizations import plot_image_attribution
@@ -49,7 +48,7 @@ for method_cls in methods:
 
 # Composite every method's rendered figure side by side in one displayer.
 fig, axes = plt.subplots(1, len(rendered), figsize=(4 * len(rendered), 4), squeeze=False)
-for ax, (name, rgb) in zip(axes[0], rendered):
+for ax, (name, rgb) in zip(axes[0], rendered, strict = True):
     ax.imshow(rgb)
     ax.set_title(name)
     ax.axis("off")
