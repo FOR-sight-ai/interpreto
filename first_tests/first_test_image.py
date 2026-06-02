@@ -1,5 +1,5 @@
 from PIL import Image
-from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad
+from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, ImageKernelShap, ImageLime, ImageSobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad
 from interpreto.attributions import *
 from interpreto import ImageGranularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor
