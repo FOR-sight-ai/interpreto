@@ -88,13 +88,13 @@ class SplitterForGeneration(BaseSplitter):
         ```python
         from interpreto import SplitterForGeneration
 
-        split_model = SplitterForGeneration(
+        splitter = SplitterForGeneration(
             "gpt2",
             split_point=10,
             batch_size=8,
             device_map="auto",
         )
-        activations, _ = split_model.get_activations(
+        activations, _ = splitter.get_activations(
             ["Hello world!", "Interpreto is magic"],
         )
         ```

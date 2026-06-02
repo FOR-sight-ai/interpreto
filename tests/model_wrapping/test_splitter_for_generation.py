@@ -52,13 +52,13 @@ def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_toke
     with pytest.raises(TypeError, match="not a causal language model"):
         SFG(bert_model, split_point=SPLIT_POINT, tokenizer=bert_tokenizer)
 
-    split_model = SFG(gpt2_model, split_point=SPLIT_POINT, tokenizer=gpt2_tokenizer, device_map=DEVICE)
-    assert split_model.split_point is not None, "split_point should be resolved for a pre-loaded causal LM"
-    assert split_model.tokenizer.pad_token is not None, "generation splitters should ensure a pad token exists"
+    splitter = SFG(gpt2_model, split_point=SPLIT_POINT, tokenizer=gpt2_tokenizer, device_map=DEVICE)
+    assert splitter.split_point is not None, "split_point should be resolved for a pre-loaded causal LM"
+    assert splitter.tokenizer.pad_token is not None, "generation splitters should ensure a pad token exists"
 
-    split_model = SFG(REPO_ID, split_point=SPLIT_POINT, device_map=DEVICE)
-    assert split_model.split_point is not None, "split_point should be resolved when loading from a repo id"
-    assert split_model.tokenizer.pad_token is not None, "generation splitters should ensure a pad token exists"
+    splitter = SFG(REPO_ID, split_point=SPLIT_POINT, device_map=DEVICE)
+    assert splitter.split_point is not None, "split_point should be resolved when loading from a repo id"
+    assert splitter.tokenizer.pad_token is not None, "generation splitters should ensure a pad token exists"
 
 
 def test_get_latent_shape(split_gen: SFG):

@@ -238,7 +238,7 @@ class BaseConceptInterpretationMethod(ABC):
         concept_model_device: torch.device | str | None = None,
     ):
         if activation_granularity is None:
-            if isinstance(concept_explainer.model_with_split_points, SplitterForClassification):
+            if isinstance(concept_explainer.splitter, SplitterForClassification):
                 activation_granularity = ActivationGranularity.CLS_TOKEN
             else:
                 activation_granularity = ActivationGranularity.TOKEN
@@ -348,7 +348,7 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if inputs is not None:
-            latent_activations, _ = self.concept_explainer.model_with_split_points.get_activations(
+            latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 inputs,
                 activation_granularity=self.activation_granularity,
                 aggregation_strategy=self.aggregation_strategy,
@@ -377,7 +377,7 @@ class BaseConceptInterpretationMethod(ABC):
                 - The concept activations for each token
         """
         # extract and sort the vocabulary
-        vocab_dict: dict[str, int] = self.concept_explainer.model_with_split_points.tokenizer.get_vocab()
+        vocab_dict: dict[str, int] = self.concept_explainer.splitter.tokenizer.get_vocab()
         inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
         inputs: list[str] = list(inputs)  # type: ignore
 
@@ -387,7 +387,7 @@ class BaseConceptInterpretationMethod(ABC):
 
         if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
             # compute the vocabulary's latent activations
-            latent_activations, _ = self.concept_explainer.model_with_split_points.get_activations(
+            latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 input_ids,
                 activation_granularity=ActivationGranularity.ALL_TOKENS,
             )
@@ -396,9 +396,7 @@ class BaseConceptInterpretationMethod(ABC):
             # so that we can get correct CLS activations
 
             # first step extract the template
-            template_ids = self.concept_explainer.model_with_split_points.tokenizer("a", return_tensors="pt")[
-                "input_ids"
-            ]
+            template_ids = self.concept_explainer.splitter.tokenizer("a", return_tensors="pt")["input_ids"]
 
             # if we are not in a template [CLS] a [EOS]
             if len(template_ids) != 3:  # type: ignore
@@ -416,7 +414,7 @@ class BaseConceptInterpretationMethod(ABC):
             repeated_template_ids[:, 1] = input_ids[:, 0]
 
             # compute the vocabulary's latent activations
-            latent_activations, _ = self.concept_explainer.model_with_split_points.get_activations(
+            latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 repeated_template_ids,
                 activation_granularity=self.activation_granularity,
             )
@@ -455,7 +453,7 @@ class BaseConceptInterpretationMethod(ABC):
             return inputs, list(range(len(inputs)))
 
         # Get granular texts from the inputs
-        tokens = self.concept_explainer.model_with_split_points.tokenizer(
+        tokens = self.concept_explainer.splitter.tokenizer(
             inputs,
             return_tensors="pt",
             padding=True,
@@ -464,7 +462,7 @@ class BaseConceptInterpretationMethod(ABC):
         )
         granular_texts: list[list[str]] = self.activation_granularity.value.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
             tokens,
-            tokenizer=self.concept_explainer.model_with_split_points.tokenizer,
+            tokenizer=self.concept_explainer.splitter.tokenizer,
             return_text=True,
         )
 

@@ -352,7 +352,7 @@ class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Gener
             **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.
                 See the sklearn documentation of the provided `concept_model_class` for more details.
         """
-        self.model_with_split_points = model_with_split_points
+        self.splitter = model_with_split_points
         shape = model_with_split_points.get_latent_shape()
 
         concept_model = self.concept_model_class(

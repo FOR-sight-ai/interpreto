@@ -526,18 +526,18 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
                 )  # number of concepts
 
 
-def test_activation_equivalence_batched_text_token_inputs(multi_split_model: MWSP):
+def test_activation_equivalence_batched_text_token_inputs(multi_splitter: MWSP):
     """
     Test the equivalence of activations for text and token inputs
     """
-    multi_split_model.split_point = "bert.encoder.layer.1"
+    multi_splitter.split_point = "bert.encoder.layer.1"
     inputs_str = ["Hello, my dog is cute", "The cat is on the [MASK]"]
-    inputs_tensor = multi_split_model.tokenizer(
+    inputs_tensor = multi_splitter.tokenizer(
         inputs_str, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True
     )
 
-    activations_str, _ = multi_split_model.get_activations(inputs_str, activation_granularity=AG.ALL_TOKENS)
-    activations_tensor, _ = multi_split_model.get_activations(inputs_tensor, activation_granularity=AG.ALL_TOKENS)
+    activations_str, _ = multi_splitter.get_activations(inputs_str, activation_granularity=AG.ALL_TOKENS)
+    activations_tensor, _ = multi_splitter.get_activations(inputs_tensor, activation_granularity=AG.ALL_TOKENS)
     assert activations_str is not None and activations_tensor is not None, "get_activations returned None"
 
     assert torch.allclose(activations_str, activations_tensor), "Mismatch between text and token activations"
@@ -558,11 +558,11 @@ def test_batching(splitted_encoder_ml: MWSP, huge_text: list[str], strategy: Act
     splitted_encoder_ml.get_activations(huge_text, activation_granularity=strategy)
 
 
-def test_index_by_layer_idx(multi_split_model: MWSP):
+def test_index_by_layer_idx(multi_splitter: MWSP):
     """Test indexing by layer idx"""
-    multi_split_model.split_point = 1  # instead of "bert.encoder.layer.1"
-    assert multi_split_model.split_point == "bert.encoder.layer.1", (
-        f"Expected 'bert.encoder.layer.1', got '{multi_split_model.split_point}'"
+    multi_splitter.split_point = 1  # instead of "bert.encoder.layer.1"
+    assert multi_splitter.split_point == "bert.encoder.layer.1", (
+        f"Expected 'bert.encoder.layer.1', got '{multi_splitter.split_point}'"
     )
 
 
@@ -708,7 +708,7 @@ if __name__ == "__main__":
         batch_size=4,
     )
     test_get_latent_shape(splitted_encoder_ml)
-    multi_split_model = MWSP(
+    multi_splitter = MWSP(
         "bert-base-uncased",
         split_point="bert.encoder.layer.1",
         automodel=AutoModelForMaskedLM,  # type: ignore
@@ -722,11 +722,11 @@ if __name__ == "__main__":
     gpt2_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
 
     test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer)
-    test_activation_equivalence_batched_text_token_inputs(multi_split_model)
+    test_activation_equivalence_batched_text_token_inputs(multi_splitter)
     test_batching(splitted_encoder_ml, sentences * 10, AG.CLS_TOKEN)
     evaluate_activations_and_gradients("hf-internal-testing/tiny-random-t5", sentences * 100)
     get_activation_and_gradient(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
     get_activation_and_gradient(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
     activation_selection_and_reintegration(bert_model, bert_tokenizer, "bert.encoder.layer.1.output", sentences)
     activation_selection_and_reintegration(gpt2_model, gpt2_tokenizer, "transformer.h.1.mlp", sentences)
-    test_index_by_layer_idx(multi_split_model)
+    test_index_by_layer_idx(multi_splitter)

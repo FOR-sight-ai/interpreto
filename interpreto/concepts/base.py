@@ -87,27 +87,26 @@ class ModelForInputsToConcepts:
         self,
         concept_explainer: ConceptEncoderExplainer,
     ):
-        self.split_model: SplitterForClassification
-        self.split_model = concept_explainer.model_with_split_points  # type: ignore
-        if not isinstance(self.split_model, SplitterForClassification):
+        self.splitter: SplitterForClassification
+        self.splitter = concept_explainer.splitter  # type: ignore
+        if not isinstance(self.splitter, SplitterForClassification):
             raise IncompatibilityError(
-                "The split model must be a SplitterForClassification model."
-                f" Got {self.split_model.__class__.__name__}."
+                f"The split model must be a SplitterForClassification model. Got {self.splitter.__class__.__name__}."
             )
 
         self.concept_model = concept_explainer.concept_model
-        if self.concept_model.device != self.split_model.device:  # type: ignore  # TODO: add device to ConceptModelProtocol
-            self.concept_model.to(self.split_model.device)  # type: ignore
+        if self.concept_model.device != self.splitter.device:  # type: ignore  # TODO: add device to ConceptModelProtocol
+            self.concept_model.to(self.splitter.device)  # type: ignore
             self.concept_model.device = (  # type: ignore
-                self.split_model.device
+                self.splitter.device
             )  # Overcomplete models `.to()` method does not set the device
 
         self.nb_concepts = concept_explainer.concept_model.nb_concepts
 
         # Expose a minimal config so InferenceWrapper.__init__ and setup_token_ids can work
         self.config = SimpleNamespace(
-            pad_token_id=self.split_model.tokenizer.pad_token_id,
-            vocab_size=getattr(self.split_model._model.config, "vocab_size", None),
+            pad_token_id=self.splitter.tokenizer.pad_token_id,
+            vocab_size=getattr(self.splitter._model.config, "vocab_size", None),
         )
 
     def eval(self):
@@ -116,7 +115,7 @@ class ModelForInputsToConcepts:
 
     def resize_token_embeddings(self, new_num_tokens: int):
         """No-op: the concept model does not have token embeddings."""
-        self.split_model._model.resize_token_embeddings(new_num_tokens)
+        self.splitter._model.resize_token_embeddings(new_num_tokens)
 
     def __call__(self, **kwargs):
         """Run inputs → activations → concepts and return a BaseModelOutput-like object.
@@ -124,7 +123,7 @@ class ModelForInputsToConcepts:
         Returns:
             SimpleNamespace with a ``.logits`` attribute containing concept activations.
         """
-        activations: Float[torch.Tensor, "n d"] = self.split_model.inputs_to_activations(kwargs)
+        activations: Float[torch.Tensor, "n d"] = self.splitter.inputs_to_activations(kwargs)
 
         # TODO: use `encode_activations` which should be renamed `activations_to_concepts`
         concepts = self.concept_model.encode(activations)
@@ -138,7 +137,7 @@ class ModelForInputsToConcepts:
         Returns:
             torch.device: The device on which the model is loaded.
         """
-        return self.split_model.device  # type: ignore
+        return self.splitter.device  # type: ignore
 
     @device.setter
     def device(self, device: torch.device):
@@ -148,7 +147,7 @@ class ModelForInputsToConcepts:
         Args:
             device (torch.device): wanted device (e.g., "cpu" or "cuda").
         """
-        self.split_model.to(device)  # type: ignore
+        self.splitter.to(device)  # type: ignore
         self.concept_model.to(device)  # type: ignore
 
     def to(self, device: torch.device, dtype: torch.dtype | None = None):
@@ -160,9 +159,9 @@ class ModelForInputsToConcepts:
             dtype (torch.dtype | None): The desired data type of the model's parameters.
         """
         if dtype is not None:
-            self.split_model.to(device, dtype)  # type: ignore
+            self.splitter.to(device, dtype)  # type: ignore
         else:
-            self.split_model.to(device)  # type: ignore
+            self.splitter.to(device)  # type: ignore
         self.concept_model.to(device)  # type: ignore
 
 
@@ -204,7 +203,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
             raise TypeError(
                 f"The given model should be a BaseSplitter (or subclass), but {type(model_with_split_points)} was given."
             )
-        self.model_with_split_points: BaseSplitter = model_with_split_points
+        self.splitter: BaseSplitter = model_with_split_points
         self._concept_model = concept_model
         self.__is_fitted: bool = False
 
@@ -477,10 +476,10 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             )
 
         # put everything on device
-        self.concept_model.to(self.model_with_split_points.device)  # type: ignore
+        self.concept_model.to(self.splitter.device)  # type: ignore
 
         # forward all computations to
-        gradients = self.model_with_split_points._get_concept_output_gradients(
+        gradients = self.splitter._get_concept_output_gradients(
             inputs=inputs,
             targets=targets,
             encode_activations=self.encode_activations,

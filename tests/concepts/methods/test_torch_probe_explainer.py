@@ -229,7 +229,7 @@ NB_TEST = 10
 
 
 @pytest.fixture(scope="module")
-def bert_split_model() -> ModelWithSplitPoints:
+def bert_splitter() -> ModelWithSplitPoints:
     from transformers import AutoModelForSequenceClassification  # noqa PLC0415
 
     return ModelWithSplitPoints(
@@ -242,12 +242,12 @@ def bert_split_model() -> ModelWithSplitPoints:
 
 
 @pytest.fixture(scope="module")
-def bert_train_test(bert_split_model: ModelWithSplitPoints):
+def bert_train_test(bert_splitter: ModelWithSplitPoints):
     """Extract BERT activations and labels for the word list."""
     words = [w for w, _ in WORDS_AND_LABELS]
     labels = torch.tensor([l for _, l in WORDS_AND_LABELS], dtype=torch.float32)
 
-    activations, _ = bert_split_model.get_activations(words, activation_granularity=ActivationGranularity.TOKEN)
+    activations, _ = bert_splitter.get_activations(words, activation_granularity=ActivationGranularity.TOKEN)
     assert activations.shape[0] == len(words)  # type: ignore
 
     # Train/test split
@@ -265,7 +265,7 @@ def bert_train_test(bert_split_model: ModelWithSplitPoints):
     ids=[c[0] for c in PROBE_CONFIGS],
 )
 def test_sanity_check_bert(
-    bert_split_model: ModelWithSplitPoints,
+    bert_splitter: ModelWithSplitPoints,
     bert_train_test: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
     name: str,
     probe_cls: type,
@@ -283,7 +283,7 @@ def test_sanity_check_bert(
 
     probe = probe_cls(**probe_kwargs)
     probe.to(train_x.device)
-    explainer = ProbeExplainer(bert_split_model, probe)
+    explainer = ProbeExplainer(bert_splitter, probe)
 
     # Fit
     explainer.fit(train_x, train_y)

@@ -25,14 +25,14 @@ It unlocks the inputs-to-concepts attributions workflow, which is not possible w
 ```python
 from interpreto import SplitterForClassification
 
-split_model = SplitterForClassification(
+splitter = SplitterForClassification(
     "nateraw/bert-base-uncased-emotion",
     batch_size=32,
     device_map="cuda",
 )
 
 # Compute activations and predictions on a dataset
-activations, predictions = split_model.get_activations(texts, tqdm_bar=True)
+activations, predictions = splitter.get_activations(texts, tqdm_bar=True)
 ```
 
 ## API Reference

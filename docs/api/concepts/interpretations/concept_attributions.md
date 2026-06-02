@@ -29,21 +29,21 @@ from interpreto import Occlusion, SplitterForClassification
 from interpreto.concepts import SemiNMFConcepts
 
 # 1. Setup the split model
-split_model = SplitterForClassification(
+splitter = SplitterForClassification(
     "nateraw/bert-base-uncased-emotion",
     batch_size=32,
     device_map="cuda",
 )
 
 # 2. Fit a concept explainer
-activations, predictions = split_model.get_activations(train_texts, tqdm_bar=True)
-concept_explainer = SemiNMFConcepts(split_model, nb_concepts=20, device="cuda")
+activations, predictions = splitter.get_activations(train_texts, tqdm_bar=True)
+concept_explainer = SemiNMFConcepts(splitter, nb_concepts=20, device="cuda")
 concept_explainer.fit(activations)
 
 # 3. Compute input-to-concept attributions
 explainer = Occlusion(
     concept_explainer.inputs_to_concepts,
-    split_model.tokenizer,
+    splitter.tokenizer,
     batch_size=256,
 )
 
@@ -112,8 +112,8 @@ and which concepts drive which predictions.
       show_root_heading: true
       show_source: true
       members:
-        - __init__
-        - __call__
+        - **init**
+        - **call**
 
 ::: interpreto.attributions.base.InputsToConceptsAttributionsExplainer
     handler: python

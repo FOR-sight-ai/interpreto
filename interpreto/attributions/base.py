@@ -872,11 +872,11 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
         from interpreto import Occlusion, SplitterForClassification
         from interpreto.concepts import SemiNMFConcepts
 
-        split_model = SplitterForClassification("model_id", device_map="cuda")
-        concept_explainer = SemiNMFConcepts(split_model, nb_concepts=20)
+        splitter = SplitterForClassification("model_id", device_map="cuda")
+        concept_explainer = SemiNMFConcepts(splitter, nb_concepts=20)
         concept_explainer.fit(activations)
 
-        explainer = Occlusion(concept_explainer.inputs_to_concepts, split_model.tokenizer)
+        explainer = Occlusion(concept_explainer.inputs_to_concepts, splitter.tokenizer)
         results = explainer.explain("Some input text.", targets=torch.arange(5))
         ```
     """

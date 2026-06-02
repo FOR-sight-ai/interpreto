@@ -35,7 +35,7 @@ The return shape depends on `flatten_activations`:
 ```python
 from interpreto import SplitterForGeneration
 
-split_model = SplitterForGeneration(
+splitter = SplitterForGeneration(
     "gpt2",
     split_point=10,
     batch_size=8,
@@ -43,10 +43,10 @@ split_model = SplitterForGeneration(
 )
 
 # Flattened token activations, suitable for concept fitting.
-activations, _ = split_model.get_activations(texts, tqdm_bar=True)
+activations, _ = splitter.get_activations(texts, tqdm_bar=True)
 
 # Sample-wise activations, useful when token alignment matters downstream.
-sample_activations, _ = split_model.get_activations(
+sample_activations, _ = splitter.get_activations(
     texts,
     flatten_activations=False,
 )

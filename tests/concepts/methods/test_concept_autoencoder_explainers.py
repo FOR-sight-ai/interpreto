@@ -111,9 +111,7 @@ def test_overcomplete_cbe(
 
     assert hasattr(cbe, "concept_model"), f"Explainer {method_class.__name__} missing attribute 'concept_model'"
     assert hasattr(cbe.concept_model, "nb_concepts"), f"Concept model in {method_class.__name__} missing 'nb_concepts'"
-    assert hasattr(cbe, "model_with_split_points"), (
-        f"Explainer {method_class.__name__} missing 'model_with_split_points'"
-    )
+    assert hasattr(cbe, "splitter"), f"Explainer {method_class.__name__} missing 'splitter'"
     assert cbe.concept_model.fitted, f"Concept model in {method_class.__name__} not fitted"
     assert cbe.is_fitted, f"Explainer {method_class.__name__} reports not fitted"
     assert hasattr(cbe, "has_differentiable_concept_encoder"), (

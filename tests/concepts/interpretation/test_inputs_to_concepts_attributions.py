@@ -127,20 +127,20 @@ def inputs_to_concepts_attributions(
     attribution_kwargs = attribution_method_kwargs[attribution_explainer_class]
 
     # Split the model
-    split_model = SSC(repo_id, device_map=DEVICE)
+    splitter = SSC(repo_id, device_map=DEVICE)
 
     # Fit the explainer
     if concepts_explainer_class != NeuronsAsConcepts:
         kwargs = {} if concepts_explainer_class != NMFConcepts else {"force_relu": True}
-        concepts_explainer = concepts_explainer_class(split_model, nb_concepts=3, **kwargs)  # type: ignore
-        activations, _ = split_model.get_activations(sentences)
+        concepts_explainer = concepts_explainer_class(splitter, nb_concepts=3, **kwargs)  # type: ignore
+        activations, _ = splitter.get_activations(sentences)
         concepts_explainer.fit(activations)
     else:
-        concepts_explainer = NeuronsAsConcepts(split_model)  # type: ignore
+        concepts_explainer = NeuronsAsConcepts(splitter)  # type: ignore
 
     # Instantiate the attribution explainer
     attribution_explainer = attribution_explainer_class(
-        concepts_explainer.inputs_to_concepts, split_model.tokenizer, **attribution_kwargs
+        concepts_explainer.inputs_to_concepts, splitter.tokenizer, **attribution_kwargs
     )
 
     # Compute the attributions

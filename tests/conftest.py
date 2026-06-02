@@ -44,7 +44,7 @@ def sentences():
 
 
 @fixture(scope="session")
-def multi_split_model() -> ModelWithSplitPoints:
+def multi_splitter() -> ModelWithSplitPoints:
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
         split_point="bert.encoder.layer.1",

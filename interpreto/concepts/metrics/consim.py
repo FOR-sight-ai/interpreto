@@ -273,7 +273,7 @@ class ConSim:
         """
         Initialize the ConSim metric.
         """
-        self.model_with_split_points = model_with_split_points
+        self.splitter = model_with_split_points
         self.activation_granularity: ActivationGranularity = activation_granularity
         self.user_llm: LLMInterface | None = user_llm
         self.classes: list[str] | None = classes
@@ -299,7 +299,7 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the inputs.
         """
-        device = device if device is not None else self.model_with_split_points.device
+        device = device if device is not None else self.splitter.device
         all_predictions = []
         for batch_index in tqdm(
             range(0, len(inputs), batch_size),
@@ -309,12 +309,10 @@ class ConSim:
             disable=not tqdm_bar,
         ):
             batch_inputs = inputs[batch_index : batch_index + batch_size]
-            batch_tokens = self.model_with_split_points.tokenizer(
+            batch_tokens = self.splitter.tokenizer(
                 batch_inputs, return_tensors="pt", padding=True, truncation=True
             ).to(device)  # type: ignore
-            logits = self.model_with_split_points._model(
-                batch_tokens["input_ids"], batch_tokens["attention_mask"]
-            ).logits
+            logits = self.splitter._model(batch_tokens["input_ids"], batch_tokens["attention_mask"]).logits
             predictions = torch.argmax(logits, dim=-1)
             all_predictions.append(predictions)
         return torch.cat(all_predictions)

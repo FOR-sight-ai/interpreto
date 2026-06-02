@@ -63,15 +63,15 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
         SSC(bert_model)
 
     # correct module name
-    split_model = SSC(bert_model, split_point="classifier", tokenizer=bert_tokenizer)
-    assert split_model.split_point == "classifier", (
-        f"split_point mismatch: got {split_model.split_point}, expected 'classifier'"
+    splitter = SSC(bert_model, split_point="classifier", tokenizer=bert_tokenizer)
+    assert splitter.split_point == "classifier", (
+        f"split_point mismatch: got {splitter.split_point}, expected 'classifier'"
     )
 
     # no module name
-    split_model = SSC("hf-internal-testing/tiny-random-bert")
-    assert split_model.split_point == "classifier", (
-        f"split_point mismatch: got {split_model.split_point}, expected 'classifier'"
+    splitter = SSC("hf-internal-testing/tiny-random-bert")
+    assert splitter.split_point == "classifier", (
+        f"split_point mismatch: got {splitter.split_point}, expected 'classifier'"
     )
 
 
@@ -89,7 +89,7 @@ def test_get_activation_and_gradient(repo_id, sentences):
     """
     # --------------------------------------------------------
     # Setup the model with split points, tokenizer, and tokens
-    split_model = SSC(
+    splitter = SSC(
         repo_id,
         batch_size=2,
         device_map=DEVICE,
@@ -97,7 +97,7 @@ def test_get_activation_and_gradient(repo_id, sentences):
     # -----------------------------------------------------------
     # Define expected shapes for the different granularity levels
     batch = len(sentences)
-    hidden = split_model._model.config.hidden_size
+    hidden = splitter._model.config.hidden_size
 
     # ----------------------------------------------
     # Define a concept encoder/decoder weight matrix
@@ -113,7 +113,7 @@ def test_get_activation_and_gradient(repo_id, sentences):
     # ---------------
     # Get activations
     # activations
-    activations, predictions = split_model.get_activations(sentences)
+    activations, predictions = splitter.get_activations(sentences)
     assert activations is not None, "get_activations returned None"
     assert activations is not None, "Activations are None"
     assert activations.shape == expected_activations_shape, (  # type: ignore
@@ -130,7 +130,7 @@ def test_get_activation_and_gradient(repo_id, sentences):
 
     # -------------
     # Get gradients
-    grads_list = split_model._get_concept_output_gradients(
+    grads_list = splitter._get_concept_output_gradients(
         sentences,
         encode_activations=lambda x: x @ encoder_weights,
         decode_concepts=lambda x: x @ decoder_weights,

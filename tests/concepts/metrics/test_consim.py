@@ -627,7 +627,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         _split_point = splitted_encoder_ml.split_point
 
         def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.model_with_split_points = model_with_split_points
+            self.splitter = model_with_split_points
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
             """
@@ -763,7 +763,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
         _split_point = splitted_encoder_ml.split_point
 
         def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.model_with_split_points = model_with_split_points
+            self.splitter = model_with_split_points
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
             local_importances = []

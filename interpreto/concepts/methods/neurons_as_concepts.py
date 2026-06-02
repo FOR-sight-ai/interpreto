@@ -129,8 +129,8 @@ class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
                 Its `split_point` attribute determines where activations are extracted.
         """
         # extract the input size from the model activations
-        self.model_with_split_points = model_with_split_points
-        input_size = self.model_with_split_points.get_latent_shape()[-1]
+        self.splitter = model_with_split_points
+        input_size = self.splitter.get_latent_shape()[-1]
 
         # initialize
         super().__init__(

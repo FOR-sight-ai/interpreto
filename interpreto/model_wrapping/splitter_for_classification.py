@@ -105,7 +105,7 @@ class SplitterForClassification(BaseSplitter):
             ```python
             from interpreto import SplitterForClassification
 
-            split_model = SplitterForClassification(
+            splitter = SplitterForClassification(
                 "nateraw/bert-base-uncased-emotion",
                 batch_size=32,
                 device_map="cuda",

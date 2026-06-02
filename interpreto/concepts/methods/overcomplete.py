@@ -211,10 +211,10 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
                 "ConceptEncoderDecoder must be a subclass of `overcomplete.sae.SAE`.\n"
                 "Use `interpreto.concepts.methods.SAEExplainerClasses` to get the list of available SAE methods."
             )
-        self.model_with_split_points = model_with_split_points
+        self.splitter = model_with_split_points
 
         # TODO: this will be replaced with a scan and a better way to select how to pick activations based on model class
-        shape = self.model_with_split_points.get_latent_shape()
+        shape = self.splitter.get_latent_shape()
         concept_model = self.concept_model_class(
             input_shape=shape[-1],
             nb_concepts=nb_concepts,
