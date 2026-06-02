@@ -82,7 +82,7 @@ class ImageSobol(ImageClassificationAttributionExplainer):
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_token_perturbations: int = 32,
-        sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.FIRST_ORDER,
+        sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.TOTAL_ORDER,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,
         replace_value: float = 0.0,
         device: torch.device | None = None,

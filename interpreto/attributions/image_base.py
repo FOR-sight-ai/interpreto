@@ -42,7 +42,7 @@ from transformers.modeling_utils import PreTrainedModel
 from interpreto.attributions.aggregations.base import Aggregator
 from interpreto.attributions.base import ClassificationAttributionExplainer, ModelTask
 from interpreto.attributions.perturbations.base import Perturbator
-from interpreto.attributions.perturbations.image_base import ImagePerturbator
+from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator, ImagePerturbator
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.commons.image_granularity import ImageGranularity
@@ -176,6 +176,16 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
         self.granularity_aggregation_strategy = granularity_aggregation_strategy
         # patch_size is sourced from the model config; required by ImageGranularity.PATCH
         self.patch_size = int(getattr(model.config, "patch_size", 16))
+        # The explainer is the single source of truth for patch_size (it owns model.config).
+        # A mask perturbator builds its (g, l) association matrix from patch_size, and the
+        # explainer's (t, l) -> (t, g) aggregation interprets the result against the same g;
+        # if the two disagree the mask<->score correspondence silently breaks. So we push the
+        # authoritative value down, overriding the perturbator's placeholder default.
+        # NOTE: this is the "version (a)" reconcile. If the isinstance wart or the
+        # silently-overwritten default become a problem, switch to "version (b)" (perturbator
+        # stops storing patch_size; explainer passes it into perturb() at call time).
+        if isinstance(self.perturbator, ImageMaskPerturbator):
+            self.perturbator.patch_size = self.patch_size
 
     def process_model_inputs(self, model_inputs: ModelInputs) -> list[TensorMapping]:
         """
