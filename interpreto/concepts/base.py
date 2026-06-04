@@ -74,7 +74,7 @@ class ModelForInputsToConcepts:
     Composes a ``SplitterForClassification`` (inputs → latent activations)
     with a concept model encoder (latent activations → concept activations).
 
-    The goal is to return this as the concept_explainer.inputs_to_concepts property.
+    The goal is to return this in concept_explainer.get_inputs_to_concepts_model() method.
     Which will then be used for in attribution methods.
 
     The resulting object quacks enough like a ``PreTrainedModel`` to be usable
@@ -245,8 +245,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """
         pass
 
-    @property
-    def inputs_to_concepts(self) -> ModelForInputsToConcepts:
+    def get_inputs_to_concepts_model(self) -> ModelForInputsToConcepts:
         """Returns a model that maps raw inputs to concept activations.
 
         The model can be passed to an attribution method,

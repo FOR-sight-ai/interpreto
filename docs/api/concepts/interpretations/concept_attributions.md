@@ -7,7 +7,7 @@ icon: material/transit-connection-variant
 Concept attributions answer the question: **which parts of the input are responsible for activating a given concept?**
 
 This is achieved by combining the concept framework with the attribution framework:
-a fitted concept explainer exposes an `inputs_to_concepts` property that returns a model
+a fitted concept explainer exposes an `get_inputs_to_concepts_model()` method that returns a model
 mapping raw inputs to concept activations. This model can then be passed to any
 perturbation-based attribution method (Lime, KernelShap, Occlusion, Sobol).
 
@@ -16,7 +16,7 @@ perturbation-based attribution method (Lime, KernelShap, Occlusion, Sobol).
 The input-to-concept attribution pipeline has three steps:
 
 1. **Fit a concept explainer** on model activations (as in the standard concept pipeline).
-2. **Get the bridge model** via `concept_explainer.inputs_to_concepts`.
+2. **Get the bridge model** via `concept_explainer.get_inputs_to_concepts_model()`.
 3. **Run an attribution method** using the bridge model and the model's tokenizer.
 
 The result is a per-token attribution for each selected concept.
@@ -42,7 +42,7 @@ concept_explainer.fit(activations)
 
 # 3. Compute input-to-concept attributions
 explainer = Occlusion(
-    concept_explainer.inputs_to_concepts,
+    concept_explainer.get_inputs_to_concepts_model(),
     splitter.tokenizer,
     batch_size=256,
 )
@@ -58,7 +58,7 @@ results = explainer.explain("Some text.", targets=torch.arange(5))
 
 ## How It Works
 
-The `inputs_to_concepts` property returns a `ModelForInputsToConcepts` object that:
+The `get_inputs_to_concepts_model()` property returns a `ModelForInputsToConcepts` object that:
 
 1. Passes inputs through the model backbone via `SplitterForClassification.inputs_to_activations`
    to obtain CLS-token representations.

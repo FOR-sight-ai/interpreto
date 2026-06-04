@@ -140,7 +140,7 @@ def inputs_to_concepts_attributions(
 
     # Instantiate the attribution explainer
     attribution_explainer = attribution_explainer_class(
-        concepts_explainer.inputs_to_concepts, splitter.tokenizer, **attribution_kwargs
+        concepts_explainer.get_inputs_to_concepts_model(), splitter.tokenizer, **attribution_kwargs
     )
 
     # Compute the attributions

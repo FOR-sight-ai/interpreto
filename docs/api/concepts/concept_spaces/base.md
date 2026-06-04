@@ -13,7 +13,7 @@ icon: material/middleware-outline
         - fit
         - verify_activations
         - interpret
-        - inputs_to_concepts
+        - get_inputs_to_concepts_model
 
 ::: interpreto.concepts.ConceptAutoEncoderExplainer
     handler: python

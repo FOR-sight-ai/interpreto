@@ -878,7 +878,7 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
         concept_explainer = SemiNMFConcepts(splitter, nb_concepts=20)
         concept_explainer.fit(activations)
 
-        explainer = Occlusion(concept_explainer.inputs_to_concepts, splitter.tokenizer)
+        explainer = Occlusion(concept_explainer.get_inputs_to_concepts_model(), splitter.tokenizer)
         results = explainer.explain("Some input text.", targets=torch.arange(5))
         ```
     """

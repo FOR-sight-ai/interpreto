@@ -161,7 +161,7 @@ from interpreto import Occlusion
 
 # Get the bridge model that maps inputs → concept activations
 explainer = Occlusion(
-    concept_explainer.inputs_to_concepts,
+    concept_explainer.get_inputs_to_concepts_model(),
     model_with_split_points.tokenizer,
     batch_size=256,
 )
