@@ -43,7 +43,7 @@ from nnsight.modeling.language import LanguageModel
 from transformers import AutoModel, PretrainedConfig, PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.model_wrapping.splitting_utils import (
+from interpreto.concepts.splitters.splitting_utils import (
     get_layer_by_idx,
     validate_path,
     walk_modules,

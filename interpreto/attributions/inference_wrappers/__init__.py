@@ -22,37 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import annotations
-
-import torch
-from beartype import beartype
-from jaxtyping import Float, Int, jaxtyped
-
-from interpreto.model_wrapping.inference_wrapper import InferenceWrapper
-
-
-class ClassificationInferenceWrapper(InferenceWrapper):
-    """
-    Inference wrapper for classification tasks.
-    """
-
-    padding_side = "right"
-
-    @jaxtyped(typechecker=beartype)
-    def _extract_targets_from_logits(self, logits: Float[torch.Tensor, "b c"]) -> Int[torch.Tensor, "b 1"]:
-        """
-        In classification, if no targets are specified, we explain the predicted class.
-        The predicted class corresponds to the highest logits.
-        Therefore, the target is the argmax of the output logits for each input sample.
-        """
-        return logits.argmax(dim=-1, keepdim=True)
-
-    def _target_logits(
-        self, logits: Float[torch.Tensor, "b c"], targets: Int[torch.Tensor, "t"]
-    ) -> Float[torch.Tensor, "b t"]:
-        """
-        For each sample, the targets specify which logits to extract.
-
-        The target is common between each sample.
-        """
-        return logits[:, targets]
+from .classification_inference_wrapper import ClassificationInferenceWrapper
+from .generation_inference_wrapper import GenerationInferenceWrapper
+from .inference_wrapper import InferenceWrapper
+from .inputs_to_concepts_inference_wrapper import InputsToConceptsInferenceWrapper

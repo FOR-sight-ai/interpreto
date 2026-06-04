@@ -77,20 +77,6 @@ def walk_modules(module: nn.Module, prefix="") -> Generator:
         yield current_path
 
 
-def get_path_idx(split: str, model_paths: list[str] | None) -> int:
-    """Match a model path to its index in the model according to the order of forward pass completion.
-
-    Args:
-        split (str): Split path to match
-
-    Returns:
-        int: Index in model_paths, or raises an error if no match
-    """
-    if model_paths is None or split not in model_paths:
-        raise ModelPathError(f"Split '{split}' not found in available model modules.")
-    return model_paths.index(split)
-
-
 def _get_paths_from_module(model_paths: list[str] | None = None, module: nn.Module | None = None) -> list[str]:
     if model_paths is None and module is None:
         raise ValueError("Either a module or a precomputed list of valid model paths should be provided for sorting.")
@@ -114,12 +100,3 @@ def get_layer_by_idx(layer_idx: int, model_paths: list[str] | None = None, modul
             "Specify your module name as a string to univocally identify the desired module."
         )
     return matches[0]
-
-
-def sort_paths(
-    paths: str | list[str], model_paths: list[str] | None = None, module: nn.Module | None = None
-) -> list[str]:
-    """Order model paths according to their actual occurrence in the model's forward pass."""
-    model_paths = _get_paths_from_module(model_paths, module)
-    paths = paths if isinstance(paths, list) else [paths]
-    return sorted(paths, key=lambda split: get_path_idx(split, model_paths=model_paths))

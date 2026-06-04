@@ -57,7 +57,7 @@ from transformers import (
     PreTrainedTokenizerFast,
 )
 
-from interpreto.model_wrapping.base_splitter import BaseSplitter
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations, TensorMapping
 
 

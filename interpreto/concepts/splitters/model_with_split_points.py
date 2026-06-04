@@ -47,7 +47,7 @@ from transformers import (
 )
 
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
-from interpreto.model_wrapping.base_splitter import BaseSplitter, InitializationError  # noqa: F401
+from interpreto.concepts.splitters.base_splitter import BaseSplitter, InitializationError  # noqa: F401
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -97,7 +97,7 @@ AG = ActivationGranularity
 
 
 class ModelWithSplitPoints(BaseSplitter):
-    """Code: [:octicons-mark-github-24: model_wrapping/model_with_split_points.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/model_wrapping/model_with_split_points.py)
+    """Code: [:octicons-mark-github-24: concepts.splitters/model_with_split_points.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts.splitters/model_with_split_points.py)
 
     The `ModelWithSplitPoints` is a wrapper around your HuggingFace model.
     Its goal is to allow you to split your model at specified locations and extract activations.

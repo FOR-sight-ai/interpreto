@@ -28,7 +28,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 
-from interpreto.model_wrapping.inference_wrapper import InferenceWrapper
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceWrapper
 from interpreto.typing import IncompatibilityError
 
 
