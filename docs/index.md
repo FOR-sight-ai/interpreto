@@ -85,11 +85,10 @@ Choose any layer in any HuggingFace language model with our `ModelWithSplitPoint
 - Top-k tokens from tokenizer vocabulary via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/#interpreto.concepts.interpretations.TopKInputs) and `use_vocab=True`
 - Top-k tokens/words/sentences/samples from specific datasets via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/#interpreto.concepts.interpretations.TopKInputs)
 - Label concepts via LLMs with [`LLMLabels`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/llm_labels/#interpreto.concepts.interpretations.LLMLabels) ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
-- Input-to-concept attributions via perturbation methods ([Concept Attributions](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/concept_attributions/))
+- Input-to-concept attributions via perturbation methods ([Concept Attributions](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/concept_attributions/)) ([Jourdan et al. 2023](https://aclanthology.org/2023.findings-acl.317/))
 
 Concept Interpretation Techniques Added in the future:
 
-- Theme prediction via LLMs from top-k tokens/sentences
 - Aligning concepts with human labels ([Sajjad et al. 2022](https://aclanthology.org/2022.naacl-main.225/))
 - Word cloud visualizations of concepts ([Dalvi et al. 2022](https://arxiv.org/abs/2205.07237))
 - VocabProj & TokenChange ([Gur-Arieh et al. 2025](https://arxiv.org/abs/2501.08319))
