@@ -38,7 +38,7 @@ from torch import nn
 
 from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
 
 __all__ = [

@@ -17,7 +17,7 @@ The previous `split_points` argument/property remains temporarily available as a
         - get_activations
         - get_latent_shape
 
-::: interpreto.model_wrapping.model_with_split_points.ActivationGranularity
+::: interpreto.concepts.splitters.model_with_split_points.ActivationGranularity
     handler: python
     options:
       show_root_heading: true
@@ -25,7 +25,7 @@ The previous `split_points` argument/property remains temporarily available as a
       show_if_no_docstring: true
       show_members: false
 
-::: interpreto.model_wrapping.model_with_split_points.GranularityAggregationStrategy
+::: interpreto.concepts.splitters.model_with_split_points.GranularityAggregationStrategy
     handler: python
     options:
       show_root_heading: true

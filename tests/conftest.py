@@ -30,7 +30,7 @@ import torch
 from pytest import fixture
 from transformers import AutoModelForCausalLM, AutoModelForMaskedLM, AutoModelForSequenceClassification, AutoTokenizer
 
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
 
 

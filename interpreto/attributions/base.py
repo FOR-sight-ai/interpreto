@@ -46,10 +46,12 @@ from interpreto.commons import Granularity
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ModelForInputsToConcepts
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
-from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
-from interpreto.model_wrapping.inputs_to_concepts_inference_wrapper import InputsToConceptsInferenceWrapper
+from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
+from interpreto.attributions.inference_wrappers.generation_inference_wrapper import GenerationInferenceWrapper
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes, InferenceWrapper
+from interpreto.attributions.inference_wrappers.inputs_to_concepts_inference_wrapper import (
+    InputsToConceptsInferenceWrapper,
+)
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 

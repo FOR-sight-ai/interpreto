@@ -51,7 +51,7 @@ from interpreto.concepts import (
 )
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer, SAEExplainer
 from interpreto.concepts.methods.sklearn_wrappers import SkLearnWrapperExplainer
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

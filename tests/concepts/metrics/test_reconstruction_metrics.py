@@ -34,7 +34,7 @@ from interpreto.concepts.metrics import (
     ReconstructionError,
     ReconstructionSpaces,
 )
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 

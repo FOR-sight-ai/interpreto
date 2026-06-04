@@ -39,7 +39,7 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -63,11 +63,11 @@ class TopKInputs(BaseConceptInterpretationMethod):
 
         activation_granularity (ActivationGranularity):
             The granularity of the activations to use for the interpretation.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         aggregation_strategy (GranularityAggregationStrategy):
             The aggregation strategy to use for the activations.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.

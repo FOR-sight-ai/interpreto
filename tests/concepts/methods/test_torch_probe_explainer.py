@@ -42,7 +42,7 @@ from interpreto.concepts import (
     SqL2CentroidProbe,
 )
 from interpreto.concepts.probes import Standardization
-from interpreto.model_wrapping.model_with_split_points import (
+from interpreto.concepts.splitters.model_with_split_points import (
     ActivationGranularity,
     ModelWithSplitPoints,
 )

@@ -18,7 +18,7 @@ based on the top-k activating inputs. This provides a human-readable summary of 
       members:
         - interpret
 
-::: interpreto.model_wrapping.llm_interface.LLMInterface
+::: interpreto.commons.llm_interface.LLMInterface
     handler: python
     options:
       show_root_heading: true

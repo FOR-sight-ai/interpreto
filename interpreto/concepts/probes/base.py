@@ -56,7 +56,7 @@ from torch import nn
 from torch.nn.modules.module import _IncompatibleKeys
 
 from interpreto.concepts.base import ConceptEncoderExplainer, check_fitted
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 # ---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
 
     Integrates any pre-instantiated torch probe into the concept explainer
     pipeline, connecting it to a
-    [ModelWithSplitPoints][interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints]
+    [ModelWithSplitPoints][interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints]
     for activation extraction.
 
     The probe is provided already instantiated (unfitted or pre-fitted).

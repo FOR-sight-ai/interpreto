@@ -38,8 +38,8 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.commons.llm_interface import LLMInterface, Role
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -112,11 +112,11 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
         activation_granularity (ActivationGranularity):
             The granularity of the activations to use for the interpretation.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         aggregation_strategy (GranularityAggregationStrategy):
             The aggregation strategy to use for the activations.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         llm_interface (LLMInterface):
             The LLM interface to use for the interpretation.

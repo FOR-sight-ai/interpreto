@@ -21,7 +21,7 @@ The main product surface is:
 
 - `interpreto/__init__.py`
   - Curated public API. If a feature is meant to be user-facing, it usually belongs here too.
-- `interpreto/model_wrapping/`
+- `interpreto/concepts.splitters/`
   - Bridges raw Hugging Face models to Interpreto internals.
   - `inference_wrapper.py`: shared batching, device handling, logits/gradient access, padding helpers.
   - `classification_inference_wrapper.py`: targeted scoring for classification tasks.

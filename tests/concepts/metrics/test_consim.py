@@ -60,7 +60,7 @@ import torch
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.consim import ConSim, PromptTypes
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
+from interpreto.commons.llm_interface import LLMInterface, Role
 
 AG = ModelWithSplitPoints.activation_granularities
 
@@ -723,7 +723,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `evaluate` method of the ConSim metric with OpenAI API.
     """
     # lazy import to avoid importing openai
-    from interpreto.model_wrapping.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
+    from interpreto.commons.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
         OpenAILLM,
     )
 

@@ -47,7 +47,7 @@ from sklearn.svm import SVC
 
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.probes.base import assert_fitted
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -88,7 +88,7 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
 
     Integrates [SklearnProbe][interpreto.concepts.probes.sklearn.SklearnProbe] into the concept
     explainer pipeline, connecting it to a
-    [ModelWithSplitPoints][interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints]
+    [ModelWithSplitPoints][interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints]
     for activation extraction.
 
     Args:

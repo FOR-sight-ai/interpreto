@@ -27,7 +27,7 @@ import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from interpreto.attributions.base import setup_token_ids
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
+from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
 from interpreto.typing import IncompatibilityError
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

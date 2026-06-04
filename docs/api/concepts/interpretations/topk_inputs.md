@@ -11,7 +11,7 @@ It provides a **global** interpretation by finding which elements in your datase
 
 ```python
 from interpreto.concepts.interpretations import TopKInputs
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
 topk = TopKInputs(
     concept_explainer=concept_explainer,

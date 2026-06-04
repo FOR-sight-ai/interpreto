@@ -41,7 +41,7 @@ from interpreto.attributions.base import AttributionExplainer, MultitaskExplaine
 from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.concepts.base import ModelForInputsToConcepts
-from interpreto.model_wrapping.inference_wrapper import InferenceModes
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 
 
 class KernelShap(MultitaskExplainerMixin, AttributionExplainer):

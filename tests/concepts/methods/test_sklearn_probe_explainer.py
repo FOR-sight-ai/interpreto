@@ -38,7 +38,7 @@ from sklearn.linear_model import RidgeClassifier
 from sklearn.svm import SVC
 
 from interpreto.concepts.probes.sklearn import SklearnProbe, SklearnProbeExplainer
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 # ---------------------------------------------------------------------------
 # Sklearn classifier configs: (name, sklearn_class, sklearn_kwargs)

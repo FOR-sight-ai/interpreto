@@ -39,7 +39,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from interpreto._vendor.overcomplete import optimization as oc_opt
 from interpreto._vendor.overcomplete import sae as oc_sae
 from interpreto.concepts.base import ConceptAutoEncoderExplainer, check_fitted
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
 
 # Type variables for covariant generics

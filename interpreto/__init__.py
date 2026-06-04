@@ -42,7 +42,7 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
-from .model_wrapping import BaseSplitter, ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 from .visualizations import (
     AttributionVisualization,
     plot_attributions,
@@ -61,7 +61,6 @@ def get_version() -> str:
 
 
 __all__ = [
-    "BaseSplitter",
     "GradientShap",
     "Granularity",
     "IntegratedGradients",

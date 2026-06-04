@@ -42,7 +42,7 @@ from interpreto.attributions.base import (
 from interpreto.attributions.perturbations import OcclusionPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.concepts.base import ModelForInputsToConcepts
-from interpreto.model_wrapping.inference_wrapper import InferenceModes
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 
 
 class Occlusion(MultitaskExplainerMixin, AttributionExplainer):

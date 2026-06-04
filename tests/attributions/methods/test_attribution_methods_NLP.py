@@ -51,7 +51,7 @@ from interpreto.attributions import (
 )
 from interpreto.attributions.base import AttributionOutput
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
-from interpreto.model_wrapping.inference_wrapper import InferenceModes
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

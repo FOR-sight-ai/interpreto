@@ -55,6 +55,7 @@ from .probes import (
     SqL2CentroidProbe,
     SVDDCentroidProbe,
 )
+from .splitters import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 
 __all__ = [
     "BatchTopKSAEConcepts",

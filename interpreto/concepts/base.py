@@ -39,12 +39,12 @@ from jaxtyping import Float
 from transformers.tokenization_utils_base import BatchEncoding
 
 from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
-from interpreto.model_wrapping.base_splitter import BaseSplitter
-from interpreto.model_wrapping.model_with_split_points import (
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
+from interpreto.concepts.splitters.model_with_split_points import (
     ActivationGranularity,
     GranularityAggregationStrategy,
 )
-from interpreto.model_wrapping.splitter_for_classification import SplitterForClassification
+from interpreto.concepts.splitters.splitter_for_classification import SplitterForClassification
 from interpreto.typing import (
     ConceptModelProtocol,
     ConceptsActivations,

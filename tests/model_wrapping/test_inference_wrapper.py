@@ -11,9 +11,9 @@ from torch import nn
 from transformers import AutoModelForCausalLM
 from transformers.utils.quantization_config import BitsAndBytesConfig
 
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
-from interpreto.model_wrapping.inference_wrapper import Batch
+from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
+from interpreto.attributions.inference_wrappers.generation_inference_wrapper import GenerationInferenceWrapper
+from interpreto.attributions.inference_wrappers.inference_wrapper import Batch
 
 TASK_INFERENCE_WRAPPERS = {
     "classification": ClassificationInferenceWrapper,

@@ -39,7 +39,7 @@ from interpreto import ModelWithSplitPoints
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations import TopKInputs, extract_ngrams
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
 AG = TopKInputs.activation_granularities
 

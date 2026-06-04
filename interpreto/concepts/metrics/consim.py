@@ -33,8 +33,8 @@ from tqdm import tqdm
 
 from interpreto import ModelWithSplitPoints
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.commons.llm_interface import LLMInterface, Role
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
 
 class PromptSetting(NamedTuple):
