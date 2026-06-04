@@ -340,7 +340,7 @@ class BaseConceptInterpretationMethod(ABC):
 
                 # concept model forward pass
                 batch_latent_activations = batch_latent_activations.to(device)
-                batch_concepts_activations = self.concept_explainer.encode_activations(batch_latent_activations)
+                batch_concepts_activations = self.concept_explainer.activations_to_concepts(batch_latent_activations)
                 batch_latent_activations.cpu()
 
                 concepts_activations_list.append(batch_concepts_activations.cpu())
@@ -420,7 +420,7 @@ class BaseConceptInterpretationMethod(ABC):
             )
 
         # compute the vocabulary's concepts activations
-        concepts_activations = self.concept_explainer.encode_activations(latent_activations)
+        concepts_activations = self.concept_explainer.activations_to_concepts(latent_activations)
         return inputs, concepts_activations
 
     @jaxtyped(typechecker=beartype)

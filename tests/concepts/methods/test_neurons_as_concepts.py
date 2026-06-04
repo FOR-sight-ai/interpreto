@@ -50,8 +50,8 @@ def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activati
     assert hasattr(concept_explainer, "has_differentiable_concept_decoder")
     assert concept_explainer.concept_model.nb_concepts == d
 
-    concepts = concept_explainer.encode_activations(activations)
-    reconstructed_activations = concept_explainer.decode_concepts(concepts)
+    concepts = concept_explainer.activations_to_concepts(activations)
+    reconstructed_activations = concept_explainer.concepts_to_activations(concepts)
 
     assert torch.allclose(concepts, activations)  # type: ignore
     assert torch.allclose(reconstructed_activations, activations)  # type: ignore

@@ -121,10 +121,10 @@ def test_overcomplete_cbe(
         f"Explainer {method_class.__name__} missing 'has_differentiable_concept_decoder'"
     )
 
-    concepts = cbe.encode_activations(activations)
-    assert concepts is not None, f"{method_class.__name__}.encode_activations returned None"
-    reconstructed_activations = cbe.decode_concepts(concepts)
-    assert reconstructed_activations is not None, f"{method_class.__name__}.decode_concepts returned None"
+    concepts = cbe.activations_to_concepts(activations)
+    assert concepts is not None, f"{method_class.__name__}.activations_to_concepts returned None"
+    reconstructed_activations = cbe.concepts_to_activations(concepts)
+    assert reconstructed_activations is not None, f"{method_class.__name__}.concepts_to_activations returned None"
     assert reconstructed_activations.shape == (n, d), (
         f"Explainer {method_class.__name__} encode-decode reconstructed activations shape mismatch: ",
         f"got {tuple(reconstructed_activations.shape)}, expected {(n, d)}",

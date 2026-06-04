@@ -321,8 +321,8 @@ class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Gener
             the concept explainer is fitted.
         concept_model (SkLearnWrapper): A wrapper around a sklearn decomposition for concept extraction.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
-        has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
+        has_differentiable_concept_decoder (bool): Whether the `concepts_to_activations` operation is differentiable.
     """
 
     has_differentiable_concept_encoder = True

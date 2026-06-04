@@ -129,8 +129,8 @@ def test_get_activation_and_gradient(split_gen: SFG, sentences: list[str]):
 
     grads_list = split_gen._get_concept_output_gradients(
         sentences,
-        encode_activations=lambda x: x @ encoder_weights,
-        decode_concepts=lambda x: x @ decoder_weights,
+        activations_to_concepts=lambda x: x @ encoder_weights,
+        concepts_to_activations=lambda x: x @ decoder_weights,
         targets=None,
     )
 
@@ -155,8 +155,8 @@ def test_get_concept_output_gradients_with_explicit_targets(split_gen: SFG, sent
 
     grads_list = split_gen._get_concept_output_gradients(
         sentences[:1],
-        encode_activations=lambda x: x @ identity,
-        decode_concepts=lambda x: x @ identity,
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
         targets=targets,
     )
 

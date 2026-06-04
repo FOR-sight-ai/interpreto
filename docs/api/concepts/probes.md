@@ -38,7 +38,7 @@ explainer = ProbeExplainer(model, concept_model=probe)
 explainer.fit(activations, labels)
 
 # 5. Score new inputs
-concept_scores = explainer.encode_activations(new_activations)
+concept_scores = explainer.activations_to_concepts(new_activations)
 ```
 
 ### Generation Model (SplitterForGeneration or ModelWithSplitPoints)
@@ -188,9 +188,9 @@ probe = CosineCentroidProbe(
       inherited_members: true
       members:
         - fit
-        - encode_activations
+        - activations_to_concepts
         - interpret
-        - inputs_to_concepts
+        - get_inputs_to_concepts_model
 
 ## Probe Models
 

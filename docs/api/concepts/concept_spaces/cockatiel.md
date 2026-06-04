@@ -14,8 +14,8 @@ Implementation of the COCKATIEL framework from [COCKATIEL: COntinuous Concept ra
       inherited_members: true
       members:
         - fit
-        - encode_activations
-        - decode_concepts
+        - activations_to_concepts
+        - concepts_to_activations
         - get_dictionary
         - interpret
         - concept_output_gradient

@@ -299,8 +299,8 @@ class SplitterForClassification(BaseSplitter):
     def _get_concept_output_gradients(
         self,
         inputs: list[str] | Float[torch.Tensor, "n d"],
-        encode_activations: Callable[[Float[torch.Tensor, "n d"]], Float[torch.Tensor, "n c"]],
-        decode_concepts: Callable[[Float[torch.Tensor, "n c"]], Float[torch.Tensor, "n d"]],
+        activations_to_concepts: Callable[[Float[torch.Tensor, "n d"]], Float[torch.Tensor, "n c"]],
+        concepts_to_activations: Callable[[Float[torch.Tensor, "n c"]], Float[torch.Tensor, "n d"]],
         targets: list[int] | None = None,
         concepts_x_gradients: bool = False,
         tqdm_bar: bool = False,
@@ -316,8 +316,8 @@ class SplitterForClassification(BaseSplitter):
         Args:
             inputs (list[str] | Float[torch.Tensor, "n d"]): Raw text inputs or
                 pre-computed latent activations.
-            encode_activations: Function mapping latent activations to concept space.
-            decode_concepts: Function mapping concept activations back to latent space.
+            activations_to_concepts: Function mapping latent activations to concept space.
+            concepts_to_activations: Function mapping concept activations back to latent space.
             targets (list[int] | None): Target class indices for which to compute
                 gradients. If None, gradients are computed for all classes.
             concepts_x_gradients (bool): If True, multiply the gradients by the concept
@@ -351,17 +351,17 @@ class SplitterForClassification(BaseSplitter):
                     )
 
             # encode activations to concepts
-            batch_concepts: Float[torch.Tensor, "b c"] = encode_activations(batch_activations.to(self.device))
+            batch_concepts: Float[torch.Tensor, "b c"] = activations_to_concepts(batch_activations.to(self.device))
             del batch_activations
             batch_concepts.requires_grad_(True)
 
             # decode concepts to logits
             try:
-                logits: Float[torch.Tensor, "b t_all"] = classification_head(decode_concepts(batch_concepts))
+                logits: Float[torch.Tensor, "b t_all"] = classification_head(concepts_to_activations(batch_concepts))
             except IndexError:
                 # we might forced two dimensions in `self.inputs_to_activations`
                 logits: Float[torch.Tensor, "b t_all"] = classification_head(
-                    decode_concepts(batch_concepts).unsqueeze(dim=1)
+                    concepts_to_activations(batch_concepts).unsqueeze(dim=1)
                 )
 
             # specify which classes to compute gradients for

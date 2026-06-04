@@ -123,8 +123,8 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         concept_model (overcomplete.sae.SAE): An [Overcomplete SAE](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/)
             variant for concept extraction.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
-        has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
+        has_differentiable_concept_decoder (bool): Whether the `concepts_to_activations` operation is differentiable.
 
     Examples:
         >>> import datasets
@@ -311,7 +311,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         return log
 
     @check_fitted
-    def encode_activations(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
+    def activations_to_concepts(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
         """Encode the given activations using the `concept_model` encoder.
 
         Args:
@@ -321,11 +321,11 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             The encoded concept activations.
         """
         # SAEs.encode returns both codes (concepts activations) and pre_codes (before relu)
-        _, codes = super().encode_activations(activations.to(self.device))
+        _, codes = super().activations_to_concepts(activations.to(self.device))
         return codes
 
     @check_fitted
-    def decode_concepts(self, concepts: torch.Tensor) -> torch.Tensor:
+    def concepts_to_activations(self, concepts: torch.Tensor) -> torch.Tensor:
         """Decode the given concepts using the `concept_model` decoder.
 
         Args:
@@ -352,8 +352,8 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         concept_model (overcomplete.optimization.BaseOptimDictionaryLearning): An [Overcomplete BaseOptimDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py)
             variant for concept extraction.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
-        has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
+        has_differentiable_concept_decoder (bool): Whether the `concepts_to_activations` operation is differentiable.
 
     Examples:
         >>> import datasets
@@ -604,7 +604,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
         self.concept_model.fit(activations, **kwargs)
 
     @check_fitted
-    def encode_activations(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
+    def activations_to_concepts(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
         """Encode the given activations using the `concept_model` encoder.
 
         Args:

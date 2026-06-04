@@ -131,5 +131,5 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
 
         self.concept_model.fit(activations, labels)
 
-    def encode_activations(self, activations: LatentActivations) -> ConceptsActivations:
+    def activations_to_concepts(self, activations: LatentActivations) -> ConceptsActivations:
         return self.concept_model.encode(activations)

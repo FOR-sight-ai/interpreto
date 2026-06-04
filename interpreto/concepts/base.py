@@ -125,7 +125,7 @@ class ModelForInputsToConcepts:
         """
         activations: Float[torch.Tensor, "n d"] = self.splitter.inputs_to_activations(kwargs)
 
-        # TODO: use `encode_activations` which should be renamed `activations_to_concepts`
+        # TODO: use `activations_to_concepts` which should be renamed `activations_to_concepts`
         concepts = self.concept_model.encode(activations)
         if isinstance(concepts, tuple):
             concepts = concepts[1]
@@ -169,7 +169,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
     """Code: [:octicons-mark-github-24: `concepts/base.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/base.py)
 
     Abstract class defining an interface for concept explanation.
-    Child classes should implement the `fit` and `encode_activations` methods, and only assume the presence of an
+    Child classes should implement the `fit` and `activations_to_concepts` methods, and only assume the presence of an
         encoding step using the `concept_model` to convert activations to latent concepts.
 
     Attributes:
@@ -177,10 +177,10 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
             The split point is determined by the model's `split_point` attribute.
         concept_model (ConceptModelProtocol): The model used to extract concepts from the activations of
             `model_with_split_points`. The only assumption for classes inheriting from this class is that
-            the `concept_model` can encode activations into concepts with `encode_activations`.
+            the `concept_model` can encode activations into concepts with `activations_to_concepts`.
             The `ConceptModelProtocol` is defined in `interpreto.typing`. It is basically a `torch.nn.Module` with an `encode` method.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
     """
 
     has_differentiable_concept_encoder = False
@@ -234,7 +234,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         pass
 
     @abstractmethod
-    def encode_activations(self, activations: LatentActivations) -> ConceptsActivations:
+    def activations_to_concepts(self, activations: LatentActivations) -> ConceptsActivations:
         """Abstract method defining how activations are converted into concepts by the concept encoder.
 
         Args:
@@ -275,10 +275,10 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             The split point is determined by the model's `split_point` attribute.
         concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from the
             activations of  `model_with_split_points`. The only assumption for classes inheriting from this class is
-            that the `concept_model` can encode activations into concepts with `encode_activations`.
+            that the `concept_model` can encode activations into concepts with `activations_to_concepts`.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
-        has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
+        has_differentiable_concept_decoder (bool): Whether the `concepts_to_activations` operation is differentiable.
     """
 
     has_differentiable_concept_decoder = False
@@ -304,7 +304,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         return self.concept_model.fitted
 
     @check_fitted
-    def encode_activations(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
+    def activations_to_concepts(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
         """Encode the given activations using the `concept_model` encoder.
 
         Args:
@@ -319,7 +319,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         return self.concept_model.encode(activations)  # type: ignore
 
     @check_fitted
-    def decode_concepts(self, concepts: ConceptsActivations) -> torch.Tensor:  # LatentActivations
+    def concepts_to_activations(self, concepts: ConceptsActivations) -> torch.Tensor:  # LatentActivations
         """Decode the given concepts using the `concept_model` decoder.
 
         Args:
@@ -388,7 +388,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
 
         In practice all computations are done by `ModelWithSplitPoints._get_concept_output_gradients`,
         which relies on NNsight. The current method only forwards the $t$ and $t^{-1}$,
-        respectively `self.encode_activations` and `self.decode_concepts` methods.
+        respectively `self.activations_to_concepts` and `self.concepts_to_activations` methods.
 
         Args:
             inputs (list[str] | torch.Tensor | BatchEncoding):
@@ -481,8 +481,8 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         gradients = self.splitter._get_concept_output_gradients(
             inputs=inputs,
             targets=targets,
-            encode_activations=self.encode_activations,
-            decode_concepts=self.decode_concepts,
+            activations_to_concepts=self.activations_to_concepts,
+            concepts_to_activations=self.concepts_to_activations,
             activation_granularity=activation_granularity,
             aggregation_strategy=aggregation_strategy,
             concepts_x_gradients=concepts_x_gradients,

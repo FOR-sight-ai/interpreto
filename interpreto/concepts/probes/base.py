@@ -208,7 +208,7 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
         probe = LinearRegressionProbe()
         explainer = ProbeExplainer(model_with_split_points, probe)
         explainer.fit(activations, labels)
-        concepts = explainer.encode_activations(activations)
+        concepts = explainer.activations_to_concepts(activations)
     """
 
     def __init__(
@@ -257,7 +257,7 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
         self.concept_model.fit(activations, labels)
 
     @check_fitted
-    def encode_activations(self, activations: LatentActivations) -> ConceptsActivations:
+    def activations_to_concepts(self, activations: LatentActivations) -> ConceptsActivations:
         """Encode activations into concept scores using the fitted probe.
 
         Args:

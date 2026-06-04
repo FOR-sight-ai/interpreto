@@ -79,9 +79,9 @@ class ReconstructionError:
         Returns:
             float: The reconstruction error.
         """
-        concepts_activations: ConceptsActivations = self.concept_explainer.encode_activations(latent_activations)
+        concepts_activations: ConceptsActivations = self.concept_explainer.activations_to_concepts(latent_activations)
 
-        reconstructed_latent_activations: LatentActivations = self.concept_explainer.decode_concepts(
+        reconstructed_latent_activations: LatentActivations = self.concept_explainer.concepts_to_activations(
             concepts_activations
         )
 

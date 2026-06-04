@@ -971,8 +971,8 @@ class ModelWithSplitPoints(BaseSplitter):
     def _get_concept_output_gradients(  # noqa: PLR0912  # ignore too many branches
         self,
         inputs: list[str] | torch.Tensor | BatchEncoding,
-        encode_activations: Callable[[LatentActivations], ConceptsActivations],
-        decode_concepts: Callable[[ConceptsActivations], LatentActivations],
+        activations_to_concepts: Callable[[LatentActivations], ConceptsActivations],
+        concepts_to_activations: Callable[[ConceptsActivations], LatentActivations],
         targets: list[int] | None = None,
         activation_granularity: ActivationGranularity = AG.TOKEN,
         aggregation_strategy: GranularityAggregationStrategy | None = GranularityAggregationStrategy.MEAN,
@@ -1152,12 +1152,12 @@ class ModelWithSplitPoints(BaseSplitter):
                 flattened_activations: Float[torch.Tensor, ng, d] = torch.cat(selected_activations, dim=0)
 
                 # encode activations into concepts
-                concept_activations: Float[torch.Tensor, "{ng} c"] = encode_activations(flattened_activations)
+                concept_activations: Float[torch.Tensor, "{ng} c"] = activations_to_concepts(flattened_activations)
                 del selected_activations, flattened_activations
                 c = concept_activations.shape[-1]
 
                 # decode concepts back into activations
-                decoded_activations: Float[torch.Tensor, ng, d] = decode_concepts(concept_activations)
+                decoded_activations: Float[torch.Tensor, ng, d] = concepts_to_activations(concept_activations)
 
                 # reintegrate decoded activations into the original activations
                 reconstructed_activations: Float[torch.Tensor, n, l, d] = self._reintegrate_selected_activations(

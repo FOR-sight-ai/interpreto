@@ -108,7 +108,7 @@ def test_torch_probe_explainer_fit_and_encode(
     probe_cls: type,
     probe_kwargs: dict,
 ):
-    """Fit a ProbeExplainer and verify encode_activations output shape."""
+    """Fit a ProbeExplainer and verify activations_to_concepts output shape."""
 
     n, d = activations.shape
     nb_concepts = 3
@@ -129,7 +129,7 @@ def test_torch_probe_explainer_fit_and_encode(
 
     # Encode before fit should fail
     with pytest.raises(RuntimeError, match="not fitted"):
-        explainer.encode_activations(activations)
+        explainer.activations_to_concepts(activations)
 
     # Fit
     explainer.fit(activations, labels)
@@ -138,7 +138,7 @@ def test_torch_probe_explainer_fit_and_encode(
     assert explainer.is_fitted, f"explainer is not fitted after fit: {explainer}"
 
     # Encode
-    concepts = explainer.encode_activations(activations)
+    concepts = explainer.activations_to_concepts(activations)
     assert concepts.shape == (n, nb_concepts), (
         f"incorrect concepts shape: {concepts.shape}, expected {(n, nb_concepts)}"
     )
@@ -167,7 +167,7 @@ def test_torch_probe_explainer_with_tensor_activations(
     explainer.fit(activations, labels)
     assert explainer.is_fitted
 
-    concepts = explainer.encode_activations(activations)
+    concepts = explainer.activations_to_concepts(activations)
     assert concepts.shape == (n, nb_concepts)
 
 
@@ -290,8 +290,8 @@ def test_sanity_check_bert(
     assert explainer.is_fitted
 
     # Encode train and test
-    train_scores = explainer.encode_activations(train_x)
-    test_scores = explainer.encode_activations(test_x)
+    train_scores = explainer.activations_to_concepts(train_x)
+    test_scores = explainer.activations_to_concepts(test_x)
 
     assert train_scores.shape == (train_x.shape[0], 3)
     assert test_scores.shape == (test_x.shape[0], 3)

@@ -69,7 +69,7 @@ def test_sklearn_probe_explainer_fit_and_encode(
     sklearn_class: type,
     sklearn_kwargs: dict,
 ):
-    """Fit a SklearnProbeExplainer and verify encode_activations output shape."""
+    """Fit a SklearnProbeExplainer and verify activations_to_concepts output shape."""
     n = activations.shape[0]
 
     # Binary labels for single concept
@@ -92,7 +92,7 @@ def test_sklearn_probe_explainer_fit_and_encode(
     assert explainer.is_fitted
 
     # Encode — SklearnProbe always has nb_concepts=1
-    concepts = explainer.encode_activations(activations)
+    concepts = explainer.activations_to_concepts(activations)
     assert concepts.shape == (n, 1), f"Expected shape ({n}, 1), got {concepts.shape}"
 
 
@@ -116,7 +116,7 @@ def test_sklearn_probe_explainer_encode_before_fit(
     )
 
     with pytest.raises(RuntimeError, match="not fitted"):
-        explainer.encode_activations(activations)
+        explainer.activations_to_concepts(activations)
 
 
 def test_sklearn_probe_explainer_with_tensor_activations(
@@ -138,7 +138,7 @@ def test_sklearn_probe_explainer_with_tensor_activations(
     explainer.fit(activations, labels)
     assert explainer.is_fitted
 
-    concepts = explainer.encode_activations(activations)
+    concepts = explainer.activations_to_concepts(activations)
     assert concepts.shape == (n, 1)
 
 

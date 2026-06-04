@@ -58,7 +58,7 @@ class Sparsity:
         Returns:
             float: The metric.
         """
-        concepts_activations: ConceptsActivations = self.concept_explainer.encode_activations(latent_activations)
+        concepts_activations: ConceptsActivations = self.concept_explainer.activations_to_concepts(latent_activations)
 
         return torch.mean(torch.abs(concepts_activations) > self.epsilon, dtype=torch.float32).item()
 
