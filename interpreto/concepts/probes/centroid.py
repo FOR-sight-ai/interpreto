@@ -54,7 +54,9 @@ from interpreto.concepts.probes.normalizations import NormalizationBase, Standar
 
 
 class BaseCentroidProbe(Probe):
-    """Shared base for centroid-based probes (multi-label, multi-output).
+    """Code: [:octicons-mark-github-24: `concepts/probes/centroid.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/centroid.py)
+
+    Shared base for centroid-based probes (multi-label, multi-output).
 
     Subclasses only need to implement [_compute_scores][interpreto.concepts.probes.centroid.BaseCentroidProbe._compute_scores]
     which maps normalized inputs to raw (unbiased) concept scores.
@@ -155,7 +157,9 @@ class BaseCentroidProbe(Probe):
 
 
 class DotProductCentroidProbe(BaseCentroidProbe):
-    """Centroid probe using dot-product similarity.
+    """Code: [:octicons-mark-github-24: `concepts/probes/centroid.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/centroid.py)
+
+    Centroid probe using dot-product similarity.
 
     `score_ij = x_i · centroid_j + bias_j`
 
@@ -171,12 +175,18 @@ class DotProductCentroidProbe(BaseCentroidProbe):
 
 
 class CosineCentroidProbe(BaseCentroidProbe):
-    """Centroid probe using cosine similarity.
+    """Code: [:octicons-mark-github-24: `concepts/probes/centroid.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/centroid.py)
+
+    Centroid probe using cosine similarity[^1].
 
     `score_ij = cosine(x_i, centroid_j) + bias_j`
 
     Centroids are L2-normalized after fitting, and inputs are normalized
     before scoring.
+
+    [^1]:
+        Manning, C. D., Raghavan, P., Schütze, H., [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/).
+        Cambridge University Press, 2008.
 
     Args:
         normalization (NormalizationBase | None): Optional input normalization layer.
@@ -204,7 +214,9 @@ class CosineCentroidProbe(BaseCentroidProbe):
 
 
 class SqL2CentroidProbe(BaseCentroidProbe):
-    """Centroid probe using negative squared Euclidean distance.
+    """Code: [:octicons-mark-github-24: `concepts/probes/centroid.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/centroid.py)
+
+    Centroid probe using negative squared Euclidean distance.
 
     `score_ij = -||x_i - centroid_j||² + bias_j`
 
@@ -233,6 +245,9 @@ class SqL2CentroidProbe(BaseCentroidProbe):
 class DiagonalMahalanobisCentroidProbe(BaseCentroidProbe):
     """Centroid probe using diagonal Mahalanobis distance.
 
+    This probe scores activations by a variance-weighted squared distance to each concept centroid. With pooled
+    variance, this corresponds to a diagonal-covariance form of Gaussian discriminant analysis[^1].
+
     `score_ij = -(x_i - c_j)^T diag(1/var) (x_i - c_j) + bias_j`
 
     The variance matrix is controlled by the `shrinkage` parameter:
@@ -243,6 +258,10 @@ class DiagonalMahalanobisCentroidProbe(BaseCentroidProbe):
 
     Default normalization is [Standardization][interpreto.concepts.probes.normalizations.Standardization]
     if none is provided.
+
+    [^1]:
+        Bishop, C. M., [Pattern Recognition and Machine Learning](https://link.springer.com/book/9780387310732).
+        Springer, 2006.
 
     Args:
         normalization (NormalizationBase | None): Input normalization (defaults to Standardization).
@@ -303,11 +322,16 @@ class DiagonalMahalanobisCentroidProbe(BaseCentroidProbe):
 
 
 class SVDDCentroidProbe(BaseCentroidProbe):
-    """Multi-label SVDD (Support Vector Data Description) probe.
+    """Code: [:octicons-mark-github-24: `concepts/probes/centroid.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/centroid.py)
 
-    Fits one hyper-sphere per concept. For each concept *j*, jointly optimizes
-    a center `a_j` and squared radius `r²_j` on positive samples by
-    minimizing::
+    Multi-label SVDD (Support Vector Data Description) probe.
+
+    For each concept, this probe fits a hypersphere around positive examples and scores activations by the margin
+    between the learned radius and the squared distance to the learned center, following Support Vector Data
+    Description[^1].
+
+    For each concept *j*, jointly optimizes
+    a center `a_j` and squared radius `r²_j` on positive samples by minimizing::
 
         L_j = r²_j + C * mean_pos( relu(||x - a_j||² - r²_j) ) + 0.5*l2*||a_j||²
 
@@ -316,6 +340,10 @@ class SVDDCentroidProbe(BaseCentroidProbe):
         score_ij = r²_j - ||x_i - a_j||²
 
     Positive scores indicate the sample is inside the concept sphere.
+
+    [^1]:
+        Tax, D. M. J., Duin, R. P. W., [Support Vector Data Description](https://doi.org/10.1023/B:MACH.0000008084.60811.49).
+        Machine Learning, 54, 2004, pp. 45-66.
 
     Args:
         lr (float): Adam learning rate for center/radius optimization.

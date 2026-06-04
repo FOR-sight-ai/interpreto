@@ -53,10 +53,19 @@ from interpreto.concepts.probes.normalizations import NormalizationBase
 
 
 class BaseLinearProbe(Probe, ABC):
-    """Abstract base for linear probes with intercept.
+    """Code: [:octicons-mark-github-24: `concepts/probes/linear.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/linear.py)
+    Abstract base class for linear concept probes.
+
+    Linear concept probes score activations by an affine map from latent activations to concept logits. This follows
+    the general idea of Concept Activation Vectors, where linear directions in activation space are used to represent
+    user-defined concepts[^1].
 
     Stores weight `(d, c)` and bias `(c,)` as buffers at init (empty),
     promoted to `nn.Parameter` during [fit][interpreto.concepts.probes.linear.BaseLinearProbe.fit].
+
+    [^1]:
+        Kim, B. et al., [Interpretability Beyond Feature Attribution: Quantitative Testing with Concept Activation Vectors (TCAV)](https://proceedings.mlr.press/v80/kim18d.html).
+        Proceedings of the 35th International Conference on Machine Learning, 2018.
 
     Args:
         normalization (NormalizationBase | None): Optional input normalization
@@ -92,12 +101,21 @@ class BaseLinearProbe(Probe, ABC):
 
 
 class LinearRegressionProbe(BaseLinearProbe):
-    """Multi-output linear regression probe with intercept.
+    """Code: [:octicons-mark-github-24: `concepts/probes/linear.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/linear.py)
+
+    Multi-output linear regression probe with intercept.
+
+    This probe fits concept scores using ordinary least squares or ridge regression, with an optional unpenalized
+    intercept term[^1].
 
     Fits the linear model in closed form:
 
     - `l2 == 0`: OLS via pseudo-inverse.
     - `l2 > 0`: Ridge regression (intercept is not penalized).
+
+    [^1]:
+        Hastie, T., Tibshirani, R., Friedman, J., [The Elements of Statistical Learning](https://link.springer.com/book/10.1007/978-0-387-84858-7).
+        Springer, 2nd edition, 2009.
 
     Args:
         l2 (float): L2 regularization strength (0 for OLS).
@@ -153,15 +171,24 @@ class LinearRegressionProbe(BaseLinearProbe):
 
 
 class MeansDiffProbe(BaseLinearProbe):
-    """Means-difference probe (multi-label, multi-output).
+    """Code: [:octicons-mark-github-24: `concepts/probes/linear.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/linear.py)
+
+    Means-difference probe (multi-label, multi-output).
 
     For each concept *j*, the weight vector is the difference between the
     mean activation of positive and negative samples::
 
-        w_j = mean(x | y_j=1) - mean(x | y_j=0)
+        $$w_j = mean(x | y_j=1) - mean(x | y_j=0)$$
 
     This is equivalent to Fisher’s Linear Discriminant with shared identity
-    covariance.
+    covariance assumption[^1][^2].
+
+    [^1]:
+        Fisher, R. A., [The Use of Multiple Measurements in Taxonomic Problems](https://doi.org/10.1111/j.1469-1809.1936.tb02137.x).
+        Annals of Eugenics, 7(2), 1936, pp. 179-188.
+    [^2]:
+        Hastie, T., Tibshirani, R., Friedman, J., [The Elements of Statistical Learning](https://link.springer.com/book/10.1007/978-0-387-84858-7).
+        Springer, 2nd edition, 2009.
 
     Args:
         bias_calibrator (BiasCalibrator | None): Post-hoc bias calibration.
@@ -212,7 +239,9 @@ class MeansDiffProbe(BaseLinearProbe):
 
 
 class _GDLinearProbe(BaseLinearProbe):
-    """Gradient-descent linear probe skeleton (private base).
+    """Code: [:octicons-mark-github-24: `concepts/probes/linear.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/linear.py)
+
+    Gradient-descent linear probe skeleton (private base).
 
     Trains weight and bias via Adam on a configurable loss function.
     Optionally initializes from [MeansDiffProbe][interpreto.concepts.probes.linear.MeansDiffProbe]
@@ -298,7 +327,9 @@ class _GDLinearProbe(BaseLinearProbe):
 
 
 class LogisticRegressionProbe(_GDLinearProbe):
-    """Multi-label logistic regression probe (BCE loss, Adam optimizer).
+    """Code: [:octicons-mark-github-24: `concepts/probes/linear.py`](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/linear.py)
+
+    Multi-label logistic regression probe (BCE loss, Adam optimizer).
 
     Minimizes binary cross-entropy with logits, optionally with L2 weight
     regularization. Initialized from [MeansDiffProbe][interpreto.concepts.probes.linear.MeansDiffProbe]
@@ -342,9 +373,15 @@ class LogisticRegressionProbe(_GDLinearProbe):
 class LinearSVMProbe(_GDLinearProbe):
     """Multi-label linear SVM probe (hinge loss, Adam optimizer).
 
+    This is the linear model used in CAV[^1].
+
     Targets are mapped to {-1, +1} and the loss is the mean of
     `max(0, 1 - y * logits)`. Optionally with L2 weight regularization.
     Initialized from [MeansDiffProbe][interpreto.concepts.probes.linear.MeansDiffProbe] by default.
+
+    [^1]:
+        Kim, B. et al., [Interpretability Beyond Feature Attribution: Quantitative Testing with Concept Activation Vectors (TCAV)](https://proceedings.mlr.press/v80/kim18d.html).
+        Proceedings of the 35th International Conference on Machine Learning, 2018.
 
     Args:
         lr (float): Adam learning rate.

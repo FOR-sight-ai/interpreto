@@ -106,7 +106,9 @@ class NormalizationBase(nn.Module):
 
 
 class Standardization(NormalizationBase):
-    """Per-feature zero-mean, unit-variance normalization.
+    """Code: [:octicons-mark-github-24: `concepts/probes/normalizations.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/probes/normalizations.py)
+
+    Per-feature zero-mean, unit-variance normalization.
 
     `z = (x - mean) / std`
 
@@ -135,15 +137,20 @@ class Standardization(NormalizationBase):
 
 
 class Whitening(NormalizationBase):
-    """SVD-based whitening normalization.
+    """Code: :octicons-mark-github-24: concepts/probes/normalizations.py
 
-    Computes the economy SVD of the centered data `Xc = U S V^T` and
-    transforms new inputs as::
+    SVD-based whitening normalization.
+
+    Whitening projects centered activations onto singular-vector directions and rescales them by the inverse singular
+    values, as in PCA whitening[^1].
 
         z = (X - mean) @ V_r * (sqrt(n) / S_r)
 
     This produces decorrelated, unit-variance features in the rotated space.
 
+    [^1]:
+        Murphy, K. P., [Machine Learning: A Probabilistic Perspective](https://probml.github.io/pml-book/book0.html).
+        MIT Press, 2012.
     Args:
         rank (int | None): If `None` (default), full whitening (r = min(n, d)).
             If int, low-rank whitening keeping the top-r singular components.
