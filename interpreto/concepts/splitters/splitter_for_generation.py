@@ -195,6 +195,46 @@ class SplitterForGeneration(BaseSplitter):
 
         raise ValueError(f"Unexpected input type: {type(inputs)}")
 
+    def inputs_to_activations(
+        self,
+        inputs: list[str],
+        *,
+        include_special_tokens: bool = False,
+        flatten_activations: bool = True,
+        forward_kwargs: dict[str, Any] = {},
+    ) -> list[LatentActivations] | LatentActivations:
+        """Extract activations from raw inputs.
+
+        Args:
+            inputs (list[str]): Raw text inputs.
+            include_special_tokens (bool): If True, return all token activations
+                (including special tokens but not padding).  If False (default),
+                filter out special tokens using ``tokenizer.all_special_ids``.
+            flatten_activations (bool): Whether to flatten the activations into a single tensor of shape (n*g, d).
+            forward_kwargs (dict[str, Any]): Additional keyword arguments passed to the model forward pass.
+
+        Returns:
+            list[LatentActivations] | LatentActivations: Sample-wise list of activations or a single flattened tensor.
+        """
+        tokenized, tokens_mask = self._tokenize_and_get_mask(inputs, include_special_tokens)
+
+        # forward till the split point
+        with self.trace(tokenized, **forward_kwargs) as tracer:
+            outputs = getattr(self, self.split_point).save()
+            tracer.stop()
+
+        # manage the output tuple and extract the (n, l, d) activations from it
+        full_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(outputs, self.split_point)
+
+        # filter out special tokens
+        granular_activations = [acts.cpu()[mask] for acts, mask in zip(full_activations, tokens_mask, strict=True)]
+
+        # flatten activations
+        if flatten_activations:
+            return torch.cat(granular_activations, dim=0)
+
+        return granular_activations
+
     def get_activations(
         self,
         inputs: list[str],

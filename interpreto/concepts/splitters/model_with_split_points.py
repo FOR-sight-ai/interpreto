@@ -627,6 +627,70 @@ class ModelWithSplitPoints(BaseSplitter):
             case _:
                 raise ValueError(f"Invalid activation selection strategy: {activation_granularity}")
 
+    def inputs_to_activations(
+        self,
+        inputs: list[str],
+        *,
+        activation_granularity: ActivationGranularity,
+        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        flatten_activations: bool = True,
+        forward_kwargs: dict[str, Any] = {},
+    ) -> list[LatentActivations] | LatentActivations:
+        """Extract activations from raw inputs.
+
+        Args:
+            inputs (list[str]): Raw text inputs.
+            activation_granularity (ActivationGranularity): Selection strategy for activations.
+            aggregation_strategy (GranularityAggregationStrategy): Aggregation strategy to use for activations.
+            flatten_activations (bool): Whether to flatten the activations into a single tensor of shape (n*g, d).
+            forward_kwargs (dict[str, Any]): Additional keyword arguments passed to the model forward pass.
+
+        Returns:
+            list[LatentActivations] | LatentActivations: Sample-wise list of activations or a single flattened tensor.
+        """
+        # tokenize text inputs for granularity selection
+        # include "offsets_mapping" for sentence selection strategy
+        tokenized = self.tokenizer(
+            inputs,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            return_offsets_mapping=True,
+        )
+
+        # get granularity indices
+        granularity_indices: list[list[list[int]]] = self._get_granularity_indices(tokenized, activation_granularity)
+
+        # extract offset mapping not supported by forward but was necessary for sentence selection strategy
+        tokenized.pop("offset_mapping", None)
+
+        sp_module = self.get(self._split_point)
+        output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
+
+        # forward till the split point
+        with self.trace(tokenized, **forward_kwargs) as tracer:
+            outputs = getattr(sp_module, output_name).save()
+            tracer.stop()
+
+        # manage the output tuple and extract the (n, l, d) activations from it
+        full_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(outputs, self._split_point)
+
+        # select relevant activations with respect to the granularity strategy
+        # potentially aggregate activations over the granularity elements
+        # this merges the `n` and `g` dimensions with `g` a subset of `n`
+        # shape (n, l, d) only for `ALL` granularity, thus raw activations
+        granular_activations: list[Float[torch.Tensor, "g d"]] = self._apply_selection_strategy(
+            activations=full_activations,
+            granularity_indices=granularity_indices,
+            activation_granularity=activation_granularity,
+            aggregation_strategy=aggregation_strategy,
+        )
+
+        if flatten_activations:
+            return torch.cat(granular_activations, dim=0)
+
+        return granular_activations
+
     def get_activations(  # noqa: PLR0912  # ignore too many branches  # too many special cases
         self,
         inputs: list[str] | torch.Tensor | BatchEncoding,
@@ -637,7 +701,7 @@ class ModelWithSplitPoints(BaseSplitter):
         tqdm_bar: bool = False,
         include_predicted_classes: bool = False,
         flatten_activations: bool = True,
-        model_forward_kwargs: dict[str, Any] = {},
+        forward_kwargs: dict[str, Any] = {},
     ) -> tuple[LatentActivations, torch.Tensor | None] | tuple[list[LatentActivations], list[torch.Tensor] | None]:
         """
 
@@ -730,7 +794,7 @@ class ModelWithSplitPoints(BaseSplitter):
 
                 - If False, a list of sample-wise activations will be returned.
 
-            model_forward_kwargs (dict):
+            forward_kwargs (dict):
                 Additional keyword arguments passed to the model forward pass.
 
         Returns:
@@ -828,7 +892,7 @@ class ModelWithSplitPoints(BaseSplitter):
 
                 # all model calls use trace with nnsight
                 # call model forward pass and save split point outputs
-                with self.trace(tokenized_inputs, **model_forward_kwargs) as tracer:
+                with self.trace(tokenized_inputs, **forward_kwargs) as tracer:
                     # nnsight quick way to obtain the activations for the split point
                     batch_activations = tracer.cache(modules=[self.get(self._split_point)])  # type: ignore
 
@@ -915,7 +979,7 @@ class ModelWithSplitPoints(BaseSplitter):
         concepts_x_gradients: bool = False,
         tqdm_bar: bool = False,
         batch_size: int | None = None,
-        model_forward_kwargs: dict[str, Any] = {},
+        forward_kwargs: dict[str, Any] = {},
     ) -> list[Float[torch.Tensor, "t g c"]]:
         """Get intermediate activations for all model split points
 
@@ -978,7 +1042,7 @@ class ModelWithSplitPoints(BaseSplitter):
             tqdm_bar (bool):
                 Whether to display a progress bar.
 
-            model_forward_kwargs (dict):
+            forward_kwargs (dict):
                 Additional keyword arguments passed to the model forward pass.
 
         Returns:
@@ -1063,7 +1127,7 @@ class ModelWithSplitPoints(BaseSplitter):
             # then backward from the predictions to the concepts activations (gradients)
 
             # all model calls use trace with nnsight
-            with self.trace(tokenized_inputs, **model_forward_kwargs):
+            with self.trace(tokenized_inputs, **forward_kwargs):
                 curr_module = self.get(self._split_point)
                 # Handle case in which module has .output attribute, and .nns_output gets overridden instead
                 module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"

@@ -285,6 +285,19 @@ class BaseSplitter(LanguageModel, ABC):
     # implementation at runtime, and get_latent_shape remains truly abstract
     # (its signature is uniform across all subclasses).
 
+    @abstractmethod
+    def inputs_to_activations(self, *args: Any, **kwargs: Any) -> Any:
+        """Un batched activation extraction from raw inputs.
+
+        Subclasses define the exact signature and return types appropriate for
+        their task (classification vs generation vs full granularity).
+
+        Raises:
+            NotImplementedError: Always — subclasses must override this method.
+        """
+        raise NotImplementedError(f"{type(self).__name__} must implement inputs_to_activations")
+
+    @abstractmethod
     def get_activations(self, *args: Any, **kwargs: Any) -> Any:
         """Extract intermediate activations at the split point.
 
@@ -296,6 +309,7 @@ class BaseSplitter(LanguageModel, ABC):
         """
         raise NotImplementedError(f"{type(self).__name__} must implement get_activations")
 
+    @abstractmethod
     def _get_concept_output_gradients(self, *args: Any, **kwargs: Any) -> Any:
         """Compute gradients of model outputs w.r.t. concept activations.
 
