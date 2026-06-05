@@ -103,23 +103,3 @@ Input-to-concept attributions complement other interpretation methods:
 
 Together, they provide a complete interpretability story: which tokens activate which concepts,
 and which concepts drive which predictions.
-
-## API Reference
-
-::: interpreto.concepts.base.ModelForInputsToConcepts
-    handler: python
-    options:
-      show_root_heading: true
-      show_source: true
-      members:
-        - **init**
-        - **call**
-
-::: interpreto.attributions.base.InputsToConceptsAttributionsExplainer
-    handler: python
-    options:
-      show_root_heading: true
-      show_source: true
-      members:
-        - process_inputs_to_explain_and_targets
-        - post_processing
