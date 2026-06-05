@@ -36,9 +36,10 @@ nav:
         - Insertion: api/attributions/metrics/insertion.md
     - Concept Explainers:
       - Overview: api/concepts/overview.md
-      - ModelWithSplitPoints: api/concepts/model_with_split_points.md
-      - SplitterForClassification: api/concepts/splitter_for_classification.md
-      - SplitterForGeneration: api/concepts/splitter_for_generation.md
+      - Splitters:
+        - ModelWithSplitPoints: api/concepts/splitters/model_with_split_points.md
+        - SplitterForClassification: api/concepts/splitters/splitter_for_classification.md
+        - SplitterForGeneration: api/concepts/splitters/splitter_for_generation.md
       - Probes (Supervised): api/concepts/probes.md
       - Concept Spaces (Unsupervised):
         - Base Classes: api/concepts/concept_spaces/base.md
@@ -184,7 +185,6 @@ extra_css:
 
 extra_javascript:
   - assets/js/custom.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 extra:

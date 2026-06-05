@@ -45,18 +45,18 @@ Determine from which point of your model the activations should be extracted.
 
 There are three splitters depending on you use-case:
 
-> **For classification models:** Use [`SplitterForClassification`](./split_sequence_classification.md)
+> **For classification models:** Use [`SplitterForClassification`](./splitters/split_sequence_classification.md)
 > It automatically detects the classification head of your classifier in most cases.
 > Then, it considers the [CLS] token (the input of this head as the activations).
 > Which means that there is one activation vector for each sample. (n, d)
 > Thus `inputs_to_activations` is the encoder and `activations_to_outputs` is the head.
 
-> **For causal language models:** Use [`SplitterForGeneration`](./splitter_for_generation.md)
+> **For causal language models:** Use [`SplitterForGeneration`](./splitters/splitter_for_generation.md)
 > Here you need to specify split point manually. It can, be the number of the layer
 > or the name of the layer.
 > Then we consider each token latent activations as activations. (n * l, d).
 
-> **For more complex cases:** Use [`ModelWithSplitPoints`](./model_with_split_points.md)
+> **For more complex cases:** Use [`ModelWithSplitPoints`](./splitters/model_with_split_points.md)
 > It is more versatile, but also more complex.
 > One needs to specify a split point manually and consider the granularity (see below).
 > Thus it covers the two other splitter cases but less optimally.
