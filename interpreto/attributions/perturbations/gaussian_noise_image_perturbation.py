@@ -28,10 +28,10 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.image_base import ImageEmbeddingsPerturbator
+from interpreto.attributions.perturbations.image_base import ImageTensorPerturbator
 
 
-class GaussianNoiseImagePerturbator(ImageEmbeddingsPerturbator):
+class GaussianNoiseImagePerturbator(ImageTensorPerturbator):
     """
     Image-side analog of `GaussianNoisePerturbator`.
 
@@ -56,7 +56,7 @@ class GaussianNoiseImagePerturbator(ImageEmbeddingsPerturbator):
         self.std = std
 
     @jaxtyped(typechecker=beartype)
-    def perturb_embeds(
+    def perturb_tensor(
         self, pixel_values: Float[torch.Tensor, "1 3 H W"]
     ) -> tuple[Float[torch.Tensor, "p 3 H W"], None]:
         """

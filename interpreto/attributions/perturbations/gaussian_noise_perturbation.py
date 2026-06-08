@@ -28,10 +28,10 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.base import EmbeddingsPerturbator
+from interpreto.attributions.perturbations.base import TextTensorPerturbator
 
 
-class GaussianNoisePerturbator(EmbeddingsPerturbator):
+class GaussianNoisePerturbator(TextTensorPerturbator):
     """
     Perturbator adding gaussian noise to the input tensor
     """
@@ -58,7 +58,7 @@ class GaussianNoisePerturbator(EmbeddingsPerturbator):
         self.std = std
 
     @jaxtyped(typechecker=beartype)
-    def perturb_embeds(self, inputs_embeds: Float[torch.Tensor, "1 l d"]) -> tuple[Float[torch.Tensor, "p l d"], None]:
+    def perturb_tensor(self, inputs_embeds: Float[torch.Tensor, "1 l d"]) -> tuple[Float[torch.Tensor, "p l d"], None]:
         """
         Apply Gaussian noise perturbations on ``inputs_embeds``.
 

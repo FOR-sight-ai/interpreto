@@ -29,11 +29,11 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import IdsPerturbator
+from interpreto.attributions.perturbations.base import TextMaskPerturbator
 from interpreto.commons.granularity import Granularity
 
 
-class OcclusionPerturbator(IdsPerturbator):
+class OcclusionPerturbator(TextMaskPerturbator):
     """
     Basic class for occlusion perturbations
     """

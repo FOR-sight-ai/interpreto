@@ -22,12 +22,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .base import EmbeddingsPerturbator, IdsPerturbator, Perturbator
+from .base import MaskPerturbator, Perturbator, TensorPerturbator, TextMaskPerturbator, TextTensorPerturbator
 from .gaussian_noise_image_perturbation import GaussianNoiseImagePerturbator
 from .gaussian_noise_perturbation import GaussianNoisePerturbator
 from .gradient_shap_image_perturbation import GradientShapImagePerturbator
 from .gradient_shap_perturbation import GradientShapPerturbator
-from .image_base import ImageEmbeddingsPerturbator, ImageMaskPerturbator, ImagePerturbator
+from .image_base import ImageMaskPerturbator, ImageTensorPerturbator
 from .insertion_deletion_perturbation import DeletionPerturbator, InsertionPerturbator
 from .linear_interpolation_image_perturbation import LinearInterpolationImagePerturbator
 from .linear_interpolation_perturbation import LinearInterpolationPerturbator
@@ -41,12 +41,13 @@ from .sobol_image_perturbation import SobolImagePerturbator
 from .sobol_perturbation import SobolTokenPerturbator
 
 __all__ = [
-    "EmbeddingsPerturbator",
-    "IdsPerturbator",
-    "ImageEmbeddingsPerturbator",
-    "ImageMaskPerturbator",
-    "ImagePerturbator",
+    "MaskPerturbator",
     "Perturbator",
+    "TensorPerturbator",
+    "TextMaskPerturbator",
+    "TextTensorPerturbator",
+    "ImageMaskPerturbator",
+    "ImageTensorPerturbator",
     "GaussianNoiseImagePerturbator",
     "GaussianNoisePerturbator",
     "GradientShapImagePerturbator",

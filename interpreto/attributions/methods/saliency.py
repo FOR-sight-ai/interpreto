@@ -34,7 +34,7 @@ import torch
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
-from interpreto.attributions.perturbations import EmbeddingsPerturbator
+from interpreto.attributions.perturbations import TextTensorPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
@@ -98,7 +98,7 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
             tokenizer=tokenizer,
             batch_size=batch_size,
             device=device,
-            perturbator=EmbeddingsPerturbator(inputs_embedder=model.get_input_embeddings()),
+            perturbator=TextTensorPerturbator(inputs_embedder=model.get_input_embeddings()),
             aggregator=None,
             granularity=granularity,
             granularity_aggregation_strategy=granularity_aggregation_strategy,

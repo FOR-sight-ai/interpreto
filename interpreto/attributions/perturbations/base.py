@@ -28,7 +28,7 @@ Base classes for perturbations used in attribution methods
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from copy import deepcopy
 
 import torch
@@ -40,39 +40,31 @@ from interpreto.commons.granularity import Granularity
 from interpreto.typing import TensorMapping
 
 
-class Perturbator:
+
+
+class Perturbator(ABC):
     """
-    Base class for perturbators
-    If this class is instantiated, it behaves as a no-op perturbator
-    Perturbator may be subclassed to define custom perturbations, we recommend to use either IdsPerturbator or EmbeddingsPerturbator as base classes
+    Abstract Base class for perturbators.
     """
 
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        """
-        Method called when we ask the perturbator to perturb a mapping of tensors, generally the output of a tokenizer
-        The mapping should be similar to mappings returned by the tokenizer.
-        It should at least have "input_ids" and "attention_mask".
-        Optionally, the "offsets_mapping" might be required for the `SENTENCE` granularity.
-        Give directly the output of the tokenizer without modifying it would be the best and most common way to use this method
-
-        Args:
-            model_inputs (TensorMapping): output of the tokenizers
-        """
-        # add perturbation dimension
-        if model_inputs["input_ids"].ndim <= 1:
-            model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        # model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        # if "inputs_embeds" in model_inputs:
-        #    model_inputs["inputs_embeds"] = model_inputs["inputs_embeds"].unsqueeze(0)
-        # TODO : eventually add perturbation dimension to other keys in the mapping ?
-
-        return model_inputs, torch.zeros_like(model_inputs["input_ids"], dtype=torch.float)
+    @abstractmethod
+    def perturb(self, inputs):
+        pass
 
     def __call__(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         return self.perturb(model_inputs)
 
+class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
+    """
+    method overriden in subclasses that perturb the tensor (instead of masking it) representing the input
+    """
 
-class EmbeddingsPerturbator(Perturbator):
+    @abstractmethod
+    def perturb_tensor(self):  # renaming of `perturb_embeds`
+        pass
+
+
+class TextTensorPerturbator(TensorPerturbator):
     """
     Specific class for perturbators working on input embeddings
     All perturbators working on input embeddings only should inherit from this class
@@ -108,7 +100,7 @@ class EmbeddingsPerturbator(Perturbator):
         # perturb embeddings
         perturbed_embeds: Float[torch.Tensor, "p l d"]
         mask: Float[torch.Tensor, "p l"] | None
-        perturbed_embeds, mask = self.perturb_embeds(inputs_embeds)
+        perturbed_embeds, mask = self.perturb_tensor(inputs_embeds)
 
         # repeat inputs elements to match perturbations
         p = perturbed_embeds.shape[0]
@@ -120,7 +112,7 @@ class EmbeddingsPerturbator(Perturbator):
 
         return inputs, mask
 
-    def perturb_embeds(
+    def perturb_tensor(
         self, inputs_embeds: Float[torch.Tensor, "1 l d"]
     ) -> tuple[Float[torch.Tensor, "p l d"], Float[torch.Tensor, "p l"] | None]:
         """
@@ -141,8 +133,12 @@ class EmbeddingsPerturbator(Perturbator):
         """
         return inputs_embeds, None
 
+class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
+    @abstractmethod
+    def get_mask(self):
+        pass
 
-class IdsPerturbator(Perturbator):
+class TextMaskPerturbator(MaskPerturbator):
     """
     Base class for perturbations consisting in applying masks on token (or groups of tokens)
     All perturbators working on input IDs by applying a mask should inherit from this class

@@ -28,11 +28,11 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.base import EmbeddingsPerturbator
+from interpreto.attributions.perturbations.base import TextTensorPerturbator
 from interpreto.typing import TensorBaseline
 
 
-class LinearInterpolationPerturbator(EmbeddingsPerturbator):
+class LinearInterpolationPerturbator(TextTensorPerturbator):
     """
     Perturbation using linear interpolation between a reference point (baseline) and the input.
     This class can serve as a base for different interpolation-based perturbators.
@@ -112,7 +112,7 @@ class LinearInterpolationPerturbator(EmbeddingsPerturbator):
         return torch.linspace(0, 1, self.n_perturbations, device=device).view(-1, *([1] * (len(shape) - 1)))
 
     @jaxtyped(typechecker=beartype)
-    def perturb_embeds(self, inputs_embeds: Float[torch.Tensor, "1 l d"]) -> tuple[Float[torch.Tensor, "p l d"], None]:
+    def perturb_tensor(self, inputs_embeds: Float[torch.Tensor, "1 l d"]) -> tuple[Float[torch.Tensor, "p l d"], None]:
         """
         Applies linear interpolation perturbation between the baseline and the original embeddings.
 

@@ -29,7 +29,7 @@ Basic standard classes for attribution methods
 from __future__ import annotations
 
 import itertools
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from dataclasses import dataclass
 from enum import Enum
@@ -41,12 +41,13 @@ from jaxtyping import Float, Int, jaxtyped
 from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.perturbations.base import Perturbator
+from interpreto.attributions.perturbations.base import MaskPerturbator, Perturbator, TensorPerturbator, TextMaskPerturbator, TextTensorPerturbator
 from interpreto.commons import Granularity
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
+from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
+from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
+from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
@@ -220,7 +221,7 @@ class AttributionOutput:
     # This should be thoroughly tested.
 
 
-class AttributionExplainer:
+class AttributionExplainer(ABC):
     """
     Abstract base class for attribution explainers.
 
@@ -229,6 +230,8 @@ class AttributionExplainer:
     """
 
     _associated_inference_wrapper = InferenceWrapper
+    base_tensor_perturbator_class: type[TensorPerturbator]
+    base_mask_perturbator_class: type[MaskPerturbator]
 
     def __init__(
         self,
@@ -494,7 +497,7 @@ class AttributionExplainer:
                 inputs=inputs,  # type: ignore
                 tokenizer=self.tokenizer,
                 aggregate_inputs=self.inference_wrapper.gradients,  # Gradient-based methods
-                aggregate_targets=isinstance(self.inference_wrapper, GenerationInferenceWrapper),  # Generation models
+                aggregate_targets=isinstance(self.inference_wrapper, TextGenerationInferenceWrapper),  # Generation models
             )
             for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
         )
@@ -547,13 +550,14 @@ class AttributionExplainer:
         return self.explain(model_inputs, targets, **kwargs)
 
 
-class ClassificationAttributionExplainer(AttributionExplainer):
+class TextClassificationAttributionExplainer(AttributionExplainer):
     """
     Attribution explainer for classification models
     """
 
-    _associated_inference_wrapper = ClassificationInferenceWrapper
-    inference_wrapper: ClassificationInferenceWrapper
+    associated_inference_wrapper: TextClassificationInferenceWrapper
+    base_tensor_perturbator_class = TextTensorPerturbator
+    base_mask_perturbator_class = TextMaskPerturbator
 
     def process_targets(
         self, targets: ClassificationTarget, expected_length: int | None = None
@@ -697,13 +701,10 @@ class ClassificationAttributionExplainer(AttributionExplainer):
         return ModelTask.CLASSIFICATION, contribution
 
 
-class GenerationAttributionExplainer(AttributionExplainer):
-    """
-    Attribution explainer for generation models
-    """
-
-    _associated_inference_wrapper = GenerationInferenceWrapper
-    inference_wrapper: GenerationInferenceWrapper
+class TextGenerationExplainer(AttributionExplainer):
+    associated_inference_wrapper: TextGenerationInferenceWrapper
+    base_tensor_perturbator_class = TextTensorPerturbator
+    base_mask_perturbator_class = TextMaskPerturbator
 
     def normalize_target_ids_with_leading_space(self, target: torch.Tensor) -> torch.Tensor:
         """Ensure target text starts with a space and return retokenized target ids."""
@@ -861,10 +862,10 @@ class MultitaskExplainerMixin(AttributionExplainer):
         if isinstance(cls, FactoryGeneratedMeta):
             return super().__new__(cls)  # type: ignore
         if model.__class__.__name__.endswith("ForSequenceClassification"):
-            t = FactoryGeneratedMeta("Classification" + cls.__name__, (cls, ClassificationAttributionExplainer), {})
+            t = FactoryGeneratedMeta("Classification" + cls.__name__, (cls, TextClassificationAttributionExplainer), {})
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
-            t = FactoryGeneratedMeta("Generation" + cls.__name__, (cls, GenerationAttributionExplainer), {})
+            t = FactoryGeneratedMeta("Generation" + cls.__name__, (cls, TextGenerationExplainer), {})
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         raise NotImplementedError(
             "Model type not supported for Explainer. Use a ModelForSequenceClassification, a ModelForCausalLM model or a LMHeadModel model."

@@ -36,38 +36,16 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.base import Perturbator
+from interpreto.attributions.perturbations.base import MaskPerturbator, TensorPerturbator
 from interpreto.commons.image_granularity import ImageGranularity
 from interpreto.typing import TensorMapping
 
 
-class ImagePerturbator(Perturbator):
+
+
+class ImageTensorPerturbator(TensorPerturbator):
     """
-    No-op image-side perturbator.
-
-    Mirrors the text-side `Perturbator` no-op with `pixel_values` substituted
-    for `input_ids`. Returns the input unchanged with `mask=None`; the default
-    `Aggregator` ignores the mask, which is the correct placeholder for
-    gradient-based methods like Saliency.
-
-    The perturbation dimension is the leading axis of `pixel_values`, which
-    `BatchFeature` from a ViT `image_processor` already provides as `1`
-    (shape `(1, 3, H, W)`). Unlike text — where the tokenizer can yield 1D
-    `input_ids` that need unsqueezing — no shape massage is required here.
-
-    For perturbation-based methods (Occlusion, LIME, KernelShap, Sobol),
-    subclass and override `perturb` to produce a `(p, 3, H, W)` batch of
-    perturbed pixel_values and a matching `(p, g)` mask, mirroring the role
-    of `IdsPerturbator` on the text side.
-    """
-
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        return model_inputs, None
-
-
-class ImageEmbeddingsPerturbator(ImagePerturbator):
-    """
-    Image-side analog of `EmbeddingsPerturbator`.
+    Image-side analog of `TextTensorPerturbator`.
 
     Operates directly on `pixel_values` of shape `(1, 3, H, W)`. Despite the
     "Embeddings" name (kept for naming symmetry with the text side), this
@@ -75,7 +53,7 @@ class ImageEmbeddingsPerturbator(ImagePerturbator):
     `inputs_embedder` on the text side, because `pixel_values` is already a
     float tensor straight from the image processor.
 
-    Subclasses override `perturb_embeds` to produce a `(p, 3, H, W)` batch.
+    Subclasses override `perturb_tensor` to produce a `(p, 3, H, W)` batch.
     The returned mask is `None`; granularity is applied post-hoc by the
     aggregator via `granularity_score_aggregation(..., aggregate_inputs=True)`.
     Used by gradient-style methods (Saliency, SmoothGrad, IntegratedGradient).
@@ -90,12 +68,12 @@ class ImageEmbeddingsPerturbator(ImagePerturbator):
 
         perturbed_embeds: Float[torch.Tensor, "p 3 H W"]
         mask: Float[torch.Tensor, "p g"] | None
-        perturbed_embeds, mask = self.perturb_embeds(pixel_values)
+        perturbed_embeds, mask = self.perturb_tensor(pixel_values)
 
         inputs["pixel_values"] = perturbed_embeds
         return inputs, mask
 
-    def perturb_embeds(
+    def perturb_tensor(
         self, pixel_values: Float[torch.Tensor, "1 3 H W"]
     ) -> tuple[Float[torch.Tensor, "p 3 H W"], Float[torch.Tensor, "p g"] | None]:
         """
@@ -110,7 +88,7 @@ class ImageEmbeddingsPerturbator(ImagePerturbator):
         return pixel_values, None
 
 
-class ImageMaskPerturbator(ImagePerturbator):
+class ImageMaskPerturbator(MaskPerturbator):
     """
     Image-side analog of `IdsPerturbator`.
 

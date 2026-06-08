@@ -40,9 +40,9 @@ from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.base import ClassificationAttributionExplainer
+from interpreto.attributions.base import AttributionExplainer
 from interpreto.attributions.perturbations.base import Perturbator
-from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator, ImagePerturbator
+from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator, ImageTensorPerturbator
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.commons.image_granularity import ImageGranularity
@@ -113,7 +113,7 @@ class ImageAttributionOutput:
     raw_image: PILImage | np.ndarray | torch.Tensor | None = None
 
 
-class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer):
+class ImageClassificationAttributionExplainer(AttributionExplainer):
     """
     Attribution explainer for image-classification models (ViT-family).
 
@@ -125,8 +125,9 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
     where the granularity API differs.
     """
 
-    _associated_inference_wrapper = ImageClassificationInferenceWrapper
-    inference_wrapper: ImageClassificationInferenceWrapper
+    associated_inference_wrapper: ImageClassificationInferenceWrapper
+    base_tensor_perturbator_class = ImageTensorPerturbator
+    base_mask_perturbator_class = ImageMaskPerturbator
 
     def __init__(
         self,
@@ -166,7 +167,7 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
             device=device,
             mode=inference_mode,
         )  # type: ignore
-        self.perturbator = perturbator or ImagePerturbator()
+        self.perturbator = perturbator or ImageTensorPerturbator()
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.granularity_aggregation_strategy = granularity_aggregation_strategy
@@ -182,6 +183,136 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
         # stops storing patch_size; explainer passes it into perturb() at call time).
         if isinstance(self.perturbator, ImageMaskPerturbator):
             self.perturbator.patch_size = self.patch_size
+
+    def process_targets(
+        self, targets: ClassificationTarget, expected_length: int | None = None
+    ) -> list[Int[torch.Tensor, "t"]]:
+        """
+        Normalize classification targets into a list of 1D integer tensors.
+
+        Args:
+            targets (int | torch.Tensor | Iterable[int] | Iterable[torch.Tensor]):
+                The classification target(s). Supported formats include:
+                - int: Interpreted as a single target.
+                - torch.Tensor:
+                    * 1D tensors are treated as a sequence of individual targets.
+                    * 2D tensors must have shape (n, t), where `n` is the number of targets.
+                - Iterable[int]: Each integer is treated as a separate target.
+                - Iterable[torch.Tensor]: Each tensor must be 1D and contain integers.
+
+            expected_length (int | None, optional):
+                If specified, validates that the number of targets matches this expected length.
+
+        Returns:
+            Iterable[torch.Tensor]
+                A list of 1D integer tensors, one per input instance.
+
+        Raises:
+            ValueError
+                - If the number of targets does not match `expected_length`.
+            TypeError
+                - If the type of `targets` is unsupported.
+                - If tensor targets are not 1D or 2D.
+                - If tensor values are not integers.
+        """
+        # integer
+        if isinstance(targets, int):
+            if expected_length is not None and expected_length != 1:
+                raise ValueError(
+                    "Mismatch between the inputs and targets length."
+                    + f" Target is a single integer, but the length of the inputs is {expected_length}."
+                )
+            return [torch.tensor([targets])]
+
+        # tensor
+        if isinstance(targets, torch.Tensor):
+            if targets.ndim == 1:
+                # one dimensional tensors are treated as iterable of integer targets
+                targets = targets.unsqueeze(-1)
+            if expected_length is not None and expected_length != targets.shape[0]:
+                raise ValueError(
+                    "Mismatch between the inputs and targets length."
+                    + f" Target tensor of {targets.shape[0]} elements, but the length of the inputs is {expected_length}."
+                )
+            if targets.ndim != 2:
+                raise TypeError(
+                    "Target tensor must be one-dimensional or two-dimensional."
+                    + f" Target tensor has {targets.ndim} dimensions."
+                )
+            if torch.is_floating_point(targets):
+                raise TypeError("Target tensor must be integers.")
+            return list(targets.unbind(dim=0))
+
+        # iterable
+        if isinstance(targets, Iterable):
+            if expected_length is not None and len(targets) != expected_length:  # type: ignore
+                raise ValueError(
+                    "Mismatch between the inputs and targets length."
+                    + f" Target is an iterable of {len(targets)} elements, but the length of the inputs is {expected_length}."  # type: ignore
+                )
+
+            # iterable[int]
+            if all(isinstance(t, int) for t in targets):
+                return [torch.tensor([target]) for target in targets]
+
+            # iterable[torch.Tensor]
+            iterable_targets: list[torch.Tensor] = list(targets)  # type: ignore
+            if all(isinstance(t, torch.Tensor) for t in iterable_targets):
+                if any(target.ndim != 1 for target in iterable_targets):
+                    raise TypeError("If the targets are iterable of tensors, the tensors must be one-dimensional.")
+                if any(torch.is_floating_point(target) for target in iterable_targets):
+                    raise TypeError("If the targets are iterable of tensors, they must be integers.")
+                return iterable_targets
+
+        raise TypeError(f"Target type {type(targets)} not supported.")
+
+    def process_inputs_to_explain_and_targets(
+        self,
+        model_inputs: list[TensorMapping],
+        targets: ClassificationTarget | None = None,
+    ) -> tuple[list[TensorMapping], list[Int[torch.Tensor, "t"]]]:
+        """
+        Pre-processes model inputs and classification targets for explanation.
+
+        This method ensures that:
+        - If `targets` are not provided, they are computed by performing inference on `model_inputs` and selecting the predicted class using `argmax`.
+        - The `targets` are then validated and converted using `self.process_targets`, ensuring the same length as `model_inputs`.
+
+        Args:
+        model_inputs : Iterable[TensorMapping]
+            A batch of input mappings, typically containing tokenized inputs such as "input_ids", "attention_mask", etc.
+
+        targets : int | torch.Tensor | Iterable[int] | Iterable[torch.Tensor] | None, optional
+            Classification targets for each input. If None, targets are computed using model inference
+            by selecting the index with the highest logit value for each input.
+
+        Returns
+        -------
+        tuple[Iterable[TensorMapping], Iterable[torch.Tensor]]
+            - model_inputs_to_explain: List of tokenized input mappings with required explanation metadata (e.g., special tokens mask).
+            - sanitized_targets: List of 1D integer tensors, each corresponding to a target label for an input.
+
+        Raises
+        ------
+        ValueError
+            If the provided or inferred targets do not match the number of input instances, or if their format is invalid.
+        """
+        sanitized_targets: list[Int[torch.Tensor, "t"]]
+        if targets is None:
+            # compute targets from logits if not provided
+            # inputs have already been split, so we only need to select the first element
+            sanitized_targets = [t[0] for t in self.inference_wrapper(model_inputs)]
+        else:
+            # process targets and ensure they have the same length as inputs
+            sanitized_targets = self.process_targets(targets, expected_length=len(model_inputs))
+
+        return model_inputs, sanitized_targets
+
+    def post_processing(self, contribution: Float[torch.Tensor, "t l"]):
+        """
+        stub implemented because post_processing is an abstact_method
+        """
+        pass
 
     def process_model_inputs(self, model_inputs: ModelInputs) -> list[TensorMapping]:
         """
@@ -281,7 +412,8 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
             targets,  # type: ignore
         )
 
-        # Preserve each user-supplied raw image alongside its sanitized BatchFeature so
+        # Preserve each user-supplied raw image alongside its
+        #  sanitized BatchFeature so
         # the per-sample ImageAttributionOutput can carry it for visualization. The
         # post-normalization pixel_values in model_inputs_to_explain are not directly
         # displayable. None for samples that came in as BatchFeature or under preprocess=False.
@@ -355,13 +487,9 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
             raw_images,
             strict=True,
         ):
-            # post_processing is inherited from ClassificationAttributionExplainer and
-            # still returns a (ModelTask, contribution) tuple for text compatibility; the
-            # image output no longer carries the task tag, so we discard it here.
-            _, clean_contribution = self.post_processing(contribution)
 
             attribution_output = ImageAttributionOutput(
-                attributions=clean_contribution,
+                attributions=contribution,
                 elements=elements,
                 model_inputs_to_explain=model_input,
                 targets=target.cpu(),

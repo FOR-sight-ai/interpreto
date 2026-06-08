@@ -36,7 +36,7 @@ from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import IdsPerturbator
+from interpreto.attributions.perturbations.base import TextMaskPerturbator
 from interpreto.commons.granularity import Granularity
 
 
@@ -50,7 +50,7 @@ class SequenceSamplers(Enum):
     LatinHypercube = qmc.LatinHypercube
 
 
-class SobolTokenPerturbator(IdsPerturbator):
+class SobolTokenPerturbator(TextMaskPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,

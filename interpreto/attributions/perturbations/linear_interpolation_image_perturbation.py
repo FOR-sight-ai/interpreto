@@ -30,11 +30,11 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.image_base import ImageEmbeddingsPerturbator
+from interpreto.attributions.perturbations.image_base import ImageTensorPerturbator
 from interpreto.typing import TensorBaseline
 
 
-class LinearInterpolationImagePerturbator(ImageEmbeddingsPerturbator):
+class LinearInterpolationImagePerturbator(ImageTensorPerturbator):
     """
     Image-side analog of `LinearInterpolationPerturbator`.
 
@@ -96,7 +96,7 @@ class LinearInterpolationImagePerturbator(ImageEmbeddingsPerturbator):
         return torch.linspace(0, 1, self.n_perturbations, device=device).view(-1, *([1] * (len(shape) - 1)))
 
     @jaxtyped(typechecker=beartype)
-    def perturb_embeds(
+    def perturb_tensor(
         self, pixel_values: Float[torch.Tensor, "1 3 H W"]
     ) -> tuple[Float[torch.Tensor, "p 3 H W"], None]:
         """
