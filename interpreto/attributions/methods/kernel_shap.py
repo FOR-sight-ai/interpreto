@@ -38,10 +38,10 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     LinearRegressionAggregator,
 )
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin, setup_token_ids
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.concepts.base import ModelForInputsToConcepts
-from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 
 
 class KernelShap(MultitaskExplainerMixin, AttributionExplainer):

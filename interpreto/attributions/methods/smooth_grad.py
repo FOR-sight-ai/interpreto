@@ -35,9 +35,9 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations import MeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.attributions.perturbations import GaussianNoisePerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
-from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 
 
 class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):

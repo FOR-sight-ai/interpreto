@@ -35,6 +35,7 @@ import torch
 from transformers import AutoModelForMaskedLM
 
 from interpreto import ModelWithSplitPoints
+from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.interpretations import LLMLabels
 from interpreto.concepts.interpretations.llm_labels import (
@@ -46,7 +47,6 @@ from interpreto.concepts.interpretations.llm_labels import (
     _sample_random,
     _sample_top,
 )
-from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

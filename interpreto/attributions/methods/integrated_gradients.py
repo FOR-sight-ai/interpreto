@@ -35,9 +35,9 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations import TrapezoidalMeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.attributions.perturbations import LinearInterpolationPerturbator
 from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
-from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 
 
 class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):

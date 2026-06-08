@@ -32,8 +32,8 @@ import torch
 from tqdm import tqdm
 
 from interpreto import ModelWithSplitPoints
-from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.commons.llm_interface import LLMInterface, Role
+from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
 

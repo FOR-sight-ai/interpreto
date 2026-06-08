@@ -58,9 +58,9 @@ import pytest
 import torch
 
 from interpreto import ModelWithSplitPoints
+from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.consim import ConSim, PromptTypes
-from interpreto.commons.llm_interface import LLMInterface, Role
 
 AG = ModelWithSplitPoints.activation_granularities
 

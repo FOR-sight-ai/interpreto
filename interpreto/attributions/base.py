@@ -41,17 +41,17 @@ from jaxtyping import Float, Int, jaxtyped
 from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.perturbations.base import Perturbator
-from interpreto.commons import Granularity
-from interpreto.commons.generator_tools import split_iterator
-from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.concepts.base import ModelForInputsToConcepts
 from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
 from interpreto.attributions.inference_wrappers.generation_inference_wrapper import GenerationInferenceWrapper
 from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes, InferenceWrapper
 from interpreto.attributions.inference_wrappers.inputs_to_concepts_inference_wrapper import (
     InputsToConceptsInferenceWrapper,
 )
+from interpreto.attributions.perturbations.base import Perturbator
+from interpreto.commons import Granularity
+from interpreto.commons.generator_tools import split_iterator
+from interpreto.commons.granularity import GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
