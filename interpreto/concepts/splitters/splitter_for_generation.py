@@ -490,13 +490,14 @@ class SplitterForGeneration(BaseSplitter):
     def get_latent_shape(self) -> torch.Size:
         """Get the shape of the latent activations at the split point.
 
-        Uses NNsight's scan to determine the shape without running a full forward pass.
+        Uses a short real trace instead of NNsight's scan. Some causal LMs, such as
+        Qwen3, run RoPE autocast checks that reject the fake/meta device used by
+        scan.
 
         Returns:
             torch.Size: Shape of the activations at the split point (typically ``(1, l, d)``).
         """
-        shape = None
-        with self.scan("scan"):
+        with self.trace("scan") as tracer:
             curr_module = self.get(self._split_point)
             module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
             module = getattr(curr_module, module_out_name)
@@ -505,5 +506,6 @@ class SplitterForGeneration(BaseSplitter):
                     if candidate.dim() == 3:
                         module = candidate
                         break
-            shape = nnsight.save(module.shape)  # type: ignore
+            shape = module.shape.save()  # type: ignore
+            tracer.stop()
         return shape

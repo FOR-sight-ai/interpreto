@@ -62,7 +62,7 @@ def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_toke
 
 
 def test_get_latent_shape(split_gen: SFG):
-    """``get_latent_shape`` returns the scanned split-point hidden-state shape."""
+    """``get_latent_shape`` returns the traced split-point hidden-state shape."""
     shape = split_gen.get_latent_shape()
     expected_hidden = split_gen._model.config.hidden_size
 
