@@ -171,6 +171,7 @@ def test_get_activations_returns_tuple(splitted_encoder_ml: MWSP, sentences: lis
     """Activation extraction returns the split activations and optional predictions directly."""
     activations, predictions = splitted_encoder_ml.get_activations(sentences, activation_granularity=AG.ALL_TOKENS)
     assert isinstance(activations, torch.Tensor), "get_activations should return a tensor when flattened"
+    assert activations.dtype == torch.float32
     assert predictions is None, "Predictions should be None unless include_predicted_classes=True is requested"
 
 
@@ -225,6 +226,8 @@ def test_flatten_activations(
         "get_activations returned a non-tensor with `flatten_activations=True`"
     )
     assert isinstance(sample_wise_acts, list), "get_activations returned a non-list with `flatten_activations=False`"
+    assert concatenated_acts.dtype == torch.float32
+    assert all(acts.dtype == torch.float32 for acts in sample_wise_acts)
 
     assert len(sample_wise_acts) == len(sentences), (
         f"get_activations with `flatten_activations=False` returned {len(sample_wise_acts)} activations, "

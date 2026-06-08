@@ -226,8 +226,11 @@ class SplitterForGeneration(BaseSplitter):
         # manage the output tuple and extract the (n, l, d) activations from it
         full_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(outputs, self.split_point)
 
-        # filter out special tokens
-        granular_activations = [acts.cpu()[mask] for acts, mask in zip(full_activations, tokens_mask, strict=True)]
+        # filter out special tokens and expose public activations as float32.
+        granular_activations = [
+            acts[mask].detach().to(device="cpu", dtype=torch.float32, copy=True)
+            for acts, mask in zip(full_activations, tokens_mask, strict=True)
+        ]
 
         # flatten activations
         if flatten_activations:
@@ -295,9 +298,9 @@ class SplitterForGeneration(BaseSplitter):
 
                 batch_acts: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(batch_outputs, self._split_point)
 
-                # filter out special tokens
+                # filter out special tokens and expose public activations as float32.
                 for acts, mask in zip(batch_acts, tokens_mask, strict=True):
-                    all_activations.append(acts.cpu()[mask])
+                    all_activations.append(acts[mask].detach().to(device="cpu", dtype=torch.float32, copy=True))
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -422,11 +425,16 @@ class SplitterForGeneration(BaseSplitter):
                 activations: Float[torch.Tensor, "bg d"] = raw_activations.flatten(0, 1)[tokens_mask.flatten()]
 
                 # Encode activations into concepts
-                concept_activations: Float[torch.Tensor, "bg c"] = activations_to_concepts(activations)
+                concept_activations: Float[torch.Tensor, "bg c"] = activations_to_concepts(
+                    activations.to(dtype=torch.float32)
+                )
                 del activations
 
                 # Decode concepts back into activations (n, l, d)
-                decoded_activations: Float[torch.Tensor, "bg d"] = concepts_to_activations(concept_activations)
+                decoded_activations: Float[torch.Tensor, "bg d"] = concepts_to_activations(concept_activations).to(
+                    device=raw_activations.device,
+                    dtype=raw_activations.dtype,
+                )
 
                 # Reintegrate decoded activations back into the full sequence and into the model
                 self._reintegrate_activations(

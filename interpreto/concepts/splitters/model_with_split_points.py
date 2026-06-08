@@ -567,6 +567,8 @@ class ModelWithSplitPoints(BaseSplitter):
         Returns:
             Float[torch.Tensor, "n l d"]: The reintegrated activations tensor.
         """
+        new_activations = new_activations.to(device=initial_activations.device, dtype=initial_activations.dtype)
+
         match activation_granularity:
             case AG.CLS_TOKEN:
                 # reintegrate the reconstructed CLS token activations into the initial activations
@@ -685,6 +687,9 @@ class ModelWithSplitPoints(BaseSplitter):
             activation_granularity=activation_granularity,
             aggregation_strategy=aggregation_strategy,
         )
+        granular_activations = [
+            act.detach().to(device="cpu", dtype=torch.float32, copy=True) for act in granular_activations
+        ]
 
         if flatten_activations:
             return torch.cat(granular_activations, dim=0)
@@ -927,7 +932,9 @@ class ModelWithSplitPoints(BaseSplitter):
                     aggregation_strategy=aggregation_strategy,
                 )
 
-                activations.extend(granular_activations)
+                activations.extend(
+                    act.detach().to(device="cpu", dtype=torch.float32, copy=True) for act in granular_activations
+                )
 
                 if include_predicted_classes:
                     if not flatten_activations:
@@ -1152,7 +1159,9 @@ class ModelWithSplitPoints(BaseSplitter):
                 flattened_activations: Float[torch.Tensor, ng, d] = torch.cat(selected_activations, dim=0)
 
                 # encode activations into concepts
-                concept_activations: Float[torch.Tensor, "{ng} c"] = activations_to_concepts(flattened_activations)
+                concept_activations: Float[torch.Tensor, "{ng} c"] = activations_to_concepts(
+                    flattened_activations.to(dtype=torch.float32)
+                )
                 del selected_activations, flattened_activations
                 c = concept_activations.shape[-1]
 

@@ -120,6 +120,7 @@ def test_get_activation_and_gradient(repo_id, sentences):
         f"Activations shape mismatch: got {tuple(activations.shape)}, "  # type: ignore
         f"expected {expected_activations_shape}"
     )
+    assert activations.dtype == torch.float32
 
     # predictions
     assert predictions is not None, "Predictions are None"

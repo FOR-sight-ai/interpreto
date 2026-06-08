@@ -79,6 +79,24 @@ def test_get_activations_returns_flattened_tokens_by_default(split_gen: SFG, sen
     assert isinstance(activations, torch.Tensor), "Flattened activations should be returned as a tensor"
     assert activations.ndim == 2, f"Expected flattened token activations with shape (ng, d), got {activations.shape}"
     assert activations.shape[-1] == split_gen._model.config.hidden_size
+    assert activations.dtype == torch.float32
+
+
+def test_get_activations_casts_bfloat16_model_outputs_to_float32(sentences: list[str]):
+    """Public activations are float32 even when the generation model runs in bfloat16."""
+    splitter = SFG(
+        REPO_ID,
+        split_point=SPLIT_POINT,
+        batch_size=2,
+        device_map="cpu",
+    )
+    splitter._model.to(torch.bfloat16)
+
+    activations, predictions = splitter.get_activations(sentences[:2])
+
+    assert predictions is None
+    assert isinstance(activations, torch.Tensor)
+    assert activations.dtype == torch.float32
 
 
 @pytest.mark.parametrize("include_all_tokens", [False, True])
@@ -102,6 +120,8 @@ def test_flatten_activations_matches_sample_wise_activations(
     assert sample_wise_predictions is None
     assert isinstance(flattened_acts, torch.Tensor), "Flattened activations should be a tensor"
     assert isinstance(sample_wise_acts, list), "Sample-wise activations should be returned as a list"
+    assert flattened_acts.dtype == torch.float32
+    assert all(acts.dtype == torch.float32 for acts in sample_wise_acts)
     assert len(sample_wise_acts) == len(sentences), (
         f"Expected one activation tensor per input, got {len(sample_wise_acts)} for {len(sentences)} inputs"
     )
