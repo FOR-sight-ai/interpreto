@@ -45,11 +45,11 @@ from collections.abc import Callable
 from math import ceil
 from typing import Any
 
-import nnsight
 import torch
 from jaxtyping import Bool, Float
 from tqdm import tqdm
 from transformers import (
+    AutoModel,
     AutoModelForCausalLM,
     PretrainedConfig,
     PreTrainedModel,
@@ -150,7 +150,7 @@ class SplitterForGeneration(BaseSplitter):
         self,
         inputs: list[str] | Float[torch.Tensor, "n l"],
         include_special_tokens: bool = False,
-    ) -> tuple[TensorMapping, Bool[torch.Tensor, "n l"] | None]:
+    ) -> tuple[TensorMapping, Bool[torch.Tensor, "n l"]]:
         """Tokenize and compute a mask of activations to keep.
 
         Args:
@@ -184,13 +184,14 @@ class SplitterForGeneration(BaseSplitter):
                 padding=True,
                 truncation=True,
             )
+            attention_mask: torch.Tensor = tokenized["attention_mask"]  # type: ignore
 
             # just filters out padding
             if include_special_tokens:
-                return tokenized, tokenized["attention_mask"]
+                return tokenized, attention_mask  # type: ignore
 
             # filter out  padding and special tokens
-            tokens_mask = tokenized["attention_mask"].bool() & ~tokenized.pop("special_tokens_mask").bool()
+            tokens_mask = attention_mask.bool() & ~tokenized.pop("special_tokens_mask").bool()
             return tokenized, tokens_mask
 
         raise ValueError(f"Unexpected input type: {type(inputs)}")

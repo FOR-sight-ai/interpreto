@@ -858,6 +858,8 @@ class ModelWithSplitPoints(BaseSplitter):
         activations: list[LatentActivations] = []
         predictions: list[torch.Tensor] = []
 
+        sp_module = self.get(self._split_point)
+
         # iterate over batch of inputs
         with torch.no_grad():
             # several call of the same model should be grouped in an nnsight session
@@ -898,28 +900,26 @@ class ModelWithSplitPoints(BaseSplitter):
                 # all model calls use trace with nnsight
                 # call model forward pass and save split point outputs
                 with self.trace(tokenized_inputs, **forward_kwargs) as tracer:
-                    # nnsight quick way to obtain the activations for the split point
-                    batch_activations = tracer.cache(modules=[self.get(self._split_point)])  # type: ignore
+                    output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
+                    batch_outputs = getattr(sp_module, output_name).save()
 
                     # for classification optionally compute and save the predictions
                     if include_predicted_classes:
                         batch_predictions: Float[torch.Tensor, "n"] = (
                             self.output.logits.argmax(dim=-1).cpu().save()  # type: ignore  (under specification from NNsight)
                         )
+                    else:
+                        tracer.stop()
 
                 # free memory after each batch, necessary with nnsight, overwise, memory piles up
                 torch.cuda.empty_cache()
 
                 # ------------------------------------------------------------------------------
                 # apply granularity selection and aggregation of activations and predictions
-                sp = self._split_point
-                # extracting the activations for the split point
-                sp_module = batch_activations["model." + sp]
-                output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
-                batch_outputs = getattr(sp_module, output_name)
-
                 # manage the output tuple and extract the (n, l, d) activations from it
-                batch_sp_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(batch_outputs, sp)
+                batch_sp_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(
+                    batch_outputs, self._split_point
+                )
 
                 # select relevant activations with respect to the granularity strategy
                 # potentially aggregate activations over the granularity elements
