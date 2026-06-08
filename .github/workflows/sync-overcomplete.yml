@@ -26,6 +26,10 @@ jobs:
         
       - name: Apply vendored patch
         run: |
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "No vendored changes to patch."
+            exit 0
+          fi
           git apply --check interpreto/_vendor/overcomplete/overcomplete.patch
           git apply --whitespace=fix interpreto/_vendor/overcomplete/overcomplete.patch
         
