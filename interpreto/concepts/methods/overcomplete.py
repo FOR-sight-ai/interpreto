@@ -225,16 +225,6 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         )
         super().__init__(model_with_split_points, concept_model)
 
-    @property
-    def device(self) -> torch.device:
-        """Get the device on which the concept model is stored."""
-        return next(self.concept_model.parameters()).device
-
-    @device.setter
-    def device(self, device: torch.device) -> None:
-        """Set the device on which the concept model is stored."""
-        self.concept_model.to(device)
-
     def fit(
         self,
         activations: LatentActivations,

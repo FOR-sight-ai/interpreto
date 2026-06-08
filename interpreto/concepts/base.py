@@ -221,6 +221,33 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
     def is_fitted(self) -> bool:
         return self.__is_fitted
 
+    @property
+    def device(self) -> torch.device:
+        """Return the device of the concept model, independent of the splitter device."""
+        concept_model = self.concept_model
+        if isinstance(concept_model, torch.nn.Module):
+            try:
+                return next(concept_model.parameters()).device
+            except StopIteration:
+                try:
+                    return next(concept_model.buffers()).device
+                except StopIteration:
+                    pass
+        return torch.device(getattr(concept_model, "device", "cpu"))
+
+    def to(self, device: torch.device | str) -> None:
+        """Move only the concept model to ``device``; the splitter remains user-managed."""
+        device = torch.device(device)
+        if hasattr(self.concept_model, "to"):
+            self.concept_model.to(device)  # type: ignore[call-arg]
+        if hasattr(self.concept_model, "device"):
+            self.concept_model.device = device  # type: ignore[attr-defined]
+
+    @device.setter
+    def device(self, device: torch.device) -> None:
+        """Set the device on which the concept model is stored."""
+        self.to(device)
+
     @abstractmethod
     def fit(self, activations: LatentActivations, *args, **kwargs) -> Any:
         """Fits `concept_model` on the given activations.
@@ -313,9 +340,8 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The encoded concept activations.
         """
-        if hasattr(self.concept_model, "device") and self.concept_model.device != activations.device:
-            activations = activations.to(self.concept_model.device, non_blocking=True)
-            self.concept_model.to(activations.device)
+        if self.device != activations.device:
+            activations = activations.to(self.device, non_blocking=True)
         return self.concept_model.encode(activations)  # type: ignore
 
     @check_fitted
@@ -328,9 +354,8 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The decoded model activations.
         """
-        if hasattr(self.concept_model, "device") and self.concept_model.device != concepts.device:
-            concepts = concepts.to(self.concept_model.device, non_blocking=True)
-            self.concept_model.to(concepts.device)
+        if self.device != concepts.device:
+            concepts = concepts.to(self.device, non_blocking=True)
         return self.concept_model.decode(concepts)  # type: ignore
 
     @check_fitted
