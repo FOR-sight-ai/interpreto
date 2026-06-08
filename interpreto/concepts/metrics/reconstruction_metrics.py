@@ -26,6 +26,8 @@ from __future__ import annotations
 
 from enum import Enum
 
+import torch
+
 from interpreto.commons.distances import DistanceFunctionProtocol, DistanceFunctions
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.typing import ConceptsActivations, LatentActivations
@@ -79,11 +81,13 @@ class ReconstructionError:
         Returns:
             float: The reconstruction error.
         """
-        concepts_activations: ConceptsActivations = self.concept_explainer.activations_to_concepts(latent_activations)
-
-        reconstructed_latent_activations: LatentActivations = self.concept_explainer.concepts_to_activations(
-            concepts_activations
-        )
+        with torch.no_grad():
+            concepts_activations: ConceptsActivations = self.concept_explainer.activations_to_concepts(
+                latent_activations
+            )
+            reconstructed_latent_activations: LatentActivations = self.concept_explainer.concepts_to_activations(
+                concepts_activations
+            )
 
         latent_activations = latent_activations.to(reconstructed_latent_activations.device)
 

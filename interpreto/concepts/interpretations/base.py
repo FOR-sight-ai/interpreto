@@ -221,9 +221,6 @@ class BaseConceptInterpretationMethod(ABC):
             see `interpreto.concepts.interpretations.topk_inputs.extract_ngrams` for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
-        concept_model_device (torch.device | str | None):
-            The device to use for the concept model forward pass.
-            If None, does not change the device.
     """
 
     def __init__(
@@ -235,7 +232,6 @@ class BaseConceptInterpretationMethod(ABC):
         use_vocab: bool = False,
         use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
-        concept_model_device: torch.device | str | None = None,
     ):
         if activation_granularity is None:
             if isinstance(concept_explainer.splitter, SplitterForClassification):
@@ -264,7 +260,6 @@ class BaseConceptInterpretationMethod(ABC):
         self.use_vocab: bool = use_vocab
         self.use_unique_words: int = int(use_unique_words)
         self.unique_words_kwargs: dict = unique_words_kwargs
-        self.concept_model_device: torch.device | str | None = concept_model_device
 
     @abstractmethod
     def interpret(
@@ -326,24 +321,15 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if latent_activations is not None:
-            device: str | torch.device = self.concept_model_device if self.concept_model_device is not None else "cpu"
-            if self.concept_model_device is not None:
-                if hasattr(self.concept_explainer.concept_model, "to"):
-                    device = self.concept_explainer.concept_model.device
-                    self.concept_explainer.concept_model.to(device)  # type: ignore
-
             # batch over latent activations for concept encoding
             concepts_activations_list = []
-            for batch_idx in range(0, latent_activations.shape[0], self.concept_encoding_batch_size):
-                # extract and encode a batch of latent activations
-                batch_latent_activations = latent_activations[batch_idx : batch_idx + self.concept_encoding_batch_size]
-
-                # concept model forward pass
-                batch_latent_activations = batch_latent_activations.to(device)
-                batch_concepts_activations = self.concept_explainer.activations_to_concepts(batch_latent_activations)
-                batch_latent_activations.cpu()
-
-                concepts_activations_list.append(batch_concepts_activations.cpu())
+            with torch.no_grad():
+                for batch_idx in range(0, latent_activations.shape[0], self.concept_encoding_batch_size):
+                    # concept model forward pass
+                    batch_concepts_activations = self.concept_explainer.activations_to_concepts(
+                        latent_activations[batch_idx : batch_idx + self.concept_encoding_batch_size]
+                    ).cpu()
+                    concepts_activations_list.append(batch_concepts_activations)
             concepts_activations = torch.cat(concepts_activations_list, dim=0)
             return concepts_activations
 
@@ -410,7 +396,7 @@ class BaseConceptInterpretationMethod(ABC):
                 )
 
             # repeat the template and replace "a" token ids by the vocabulary ids
-            repeated_template_ids = template_ids.repeat(vocab_size, 1)
+            repeated_template_ids = template_ids.repeat(vocab_size, 1)  # type: ignore
             repeated_template_ids[:, 1] = input_ids[:, 0]
 
             # compute the vocabulary's latent activations
@@ -420,7 +406,8 @@ class BaseConceptInterpretationMethod(ABC):
             )
 
         # compute the vocabulary's concepts activations
-        concepts_activations = self.concept_explainer.activations_to_concepts(latent_activations)
+        with torch.no_grad():
+            concepts_activations = self.concept_explainer.activations_to_concepts(latent_activations)
         return inputs, concepts_activations
 
     @jaxtyped(typechecker=beartype)

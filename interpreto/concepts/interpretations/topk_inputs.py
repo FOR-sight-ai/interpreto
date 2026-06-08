@@ -89,10 +89,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
             See [`extract_ngrams`][interpreto.concepts.interpretations.extract_ngrams] for more details.
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
-        concept_model_device (torch.device | str | None):
-            The device to use for the concept model forward pass.
-            If None, does not change the device.
-
     Examples:
         **Minimal example**, finding the topk tokens activating a neuron:
         >>> from transformers import AutoModelForCausalLM
@@ -204,7 +200,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
         ...     concept_explainer=concept_explainer,
         ...     activation_granularity=WORD,    # we want the topk words for each concept
         ...     k=10,                           # get the top 10 words for each concept
-        ...     device="cuda",
         ... )
         >>>
         >>> topk_tokens = method.interpret(
@@ -228,7 +223,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
         use_vocab: bool = False,
         use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
-        concept_model_device: torch.device | str | None = None,
     ):
         super().__init__(
             concept_explainer=concept_explainer,
@@ -238,7 +232,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
-            concept_model_device=concept_model_device,
         )
 
         self.k = k
