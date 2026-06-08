@@ -40,7 +40,7 @@ from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.base import ClassificationAttributionExplainer, ModelTask
+from interpreto.attributions.base import ClassificationAttributionExplainer
 from interpreto.attributions.perturbations.base import Perturbator
 from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator, ImagePerturbator
 from interpreto.commons.generator_tools import split_iterator
@@ -88,9 +88,6 @@ class ImageAttributionOutput:
         targets (torch.Tensor):
             The target class(es).
 
-        model_task (ModelTask):
-            Always `ModelTask.CLASSIFICATION` for the image MVP.
-
         classes (torch.Tensor | None):
             Optional tensor of class labels.
 
@@ -109,7 +106,6 @@ class ImageAttributionOutput:
     elements: list[tuple[int, int]] | torch.Tensor
     model_inputs_to_explain: TensorMapping
     targets: torch.Tensor
-    model_task: ModelTask
     classes: torch.Tensor | None = None
     granularity: ImageGranularity = ImageGranularity.DEFAULT
     granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN
@@ -359,13 +355,15 @@ class ImageClassificationAttributionExplainer(ClassificationAttributionExplainer
             raw_images,
             strict=True,
         ):
-            model_task, clean_contribution = self.post_processing(contribution)
+            # post_processing is inherited from ClassificationAttributionExplainer and
+            # still returns a (ModelTask, contribution) tuple for text compatibility; the
+            # image output no longer carries the task tag, so we discard it here.
+            _, clean_contribution = self.post_processing(contribution)
 
             attribution_output = ImageAttributionOutput(
                 attributions=clean_contribution,
                 elements=elements,
                 model_inputs_to_explain=model_input,
-                model_task=model_task,
                 targets=target.cpu(),
                 granularity=self.granularity,
                 granularity_aggregation_strategy=self.granularity_aggregation_strategy,
