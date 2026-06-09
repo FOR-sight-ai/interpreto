@@ -414,7 +414,7 @@ class SplitSequenceClassification(ModelWithSplitPoints):
         self,
         **kwargs,  # not used, just to support the `model_with_split_points` interface
     ) -> dict[str, torch.Size]:
-        """Get the shape of the latent activations at the specified split point.
+        """Get the shape of the latent activations.
 
         Uses a quick trace with a dummy input to determine the classifier input shape.
 
