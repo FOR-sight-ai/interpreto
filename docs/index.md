@@ -75,21 +75,20 @@ Choose any layer in any HuggingFace language model with our `ModelWithSplitPoint
 
 **2. Dictionary Learning for Concept Discovery** (mainly via [`overcomplete`](https://github.com/KempnerInstitute/overcomplete)):
 
-- Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/)
-- [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ConvexNMFConcepts)
-- [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.KMeansConcepts)
-- SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.BatchTopKSAEConcepts)
+- Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/neurons_as_concepts/)
+- [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ConvexNMFConcepts)
+- [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.KMeansConcepts)
+- SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.BatchTopKSAEConcepts)
 
 **3. Available Concept Interpretation Techniques:**
 
-- Top-k tokens from tokenizer vocabulary via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.TopKInputs) and `use_vocab=True`
-- Top-k tokens/words/sentences/samples from specific datasets via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.TopKInputs)
-- Label concepts via LLMs with [`LLMLabels`](https://for-sight-ai.github.io/interpreto/api/concepts/concepts_interpretations/#interpreto.concepts.interpretations.LLMLabels) ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
+- Top-k tokens from tokenizer vocabulary via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/#interpreto.concepts.interpretations.TopKInputs) and `use_vocab=True`
+- Top-k tokens/words/sentences/samples from specific datasets via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/#interpreto.concepts.interpretations.TopKInputs)
+- Label concepts via LLMs with [`LLMLabels`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/llm_labels/#interpreto.concepts.interpretations.LLMLabels) ([Bills et al. 2023](https://openai.com/index/language-models-can-explain-neurons-in-language-models/))
+- Input-to-concept attributions via perturbation methods ([Concept Attributions](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/concept_attributions/)) ([Jourdan et al. 2023](https://aclanthology.org/2023.findings-acl.317/))
 
 Concept Interpretation Techniques Added in the future:
 
-- Input-to-concept attribution from dataset examples ([Jourdan et al. 2023](https://aclanthology.org/2023.findings-acl.317/))
-- Theme prediction via LLMs from top-k tokens/sentences
 - Aligning concepts with human labels ([Sajjad et al. 2022](https://aclanthology.org/2022.naacl-main.225/))
 - Word cloud visualizations of concepts ([Dalvi et al. 2022](https://arxiv.org/abs/2205.07237))
 - VocabProj & TokenChange ([Gur-Arieh et al. 2025](https://arxiv.org/abs/2501.08319))
@@ -98,7 +97,7 @@ Concept Interpretation Techniques Added in the future:
 
 Estimate the contribution of each concept to the model output.
 
-Can be obtained with any concept-based explainer via [`MethodConcepts.concept_output_gradient()`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/base/#interpreto.concepts.ConceptAutoEncoderExplainer.concept_output_gradient).
+Can be obtained with any concept-based explainer via [`MethodConcepts.concept_output_gradient()`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/base/#interpreto.concepts.ConceptAutoEncoderExplainer.concept_output_gradient).
 
 **Specific methods:**
 

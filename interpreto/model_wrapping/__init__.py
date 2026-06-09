@@ -23,5 +23,6 @@
 # SOFTWARE.
 
 from .model_with_split_points import ModelWithSplitPoints
+from .split_sequence_classification import SplitSequenceClassification
 
-__all__ = ["ModelWithSplitPoints"]
+__all__ = ["ModelWithSplitPoints", "SplitSequenceClassification"]
