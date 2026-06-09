@@ -19,6 +19,7 @@ template: home.html
 
 <p align="center">
   <a href="https://for-sight-ai.github.io/interpreto-demo/"><strong>🖼️ Checkout our explanation gallery &gt;&gt;</strong></a>
+  <a href="https://arxiv.org/abs/2512.09730"><strong>📜 Read our paper &gt;&gt;</strong></a>
 </p>
 
 ## 🚀 Quick Start
@@ -62,25 +63,36 @@ They all work seamlessly for both classification (`...ForSequenceClassification`
 
 Concept-based explanations aim to provide high-level interpretations of latent model representations.
 
-Interpreto generalizes these methods through four core steps:
+We propose both supervised (probes and CAVs) and unsupervised (dictionary learning) approaches.
+
+Interpreto generalizes these methods through four core steps, the two first are common between both approaches:
 
 1. Split a model in two and obtain a dataset of activations
-2. Concept Discovery (e.g., from latent embeddings)
-3. Concept Interpretation (mapping discovered concepts to human-understandable elements)
-4. Concept-to-Output Attribution (assessing concept relevance to model outputs)
+2. Learn concepts (e.g., from latent embeddings)
+3. Interpret concepts (mapping discovered concepts to human-understandable elements)
+4. Estimate concepts importance (assessing concept relevance to model outputs)
 
 **1. Split a model in two and obtain a dataset of activations:** (mainly via [`nnsight`](https://github.com/ndif-team/nnsight)):
 
 Choose any layer in any HuggingFace language model with our `ModelWithSplitPoints` based on `nnsight`. Then pass a dataset through it to obtain a dataset of activations.
 
-**2. Dictionary Learning for Concept Discovery** (mainly via [`overcomplete`](https://github.com/KempnerInstitute/overcomplete)):
+**2. (supervised) Train probe** with the [`ProbeExplainer`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/)
 
-- Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/neurons_as_concepts/)
-- [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ConvexNMFConcepts)
-- [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.KMeansConcepts)
-- SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.BatchTopKSAEConcepts)
+We differentiate two families of probes:
 
-**3. Available Concept Interpretation Techniques:**
+- Linear probes: [`LinearRegressionProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.LinearRegressionProbe), [`LogisticRegressionProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.LogisticRegressionProbe), [`LinearSVMProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.LinearSVMProbe), [`MeansDiffProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.MeansDiffProbe)
+- Centroid-based probes: [`CosineCentroidProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.CosineCentroidProbe), [`DotProductCentroidProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.DotProductCentroidProbe), [`SqL2CentroidProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.SqL2CentroidProbe), [`SVDDCentroidProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.SVDDCentroidProbe), [`DiagonalMahalanobisCentroidProbe`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/#interpreto.concepts.probes.DiagonalMahalanobisCentroidProbe)
+
+Both can be tuned with `bias_calibrator` and `normalization` parameters.
+
+**2. (unsupervised) Dictionary Learning for Concept Discovery** (mainly via [`overcomplete`](https://github.com/KempnerInstitute/overcomplete)):
+
+- Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/)
+- [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ConvexNMFConcepts)
+- [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.KMeansConcepts)
+- SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.BatchTopKSAEConcepts)
+
+**3. (unsupervised) Available Concept Interpretation Techniques:**
 
 - Top-k tokens from tokenizer vocabulary via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/#interpreto.concepts.interpretations.TopKInputs) and `use_vocab=True`
 - Top-k tokens/words/sentences/samples from specific datasets via [`TopKInputs`](https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/#interpreto.concepts.interpretations.TopKInputs)
@@ -93,7 +105,7 @@ Concept Interpretation Techniques Added in the future:
 - Word cloud visualizations of concepts ([Dalvi et al. 2022](https://arxiv.org/abs/2205.07237))
 - VocabProj & TokenChange ([Gur-Arieh et al. 2025](https://arxiv.org/abs/2501.08319))
 
-**4. Concept-to-Output Attribution:**
+**4. (unsupervised) Concept-to-Output Attribution:**
 
 Estimate the contribution of each concept to the model output.
 
@@ -105,7 +117,6 @@ Thanks to this generalization encompassing all concept-based methods and our hig
 
 The following list will **soon be available**:
 
-- CAV and TCAV: [Kim et al. 2018, Interpretability Beyond Feature Attribution: Quantitative Testing with Concept Activation Vectors (TCAV)](http://proceedings.mlr.press/v80/kim18d.html)
 - ConceptSHAP: [Yeh et al. 2020, On Completeness-aware Concept-Based Explanations in Deep Neural Networks](https://proceedings.neurips.cc/paper/2020/hash/ecb287ff763c169694f682af52c1f309-Abstract.html)
 - COCKATIEL: [Jourdan et al. 2023, COCKATIEL: COntinuous Concept ranKed ATtribution with Interpretable ELements for explaining neural net classifiers on NLP](https://aclanthology.org/2023.findings-acl.317/)
 - Yun et al. 2021, [Transformer visualization via dictionary learning: contextualized embedding as a linear superposition of transformer factors](https://arxiv.org/abs/2103.15949)
@@ -160,7 +171,7 @@ Interpreto 🪄 is a project of the [FOR](https://www.irt-saintexupery.com/fr/fo
 
 ## 🗞️ Citation
 
-If you use Interpreto 🪄 as part of your workflow in a scientific publication, please consider citing 🗞️ our paper:
+If you use Interpreto 🪄 as part of your workflow in a scientific publication, please consider citing 🗞️ [our paper](https://arxiv.org/abs/2512.09730):
 
 ```bibtex
 @article{poche2025interpreto,

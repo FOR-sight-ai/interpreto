@@ -72,7 +72,10 @@ Use `aggregation_strategy=ModelWithSplitPoints.aggregation_strategies.MEAN` to s
 ### Step 3: Instantiate the concept-based explainer
 
 The concept-based explainer is an object use to define the concept space.
-Interpreto supports many concept-based explainers by wrapping over `overcomplete`.
+
+#### Unsupervised methods
+
+Interpreto supports many **unsupervised** concept-based explainers by wrapping over `overcomplete`.
 See the following documentation for more details: [SAEs](./concept_spaces/sae.md);
 [Dictionary Learning](./concept_spaces/optim.md); [Cockatiel](./concept_spaces/cockatiel.md); and [Neurons as concepts](./concept_spaces/neurons_as_concepts.md).
 
@@ -82,12 +85,30 @@ They has few key parameters:
 - `nb_concepts`: the number of concepts to use.
 - `device`: the device for training and inference for SAEs
 
+#### Supervised methods (Probes)
+
+Interpreto also supports **supervised** concept methods via [Probes](./probes.md).
+Probes require labeled data (binary concept annotations) and learn a mapping from
+activations to concept scores. They are useful when you already know which concepts
+you want to test for.
+
+```python
+from interpreto.concepts import ProbeExplainer
+from interpreto.concepts.probes import LinearRegressionProbe
+
+probe = LinearRegressionProbe(nb_concepts=3, input_size=768)
+concept_explainer = ProbeExplainer(model_with_split_points, concept_model=probe)
+concept_explainer.fit(activations, y=labels)
+```
+
+See the [Probes (Supervised)](./probes.md) documentation for the full list of available probes.
+
 ### Step 4: Fit the concept-based explainer on the activations
 
 The goal is to define the concept space. Each concept correspond to a direction or polytope in the latent space.
 This may take quite a long time depending on the number of concepts and the size of the activations.
 
-### Step 5: Interpret the obtained concepts
+### Step 5: Interpret the obtained concepts (unsupervised methods only)
 
 After the fit, concepts are abstract directions in the middle of the model.
 To interpret the concepts, we need to communicate what they correspond to to the user.
@@ -140,7 +161,7 @@ instead of `ModelWithSplitPoints` for a simpler setup.
 
 More details in the [Concept Attributions documentation](./interpretations/concept_attributions.md).
 
-### Step 6: Evaluate concepts' contributions to the output
+### Step 6: Evaluate concepts' contributions to the output (unsupervised methods only)
 
 There are often a lot of concepts, but only few are contributing to the output.
 This is often less than the number of activated concepts.
