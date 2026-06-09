@@ -395,7 +395,7 @@ class SplitterForClassification(BaseSplitter):
         return gradients_list
 
     def get_latent_shape(self) -> torch.Size:
-        """Get the shape of the latent activations at the specified split point.
+        """Get the shape of the latent activations.
 
         Uses a quick trace with a dummy input to determine the classifier input shape.
 

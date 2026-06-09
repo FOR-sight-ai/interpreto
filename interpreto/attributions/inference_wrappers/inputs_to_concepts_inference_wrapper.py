@@ -44,6 +44,8 @@ class InputsToConceptsInferenceWrapper(InferenceWrapper):
         Use perturbation-based methods (Lime, KernelShap, Occlusion, or Sobol) instead.
     """
 
+    padding_side = "right"
+
     def __init__(
         self,
         model,
@@ -76,10 +78,6 @@ class InputsToConceptsInferenceWrapper(InferenceWrapper):
             "InputsToConceptsInferenceWrapper does not support computing targets from logits. "
             "Concept targets should be provided explicitly."
         )
-
-    @property
-    def padding_side(self):
-        return "right"
 
     @jaxtyped(typechecker=beartype)
     def _target_logits(
