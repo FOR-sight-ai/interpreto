@@ -26,32 +26,32 @@
 import pytest
 import torch
 
-from interpreto import Granularity, IntegratedGradients, KernelShap, Occlusion, SmoothGrad
+from interpreto import TextGranularity, IntegratedGradients, KernelShap, Occlusion, SmoothGrad
 from interpreto.attributions.metrics import Deletion, Insertion
 
 test_cases = [
     {  # Test case 1: Insertion metric with Token granularity and 10 perturbations
         "task": "classification",
         "metric_class": Insertion,
-        "granularity": Granularity.TOKEN,
+        "granularity": TextGranularity.TOKEN,
         "n_perturbations": 10,
     },
     {  # Test case 2: Deletion metric with Token granularity and 50 perturbations
         "task": "classification",
         "metric_class": Deletion,
-        "granularity": Granularity.TOKEN,
+        "granularity": TextGranularity.TOKEN,
         "n_perturbations": 50,
     },
     {  # Test case 3: Insertion metric with Word granularity and 5 perturbations
         "task": "classification",
         "metric_class": Insertion,
-        "granularity": Granularity.WORD,
+        "granularity": TextGranularity.WORD,
         "n_perturbations": 5,
     },
     {  # Test case 4: Deletion metric with Word granularity and 5 perturbations
         "task": "classification",
         "metric_class": Deletion,
-        "granularity": Granularity.WORD,
+        "granularity": TextGranularity.WORD,
         "n_perturbations": 5,
     },
 ]
@@ -63,7 +63,7 @@ def id_names(param):
         param["metric_class"].__name__
         + "-task="
         + param["task"]
-        + "-Granularity."
+        + "-TextGranularity."
         + param["granularity"].value.upper()
         + "-n_perturbations="
         + str(param["n_perturbations"])
@@ -90,7 +90,7 @@ def metric_on_method_model_pair(model, tokenizer, method_class, metric_class, se
     Warnings are considered as errors.
     """
     # compute explanations
-    explainer = method_class(model, tokenizer, granularity=Granularity.WORD)
+    explainer = method_class(model, tokenizer, granularity=TextGranularity.WORD)
     attributions = explainer.explain(sentences, targets)
 
     # compute metric
@@ -153,7 +153,7 @@ def test_qualitative_classification(bert_imdb_model, bert_imdb_tokenizer):
 
     # Compute an explanation
     model_inputs = bert_imdb_tokenizer(sentences, return_tensors="pt", return_offsets_mapping=True, truncation=True)
-    explainer = Occlusion(bert_imdb_model, bert_imdb_tokenizer, granularity=Granularity.WORD)
+    explainer = Occlusion(bert_imdb_model, bert_imdb_tokenizer, granularity=TextGranularity.WORD)
     occlusion_attribution_outputs = explainer.explain(model_inputs, targets)
 
     assert occlusion_attribution_outputs[0].attributions.shape == (1, 11)

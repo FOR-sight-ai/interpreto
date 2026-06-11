@@ -41,8 +41,8 @@ class ImageGranularity(Enum):
     """
     Enumeration of granularity levels for image classification explainers.
 
-    Standalone enum (not a subclass of `Granularity`) because Python forbids
-    extending enums that already have members. Duck-typed with text `Granularity`
+    Standalone enum (not a subclass of `TextGranularity`) because Python forbids
+    extending enums that already have members. Duck-typed with `TextGranularity`
     via the same method names (`get_indices`, `get_association_matrix`,
     `granularity_score_aggregation`, `get_decomposition`).
 
@@ -106,7 +106,7 @@ class ImageGranularity(Enum):
         """
         Build the boolean matrix that maps from this granularity to flat pixel-position space.
 
-        Mirrors `Granularity.get_association_matrix` with `l = H*W` instead of padded token count.
+        Mirrors `TextGranularity.get_association_matrix` with `l = H*W` instead of padded token count.
 
         Args:
             inputs (TensorMapping): Batched inputs with `pixel_values` of shape `(b, 3, H, W)`.
@@ -145,7 +145,7 @@ class ImageGranularity(Enum):
         """
         Aggregate `contribution` of shape `(t, l=H*W)` to the chosen granularity.
 
-        Mirrors `Granularity.granularity_score_aggregation` minus the generation
+        Mirrors `TextGranularity.granularity_score_aggregation` minus the generation
         (`aggregate_targets`) branch — image classification only.
 
         PIXEL behaves like text `TOKEN` (direct indexing).

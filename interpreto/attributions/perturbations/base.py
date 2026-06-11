@@ -36,7 +36,7 @@ from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from transformers import PreTrainedTokenizer
 
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 from interpreto.typing import TensorMapping
 
 
@@ -151,7 +151,7 @@ class TextMaskPerturbator(MaskPerturbator):
         tokenizer: PreTrainedTokenizer | None,
         replace_token_id: int,
         n_perturbations: int = 1,
-        granularity: Granularity = Granularity.TOKEN,
+        granularity: TextGranularity = TextGranularity.TOKEN,
     ):
         self.tokenizer = tokenizer
 
@@ -162,7 +162,7 @@ class TextMaskPerturbator(MaskPerturbator):
         self.replace_token_id = replace_token_id
 
         # granularity level of the perturbation (token masking, word masking...)
-        # in most commons cases, this should be set to Granularity.TOKEN
+        # in most commons cases, this should be set to TextGranularity.TOKEN
         self.granularity = granularity
 
     @jaxtyped(typechecker=beartype)

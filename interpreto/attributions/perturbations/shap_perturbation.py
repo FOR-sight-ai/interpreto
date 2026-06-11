@@ -35,14 +35,14 @@ from torch import Tensor
 from transformers import PreTrainedTokenizer
 
 from interpreto.attributions.perturbations.base import TextMaskPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 
 
 class ShapTokenPerturbator(TextMaskPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
+        granularity: TextGranularity = TextGranularity.TOKEN,
         replace_token_id: int = 0,
         n_perturbations: int = 1000,
         device: torch.device | None = None,

@@ -33,7 +33,7 @@ from transformers import AutoTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 
 # local import – the module is supplied alongside this test file
-from interpreto import Granularity
+from interpreto import TextGranularity
 from interpreto.commons.granularity import GranularityAggregationStrategy
 
 # -------
@@ -84,17 +84,17 @@ def test_low_level_granularities_indices(simple_text, real_bert_tokenizer):
     print("\nBERT tokens:", real_bert_tokenizer.tokenize(simple_text))
 
     # ALL_TOKENS
-    all_tokens_indices = Granularity.ALL_TOKENS.get_indices(tokens, real_bert_tokenizer)[0]
+    all_tokens_indices = TextGranularity.ALL_TOKENS.get_indices(tokens, real_bert_tokenizer)[0]
     assert all_tokens_indices == [[i] for i in range(seq_len)]
 
     # TOKEN
-    token_indices = Granularity.TOKEN.get_indices(tokens, real_bert_tokenizer)[0]
+    token_indices = TextGranularity.TOKEN.get_indices(tokens, real_bert_tokenizer)[0]
     special = set(real_bert_tokenizer.all_special_ids)
     expected_token_pos = [i for i, tid in enumerate(tokens["input_ids"][0]) if int(tid) not in special]
     assert [idx[0] for idx in token_indices] == expected_token_pos
 
     # WORD
-    word_indices = Granularity.WORD.get_indices(tokens, real_bert_tokenizer)[0]
+    word_indices = TextGranularity.WORD.get_indices(tokens, real_bert_tokenizer)[0]
     # We know there are exactly 3 human words in *simple_text*: "word longword verylongword".
     assert len(word_indices) == 3
     # First word should decode to "word"
@@ -108,7 +108,7 @@ def test_low_level_granularities_matrices_and_decomposition(simple_text, real_be
     tokens = real_bert_tokenizer(simple_text, return_tensors="pt", return_offsets_mapping=True)
     seq_len = tokens["input_ids"].shape[1]
 
-    for gran in (Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD):
+    for gran in (TextGranularity.ALL_TOKENS, TextGranularity.TOKEN, TextGranularity.WORD):
         indices = gran.get_indices(tokens, real_bert_tokenizer)[0]
 
         # Association matrix
@@ -125,25 +125,25 @@ def test_low_level_granularities_matrices_and_decomposition(simple_text, real_be
         decomp_text: list[str] = gran.get_decomposition(tokens, real_bert_tokenizer, return_text=True)[0]  # type: ignore
         # Join all segments and strip spaces; must equal original (without specials)
         match gran:
-            case Granularity.ALL_TOKENS:
+            case TextGranularity.ALL_TOKENS:
                 # We remove the special tokens: decomp_text[1:-1]
                 joined = " ".join(seg.strip() for seg in decomp_text[1:-1]).replace(" ##", "")
                 assert joined == simple_text
-            case Granularity.TOKEN:
+            case TextGranularity.TOKEN:
                 joined = " ".join(seg.strip() for seg in decomp_text).replace(" ##", "")
                 assert joined == simple_text
-            case Granularity.WORD:
+            case TextGranularity.WORD:
                 joined = " ".join(seg.strip() for seg in decomp_text)
                 assert joined == simple_text
 
 
 def test_starts_word():
-    assert not Granularity._starts_word("##foo"), "'##foo' cannot be the start of a word"
-    assert not Granularity._starts_word("@@bar"), "'@@bar' cannot be the start of a word"
-    assert Granularity._starts_word("__init__"), "'__init__' should be considered the start of a word"
-    assert Granularity._starts_word("ĠHello"), "'ĠHello' should be considered the start of a word"
-    assert Granularity._starts_word(" World"), "' World' should be considered the start of a word"
-    assert not Granularity._starts_word("token"), "'token' cannot be the start of a word"
+    assert not TextGranularity._starts_word("##foo"), "'##foo' cannot be the start of a word"
+    assert not TextGranularity._starts_word("@@bar"), "'@@bar' cannot be the start of a word"
+    assert TextGranularity._starts_word("__init__"), "'__init__' should be considered the start of a word"
+    assert TextGranularity._starts_word("ĠHello"), "'ĠHello' should be considered the start of a word"
+    assert TextGranularity._starts_word(" World"), "' World' should be considered the start of a word"
+    assert not TextGranularity._starts_word("token"), "'token' cannot be the start of a word"
 
 
 def test_granularity_score_aggregation_alltokens_manual_ids(simple_text, real_bert_tokenizer):
@@ -158,7 +158,7 @@ def test_granularity_score_aggregation_alltokens_manual_ids(simple_text, real_be
     fake_scores = torch.arange(seq_len).float().unsqueeze(0)
 
     # ALL_TOKENS → passthrough
-    agg_all_tokens = Granularity.ALL_TOKENS.granularity_score_aggregation(
+    agg_all_tokens = TextGranularity.ALL_TOKENS.granularity_score_aggregation(
         contribution=fake_scores,
         inputs=tokens,
         tokenizer=tokenizer,
@@ -197,7 +197,7 @@ def test_granularity_score_aggregation_token_manual_ids(real_bert_tokenizer):
     fake_scores = torch.tensor([[10.0, 20.0, 31.1, 41.2, 55.2], [12.0, 21.0, 30.0, 40.0, 50.0]])  # shape (2, 5)
 
     # Apply TOKEN-level aggregation (no actual reduction since each token is treated individually)
-    aggregated = Granularity.TOKEN.granularity_score_aggregation(
+    aggregated = TextGranularity.TOKEN.granularity_score_aggregation(
         contribution=fake_scores,
         inputs=tokens,
         tokenizer=tokenizer,
@@ -291,11 +291,11 @@ def test_word_aggregation_matches_manual(simple_text, real_bert_tokenizer, strat
     scores = torch.randn(2, seq_len)
 
     # Group token indices by word
-    indices = Granularity.WORD.get_indices(tok, real_bert_tokenizer)[0]
+    indices = TextGranularity.WORD.get_indices(tok, real_bert_tokenizer)[0]
 
     expected = _manual_aggregate(scores, indices, strategy)
 
-    obtained = Granularity.WORD.granularity_score_aggregation(
+    obtained = TextGranularity.WORD.granularity_score_aggregation(
         contribution=scores,
         granularity_aggregation_strategy=strategy,
         inputs=tok,
@@ -315,7 +315,7 @@ def test_sentence_granularities_indices(complex_text, real_bert_tokenizer):
 
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
 
-    sent_idx = Granularity.SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
+    sent_idx = TextGranularity.SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
 
     assert len(sent_idx) == 5, f"Expected 5 sentences, got {len(sent_idx)}"
 
@@ -325,7 +325,7 @@ def test_sentence_granularities_indices_part_sentence(complex_text, real_bert_to
 
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
 
-    part_sent_idx = Granularity.PART_SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
+    part_sent_idx = TextGranularity.PART_SENTENCE.get_indices(tokens, real_bert_tokenizer)[0]
 
     assert len(part_sent_idx) == 7, f"Expected 7 part-sentences, got {len(part_sent_idx)}"
 
@@ -363,8 +363,8 @@ def test_sentence_part_sentence_granularity_with_different_tokenizers():
         tokens = tokenizer(text, return_tensors="pt", return_offsets_mapping=True)
 
         # --- SENTENCE granularity ---
-        sent_idx = Granularity.SENTENCE.get_indices(tokens, tokenizer)[0]
-        sent_text = Granularity.SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
+        sent_idx = TextGranularity.SENTENCE.get_indices(tokens, tokenizer)[0]
+        sent_text = TextGranularity.SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
 
         assert len(sent_idx) == 5, (
             f"[SENTENCE] Expected 5 sentences, got {len(sent_idx)} for tokenizer {repo_id}",
@@ -383,8 +383,8 @@ def test_sentence_part_sentence_granularity_with_different_tokenizers():
             assert_segment_matches(repo_id, segment, ref)
 
         # --- PART_SENTENCE granularity (also splits on ',' and ':') ---
-        part_idx = Granularity.PART_SENTENCE.get_indices(tokens, tokenizer)[0]
-        part_text = Granularity.PART_SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
+        part_idx = TextGranularity.PART_SENTENCE.get_indices(tokens, tokenizer)[0]
+        part_text = TextGranularity.PART_SENTENCE.get_decomposition(tokens, tokenizer, return_text=True)[0]
 
         # We expect extra splits due to ',' and ':' :
         assert len(part_idx) == 7, (
@@ -419,7 +419,7 @@ def test_sentence_granularities_matrices_and_decomposition(complex_text, real_be
     tokens = real_bert_tokenizer(complex_text, return_tensors="pt", return_offsets_mapping=True)
     seq_len = tokens["input_ids"].shape[1]
 
-    for gran in (Granularity.SENTENCE, Granularity.PART_SENTENCE):
+    for gran in (TextGranularity.SENTENCE, TextGranularity.PART_SENTENCE):
         indices = gran.get_indices(tokens, real_bert_tokenizer)[0]
 
         # Association matrix
@@ -456,7 +456,7 @@ def test_sentence_aggregation_matches_manual(complex_text, real_bert_tokenizer, 
     seq_len = tok["input_ids"].shape[1]
     scores = torch.randn(3, seq_len)  # three scores per token for variation
 
-    for gran in (Granularity.SENTENCE, Granularity.PART_SENTENCE):
+    for gran in (TextGranularity.SENTENCE, TextGranularity.PART_SENTENCE):
         indices = gran.get_indices(tok, real_bert_tokenizer)[0]
 
         expected = _manual_aggregate(scores, indices, strategy)

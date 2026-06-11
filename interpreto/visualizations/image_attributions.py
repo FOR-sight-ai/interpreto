@@ -99,7 +99,7 @@ def _prepare_heatmap(
 
     elements = attribution_output.elements
     #for a 30*30 image with patch_size = 2, elements stores [(0,0),(0,1),...,(14,14)] so the heatmap is effectively a 15*15 array, which is what we want.
-    #TODO: This works for rectangular Granularity but may break if we introduce other type of Granularities. Check if another solution is needed.
+    #TODO: This works for rectangular TextGranularity but may break if we introduce other type of Granularities. Check if another solution is needed.
     rows = max(e[0] for e in elements) + 1
     cols = max(e[1] for e in elements) + 1
     heatmap = flat.reshape(rows, cols)

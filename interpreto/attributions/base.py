@@ -46,7 +46,7 @@ from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 from interpreto.attributions.aggregations.base import Aggregator
 from interpreto.attributions.perturbations.base import MaskPerturbator, Perturbator, TensorPerturbator, TextMaskPerturbator, TextTensorPerturbator
 from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator, ImageTensorPerturbator
-from interpreto.commons import Granularity
+from interpreto.commons import TextGranularity
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.commons.image_granularity import ImageGranularity
@@ -199,7 +199,7 @@ class AttributionOutput:
                 - For single-class classification: tensor of shape `(1)`
                 - For multi-class classification: tensor of shape `(c)` where `c` is the number of classes
 
-        granularity (Granularity):
+        granularity (TextGranularity):
             The granularity level of the explanation.
 
         granularity_aggregation_strategy (GranularityAggregationStrategy):
@@ -216,7 +216,7 @@ class AttributionOutput:
     targets: torch.Tensor
     model_task: ModelTask
     classes: torch.Tensor | None = None
-    granularity: Granularity = Granularity.DEFAULT
+    granularity: TextGranularity = TextGranularity.DEFAULT
     granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN
     inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
 
@@ -247,7 +247,7 @@ class AttributionExplainer(ABC):
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
-        granularity: Granularity = Granularity.DEFAULT,
+        granularity: TextGranularity = TextGranularity.DEFAULT,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,  # TODO: add to all classes
         use_gradient: bool = False,
@@ -266,10 +266,10 @@ class AttributionExplainer(ABC):
                 If None, the aggregator returns the original scores.
             device (torch.device, optional): The device on which computations are performed.
                 If None, defaults to the device of the model.
-            granularity (Granularity, optional): The level of granularity for the explanation.
+            granularity (TextGranularity, optional): The level of granularity for the explanation.
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to Granularity.DEFAULT (ALL_TOKENS)
-                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+                Defaults to TextGranularity.DEFAULT (ALL_TOKENS)
+                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
             granularity_aggregation_strategy (GranularityAggregationStrategy, optional): The method used to aggregate scores at the specified granularity,
                 for gradient-based methods. Thus, it is ignored for perturbation based methods.
                 Defaults to GranularityAggregationStrategy.MEAN.

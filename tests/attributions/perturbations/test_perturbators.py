@@ -37,7 +37,7 @@ from interpreto.attributions.perturbations import (
 )
 from interpreto.attributions.perturbations.base import TextMaskPerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 
 embeddings_perturbators = [
     GaussianNoisePerturbator,
@@ -100,13 +100,13 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         # the number of perturbations depends on the sequence length
         perturbator = perturbator_class(
             tokenizer=bert_tokenizer,
-            granularity=Granularity.ALL_TOKENS,
+            granularity=TextGranularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
         )
     else:
         perturbator = perturbator_class(
             tokenizer=bert_tokenizer,
-            granularity=Granularity.ALL_TOKENS,
+            granularity=TextGranularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
             n_perturbations=p,
         )

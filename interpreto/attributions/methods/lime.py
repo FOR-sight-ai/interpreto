@@ -42,7 +42,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.random_perturbation import RandomMaskedTokenPerturbator
-from interpreto.commons import Granularity, GranularityAggregationStrategy
+from interpreto.commons import TextGranularity, GranularityAggregationStrategy
 
 
 class Lime(MultitaskExplainerMixin, AttributionExplainer):
@@ -58,12 +58,12 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
     [Paper](https://arxiv.org/abs/1602.04938)
 
     Examples:
-        >>> from interpreto import Granularity, Lime
+        >>> from interpreto import TextGranularity, Lime
         >>> from interpreto.attributions import InferenceModes
         >>> method = Lime(model, tokenizer, batch_size=4,
         >>>               inference_mode=InferenceModes.LOG_SOFTMAX,
         >>>               n_perturbations=20,
-        >>>               granularity=Granularity.WORD,
+        >>>               granularity=TextGranularity.WORD,
         >>>               distance_function=Lime.distance_functions.HAMMING)
         >>> explanations = method(text)
     """
@@ -75,7 +75,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
         model: PreTrainedModel,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
-        granularity: Granularity = Granularity.WORD,
+        granularity: TextGranularity = TextGranularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_perturbations: int = 100,
@@ -91,10 +91,10 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
             model (PreTrainedModel): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
-            granularity (Granularity, optional): The level of granularity for the explanation.
+            granularity (TextGranularity, optional): The level of granularity for the explanation.
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to Granularity.WORD.
-                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+                Defaults to TextGranularity.WORD.
+                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
             granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
                 Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
                 Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.

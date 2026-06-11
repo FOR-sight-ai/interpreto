@@ -37,7 +37,7 @@ from scipy.stats import qmc
 from transformers import PreTrainedTokenizer
 
 from interpreto.attributions.perturbations.base import TextMaskPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 
 
 class SequenceSamplers(Enum):
@@ -54,7 +54,7 @@ class SobolTokenPerturbator(TextMaskPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
+        granularity: TextGranularity = TextGranularity.TOKEN,
         replace_token_id: int = 0,
         n_token_perturbations: int = 16,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,

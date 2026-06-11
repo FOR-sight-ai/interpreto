@@ -151,8 +151,14 @@ class GranularityAggregationStrategy(Enum):
             case _:
                 raise NotImplementedError(f"Aggregation strategy {self} not implemented.")
 
-
 class Granularity(Enum):
+    #TODO: look if it's possible to refactor some functions in TextGranularity and ImageGranularity
+    """
+    Abstract Granularity class to harmonize typing.
+    """
+    pass
+
+class TextGranularity(Granularity):
     """
     Enumerations of the different granularity levels supported for masking perturbations
     Allows to define token-wise masking, word-wise masking...
@@ -209,7 +215,7 @@ class Granularity(Enum):
             NotImplementedError: if an unknown granularity is supplied.
 
         Examples:
-            >>> from interpreto.commons.granularity import Granularity
+            >>> from interpreto.commons.granularity import TextGranularity
             >>> raw_input_text = [
             ...     "Interpreto is magical. Or is it?",
             ...     "At least we try.",
@@ -220,25 +226,25 @@ class Granularity(Enum):
             ... ]
             >>> tokenizer = AutoTokenizer.from_pretrained("gpt2")
             >>> input_ids = tokenizer(raw_input_text, return_tensors="pt")["input_ids"]
-            >>> Granularity.ALL_TOKENS.get_indices(input_ids, tokenizer=tokenizer)
+            >>> TextGranularity.ALL_TOKENS.get_indices(input_ids, tokenizer=tokenizer)
             [[[0], [1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11]],
              [[12], [13], [14], [15], [16], [17], [18], [19], [20], [21], [22], [23]]]
-            >>> Granularity.TOKEN.get_indices(input_ids, tokenizer=tokenizer)
+            >>> TextGranularity.TOKEN.get_indices(input_ids, tokenizer=tokenizer)
             [[[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]],
              [[13], [14], [15], [16], [17]]]
-            >>> Granularity.WORD.get_indices(input_ids, tokenizer=tokenizer)
+            >>> TextGranularity.WORD.get_indices(input_ids, tokenizer=tokenizer)
             [[[1, 2], [3], [4, 5], [6], [7], [8], [9], [10]],
              [[13], [14], [15], [16], [17]]]
-            >>> Granularity.SENTENCE.get_indices(input_ids, tokenizer=tokenizer)
+            >>> TextGranularity.SENTENCE.get_indices(input_ids, tokenizer=tokenizer)
             [[[1, 2, 3, 4, 5, 6], [7, 8, 9, 10]],
              [[13, 14, 15, 16, 17]]]
         """
 
-        match self or Granularity.DEFAULT:
-            case Granularity.ALL_TOKENS:
+        match self or TextGranularity.DEFAULT:
+            case TextGranularity.ALL_TOKENS:
                 input_ids: Int[torch.Tensor, "n l"] = inputs["input_ids"]  # type: ignore
-                return [Granularity.__all_tokens_get_indices(tokens_ids) for tokens_ids in input_ids]
-            case Granularity.TOKEN:
+                return [TextGranularity.__all_tokens_get_indices(tokens_ids) for tokens_ids in input_ids]
+            case TextGranularity.TOKEN:
                 if tokenizer is None:
                     raise ValueError(
                         "Cannot get indices without a tokenizer if granularity is TOKEN."
@@ -247,8 +253,8 @@ class Granularity(Enum):
 
                 special_ids = tokenizer.all_special_ids
                 input_ids: Int[torch.Tensor, "n l"] = inputs["input_ids"]  # type: ignore
-                return [Granularity.__token_get_indices(tokens_ids, special_ids) for tokens_ids in input_ids]
-            case Granularity.WORD:
+                return [TextGranularity.__token_get_indices(tokens_ids, special_ids) for tokens_ids in input_ids]
+            case TextGranularity.WORD:
                 if tokenizer is None:
                     raise ValueError(
                         "Cannot get indices without a tokenizer if granularity is WORD."
@@ -257,16 +263,16 @@ class Granularity(Enum):
 
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
 
-                if Granularity.__word_ids_are_usable(tokenizer, inputs):
-                    return [Granularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
+                if TextGranularity.__word_ids_are_usable(tokenizer, inputs):
+                    return [TextGranularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
 
                 return [
-                    Granularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)
+                    TextGranularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)
                     for i in range(n_inputs)
                 ]
 
-            case Granularity.PART_SENTENCE | Granularity.SENTENCE:
-                if self is Granularity.PART_SENTENCE:
+            case TextGranularity.PART_SENTENCE | TextGranularity.SENTENCE:
+                if self is TextGranularity.PART_SENTENCE:
                     split = END_PART_SENTENCE
                 else:
                     split = END_SENTENCE
@@ -278,7 +284,7 @@ class Granularity(Enum):
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
                 if tokenizer.is_fast and isinstance(inputs, BatchEncoding) and getattr(inputs, "encodings", None):
                     return [
-                        Granularity.__sentence_get_indices_from_offsets(
+                        TextGranularity.__sentence_get_indices_from_offsets(
                             inputs["input_ids"][i],  # type: ignore
                             inputs.encodings[i].offsets,  # type: ignore[attr-defined]
                             tokenizer,
@@ -287,7 +293,7 @@ class Granularity(Enum):
                         for i in range(n_inputs)
                     ]
                 return [
-                    Granularity.__sentence_get_indices_from_input_ids(
+                    TextGranularity.__sentence_get_indices_from_input_ids(
                         inputs["input_ids"][i],  # type: ignore
                         tokenizer,
                         split,  # type: ignore
@@ -296,7 +302,7 @@ class Granularity(Enum):
                 ]
 
             case _:
-                raise NotImplementedError(f"Granularity level {self} not implemented")
+                raise NotImplementedError(f"TextGranularity level {self} not implemented")
 
     @staticmethod
     def __all_tokens_get_indices(tokens_ids: torch.Tensor) -> list[list[int]]:
@@ -353,7 +359,7 @@ class Granularity(Enum):
                 continue
 
             # If token starts a new word, we put current to indices and initialize a new one
-            if Granularity._starts_word(token):
+            if TextGranularity._starts_word(token):
                 if current_word:
                     indices.append(current_word)
                 current_word = [i]
@@ -476,7 +482,7 @@ class Granularity(Enum):
         special_ids = tokenizer.all_special_ids
         ids = [int(x) for x in input_ids.tolist()]
         tokens = tokenizer.convert_ids_to_tokens(ids, skip_special_tokens=False)
-        exception_id_seqs = Granularity.__build_sentence_exception_id_seqs(tokenizer)
+        exception_id_seqs = TextGranularity.__build_sentence_exception_id_seqs(tokenizer)
 
         indices: list[list[int]] = []
         current_sentence: list[int] = []
@@ -487,7 +493,7 @@ class Granularity(Enum):
                 continue
             current_sentence.append(i)
 
-            j = Granularity.__next_non_special(i + 1, ids, special_ids)
+            j = TextGranularity.__next_non_special(i + 1, ids, special_ids)
             if j is None:
                 continue
 
@@ -497,7 +503,7 @@ class Granularity(Enum):
                 continue
 
             # Exception guard (only relevant for '.' abbreviations)
-            if ("." in tok_str) and Granularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
+            if ("." in tok_str) and TextGranularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
                 continue
 
             curr_end = offsets[i][1]
@@ -508,12 +514,12 @@ class Granularity(Enum):
 
             # 2) Decode-based whitespace (works well for GPT2-like tokenizers and newline tokens)
             if not has_whitespace_after:
-                next_piece = Granularity.__decode_one(tokenizer, ids[j])  # type: ignore
+                next_piece = TextGranularity.__decode_one(tokenizer, ids[j])  # type: ignore
                 has_whitespace_after = bool(next_piece) and next_piece[0].isspace()
 
             # 3) Token-string space marker (fixes SentencePiece/LLaMA/Mistral: tokens like "▁Is")
             if not has_whitespace_after:
-                has_whitespace_after = Granularity.__starts_with_space_marker(tokens[j])
+                has_whitespace_after = TextGranularity.__starts_with_space_marker(tokens[j])
 
             # If punctuation is followed by whitespace, start a new group
             if has_whitespace_after:
@@ -544,7 +550,7 @@ class Granularity(Enum):
             else [int(x) for x in input_ids]
         )
         tokens = tokenizer.convert_ids_to_tokens(ids, skip_special_tokens=False)
-        exception_id_seqs = Granularity.__build_sentence_exception_id_seqs(tokenizer)
+        exception_id_seqs = TextGranularity.__build_sentence_exception_id_seqs(tokenizer)
 
         indices: list[list[int]] = []
         current_sentence: list[int] = []
@@ -560,11 +566,11 @@ class Granularity(Enum):
                 continue
 
             # Exception guard (prevents splitting inside 'U.S.' etc.)
-            if Granularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
+            if TextGranularity.__is_index_in_any_exception(ids, i, exception_id_seqs):
                 continue
 
             # Avoid splitting 3 times for "..." when it is tokenized as ".", ".", "."
-            j = Granularity.__next_non_special(i + 1, ids, special_ids)
+            j = TextGranularity.__next_non_special(i + 1, ids, special_ids)
             # if j is not None and tokens[j].startswith("."):
             #    continue  # still in a run of dots
             if j is not None:
@@ -680,14 +686,14 @@ class Granularity(Enum):
                 ids = [int(input_ids[idx].item()) for idx in gran_indices]
                 # TODO: additional testing of this, it might cause issues for the TopKInputs concept interpretation method
                 if return_text:
-                    text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)  # type: ignore
+                    text = tokenizer.decode(ids, skip_special_tokens=self is not TextGranularity.ALL_TOKENS)  # type: ignore
                     decomposition.append(text)
                 # Proposition for exact recontruction but too costly (I keep only if one day is necessary
                 # to have exact text reconstruction for sentences, but it is not the case for now):
                 # if return_text:
                 #     assert tokenizer is not None
                 #     if (
-                #         (self is Granularity.SENTENCE or self is Granularity.WORD)
+                #         (self is TextGranularity.SENTENCE or self is TextGranularity.WORD)
                 #         and raw_text is not None
                 #         and tokenizer.is_fast
                 #         and isinstance(inputs, BatchEncoding)
@@ -704,8 +710,8 @@ class Granularity(Enum):
                 #         decomposition.append(text)
                 #     else:
                 #         # Default: decode (works everywhere), but strip leading spaces for SENTENCE
-                #         text = tokenizer.decode(ids, skip_special_tokens=self is not Granularity.ALL_TOKENS)
-                #         if self is Granularity.SENTENCE:
+                #         text = tokenizer.decode(ids, skip_special_tokens=self is not TextGranularity.ALL_TOKENS)
+                #         if self is TextGranularity.SENTENCE:
                 #             text = text.lstrip()
                 #         decomposition.append(text)
                 else:
@@ -779,7 +785,7 @@ class Granularity(Enum):
         if not aggregate_targets and not aggregate_inputs:
             return contribution
 
-        if self == Granularity.ALL_TOKENS:
+        if self == TextGranularity.ALL_TOKENS:
             return contribution
 
         if inputs is None:
@@ -798,11 +804,11 @@ class Granularity(Enum):
         if aggregate_inputs:
             # Gradient-based methods
             match self:
-                case Granularity.TOKEN:
+                case TextGranularity.TOKEN:
                     # convert contribution to tensor for faster indexing
                     indices = torch.tensor(sample_indices).squeeze(1)
                     contribution = contribution[:, indices]
-                case Granularity.WORD | Granularity.PART_SENTENCE | Granularity.SENTENCE:
+                case TextGranularity.WORD | TextGranularity.PART_SENTENCE | TextGranularity.SENTENCE:
                     # verify aggregation strategy is not None:
                     if granularity_aggregation_strategy is None:
                         raise ValueError(
@@ -869,12 +875,12 @@ class Granularity(Enum):
             # same match case and operations
             # different indices and dimension on which to aggregate
             match self:
-                case Granularity.TOKEN:
+                case TextGranularity.TOKEN:
                     if len(target_indices) != contribution.shape[0]:
                         # convert contribution to tensor for faster indexing
                         indices = torch.tensor(target_indices).squeeze(1)
                         contribution = contribution[indices, :]
-                case Granularity.WORD | Granularity.PART_SENTENCE | Granularity.SENTENCE:
+                case TextGranularity.WORD | TextGranularity.PART_SENTENCE | TextGranularity.SENTENCE:
                     # verify aggregation strategy is not None:
                     if granularity_aggregation_strategy is None:
                         raise ValueError(
@@ -903,3 +909,238 @@ class Granularity(Enum):
                     raise NotImplementedError(f"Invalid granularity for aggregation: {self}")
 
         return contribution
+
+
+
+class ImageGranularity(Granularity):
+    """
+    Enumeration of granularity levels for image classification explainers.
+
+    Standalone enum (not a subclass of `TextGranularity`) because Python forbids
+    extending enums that already have members. Duck-typed with `TextGranularity`
+    via the same method names (`get_indices`, `get_association_matrix`,
+    `granularity_score_aggregation`, `get_decomposition`).
+
+    Positions are flattened row-major: index `i` <-> `(row=i//W, col=i%W)`.
+    For `vit-base-patch16-224`: PIXEL has `H*W = 50176` singleton units,
+    PATCH has `196` units of `patch_size*patch_size = 256` pixel positions each.
+    """
+
+    PIXEL = "pixel"
+    PATCH = "patch"
+    DEFAULT = PATCH
+
+    def get_indices(
+        self,
+        inputs: TensorMapping,
+        patch_size: int = 16,
+    ) -> list[list[list[int]]]:
+        """
+        Return indices of the pixel positions composing each granularity unit, per sample.
+
+        Args:
+            inputs (TensorMapping): Batched inputs with `pixel_values` of shape `(b, 3, H, W)`.
+            patch_size (int): Patch side length used for PATCH granularity. Ignored for PIXEL.
+
+        Returns:
+            list[list[list[int]]]: Outer list indexed by sample, middle list indexed by
+                granularity unit, inner list = pixel positions (flat row-major) inside the unit.
+        """
+        pixel_values = inputs["pixel_values"]
+        n_samples = pixel_values.shape[0]
+        h, w = int(pixel_values.shape[-2]), int(pixel_values.shape[-1])
+
+        match self:
+            case ImageGranularity.PIXEL:
+                per_sample: list[list[int]] = [[i] for i in range(h * w)]
+            case ImageGranularity.PATCH:
+                per_sample = []
+                # rows of patches, then cols of patches
+                for row_start in range(0, h, patch_size):
+                    for col_start in range(0, w, patch_size):
+                        patch = []
+                        for i in range(patch_size):
+                            for j in range(patch_size):
+                                # pixel positions in this patch, starting from row_start and col_start and moving by patch_size pixels
+                                patch.append((i+row_start) * w + j + col_start)
+                                
+                        per_sample.append(patch)
+            case _:
+                raise NotImplementedError(f"Granularity {self} not implemented.")
+
+        # per-sample structure is identical across the batch (unlike text, where it depends on tokens)
+        return [per_sample for _ in range(n_samples)]
+
+    @jaxtyped(typechecker=beartype)
+    def get_association_matrix(
+        self,
+        inputs: TensorMapping,
+        patch_size: int = 16,
+        indices_list: list[list[list[int]]] | None = None,
+    ) -> list[Bool[torch.Tensor, "g l"]]:
+        """
+        Build the boolean matrix that maps from this granularity to flat pixel-position space.
+
+        Mirrors `TextGranularity.get_association_matrix` with `l = H*W` instead of padded token count.
+
+        Args:
+            inputs (TensorMapping): Batched inputs with `pixel_values` of shape `(b, 3, H, W)`.
+            patch_size (int): Patch side length used when computing indices for PATCH.
+            indices_list (list[list[list[int]]] | None): Precomputed `get_indices` output.
+
+        Returns:
+            list[Bool[Tensor, "g l"]]: One matrix per sample. `g` = number of granularity units,
+                `l = H*W` = total pixel positions (no padding for ViT).
+        """
+        if indices_list is None:
+            indices_list = self.get_indices(inputs, patch_size)
+
+        pixel_values = inputs["pixel_values"]
+        l = int(pixel_values.shape[-1]) * int(pixel_values.shape[-2])  # H * W
+
+        assoc_matrix_list: list[Bool[torch.Tensor, "g l"]] = []
+        for indices in indices_list:
+            g = len(indices)
+            assoc_matrix: Bool[torch.Tensor, "g l"] = torch.zeros((g, l), dtype=torch.bool)
+            for j, gran_indices in enumerate(indices):
+                assoc_matrix[j, gran_indices] = True
+            assoc_matrix_list.append(assoc_matrix)
+
+        return assoc_matrix_list
+
+    def granularity_score_aggregation(
+        self,
+        contribution: torch.Tensor,
+        granularity_aggregation_strategy: GranularityAggregationStrategy | None = None,
+        inputs: TensorMapping | None = None,
+        patch_size: int = 16,
+        aggregate_inputs: bool = False,
+        indices_list: list[list[list[int]]] | None = None,
+    ) -> Float[torch.Tensor, "t g"]:
+        """
+        Aggregate `contribution` of shape `(t, l=H*W)` to the chosen granularity.
+
+        Mirrors `TextGranularity.granularity_score_aggregation` minus the generation
+        (`aggregate_targets`) branch — image classification only.
+
+        PIXEL behaves like text `TOKEN` (direct indexing).
+        PATCH behaves like text `WORD` (within-unit aggregation via `GranularityAggregationStrategy`).
+
+        Args:
+            contribution (torch.Tensor): Per-pixel attribution scores of shape `(t, l)`.
+            granularity_aggregation_strategy (GranularityAggregationStrategy | None):
+                Aggregation method for PATCH. Required for PATCH, ignored for PIXEL.
+            inputs (TensorMapping | None): Required for non-default granularity to read H, W.
+            patch_size (int): Patch side length, used to compute indices for PATCH.
+            aggregate_inputs (bool): If False (perturbation methods), returns `contribution`
+                unchanged — granularity is already encoded in the perturbation masks.
+                If True (gradient methods), aggregates over pixel positions to granularity units.
+            indices_list (list[list[list[int]]] | None): Precomputed `get_indices` output.
+
+        Returns:
+            torch.Tensor: Aggregated contribution of shape `(t, g)`.
+        """
+        # Perturbation methods: granularity is already in the masks, return as-is
+        if not aggregate_inputs:
+            return contribution
+
+        if inputs is None:
+            raise ValueError("Inputs are required for non-default granularity aggregation.")
+
+        if indices_list is None:
+            indices_list = self.get_indices(inputs, patch_size)
+
+        if len(indices_list) > 1:
+            raise ValueError(
+                "`granularity_score_aggregation` does not support batched inputs. Please provide a single input."
+            )
+        sample_indices: list[list[int]] = indices_list[0]
+
+        # Gradient methods: aggregate per granularity unit
+        match self:
+            case ImageGranularity.PIXEL:
+                # PIXEL behaves like text TOKEN — direct indexing, singleton units
+                indices = torch.tensor(sample_indices).squeeze(1)
+                return contribution[:, indices]
+            case ImageGranularity.PATCH:
+                # PATCH behaves like text WORD — within-unit aggregation
+                if granularity_aggregation_strategy is None:
+                    raise ValueError(
+                        "granularity_aggregation_strategy must be provided for PATCH granularity."
+                    )
+                aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
+                    (contribution.shape[0], len(sample_indices)),
+                    dtype=contribution.dtype,
+                    device=contribution.device,
+                )
+                for j, unit_indices in enumerate(sample_indices):
+                    unit_contribution: Float[torch.Tensor, "t gi"] = contribution[:, unit_indices]
+                    assert unit_contribution.dim() == 2 and unit_contribution.shape[1] >= 2, (
+                        f"PATCH units must contain >=2 pixels; got shape {tuple(unit_contribution.shape)}. "
+                        "Use ImageGranularity.PIXEL for pixel-level granularity."
+                    )
+                    aggregated_contribution[:, [j]] = granularity_aggregation_strategy.aggregate(
+                        unit_contribution, dim=1
+                    )
+                return aggregated_contribution
+            case _:
+                raise NotImplementedError(f"Granularity {self} not implemented for aggregation.")
+
+    def get_decomposition(
+        self,
+        inputs: TensorMapping,
+        patch_size: int = 16,
+        return_coordinates: bool = False,
+        indices_list: list[list[list[int]]] | None = None,
+        **kwargs,
+    ) -> list[list[list[int]]] | list[list[tuple[int, int]]]:
+        """
+        Return per-unit labels for visualization or downstream consumption.
+
+        If `return_coordinates=True`, returns `(row, col)` int tuples per granularity unit
+        (pixel coordinates for PIXEL, patch-grid coordinates for PATCH).
+        Otherwise returns the same nested-int structure as `get_indices`.
+
+        Args:
+            inputs (TensorMapping): Batched inputs with `pixel_values` of shape `(b, 3, H, W)`.
+            patch_size (int): Patch side length, used for PATCH.
+            return_coordinates (bool): Tuple-coordinate output vs. raw index nesting.
+            indices_list (list[list[list[int]]] | None): Precomputed `get_indices` output.
+            **kwargs: Absorbs text-side caller args (e.g., `tokenizer=...`) that do not apply here.
+
+        Returns:
+            list[list[list[int]]] | list[list[tuple[int, int]]]: Outer list indexed by sample.
+        """
+        del kwargs  # tokenizer etc. — explicitly discarded for text-API parity
+
+        if indices_list is None:
+            indices_list = self.get_indices(inputs, patch_size)
+
+        if not return_coordinates:
+            return indices_list
+
+        pixel_values = inputs["pixel_values"]
+        w = int(pixel_values.shape[-1])
+        n_samples = len(indices_list)
+
+        # all samples share the same per-sample structure (image processor produces fixed shape),
+        # so we compute the decomposition once and replicate.
+        sample_indices = indices_list[0]
+        decomposition: list[tuple[int, int]] = []
+        match self:
+            case ImageGranularity.PIXEL:
+                # one singleton index per unit; recover (row, col) from flat position
+                for unit in sample_indices:
+                    idx = unit[0]
+                    decomposition.append((idx // w, idx % w))
+            case ImageGranularity.PATCH:
+                # patch-grid coords: (patch_row, patch_col), order matches get_indices traversal
+                n_patches_per_row = w // patch_size
+                for j in range(len(sample_indices)):
+                    decomposition.append((j // n_patches_per_row, j % n_patches_per_row))
+            case _:
+                raise NotImplementedError(f"Granularity {self} not implemented for decomposition.")
+
+        all_decompositions: list[list[tuple[int, int]]] = [decomposition for _ in range(n_samples)]
+
+        return all_decompositions

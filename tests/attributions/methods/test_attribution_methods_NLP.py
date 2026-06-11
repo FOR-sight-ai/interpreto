@@ -50,7 +50,7 @@ from interpreto.attributions import (
     VarGrad,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import TextGranularity, GranularityAggregationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
 
@@ -130,7 +130,7 @@ def is_ci() -> bool:
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_with_text_short(model_name, attribution_explainer):
     evaluate_attribution_methods_with_text(
-        model_name, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
+        model_name, attribution_explainer, granularity=TextGranularity.TOKEN, aggregation_strategy=None
     )
 
 
@@ -139,7 +139,7 @@ def test_attribution_methods_with_text_short(model_name, attribution_explainer):
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_with_text_long(model_name, attribution_explainer):
     evaluate_attribution_methods_with_text(
-        model_name, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
+        model_name, attribution_explainer, granularity=TextGranularity.TOKEN, aggregation_strategy=None
     )
 
 
@@ -148,7 +148,7 @@ def test_attribution_methods_with_text_long(model_name, attribution_explainer):
 )
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize(
-    "granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE]
+    "granularity", [TextGranularity.ALL_TOKENS, TextGranularity.TOKEN, TextGranularity.WORD, TextGranularity.SENTENCE]
 )
 def test_attribution_methods_granularity(model_name, attribution_explainer, granularity):
     evaluate_attribution_methods_with_text(
@@ -163,7 +163,7 @@ def test_attribution_methods_granularity(model_name, attribution_explainer, gran
     "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
 )
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-@pytest.mark.parametrize("granularity", [Granularity.WORD, Granularity.SENTENCE])
+@pytest.mark.parametrize("granularity", [TextGranularity.WORD, TextGranularity.SENTENCE])
 @pytest.mark.parametrize(
     "aggregation_strategy",
     [
@@ -336,7 +336,7 @@ def test_attribution_methods_memory_management_classification(attribution_explai
         tokenizer=tokenizer,
         batch_size=16,
         device=DEVICE,
-        granularity=Granularity.ALL_TOKENS,
+        granularity=TextGranularity.ALL_TOKENS,
         **explainer_kwargs,
     )
 
@@ -369,7 +369,7 @@ def test_attribution_methods_memory_management_generation(attribution_explainer)
         tokenizer=tokenizer,
         batch_size=16,
         device=DEVICE,
-        granularity=Granularity.ALL_TOKENS,
+        granularity=TextGranularity.ALL_TOKENS,
         **explainer_kwargs,
     )
 
@@ -409,22 +409,22 @@ if __name__ == "__main__":
     test_attribution_methods_granularity(
         model_name="hf-internal-testing/tiny-random-bert",
         attribution_explainer=Occlusion,
-        granularity=Granularity.WORD,
+        granularity=TextGranularity.WORD,
     )
     test_attribution_methods_granularity(
         model_name="hf-internal-testing/tiny-random-gpt2",
         attribution_explainer=VarGrad,
-        granularity=Granularity.WORD,
+        granularity=TextGranularity.WORD,
     )
     test_attribution_methods_granularity(
         model_name="hf-internal-testing/tiny-random-bert",
         attribution_explainer=Saliency,
-        granularity=Granularity.ALL_TOKENS,
+        granularity=TextGranularity.ALL_TOKENS,
     )
     test_attribution_methods_granularity_aggregation_strategy(
         model_name="hf-internal-testing/tiny-random-gpt2",
         attribution_explainer=GradientShap,
-        granularity=Granularity.SENTENCE,
+        granularity=TextGranularity.SENTENCE,
         aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
     )
     bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")

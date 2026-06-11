@@ -50,7 +50,7 @@ from .attributions import (
     VarGrad,
 )
 from .commons import (
-    Granularity,
+    TextGranularity,
     ImageGranularity,
 )
 from .model_wrapping import ModelWithSplitPoints
@@ -73,7 +73,7 @@ def get_version() -> str:
 
 __all__ = [
     "GradientShap",
-    "Granularity",
+    "TextGranularity",
     "ImageGranularity",
     "ImageGradientShap",
     "ImageIntegratedGradients",

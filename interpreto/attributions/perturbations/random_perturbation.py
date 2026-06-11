@@ -34,7 +34,7 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import Granularity, TextMaskPerturbator
+from interpreto.attributions.perturbations.base import TextGranularity, TextMaskPerturbator
 
 
 class RandomMaskedTokenPerturbator(TextMaskPerturbator):
@@ -45,7 +45,7 @@ class RandomMaskedTokenPerturbator(TextMaskPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
+        granularity: TextGranularity = TextGranularity.TOKEN,
         replace_token_id: int = 0,
         n_perturbations: int = 30,
         perturb_probability: float = 0.5,

@@ -30,7 +30,7 @@ from jaxtyping import Float, jaxtyped
 from transformers import PreTrainedTokenizer
 
 from interpreto.attributions.perturbations.base import TextMaskPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 
 
 class OcclusionPerturbator(TextMaskPerturbator):
@@ -43,14 +43,14 @@ class OcclusionPerturbator(TextMaskPerturbator):
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
+        granularity: TextGranularity = TextGranularity.TOKEN,
         replace_token_id: int = 0,
     ) -> None:
         """Instantiate the perturbator.
 
         Args:
             tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model.
-            granularity (Granularity): Level at which occlusion should be applied.
+            granularity (TextGranularity): Level at which occlusion should be applied.
             replace_token_id (int): Token used to replace occluded elements.
         """
 

@@ -34,7 +34,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionOutput
 from interpreto.attributions.perturbations.random_perturbation import RandomMaskedTokenPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -42,12 +42,12 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 @pytest.mark.parametrize(
     "granularity, n_perturbations, perturb_probability, distance_function, kernel_width",
     [
-        (Granularity.TOKEN, 10, 0.5, DistancesFromMask.HAMMING, None),
-        (Granularity.TOKEN, 20, 0.8, DistancesFromMask.EUCLIDEAN, 5),
-        (Granularity.TOKEN, 10, 0.5, DistancesFromMask.COSINE, 0.5),
-        (Granularity.WORD, 15, 0.3, DistancesFromMask.HAMMING, None),
-        (Granularity.WORD, 25, 0.7, DistancesFromMask.EUCLIDEAN, None),
-        (Granularity.WORD, 15, 0.3, DistancesFromMask.COSINE, 0.5),
+        (TextGranularity.TOKEN, 10, 0.5, DistancesFromMask.HAMMING, None),
+        (TextGranularity.TOKEN, 20, 0.8, DistancesFromMask.EUCLIDEAN, 5),
+        (TextGranularity.TOKEN, 10, 0.5, DistancesFromMask.COSINE, 0.5),
+        (TextGranularity.WORD, 15, 0.3, DistancesFromMask.HAMMING, None),
+        (TextGranularity.WORD, 25, 0.7, DistancesFromMask.EUCLIDEAN, None),
+        (TextGranularity.WORD, 15, 0.3, DistancesFromMask.COSINE, 0.5),
     ],
 )
 def test_lime_attribution_init_and_mask(

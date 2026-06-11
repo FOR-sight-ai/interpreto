@@ -36,7 +36,7 @@ from jaxtyping import Float, Int, jaxtyped
 from transformers import BatchEncoding
 from transformers.tokenization_utils import PreTrainedTokenizer
 
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 from interpreto.typing import SingleAttribution
 
 
@@ -55,7 +55,7 @@ class InsertionDeletionPerturbator:
 
     Attributes:
         tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model.
-        granularity (Granularity): Level at which deletion should be applied. Set after initialization.
+        granularity (TextGranularity): Level at which deletion should be applied. Set after initialization.
         n_perturbations (int): Number of perturbations to generate.
         max_percentage_perturbed (float): Maximum percentage of tokens in the sequence to be perturbed.
         replace_token_id (int): Token used to replace deleted elements.
@@ -69,7 +69,7 @@ class InsertionDeletionPerturbator:
         "max_percentage_perturbed",
     )
 
-    granularity: Granularity
+    granularity: TextGranularity
 
     def __init__(
         self,
