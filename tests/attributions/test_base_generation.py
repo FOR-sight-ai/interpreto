@@ -25,7 +25,7 @@
 
 import torch
 
-from interpreto.attributions.base import GenerationAttributionExplainer
+from interpreto.attributions.base import TextGenerationExplainer
 
 
 def create_targets_test(tokenizer):
@@ -73,7 +73,7 @@ def test_process_targets(gpt2_model, gpt2_tokenizer):
     """
     Test the process_targets method for different input types.
     """
-    explainer = GenerationAttributionExplainer(gpt2_model, gpt2_tokenizer, batch_size=2)
+    explainer = TextGenerationExplainer(gpt2_model, gpt2_tokenizer, batch_size=2)
     list_targets = create_targets_test(gpt2_tokenizer)
 
     for target in list_targets:

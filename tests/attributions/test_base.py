@@ -27,7 +27,7 @@ import pickle
 import pytest
 import torch
 
-from interpreto.attributions.base import ClassificationAttributionExplainer, InferenceModes
+from interpreto.attributions.base import TextClassificationAttributionExplainer, InferenceModes
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -43,7 +43,7 @@ def test_process_targets(bert_model, bert_tokenizer):
     """
     Test the process_targets method for different input types.
     """
-    explainer = ClassificationAttributionExplainer(bert_model, bert_tokenizer, batch_size=2, device=DEVICE)
+    explainer = TextClassificationAttributionExplainer(bert_model, bert_tokenizer, batch_size=2, device=DEVICE)
 
     # Single integer
     result = explainer.process_targets(3, expected_length=1)
@@ -105,7 +105,7 @@ def test_process_targets(bert_model, bert_tokenizer):
 
 
 def test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer):
-    explainer = ClassificationAttributionExplainer(bert_model, tokenizer=bert_tokenizer, batch_size=2, device=DEVICE)
+    explainer = TextClassificationAttributionExplainer(bert_model, tokenizer=bert_tokenizer, batch_size=2, device=DEVICE)
     explainer.inference_wrapper = lambda *args, **kwargs: [torch.tensor([[1]]), torch.tensor([[0]])]  # type: ignore
 
     # Model input example

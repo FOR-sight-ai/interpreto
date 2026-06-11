@@ -50,8 +50,8 @@ from interpreto.attributions.perturbations.insertion_deletion_perturbation impor
 )
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
+from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
+from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import (
     InferenceModes,
     InferenceWrapper,
@@ -345,8 +345,8 @@ class ClassificationInsertionDeletionBase(InsertionDeletionBase):
     The perturbations are computed for each sample-explanation pair.
     """
 
-    _associated_inference_wrapper = ClassificationInferenceWrapper
-    inference_wrapper: ClassificationInferenceWrapper
+    _associated_inference_wrapper = TextClassificationInferenceWrapper
+    inference_wrapper: TextClassificationInferenceWrapper
 
     def perturbation_generator(
         self, attributions_outputs: Iterable[AttributionOutput]
@@ -397,8 +397,8 @@ class GenerationInsertionDeletionBase(InsertionDeletionBase):
     pert 3 input: "A BC DEF GHIJ KLMNOP", pert 3 target "KLMNOP"
     """
 
-    _associated_inference_wrapper = GenerationInferenceWrapper
-    inference_wrapper: GenerationInferenceWrapper
+    _associated_inference_wrapper = TextGenerationInferenceWrapper
+    inference_wrapper: TextGenerationInferenceWrapper
 
     def perturbation_generator(
         self, attributions_outputs: Iterable[AttributionOutput]
