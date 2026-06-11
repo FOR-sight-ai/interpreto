@@ -1,6 +1,6 @@
 from PIL import Image
 from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, ImageLime,ImageOcclusion, ImageSquareGrad, ImageVarGrad, ImageKernelShap, ImageSobol
-from interpreto import ImageGranularity
+from interpreto.commons import ImageGranularity, granularity
 from transformers import AutoModelForImageClassification, AutoImageProcessor, ViTModel
 from interpreto.visualizations import plot_image_attribution, plot_image_attributions_comparison
 import numpy as np
@@ -11,23 +11,30 @@ import functools
 matplotlib.use("Qt5Agg")
 import requests
 
-url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
-image = Image.open("../cat.jpg")
 
 model = AutoModelForImageClassification.from_pretrained('akahana/vit-base-cats-vs-dogs')
 processor = AutoImageProcessor.from_pretrained('akahana/vit-base-cats-vs-dogs')
 
 #cat_image = Image.open("../cat.jpg")
 #dog_image = Image.open("../dog.jpg")
-cat_and_dog_image = Image.open("../cat and dog.jpg")
-image = cat_and_dog_image
+new_cat_and_dog_image = Image.open("/home/pirano/Desktop/interpretability_libraries/interpreto/equal_cat_and_dog.jpg")
+image = new_cat_and_dog_image
 print(model.config)
 
 test_imagekernelshap = functools.partial(ImageKernelShap, n_perturbations=20)
-test_imagesobol = functools.partial(ImageSobol, n_token_perturbations=10)
+test_imagesobol = functools.partial(ImageSobol, n_token_perturbations=32)
+test_saliency = functools.partial(ImageSaliency,granularity=ImageGranularity.PIXEL)
+test_gradient_shap = functools.partial(ImageGradientShap,granularity=ImageGranularity.PIXEL)
+test_integrated_gradient = functools.partial(ImageIntegratedGradients,granularity=ImageGranularity.PIXEL)
+test_smoothgrad = functools.partial(ImageSmoothGrad,granularity=ImageGranularity.PIXEL)
+test_imagegrad = functools.partial(ImageVarGrad,granularity=ImageGranularity.PIXEL)
+test_squaregrad = functools.partial(ImageSquareGrad,granularity=ImageGranularity.PIXEL)
+test_imagelime = functools.partial(ImageLime, n_perturbations=1000)
 
-methods = [ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, test_imagekernelshap, ImageLime, test_imagesobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad]
 
+methods = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagekernelshap, ImageLime, test_imagesobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad]
+grad_methods = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagekernelshap,test_imagegrad]
+single_method = [test_saliency, test_smoothgrad]
 
 def method_name(method_cls):
     # functools.partial has no __name__; the wrapped class lives on .func
@@ -36,11 +43,11 @@ def method_name(method_cls):
 
 outputs = []  # one ImageAttributionOutput per method
 labels = []   # matching method names
-for method_cls in methods:
+for method_cls in single_method:
     method = method_cls(
         model=model,
         image_processor=processor,
-        granularity=ImageGranularity.PATCH,
+        granularity=ImageGranularity.PIXEL,
     )
 
     output = method.explain(model_inputs=image,targets = [1])[0]

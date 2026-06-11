@@ -42,7 +42,7 @@ import torch
 from matplotlib import pyplot as plt
 from PIL.Image import Image as PILImage
 
-from interpreto.attributions.image_base import ImageAttributionOutput
+from interpreto.attributions.base import ImageAttributionOutput
 
 
 def _to_displayable(image: PILImage | np.ndarray | torch.Tensor) -> np.ndarray:
