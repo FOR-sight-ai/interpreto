@@ -35,7 +35,7 @@ from transformers.image_processing_utils import BaseImageProcessor
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.aggregations import TrapezoidalMeanAggregator
-from interpreto.attributions.image_base import ImageClassificationAttributionExplainer
+from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import LinearInterpolationImagePerturbator
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.commons.image_granularity import ImageGranularity

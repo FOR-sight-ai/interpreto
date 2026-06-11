@@ -36,7 +36,7 @@ from transformers.image_processing_utils import BaseImageProcessor
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
-from interpreto.attributions.image_base import ImageClassificationAttributionExplainer
+from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import SobolImagePerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import GranularityAggregationStrategy
