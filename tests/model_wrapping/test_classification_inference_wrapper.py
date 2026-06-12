@@ -27,7 +27,7 @@ import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from interpreto.attributions.base import setup_token_ids
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
+from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
 from interpreto.typing import IncompatibilityError
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -64,7 +64,7 @@ def test_classification_wrapper(model_name):
     setup_token_ids(model, tokenizer)
     model.eval()
     embedder = model.get_input_embeddings()
-    inference_wrapper = ClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
+    inference_wrapper = TextClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
 
     # Construct inputs
     with torch.no_grad():

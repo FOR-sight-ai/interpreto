@@ -27,7 +27,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from interpreto.attributions.base import setup_token_ids
-from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
+from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 GENERATION_MODELS = [
@@ -62,7 +62,7 @@ def test_generation_wrapper(model_name):
     setup_token_ids(model, tokenizer)
     model.eval()
     embedder = model.get_input_embeddings()
-    inference_wrapper = GenerationInferenceWrapper(model, batch_size=3, device=DEVICE)
+    inference_wrapper = TextGenerationInferenceWrapper(model, batch_size=3, device=DEVICE)
 
     # Construct inputs
     with torch.no_grad():

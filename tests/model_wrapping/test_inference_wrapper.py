@@ -11,13 +11,13 @@ from torch import nn
 from transformers import AutoModelForCausalLM
 from transformers.utils.quantization_config import BitsAndBytesConfig
 
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
+from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
+from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import Batch
 
 TASK_INFERENCE_WRAPPERS = {
-    "classification": ClassificationInferenceWrapper,
-    "generation": GenerationInferenceWrapper,
+    "classification": TextClassificationInferenceWrapper,
+    "generation": TextGenerationInferenceWrapper,
 }
 
 TARGET_MAX = 3
@@ -256,7 +256,7 @@ def test_inference_wrapper_with_quantized_models(model_name, bab_config):
             pytest.skip(f"bitsandbytes runtime is not available in this environment: {error}")
         raise
 
-    wrapped_model = GenerationInferenceWrapper(quantized_model)
+    wrapped_model = TextGenerationInferenceWrapper(quantized_model)
 
     input_ids = torch.arange(0, nb_inputs + nb_outputs, dtype=torch.long).view((1, -1))
     attention_mask = torch.ones_like(input_ids)
