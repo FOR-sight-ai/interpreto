@@ -48,8 +48,8 @@ from interpreto.attributions.perturbations.base import MaskPerturbator, Perturba
 from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator, ImageTensorPerturbator
 from interpreto.commons import TextGranularity
 from interpreto.commons.generator_tools import split_iterator
-from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityAggregationStrategy, GranularityResizeStrategy
+from interpreto.commons.granularity import ImageGranularity
 from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
 from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
 from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
@@ -877,8 +877,8 @@ class ImageAttributionOutput:
             The granularity level of the explanation. Defaults to `ImageGranularity.DEFAULT`
             (= `PATCH`).
 
-        granularity_aggregation_strategy (GranularityAggregationStrategy):
-            The aggregation method used to aggregate scores at the specified granularity.
+        granularity_resize (GranularityResizeStrategy):
+            The interpolation strategy used to resize per-pixel scores to the specified granularity.
 
         inference_mode (Callable[[torch.Tensor], torch.Tensor]):
             The mode used for inference (LOGITS, SOFTMAX, LOG_SOFTMAX). See `InferenceModes`.
@@ -890,7 +890,7 @@ class ImageAttributionOutput:
     targets: torch.Tensor
     classes: torch.Tensor | None = None
     granularity: ImageGranularity = ImageGranularity.DEFAULT
-    granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN
+    granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR
     inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
     raw_image: PILImage | np.ndarray | torch.Tensor | None = None
 
@@ -921,7 +921,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         use_gradient: bool = False,
         input_x_gradient: bool = True,
@@ -953,7 +953,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         self.perturbator = perturbator or ImageTensorPerturbator()
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
-        self.granularity_aggregation_strategy = granularity_aggregation_strategy
+        self.granularity_resize = granularity_resize
         # patch_size is sourced from the model config; required by ImageGranularity.PATCH
         self.patch_size = int(getattr(model.config, "patch_size", 16))
         # The explainer is the single source of truth for patch_size (it owns model.config).
@@ -1173,8 +1173,9 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         Compute attributions for image-classification models.
 
         Mirrors `AttributionExplainer.explain` with image-side substitutions:
-        - `granularity_score_aggregation` is called without `tokenizer` and with `patch_size`
-          (text accepts `tokenizer`; image accepts `patch_size`).
+        - `granularity_resize` (the image counterpart of text's `granularity_score_aggregation`)
+          is called with `patch_size` instead of `tokenizer`, and spatially interpolates the
+          per-pixel field rather than reducing each unit to a scalar.
         - `get_decomposition` uses `return_coordinates=True` (image equivalent of `return_text`).
         - The `attention_mask` post-processing block is dropped (no attention_mask for ViT).
         - The output is `ImageAttributionOutput` instead of `AttributionOutput`.
@@ -1226,9 +1227,9 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         # Aggregate over inputs for gradient-based methods: (t, l) -> (t, g).
         # Image granularity signature: patch_size instead of tokenizer; no aggregate_targets.
         granular_contributions: Iterator[Float[torch.Tensor, "t g"]] = (
-            self.granularity.granularity_score_aggregation(
-                contribution=contribution.cpu(),
-                granularity_aggregation_strategy=self.granularity_aggregation_strategy,
+            self.granularity.granularity_resize(
+                contribution=contribution,
+                granularity_resize_strategy=self.granularity_resize,
                 inputs=inputs,
                 patch_size=self.patch_size,
                 aggregate_inputs=self.inference_wrapper.gradients,
@@ -1266,12 +1267,12 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         ):
 
             attribution_output = ImageAttributionOutput(
-                attributions=contribution,
+                attributions=contribution.cpu(),
                 elements=elements,
                 model_inputs_to_explain=model_input,
                 targets=target.cpu(),
                 granularity=self.granularity,
-                granularity_aggregation_strategy=self.granularity_aggregation_strategy,
+                granularity_resize=self.granularity_resize,
                 inference_mode=self.inference_wrapper.mode,
                 raw_image=raw_image,
             )

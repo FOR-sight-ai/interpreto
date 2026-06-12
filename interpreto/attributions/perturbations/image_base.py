@@ -37,7 +37,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
 from interpreto.attributions.perturbations.base import MaskPerturbator, TensorPerturbator
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import ImageGranularity
 from interpreto.typing import TensorMapping
 
 

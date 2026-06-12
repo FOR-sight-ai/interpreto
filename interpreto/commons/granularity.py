@@ -32,9 +32,11 @@ from enum import Enum
 import torch
 from beartype import beartype
 from jaxtyping import Bool, Float, Int, jaxtyped
+from torch.nn.functional import interpolate
 from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from torchvision.transforms.v2 import functional as F2
 
 # TODO I dont know where to put this...
 END_SENTENCE = (".", "?", "!")
@@ -70,8 +72,11 @@ SENTENCE_SPLIT_EXCEPTIONS = (
     "E.U.",
 )
 
+class GranularityCombinationStrategy(Enum):
+    pass
 
-class GranularityAggregationStrategy(Enum):
+
+class GranularityAggregationStrategy(GranularityCombinationStrategy):
     """
     Enumeration of the available aggregation strategies for combining token-level
     scores into a single score for each unit of a higher-level granularity
@@ -150,6 +155,57 @@ class GranularityAggregationStrategy(Enum):
                 return x.repeat(new_dim_length, 1)
             case _:
                 raise NotImplementedError(f"Aggregation strategy {self} not implemented.")
+
+class GranularityResizeStrategy(GranularityCombinationStrategy):
+    # TODO: evaluate if it needs an unfold function such as GranularityAggregationStrategy
+    # NOTE: torch has no hamming/lanczos modes, and torchvision only offers them via the CPU-only
+    # PIL backend, so they are unavailable for GPU tensors regardless of library.
+    BILINEAR = "bilinear"
+    BICUBIC = "bicubic"
+    AREA = "area"  # box/area averaging — the energy-preserving downsample
+
+    def resize(
+        self,
+        x: Float[torch.Tensor, "t h_in w_in"],
+        patch_size: int,
+    ) -> Float[torch.Tensor, "t h_out w_out"]:
+        """
+        Spatially resize per-target contribution maps from pixel resolution down to the patch grid.
+
+        Unlike `GranularityAggregationStrategy.aggregate` (which reduces a unit's pixels to a
+        scalar), this keeps the 2-D layout and interpolates the whole grid. The `t` axis is treated
+        as the channel dimension, so all targets are resized in one call and the per-target axis is
+        preserved (no broadcast across targets). Runs on `x`'s device (CPU or GPU).
+
+        The output size is derived from the input grid and `patch_size`:
+        ``(h_in // patch_size, w_in // patch_size)``.
+
+        Args:
+            x (Float[torch.Tensor, "t h_in w_in"]): Per-target contribution maps at pixel resolution.
+            patch_size (int): Patch side length; the pixel grid is reduced by this factor.
+
+        Returns:
+            Float[torch.Tensor, "t h_out w_out"]: Resized maps, same dtype/device as ``x``.
+        """
+        _, h_in, w_in = x.shape
+        output_size = (h_in // patch_size, w_in // patch_size)
+        # interpolate expects 4-D (N, C, H, W); treat the maps as a single batch of `t` channels
+        x4: Float[torch.Tensor, "1 t h_in w_in"] = x.unsqueeze(0)
+        match self:
+            case GranularityResizeStrategy.BILINEAR:
+                resized = interpolate(x4, size=output_size, mode="bilinear", align_corners=False, antialias=True)
+            case GranularityResizeStrategy.BICUBIC:
+                resized = interpolate(x4, size=output_size, mode="bicubic", align_corners=False, antialias=True)
+            case GranularityResizeStrategy.AREA:
+                # align_corners / antialias are not accepted with mode="area"
+                resized = interpolate(x4, size=output_size, mode="area")
+            case _:
+                raise NotImplementedError(f"Resize strategy {self} not implemented.")
+        return resized.squeeze(0)
+
+
+
+
 
 class Granularity(Enum):
     #TODO: look if it's possible to refactor some functions in TextGranularity and ImageGranularity
@@ -1008,83 +1064,62 @@ class ImageGranularity(Granularity):
 
         return assoc_matrix_list
 
-    def granularity_score_aggregation(
+    def granularity_resize(
         self,
         contribution: torch.Tensor,
-        granularity_aggregation_strategy: GranularityAggregationStrategy | None = None,
+        granularity_resize_strategy: GranularityResizeStrategy | None = None,
         inputs: TensorMapping | None = None,
         patch_size: int = 16,
         aggregate_inputs: bool = False,
-        indices_list: list[list[list[int]]] | None = None,
     ) -> Float[torch.Tensor, "t g"]:
         """
-        Aggregate `contribution` of shape `(t, l=H*W)` to the chosen granularity.
+        Resize `contribution` of shape `(t, l=H*W)` to the chosen granularity.
 
-        Mirrors `TextGranularity.granularity_score_aggregation` minus the generation
-        (`aggregate_targets`) branch — image classification only.
+        Image-native counterpart of `TextGranularity.granularity_score_aggregation`: instead of
+        treating a unit as an unordered bag of pixels and reducing it to a scalar, it keeps the 2-D
+        spatial layout and interpolates the whole grid (see `GranularityResizeStrategy`).
 
-        PIXEL behaves like text `TOKEN` (direct indexing).
-        PATCH behaves like text `WORD` (within-unit aggregation via `GranularityAggregationStrategy`).
+        - PIXEL: identity — pixels are already the finest unit.
+        - PATCH: reshape `(t, H*W)` → `(t, H, W)` (row-major), spatially resize to the patch grid,
+          then reflatten row-major to `(t, g)`.
 
         Args:
             contribution (torch.Tensor): Per-pixel attribution scores of shape `(t, l)`.
-            granularity_aggregation_strategy (GranularityAggregationStrategy | None):
-                Aggregation method for PATCH. Required for PATCH, ignored for PIXEL.
-            inputs (TensorMapping | None): Required for non-default granularity to read H, W.
-            patch_size (int): Patch side length, used to compute indices for PATCH.
+            granularity_resize_strategy (GranularityResizeStrategy | None):
+                Interpolation mode for PATCH. Required for PATCH, ignored for PIXEL.
+            inputs (TensorMapping | None): Required for PATCH to read H, W from `pixel_values`.
+            patch_size (int): Patch side length; the pixel grid is reduced by this factor.
             aggregate_inputs (bool): If False (perturbation methods), returns `contribution`
                 unchanged — granularity is already encoded in the perturbation masks.
-                If True (gradient methods), aggregates over pixel positions to granularity units.
-            indices_list (list[list[list[int]]] | None): Precomputed `get_indices` output.
+                If True (gradient methods), resizes the per-pixel field to granularity units.
 
         Returns:
-            torch.Tensor: Aggregated contribution of shape `(t, g)`.
+            torch.Tensor: Resized contribution of shape `(t, g)`.
         """
         # Perturbation methods: granularity is already in the masks, return as-is
         if not aggregate_inputs:
             return contribution
 
-        if inputs is None:
-            raise ValueError("Inputs are required for non-default granularity aggregation.")
-
-        if indices_list is None:
-            indices_list = self.get_indices(inputs, patch_size)
-
-        if len(indices_list) > 1:
-            raise ValueError(
-                "`granularity_score_aggregation` does not support batched inputs. Please provide a single input."
-            )
-        sample_indices: list[list[int]] = indices_list[0]
-
-        # Gradient methods: aggregate per granularity unit
         match self:
             case ImageGranularity.PIXEL:
-                # PIXEL behaves like text TOKEN — direct indexing, singleton units
-                indices = torch.tensor(sample_indices).squeeze(1)
-                return contribution[:, indices]
+                # pixels are the finest unit — nothing to resize
+                return contribution
             case ImageGranularity.PATCH:
-                # PATCH behaves like text WORD — within-unit aggregation
-                if granularity_aggregation_strategy is None:
-                    raise ValueError(
-                        "granularity_aggregation_strategy must be provided for PATCH granularity."
-                    )
-                aggregated_contribution: Float[torch.Tensor, "t g"] = torch.zeros(
-                    (contribution.shape[0], len(sample_indices)),
-                    dtype=contribution.dtype,
-                    device=contribution.device,
-                )
-                for j, unit_indices in enumerate(sample_indices):
-                    unit_contribution: Float[torch.Tensor, "t gi"] = contribution[:, unit_indices]
-                    assert unit_contribution.dim() == 2 and unit_contribution.shape[1] >= 2, (
-                        f"PATCH units must contain >=2 pixels; got shape {tuple(unit_contribution.shape)}. "
-                        "Use ImageGranularity.PIXEL for pixel-level granularity."
-                    )
-                    aggregated_contribution[:, [j]] = granularity_aggregation_strategy.aggregate(
-                        unit_contribution, dim=1
-                    )
-                return aggregated_contribution
+                if granularity_resize_strategy is None:
+                    raise ValueError("granularity_resize_strategy must be provided for PATCH granularity.")
+                if inputs is None:
+                    raise ValueError("Inputs are required for PATCH granularity to read H, W.")
+
+                t = contribution.shape[0]
+                h, w = int(inputs["pixel_values"].shape[-2]), int(inputs["pixel_values"].shape[-1])
+                # row-major reshape — matches get_indices (index = row*W + col) and the inference
+                # wrapper's flatten(start_dim=1)
+                grid: Float[torch.Tensor, "t h w"] = contribution.reshape(t, h, w)
+                resized: Float[torch.Tensor, "t hp wp"] = granularity_resize_strategy.resize(grid, patch_size)
+                # row-major reflatten back to (t, g = hp*wp)
+                return resized.reshape(t, -1)
             case _:
-                raise NotImplementedError(f"Granularity {self} not implemented for aggregation.")
+                raise NotImplementedError(f"Granularity {self} not implemented for resizing.")
 
     def get_decomposition(
         self,

@@ -36,8 +36,8 @@ from transformers.image_processing_utils import BaseImageProcessor
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
-from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy
+from interpreto.commons.granularity import ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -80,7 +80,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         input_x_gradient: bool = True,
@@ -97,7 +97,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             granularity (ImageGranularity, optional): The granularity level of the
                 explanation. Options: `PIXEL`, `PATCH`. Defaults to
                 `ImageGranularity.DEFAULT` (= `PATCH`).
-            granularity_aggregation_strategy (GranularityAggregationStrategy, optional):
+            granularity_resize (GranularityResizeStrategy, optional):
                 How to aggregate per-pixel gradients into per-patch scores.
                 Options: MEAN, MAX, MIN, SUM, SIGNED_MAX. Ignored when `granularity`
                 is `PIXEL` (no within-unit aggregation needed).
@@ -121,7 +121,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             aggregator=None,  # falls back to default Aggregator() (squeeze p=1)
             device=device,
             granularity=granularity,
-            granularity_aggregation_strategy=granularity_aggregation_strategy,
+            granularity_resize=granularity_resize,
             inference_mode=inference_mode,
             use_gradient=True,
             input_x_gradient=input_x_gradient,

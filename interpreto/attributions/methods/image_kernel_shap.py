@@ -40,8 +40,8 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import ShapImagePerturbator
-from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy
+from interpreto.commons.granularity import ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -75,7 +75,7 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_perturbations: int = 1000,
         replace_value: float = 0.0,
@@ -91,7 +91,7 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
             batch_size (int): batch size for the attribution method.
             granularity (ImageGranularity, optional): unit over which coalitions are defined (`PIXEL`, `PATCH`).
                 Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
-            granularity_aggregation_strategy (GranularityAggregationStrategy, optional): how to
+            granularity_resize (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel scores into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
             n_perturbations (int): number of coalition samples to generate.
@@ -122,7 +122,7 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
             aggregator=aggregator,
             device=device,
             granularity=granularity,
-            granularity_aggregation_strategy=granularity_aggregation_strategy,
+            granularity_resize=granularity_resize,
             inference_mode=inference_mode,
             use_gradient=False,
             preprocess=preprocess,

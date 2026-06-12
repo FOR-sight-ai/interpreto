@@ -37,8 +37,8 @@ from transformers.modeling_utils import PreTrainedModel
 from interpreto.attributions.aggregations import MeanAggregator
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import GaussianNoiseImagePerturbator
-from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy
+from interpreto.commons.granularity import ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -70,7 +70,7 @@ class ImageSmoothGrad(ImageClassificationAttributionExplainer):
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         input_x_gradient: bool = True,
@@ -87,7 +87,7 @@ class ImageSmoothGrad(ImageClassificationAttributionExplainer):
             batch_size (int): batch size for the attribution method.
             granularity (ImageGranularity, optional): granularity level (`PIXEL`, `PATCH`).
                 Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
-            granularity_aggregation_strategy (GranularityAggregationStrategy, optional): how to
+            granularity_resize (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel gradients into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             device (torch.device, optional): device on which the attribution method will be run.
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
@@ -107,7 +107,7 @@ class ImageSmoothGrad(ImageClassificationAttributionExplainer):
             aggregator=MeanAggregator(),
             device=device,
             granularity=granularity,
-            granularity_aggregation_strategy=granularity_aggregation_strategy,
+            granularity_resize=granularity_resize,
             inference_mode=inference_mode,
             use_gradient=True,
             input_x_gradient=input_x_gradient,

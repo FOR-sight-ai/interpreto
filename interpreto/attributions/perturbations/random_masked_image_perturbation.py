@@ -38,7 +38,7 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 
 from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import ImageGranularity
 
 
 class RandomMaskedImagePerturbator(ImageMaskPerturbator):

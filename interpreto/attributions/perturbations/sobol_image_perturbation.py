@@ -34,7 +34,7 @@ from jaxtyping import Float, jaxtyped
 
 from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import ImageGranularity
 
 
 class SobolImagePerturbator(ImageMaskPerturbator):

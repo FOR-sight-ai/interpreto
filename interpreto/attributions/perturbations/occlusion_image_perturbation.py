@@ -33,7 +33,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
 from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator
-from interpreto.commons.image_granularity import ImageGranularity
+from interpreto.commons.granularity import ImageGranularity
 
 
 class OcclusionImagePerturbator(ImageMaskPerturbator):
