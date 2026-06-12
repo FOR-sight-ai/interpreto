@@ -36,8 +36,8 @@ from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TextMaskPerturbator
-from interpreto.commons.granularity import TextGranularity
+from interpreto.attributions.perturbations.base import TextMaskPerturbator, ImageMaskPerturbator
+from interpreto.commons.granularity import TextGranularity, ImageGranularity
 
 
 class SequenceSamplers(Enum):
@@ -107,6 +107,67 @@ class SobolTokenPerturbator(TextMaskPerturbator):
         C[indices, :, indices] = B.T
 
         # We reshape stack all C_i, A, and B to match the expected shape from interpreto API.
+        masks: Float[torch.Tensor, p, l] = torch.concat([A, B, C.view(l * k, l)], dim=0)
+
+        return (masks < 0.5).float()
+
+class SobolImagePerturbator(ImageMaskPerturbator):
+    """
+    Perturbator producing Sobol (quasi-Monte-Carlo) masks for Sobol attribution.
+    """
+
+    __slots__ = ("n_token_perturbations", "sampler_class")
+
+    def __init__(
+        self,
+        granularity: ImageGranularity = ImageGranularity.PATCH,
+        replace_value: float = 0.0,
+        n_token_perturbations: int = 16,
+        sampler: SequenceSamplers = SequenceSamplers.SOBOL,
+        patch_size: int | None = None,
+    ):
+        """
+        Args:
+            granularity (ImageGranularity): unit over which masks are defined.
+            replace_value (float): baseline written into masked positions.
+            n_token_perturbations (int): Monte-Carlo samples per granularity unit.
+            sampler (SequenceSamplers): `SOBOL`, `HALTON`, or `LatinHypercube`.
+            patch_size (int): patch side length (reconciled by the explainer).
+        """
+        # total p = (g + 2) * k is determined at mask time, not up front.
+        super().__init__(
+            granularity=granularity,
+            n_perturbations=-1,
+            replace_value=replace_value,
+            patch_size=patch_size,
+        )
+        self.n_token_perturbations = n_token_perturbations
+        self.sampler_class = sampler.value
+
+    @jaxtyped(typechecker=beartype)
+    def get_mask(self, mask_dim: int, **kwargs) -> Float[torch.Tensor, "p {mask_dim}"]:
+        """
+        Generates a binary mask for each token in the sequence.
+
+        Args:
+            mask_dim (int): number of granularity units `g`.
+
+        Returns:
+            torch.Tensor: shape `((g + 2) * k, g)`.
+        """
+        l, k = mask_dim, self.n_token_perturbations
+        p = (l + 2) * k
+
+        # two independent random matrices A & B
+        AB: Float[torch.Tensor, k, 2 * l] = torch.Tensor(self.sampler_class(2 * l).random(k))
+        A: Float[torch.Tensor, k, l] = AB[:, :l]
+        B: Float[torch.Tensor, k, l] = AB[:, l:]
+
+        # C is a collection of C_i; C_i is A with its i-th column replaced by B[:, i]
+        C: Float[torch.Tensor, l, k, l] = A.repeat(l, 1, 1)
+        indices = torch.arange(l)
+        C[indices, :, indices] = B.T
+
         masks: Float[torch.Tensor, p, l] = torch.concat([A, B, C.view(l * k, l)], dim=0)
 
         return (masks < 0.5).float()

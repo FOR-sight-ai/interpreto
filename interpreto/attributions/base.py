@@ -44,8 +44,15 @@ from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.perturbations.base import MaskPerturbator, Perturbator, TensorPerturbator, TextMaskPerturbator, TextTensorPerturbator
-from interpreto.attributions.perturbations.image_base import ImageMaskPerturbator, ImageTensorPerturbator
+from interpreto.attributions.perturbations.base import (
+    ImageMaskPerturbator,
+    ImageTensorPerturbator,
+    MaskPerturbator,
+    Perturbator,
+    TensorPerturbator,
+    TextMaskPerturbator,
+    TextTensorPerturbator,
+)
 from interpreto.commons import TextGranularity
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy, GranularityResizeStrategy
