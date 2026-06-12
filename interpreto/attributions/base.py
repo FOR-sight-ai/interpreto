@@ -292,7 +292,7 @@ class AttributionExplainer(ABC):
             device=device,
             mode=inference_mode,
         )  # type: ignore
-        self.perturbator = perturbator or Perturbator()
+        self.perturbator = perturbator 
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.granularity_aggregation_strategy = granularity_aggregation_strategy
@@ -899,7 +899,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
     """
     Attribution explainer for image-classification models (ViT-family).
 
-    Mirrors `ClassificationAttributionExplainer` with three modality-specific overrides:
+    Mirrors `TextClassificationAttributionExplainer` with three modality-specific overrides:
     `__init__` swaps `tokenizer` for `image_processor` and drops the text-side
     `setup_token_ids` call (image configs have no pad/mask tokens),
     `process_model_inputs` accepts `BatchFeature` instead of `BatchEncoding`, and
