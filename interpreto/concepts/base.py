@@ -87,26 +87,22 @@ class ModelForInputsToConcepts:
         self,
         concept_explainer: ConceptEncoderExplainer,
     ):
-        self.splitter: SplitterForClassification
-        self.splitter = concept_explainer.splitter  # type: ignore
-        if not isinstance(self.splitter, SplitterForClassification):
+        self.concept_explainer = concept_explainer
+        splitter = concept_explainer.splitter  # type: ignore
+
+        if not isinstance(splitter, SplitterForClassification):
             raise IncompatibilityError(
-                f"The split model must be a SplitterForClassification model. Got {self.splitter.__class__.__name__}."
+                f"The split model must be a SplitterForClassification model. Got {splitter.__class__.__name__}."
             )
 
-        self.concept_model = concept_explainer.concept_model
-        if self.concept_model.device != self.splitter.device:  # type: ignore  # TODO: add device to ConceptModelProtocol
-            self.concept_model.to(self.splitter.device)  # type: ignore
-            self.concept_model.device = (  # type: ignore
-                self.splitter.device
-            )  # Overcomplete models `.to()` method does not set the device
+        self.to(self.concept_explainer.splitter.device)  # type: ignore
 
         self.nb_concepts = concept_explainer.concept_model.nb_concepts
 
         # Expose a minimal config so InferenceWrapper.__init__ and setup_token_ids can work
         self.config = SimpleNamespace(
-            pad_token_id=self.splitter.tokenizer.pad_token_id,
-            vocab_size=getattr(self.splitter._model.config, "vocab_size", None),
+            pad_token_id=splitter.tokenizer.pad_token_id,
+            vocab_size=getattr(splitter._model.config, "vocab_size", None),
         )
 
     def eval(self):
@@ -115,7 +111,7 @@ class ModelForInputsToConcepts:
 
     def resize_token_embeddings(self, new_num_tokens: int):
         """No-op: the concept model does not have token embeddings."""
-        self.splitter._model.resize_token_embeddings(new_num_tokens)
+        self.concept_explainer.splitter._model.resize_token_embeddings(new_num_tokens)
 
     def __call__(self, **kwargs):
         """Run inputs → activations → concepts and return a BaseModelOutput-like object.
@@ -123,12 +119,7 @@ class ModelForInputsToConcepts:
         Returns:
             SimpleNamespace with a ``.logits`` attribute containing concept activations.
         """
-        activations: Float[torch.Tensor, "n d"] = self.splitter.inputs_to_activations(kwargs)
-
-        # TODO: use `activations_to_concepts` which should be renamed `activations_to_concepts`
-        concepts = self.concept_model.encode(activations)
-        if isinstance(concepts, tuple):
-            concepts = concepts[1]
+        concepts = self.concept_explainer.inputs_to_concepts(**kwargs)
         return SimpleNamespace(logits=concepts)
 
     @property
@@ -137,7 +128,9 @@ class ModelForInputsToConcepts:
         Returns:
             torch.device: The device on which the model is loaded.
         """
-        return self.splitter.device  # type: ignore
+        if self.concept_explainer.splitter.device != self.concept_explainer.device:
+            self.concept_explainer.to(self.concept_explainer.splitter.device)  # type: ignore
+        return self.concept_explainer.splitter.device  # type: ignore
 
     @device.setter
     def device(self, device: torch.device):
@@ -147,22 +140,17 @@ class ModelForInputsToConcepts:
         Args:
             device (torch.device): wanted device (e.g., "cpu" or "cuda").
         """
-        self.splitter.to(device)  # type: ignore
-        self.concept_model.to(device)  # type: ignore
+        self.to(device)
 
-    def to(self, device: torch.device, dtype: torch.dtype | None = None):
+    def to(self, device: torch.device):
         """
         Move the model to the specified device.
 
         Args:
             device (torch.device): The device to which the model should be moved.
-            dtype (torch.dtype | None): The desired data type of the model's parameters.
         """
-        if dtype is not None:
-            self.splitter.to(device, dtype)  # type: ignore
-        else:
-            self.splitter.to(device)  # type: ignore
-        self.concept_model.to(device)  # type: ignore
+        self.concept_explainer.splitter.to(device)  # type: ignore
+        self.concept_explainer.to(device)  # type: ignore
 
 
 class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
@@ -271,6 +259,18 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
             A `torch.Tensor` of encoded activations produced by the fitted concept encoder.
         """
         pass
+
+    def inputs_to_concepts(self, **kwargs) -> ConceptsActivations:
+        """Abstract method defining how inputs are converted into concepts by the concept encoder.
+
+        Args:
+            kwargs (Any): The inputs to encode.
+
+        Returns:
+            A `torch.Tensor` of encoded activations produced by the fitted concept encoder.
+        """
+        activations: Float[torch.Tensor, "n d"] = self.splitter.inputs_to_activations(kwargs)
+        return self.activations_to_concepts(activations)
 
     def get_inputs_to_concepts_model(self) -> ModelForInputsToConcepts:
         """Returns a model that maps raw inputs to concept activations.
@@ -500,7 +500,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             )
 
         # put everything on device
-        self.concept_model.to(self.splitter.device)  # type: ignore
+        self.to(self.splitter.device)  # type: ignore
 
         # forward all computations to
         gradients = self.splitter._get_concept_output_gradients(
