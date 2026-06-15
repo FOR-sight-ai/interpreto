@@ -64,12 +64,16 @@ from interpreto.model_wrapping.inference_wrapper import InferenceModes, Inferenc
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
-def setup_token_ids(model: PreTrainedModel, tokenizer: PreTrainedTokenizer, require_mask_token: bool = True) -> int:
+def setup_token_ids(model: PreTrainedModel, tokenizer: PreTrainedTokenizer | BaseImageProcessor, require_mask_token: bool = True) -> int|None:
     """
     Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
 
     Returns the mask token ID.
     """
+
+    if isinstance(tokenizer,BaseImageProcessor):
+        return None
+
 
     resize_token_embeddings = False
 
@@ -973,6 +977,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         # stops storing patch_size; explainer passes it into perturb() at call time).
         if isinstance(self.perturbator, ImageMaskPerturbator):
             self.perturbator.patch_size = self.patch_size
+            self.perturbator.granularity_combination_strategy = self.resize_strategy
 
     def process_targets(
         self, targets: ClassificationTarget, expected_length: int | None = None

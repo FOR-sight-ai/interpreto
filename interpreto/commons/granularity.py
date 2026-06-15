@@ -160,6 +160,7 @@ class GranularityResizeStrategy(GranularityCombinationStrategy):
     # TODO: evaluate if it needs an unfold function such as GranularityAggregationStrategy
     # NOTE: torch has no hamming/lanczos modes, and torchvision only offers them via the CPU-only
     # PIL backend, so they are unavailable for GPU tensors regardless of library.
+    NEAREST = "nearest"  # nearest-neighbor — replicates values, keeps a binary mask binary
     BILINEAR = "bilinear"
     BICUBIC = "bicubic"
     AREA = "area"  # box/area averaging — the energy-preserving downsample
@@ -167,31 +168,40 @@ class GranularityResizeStrategy(GranularityCombinationStrategy):
     def resize(
         self,
         x: Float[torch.Tensor, "t h_in w_in"],
-        patch_size: int,
+        output_size: tuple[int, int] | None = None,
+        patch_size: int = 16,
     ) -> Float[torch.Tensor, "t h_out w_out"]:
         """
-        Spatially resize per-target contribution maps from pixel resolution down to the patch grid.
+        Spatially resize per-channel maps, keeping the 2-D layout.
+
+        Direction-agnostic: downsamples (pixel grid -> patch grid, for aggregating gradient
+        attributions) when `output_size` is left `None`, or resizes to an explicit target (e.g.
+        upsampling a perturbation mask back to pixel resolution) when `output_size` is given.
 
         Unlike `GranularityAggregationStrategy.aggregate` (which reduces a unit's pixels to a
         scalar), this keeps the 2-D layout and interpolates the whole grid. The `t` axis is treated
-        as the channel dimension, so all targets are resized in one call and the per-target axis is
-        preserved (no broadcast across targets). Runs on `x`'s device (CPU or GPU).
-
-        The output size is derived from the input grid and `patch_size`:
-        ``(h_in // patch_size, w_in // patch_size)``.
+        as the channel dimension, so all maps are resized in one call and the per-channel axis is
+        preserved (no broadcast across them). Runs on `x`'s device (CPU or GPU).
 
         Args:
-            x (Float[torch.Tensor, "t h_in w_in"]): Per-target contribution maps at pixel resolution.
-            patch_size (int): Patch side length; the pixel grid is reduced by this factor.
+            x (Float[torch.Tensor, "t h_in w_in"]): Per-channel maps to resize.
+            patch_size (int): Patch side length; used only when `output_size` is `None`, to derive
+                the downsample target ``(h_in // patch_size, w_in // patch_size)``.
+            output_size (tuple[int, int] | None): Explicit target ``(h_out, w_out)``. When provided,
+                it is used directly and `patch_size` is ignored; prefer computing it at the call site.
 
         Returns:
             Float[torch.Tensor, "t h_out w_out"]: Resized maps, same dtype/device as ``x``.
         """
-        _, h_in, w_in = x.shape
-        output_size = (h_in // patch_size, w_in // patch_size)
+        if output_size is None:
+            _, h_in, w_in = x.shape
+            output_size = (h_in // patch_size, w_in // patch_size)
         # interpolate expects 4-D (N, C, H, W); treat the maps as a single batch of `t` channels
         x4: Float[torch.Tensor, "1 t h_in w_in"] = x.unsqueeze(0)
         match self:
+            case GranularityResizeStrategy.NEAREST:
+                # nearest does not accept align_corners / antialias
+                resized = interpolate(x4, size=output_size, mode="nearest")
             case GranularityResizeStrategy.BILINEAR:
                 resized = interpolate(x4, size=output_size, mode="bilinear", align_corners=False, antialias=True)
             case GranularityResizeStrategy.BICUBIC:

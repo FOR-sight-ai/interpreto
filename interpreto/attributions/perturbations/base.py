@@ -36,7 +36,7 @@ from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from transformers import PreTrainedTokenizer
 
-from interpreto.commons.granularity import ImageGranularity, TextGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity, TextGranularity
 from interpreto.typing import TensorMapping
 
 
@@ -340,7 +340,7 @@ class ImageMaskPerturbator(MaskPerturbator):
         then reshaped, instead of operating on a 1D token axis.
     """
 
-    __slots__ = ("granularity", "n_perturbations", "replace_value", "patch_size")
+    __slots__ = ("granularity", "n_perturbations", "replace_value", "patch_size", "granularity_combination_strategy")
 
     def __init__(
         self,
@@ -348,6 +348,7 @@ class ImageMaskPerturbator(MaskPerturbator):
         n_perturbations: int = 1,
         replace_value: float = 0.0,
         patch_size: int | None = None,
+        granularity_combination_strategy: GranularityResizeStrategy = GranularityResizeStrategy.NEAREST,
     ):
         """
         Args:
@@ -358,17 +359,25 @@ class ImageMaskPerturbator(MaskPerturbator):
             replace_value (float): baseline value written into masked pixel
                 positions across all channels. `0.0` is the per-channel mean
                 after standard ViT normalization (a neutral "grey" baseline).
-            patch_size (int | None): patch side length, used to build the association
-                matrix for PATCH granularity (ignored for PIXEL). Defaults to `None`,
-                NOT a number: the explainer is the source of truth and overwrites it
-                from `model.config.patch_size` at construction. Leaving it `None`
-                makes a PATCH perturb that never went through that reconcile fail
-                loudly rather than silently mask with a wrong patch size.
+            patch_size (int | None): patch side length, used to expand the
+                granularity-wise mask to pixel space for PATCH granularity (ignored
+                for PIXEL). Defaults to `None`, NOT a number: the explainer is the
+                source of truth and overwrites it from `model.config.patch_size` at
+                construction. Leaving it `None` makes a PATCH perturb that never went
+                through that reconcile fail loudly rather than silently mask with a
+                wrong patch size.
+            granularity_combination_strategy (GranularityResizeStrategy): how the
+                granularity-wise mask `(p, g)` is resized up to pixel space `(p, H*W)`.
+                Defaults to NEAREST, which replicates each unit's value over its pixels
+                and keeps a binary mask binary (bit-identical to the old
+                `gran_mask @ association_matrix`). Continuous-mask methods may pass
+                BILINEAR/BICUBIC for soft masks.
         """
         self.granularity = granularity
         self.n_perturbations = n_perturbations
         self.replace_value = replace_value
         self.patch_size = patch_size
+        self.granularity_combination_strategy = granularity_combination_strategy
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod
@@ -415,17 +424,24 @@ class ImageMaskPerturbator(MaskPerturbator):
                 "If using the perturbator standalone, pass patch_size explicitly."
             )
 
-        # association matrix mapping granularity units to flat pixel positions: (g, l)
-        association_matrix: Float[torch.Tensor, "g l"] = self.granularity.get_association_matrix(
-            inputs,
-            patch_size=self.patch_size,
-        )[0].float()
+        # granularity grid dims: PIXEL is per-pixel (identity resize), PATCH is the patch grid
+        if self.granularity == ImageGranularity.PIXEL:
+            gh, gw = h, w
+        else:  # PATCH — patch_size guaranteed non-None by the guard above
+            gh, gw = h // self.patch_size, w // self.patch_size
 
-        # granularity-wise mask from the subclass: (p, g)
-        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(association_matrix.shape[0])
+        # granularity-wise mask from the subclass: (p, g) with g = gh * gw
+        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(gh * gw)
+        p = gran_mask.shape[0]
 
-        # expand to pixel space: (p, g) @ (g, l) -> (p, l)
-        real_mask: Float[torch.Tensor, "p l"] = gran_mask @ association_matrix
+        # expand to pixel space by resizing the (gh, gw) grid up to (h, w): (p, l)
+        # NEAREST (the default) replicates each unit over its pixels and is bit-identical to the
+        # old `gran_mask @ association_matrix`; output_size is computed here at the call site.
+        grid: Float[torch.Tensor, "p gh gw"] = gran_mask.reshape(p, gh, gw)
+        real_mask: Float[torch.Tensor, "p l"] = self.granularity_combination_strategy.resize(
+            grid,
+            output_size=(h, w),
+        ).reshape(p, l)
 
         # apply the mask in flattened spatial space, broadcasting across channels
         flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
