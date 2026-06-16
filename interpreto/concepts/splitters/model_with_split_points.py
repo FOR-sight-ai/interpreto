@@ -150,11 +150,6 @@ class ModelWithSplitPoints(BaseSplitter):
 
         device_map (torch.device | str | None): Device map for the model. Directly passed to the model.
 
-        output_tuple_index (int | None): If the output at the split point is a tuple, this is the index of the hidden state.
-            If `None`, an element with 3 dimensions is searched for.
-            If not found, an error is raised.
-            If several elements are found, an error is raised.
-
     Attributes:
         activation_granularities (ActivationGranularity):
             Enumeration of the available granularities for the `get_activations` method.
@@ -252,7 +247,6 @@ class ModelWithSplitPoints(BaseSplitter):
         config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
-        output_tuple_index: int | None = None,
         **kwargs,
     ) -> None:
         # For parameters list, see class docstring. It was moved to change the order in the documentation.
@@ -286,7 +280,6 @@ class ModelWithSplitPoints(BaseSplitter):
             config=config,
             batch_size=batch_size,
             device_map=device_map,
-            output_tuple_index=output_tuple_index,
             **kwargs,
         )
 

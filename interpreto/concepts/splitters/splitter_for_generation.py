@@ -81,7 +81,6 @@ class SplitterForGeneration(BaseSplitter):
         config (PretrainedConfig | None): Model configuration.
         batch_size (int): Batch size for batched operations.
         device_map (torch.device | str | None): Device on which to load the model.
-        output_tuple_index (int | None): Index of the hidden state in a tuple output.
         **kwargs: Additional keyword arguments forwarded to NNsight.
 
     Example:
@@ -110,7 +109,6 @@ class SplitterForGeneration(BaseSplitter):
         config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
-        output_tuple_index: int | None = None,
         **kwargs,
     ):
         """Initialize a SplitterForGeneration model wrapper.
@@ -135,7 +133,6 @@ class SplitterForGeneration(BaseSplitter):
             automodel=automodel if automodel is not None else AutoModelForCausalLM,  # type: ignore
             batch_size=batch_size,
             device_map=device_map,
-            output_tuple_index=output_tuple_index,
             **kwargs,
         )
 

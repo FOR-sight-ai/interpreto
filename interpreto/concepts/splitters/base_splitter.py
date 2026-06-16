@@ -96,9 +96,6 @@ class BaseSplitter(LanguageModel, ABC):
         batch_size (int): Batch size for batched operations.
 
         device_map (torch.device | str | None): Device on which to load the model.
-
-        output_tuple_index (int | None): If the output at the split point is a tuple,
-            index of the hidden state element.  If None, a 3D tensor is searched for.
     """
 
     # Class-level enums exposed for the concept explainer interface
@@ -114,7 +111,6 @@ class BaseSplitter(LanguageModel, ABC):
         config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
-        output_tuple_index: int | None = None,
         **kwargs,
     ) -> None:
         """Initialize a BaseSplitter.
@@ -188,7 +184,6 @@ class BaseSplitter(LanguageModel, ABC):
         # Final validation
         if self.tokenizer is None:
             raise ValueError("Tokenizer is not set. When providing a model instance, the tokenizer must be set.")
-        self.output_tuple_index = output_tuple_index
 
     # ======================================================================
     # Split point property
@@ -259,8 +254,8 @@ class BaseSplitter(LanguageModel, ABC):
                 f"Wrong type of activations. Expected torch.Tensor or tuple[torch.Tensor], got {type(activations)}: {activations}"
             )
 
-        if self.output_tuple_index is not None:
-            return activations[self.output_tuple_index]
+        if hasattr(self, "output_tuple_index"):
+            return activations[self.output_tuple_index]  # type: ignore
 
         for i, candidate in enumerate(activations):
             if candidate.dim() == 3:
