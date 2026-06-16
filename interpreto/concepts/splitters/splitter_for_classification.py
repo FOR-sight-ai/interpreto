@@ -302,7 +302,7 @@ class SplitterForClassification(BaseSplitter):
         activations_to_concepts: Callable[[Float[torch.Tensor, "n d"]], Float[torch.Tensor, "n c"]],
         concepts_to_activations: Callable[[Float[torch.Tensor, "n c"]], Float[torch.Tensor, "n d"]],
         targets: list[int] | None = None,
-        concepts_x_gradients: bool = False,
+        concepts_x_gradients: bool = True,
         tqdm_bar: bool = False,
         batch_size: int | None = None,
         forward_kwargs: dict[str, Any] = {},

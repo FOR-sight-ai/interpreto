@@ -355,7 +355,7 @@ class SplitterForGeneration(BaseSplitter):
         concepts_to_activations: Callable[[ConceptsActivations], LatentActivations],
         targets: list[int] | None = None,
         include_special_tokens: bool = False,
-        concepts_x_gradients: bool = False,
+        concepts_x_gradients: bool = True,
         tqdm_bar: bool = False,
         batch_size: int | None = None,
         forward_kwargs: dict[str, Any] = {},

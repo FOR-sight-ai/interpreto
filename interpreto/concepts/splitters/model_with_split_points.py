@@ -976,7 +976,7 @@ class ModelWithSplitPoints(BaseSplitter):
         targets: list[int] | None = None,
         activation_granularity: ActivationGranularity = AG.TOKEN,
         aggregation_strategy: GranularityAggregationStrategy | None = GranularityAggregationStrategy.MEAN,
-        concepts_x_gradients: bool = False,
+        concepts_x_gradients: bool = True,
         tqdm_bar: bool = False,
         batch_size: int | None = None,
         forward_kwargs: dict[str, Any] = {},
