@@ -45,7 +45,7 @@ Determine from which point of your model the activations should be extracted.
 
 There are three splitters depending on you use-case:
 
-> **For classification models:** Use [`SplitterForClassification`](./splitters/split_sequence_classification.md)
+> **For classification models:** Use [`SplitterForClassification`](./splitters/splitter_for_classification.md)
 > It automatically detects the classification head of your classifier in most cases.
 > Then, it considers the [CLS] token (the input of this head as the activations).
 > Which means that there is one activation vector for each sample. (n, d)
@@ -163,7 +163,7 @@ results = explainer.explain(inputs)
 > **Note:** Only perturbation-based methods (Occlusion, Lime, KernelShap, Sobol) are supported.
 > Gradient-based methods are not compatible with the input-to-concept pipeline.
 
-For classification models, use [`SplitterForClassification`](./split_sequence_classification.md)
+For classification models, use [`SplitterForClassification`](./splitter_for_classification.md)
 instead of `ModelWithSplitPoints` for a simpler setup.
 
 More details in the [Concept Attributions documentation](./interpretations/concept_attributions.md).
