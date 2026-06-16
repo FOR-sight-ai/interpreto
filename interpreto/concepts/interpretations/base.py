@@ -58,11 +58,24 @@ def _ensure_nltk_resources(lemmatize: bool) -> None:
 
     The `lru_cache` ensures the download are only called once.
     """
-    # Use NLTK's own installer check; will skip download if already present.
-    needed = ["punkt", "punkt_tab"] + (["wordnet"] if lemmatize else [])
-    for res in needed:
-        # quiet=True prevents logs; raise_on_error=True surfaces failures.
-        nltk.download(res, quiet=True, raise_on_error=True)
+    needed = {
+        "punkt": "tokenizers/punkt",
+        "punkt_tab": "tokenizers/punkt_tab",
+    }
+
+    if lemmatize:
+        needed["wordnet"] = "corpora/wordnet.zip"
+
+    for package, resource_path in needed.items():
+        # Even if already present, nltk still reaches internet which can crash if no internet connection
+        try:
+            nltk.data.find(resource_path)
+        except LookupError:
+            nltk.download(
+                package,
+                quiet=True,
+                raise_on_error=True,
+            )
 
 
 @jaxtyped(typechecker=beartype)
