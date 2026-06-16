@@ -46,6 +46,8 @@ def split_gen():
 
 def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_tokenizer):
     """Generation splitters can be loaded from repos or causal LM instances only."""
+    split_point_module = "transformer.h.1"
+
     with pytest.raises(ValueError):
         SFG(gpt2_model, split_point=SPLIT_POINT)
 
@@ -53,11 +55,11 @@ def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_toke
         SFG(bert_model, split_point=SPLIT_POINT, tokenizer=bert_tokenizer)
 
     splitter = SFG(gpt2_model, split_point=SPLIT_POINT, tokenizer=gpt2_tokenizer, device_map=DEVICE)
-    assert splitter.split_point is not None, "split_point should be resolved for a pre-loaded causal LM"
+    assert splitter.split_point == split_point_module, "split_point should be resolved for a pre-loaded causal LM"
     assert splitter.tokenizer.pad_token is not None, "generation splitters should ensure a pad token exists"
 
     splitter = SFG(REPO_ID, split_point=SPLIT_POINT, device_map=DEVICE)
-    assert splitter.split_point is not None, "split_point should be resolved when loading from a repo id"
+    assert splitter.split_point == split_point_module, "split_point should be resolved when loading from a repo id"
     assert splitter.tokenizer.pad_token is not None, "generation splitters should ensure a pad token exists"
 
 
@@ -94,9 +96,9 @@ def test_get_activations_casts_bfloat16_model_outputs_to_float32(sentences: list
 
     activations, predictions = splitter.get_activations(sentences[:2])
 
-    assert predictions is None
-    assert isinstance(activations, torch.Tensor)
-    assert activations.dtype == torch.float32
+    assert predictions is None, f"Expected predictions to be None, got {predictions}"
+    assert isinstance(activations, torch.Tensor), f"Expected activations to be a tensor, got {type(activations)}"
+    assert activations.dtype == torch.float32, f"Expected activations to be float32, got {activations.dtype}"
 
 
 @pytest.mark.parametrize("include_all_tokens", [False, True])
