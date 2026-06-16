@@ -242,6 +242,7 @@ class SplitterForClassification(BaseSplitter):
         inputs: list[str] | Int[torch.Tensor, "n l"],
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
+        **kwargs,
     ) -> tuple[LatentActivations, torch.Tensor]:
         """Extract CLS-token activations and predictions for a dataset of inputs.
 
@@ -306,6 +307,7 @@ class SplitterForClassification(BaseSplitter):
         tqdm_bar: bool = False,
         batch_size: int | None = None,
         forward_kwargs: dict[str, Any] = {},
+        **kwargs,
     ) -> list[Float[torch.Tensor, "t 1 c"]]:
         """Compute gradients of model outputs w.r.t. concept activations.
 
