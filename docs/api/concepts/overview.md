@@ -69,16 +69,6 @@ This step rely on the `.get_activations` method of the splitter.
 The idea is to compute a dataset of activations.
 To latter fit the concept model on.
 
-The function is quite simple for `SplitterForClassification` and `SplitterForGeneration`.
-However, for `ModelWithSplitPoints`, at this step, one needs to specify:
-
-- `activation_granularity`: specifies which of the `(n, l, d)` activations to return.
-It can be one of `CLS_TOKEN`, `ALL_TOKENS`, `TOKEN`, `WORD`, `SENTENCE`, or `SAMPLE`.
-Use `activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN` to specify it.
-- `aggregation_strategy`: how activations should be aggregated (ignored for some granularities).
-It can be one of `SUM`, `MEAN`, `MAX`, or `SIGNED_MAX`.
-Use `aggregation_strategy=ModelWithSplitPoints.aggregation_strategies.MEAN` to specify it.
-
 !!! tip
     The larger the activations dataset, the more accurate the concept model will be.
     However, the more expensive it is to compute.
