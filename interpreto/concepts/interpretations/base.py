@@ -352,11 +352,6 @@ class BaseConceptInterpretationMethod(ABC):
         """
         Computes the concepts activations for each token of the vocabulary
 
-        Args:
-            model_with_split_points (ModelWithSplitPoints):
-            split_point (str):
-            concept_model (ConceptModelProtocol):
-
         Returns:
             tuple[list[str], Float[torch.Tensor, "nl cpt"]]:
                 - The list of tokens in the vocabulary

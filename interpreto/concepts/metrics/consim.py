@@ -31,10 +31,9 @@ from typing import NamedTuple
 import torch
 from tqdm import tqdm
 
-from interpreto import ModelWithSplitPoints
 from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 
 
 class PromptSetting(NamedTuple):
@@ -144,7 +143,7 @@ class ConSim:
 
     - Step 0:
         Instantiate the ConSim metric
-        with the `model_with_split_points` ($f$) and the `user_llm` ($\\Psi$).
+        with the `splitter` ($f$) and the `user_llm` ($\\Psi$).
 
     - Step 1:
         Select interesting examples for ConSim with the `select_examples` method.
@@ -166,7 +165,7 @@ class ConSim:
         In the Proceedings of the 2025 Association for Computational Linguistics (ACL).
 
     Arguments:
-        model_with_split_points: ModelWithSplitPoints
+        splitter: BaseSplitter
             The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
 
         user_llm: LLMInterface | None
@@ -178,9 +177,6 @@ class ConSim:
             The format of the prompt is:
 
             `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
-
-        activation_granularity: ActivationGranularity
-            The granularity of the activations to use for the explanations.
 
         classes: list[str] | None
             The names of classes of the dataset.
@@ -195,7 +191,7 @@ class ConSim:
         prompt_types: PromptTypes
             Enum of the possible prompts types to use.
 
-        model_with_split_points: ModelWithSplitPoints
+        splitter: BaseSplitter
             The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
 
         split_point: str
@@ -216,11 +212,11 @@ class ConSim:
     Examples:
         Preamble to a metric, fit a concept explainer:
         >>> import datasets
-        >>> from interpreto import ConSim, ModelWithSplitPoints, ICAConcepts, OpenAILLM
+        >>> from interpreto import ConSim, SplitterForClassification, ICAConcepts, OpenAILLM
         >>>
         >>> # ------------------------
         >>> # Load a model and wrap it
-        >>> model_with_split_points = ModelWithSplitPoints(
+        >>> splitter = SplitterForClassification(
         ...     "textattack/bert-base-uncased-ag-news",
         ...     split_point="bert.encoder.layer.10.output",
         ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
@@ -231,11 +227,11 @@ class ConSim:
         >>> # Load a dataset and compute activations
         >>> dataset = datasets.load_dataset("fancyzhx/ag_news")
         >>> classes = ["World", "Sports", "Business", "Sci/Tech"]
-        >>> activations, _ = model_with_split_points.get_activations(dataset["train"]["text"])
+        >>> activations, _ = splitter.get_activations(dataset["train"]["text"])
         >>>
         >>> # -------------------------
         >>> # Fit the concept explainer
-        >>> concept_explainer_1 = ICAConcepts(model_with_split_points, nb_concepts=50)
+        >>> concept_explainer_1 = ICAConcepts(splitter, nb_concepts=50)
         >>> concept_explainer.fit(activations)
 
         The two steps of ConSim:
@@ -243,9 +239,8 @@ class ConSim:
         >>> # Step 0: Define the User-LLM and instantiate the ConSim metric
         >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt-4.1-nano")
         >>> consim = ConSim(
-        ...     model_with_split_points,
+        ...     splitter,
         ...     user_llm,
-        ...     activation_granularities=ModelWithSplitPoints.activation_granularities.TOKEN,
         ...     classes=classes,
         ... )
         >>>
@@ -265,16 +260,14 @@ class ConSim:
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         user_llm: LLMInterface | None,
-        activation_granularity: ActivationGranularity,
         classes: list[str] | None = None,
     ):
         """
         Initialize the ConSim metric.
         """
-        self.splitter = model_with_split_points
-        self.activation_granularity: ActivationGranularity = activation_granularity
+        self.splitter = splitter
         self.user_llm: LLMInterface | None = user_llm
         self.classes: list[str] | None = classes
 
@@ -1267,7 +1260,6 @@ class ConSim:
                     samples_to_explain = interesting_samples
                 local_importances_list = concept_explainer.concept_output_gradient(
                     inputs=samples_to_explain,
-                    activation_granularity=self.activation_granularity,
                     concepts_x_gradients=True,
                     tqdm_bar=False,
                 )

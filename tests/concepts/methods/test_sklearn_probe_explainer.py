@@ -77,7 +77,7 @@ def test_sklearn_probe_explainer_fit_and_encode(
     labels = (torch.rand(n) > 0.5).float()
 
     explainer = SklearnProbeExplainer(
-        model_with_split_points=splitted_encoder_ml,
+        splitter=splitted_encoder_ml,
         sklearn_class=sklearn_class,
         sklearn_kwargs=sklearn_kwargs,
     )
@@ -110,7 +110,7 @@ def test_sklearn_probe_explainer_encode_before_fit(
 ):
     """Encoding before fitting should raise RuntimeError."""
     explainer = SklearnProbeExplainer(
-        model_with_split_points=splitted_encoder_ml,
+        splitter=splitted_encoder_ml,
         sklearn_class=sklearn_class,
         sklearn_kwargs=sklearn_kwargs,
     )
@@ -130,7 +130,7 @@ def test_sklearn_probe_explainer_with_tensor_activations(
     labels = (torch.rand(n) > 0.5).float()
 
     explainer = SklearnProbeExplainer(
-        model_with_split_points=splitted_encoder_ml,
+        splitter=splitted_encoder_ml,
         sklearn_class=SVC,
         sklearn_kwargs={"kernel": "linear"},
     )

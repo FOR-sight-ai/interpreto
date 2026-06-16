@@ -62,8 +62,6 @@ from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.consim import ConSim, PromptTypes
 
-AG = ModelWithSplitPoints.activation_granularities
-
 
 class LLMInterfacePlaceholder(LLMInterface):
     def __init__(self):
@@ -138,7 +136,7 @@ def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints):
     classes = [str(i) for i in range(int(splitted_encoder_ml._model.num_labels))]  # type: ignore
 
     # when only one split point is available, it should be chosen automatically
-    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, llm, classes=classes)
     assert consim.user_llm is llm, "consim llm should correspond to the parameter"
 
 
@@ -147,7 +145,7 @@ def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `_get_predictions` method of the ConSim metric.
     """
     # Initialize the ConSim metric
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN)
+    consim = ConSim(splitted_encoder_ml, user_llm=None)
 
     inputs = ["This is a first sentence", "Another sentence"]
 
@@ -182,7 +180,7 @@ def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplit
     Test the `_extract_interesting_elements` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=None, classes=classes)
 
     inputs = [f"sentence {i}" for i in range(6)]
     labels = torch.tensor([0, 1, 0, 1, 0, 1])
@@ -224,7 +222,7 @@ def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `select_examples` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, None, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, None, classes=classes)
 
     # prepare fake methods so we only test the logic of select_examples
     inputs = ["a", "b", "c", "d", "e", "f"]
@@ -626,8 +624,8 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         fitted = True
         _split_point = splitted_encoder_ml.split_point
 
-        def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.splitter = model_with_split_points
+        def __init__(self, splitter: ModelWithSplitPoints):  # type: ignore
+            self.splitter = splitter
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
             """
@@ -656,7 +654,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     # Test consim with a valid LLM output
 
     llm = LLMInterfacePlaceholder()
-    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, llm, classes=classes)
 
     # evaluate the ConSim metric
     score: float | None = consim.evaluate(  # type: ignore
@@ -755,15 +753,15 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     # -----------------------------------------------------------------
     # Initialize the ConSim metric with the open_ai_llm api as user_llm
     classes = ["not prime", "prime"]
-    consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, activation_granularity=AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, classes=classes)
 
     # construct a dummy explainer that will arbitrary local importances
     class DummyExplainer(ConceptAutoEncoderExplainer):
         fitted = True
         _split_point = splitted_encoder_ml.split_point
 
-        def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.splitter = model_with_split_points
+        def __init__(self, splitter: ModelWithSplitPoints):  # type: ignore
+            self.splitter = splitter
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
             local_importances = []

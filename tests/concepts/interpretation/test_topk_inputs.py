@@ -103,7 +103,7 @@ def test_topk_inputs_from_activations(splitted_encoder_ml: ModelWithSplitPoints)
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
     splitted_encoder_ml.split_point = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     # initializing the interpreter
     interpretation_method = TopKInputs(
@@ -170,7 +170,7 @@ def test_topk_inputs_granularity(
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
     splitted_encoder_ml.split_point = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     # getting the activations
     activations, _ = splitted_encoder_ml.get_activations(huge_text, activation_granularity=activation_granularity)
@@ -218,7 +218,7 @@ def test_topk_inputs_concepts_selection(splitted_encoder_ml: ModelWithSplitPoint
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
     splitted_encoder_ml.split_point = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     # getting the activations
     activations, _ = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
@@ -288,7 +288,7 @@ def test_topk_inputs_sources(splitted_encoder_ml: ModelWithSplitPoints):
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
     splitted_encoder_ml.split_point = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     # getting the activations
     activations, _ = splitted_encoder_ml.get_activations(joined_tokens_list, activation_granularity=AG.TOKEN)
@@ -336,7 +336,7 @@ def test_topk_inputs_from_vocabulary(splitted_encoder_ml: ModelWithSplitPoints):
     # initializing the explainer
     split = "bert.encoder.layer.1.output"
     splitted_encoder_ml.split_point = split
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     top_k_vocabulary = TopKInputs(
         concept_explainer=concept_explainer,
@@ -370,7 +370,7 @@ def test_topk_inputs_from_ngrams(splitted_encoder_ml: ModelWithSplitPoints, n: i
     splitted_encoder_ml.split_point = split
     concept_model = ConceptModelCounter()
     concept_explainer = DummyConceptExplainer(
-        model_with_split_points=splitted_encoder_ml,
+        splitter=splitted_encoder_ml,
         concept_model=concept_model,
     )
     concept_explainer._ConceptEncoderExplainer__is_fitted = True
@@ -419,7 +419,7 @@ def test_topk_inputs_error_raising(splitted_encoder_ml: ModelWithSplitPoints, ac
     """
     Test that the `TopKInputs` class raises an error when needed
     """
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     some_texts_for_interpretation = ["a sentence", "another sentence", "yet another sentence"]
 

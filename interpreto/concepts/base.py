@@ -161,10 +161,10 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         encoding step using the `concept_model` to convert activations to latent concepts.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             The split point is determined by the model's `split_point` attribute.
         concept_model (ConceptModelProtocol): The model used to extract concepts from the activations of
-            `model_with_split_points`. The only assumption for classes inheriting from this class is that
+            `splitter`. The only assumption for classes inheriting from this class is that
             the `concept_model` can encode activations into concepts with `activations_to_concepts`.
             The `ConceptModelProtocol` is defined in `interpreto.typing`. It is basically a `torch.nn.Module` with an `encode` method.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
@@ -175,23 +175,21 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
 
     def __init__(
         self,
-        model_with_split_points: BaseSplitter,
+        splitter: BaseSplitter,
         concept_model: ConceptModelProtocol,
     ):
         """Initializes the concept explainer with a given splitted model.
 
         Args:
-            model_with_split_points (BaseSplitter): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             concept_model (ConceptModelProtocol): The model used to extract concepts from
-                the activations of `model_with_split_points`.
+                the activations of `splitter`.
                 The `ConceptModelProtocol` is defined in `interpreto.typing`. It is basically a `torch.nn.Module` with an `encode` method.
         """
-        if not isinstance(model_with_split_points, BaseSplitter):
-            raise TypeError(
-                f"The given model should be a BaseSplitter (or subclass), but {type(model_with_split_points)} was given."
-            )
-        self.splitter: BaseSplitter = model_with_split_points
+        if not isinstance(splitter, BaseSplitter):
+            raise TypeError(f"The given model should be a BaseSplitter (or subclass), but {type(splitter)} was given.")
+        self.splitter: BaseSplitter = splitter
         self._concept_model = concept_model
         self.__is_fitted: bool = False
 
@@ -199,7 +197,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
     def concept_model(self) -> ConceptModelProtocol:
         """
         Returns:
-            The concept model used to extract concepts from the activations of `model_with_split_points`.
+            The concept model used to extract concepts from the activations of `splitter`.
             The `ConceptModelProtocol` is defined in `interpreto.typing`. It is basically a `torch.nn.Module` with an `encode` method.
         """
         # Declare the concept model as read-only property for inheritance typing flexibility
@@ -298,10 +296,10 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
     model, which defines the `encode` and `decode` methods for encoding and decoding activations into concepts.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (ModelWithSplitPoints): The model to apply the explanation on.
             The split point is determined by the model's `split_point` attribute.
         concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from the
-            activations of  `model_with_split_points`. The only assumption for classes inheriting from this class is
+            activations of  `splitter`. The only assumption for classes inheriting from this class is
             that the `concept_model` can encode activations into concepts with `activations_to_concepts`.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
         has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
@@ -312,19 +310,19 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
 
     def __init__(
         self,
-        model_with_split_points: BaseSplitter,
+        splitter: BaseSplitter,
         concept_model: BaseDictionaryLearning,
     ):
         """Initializes the concept explainer with a given splitted model.
 
         Args:
-            model_with_split_points (BaseSplitter): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from
-                the activations of `model_with_split_points`.
+                the activations of `splitter`.
         """
         self.concept_model: BaseDictionaryLearning
-        super().__init__(model_with_split_points, concept_model)  # type: ignore
+        super().__init__(splitter, concept_model)  # type: ignore
 
     @property
     def is_fitted(self) -> bool:

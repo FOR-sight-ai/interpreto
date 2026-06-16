@@ -32,7 +32,7 @@ import torch
 
 from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -108,7 +108,7 @@ class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
     # TODO: Add doc with papers we can redo with it.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str): The split point used to train the `concept_model`.
         concept_model (IdentityConceptModel): An identity concept model for harmonization.
@@ -119,22 +119,22 @@ class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
     ):
         """
         Initializes the concept explainer with a given splitted model.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
         """
         # extract the input size from the model activations
-        self.splitter = model_with_split_points
+        self.splitter = splitter
         input_size = self.splitter.get_latent_shape()[-1]
 
         # initialize
         super().__init__(
-            model_with_split_points=model_with_split_points,
+            splitter=splitter,
             concept_model=IdentityConceptModel(input_size),
         )
         self.has_differentiable_concept_encoder = True

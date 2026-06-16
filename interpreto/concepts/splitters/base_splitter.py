@@ -282,7 +282,7 @@ class BaseSplitter(LanguageModel, ABC):
 
     @abstractmethod
     def inputs_to_activations(self, *args: Any, **kwargs: Any) -> Any:
-        """Un batched activation extraction from raw inputs.
+        """Unbatched activation extraction from raw inputs.
 
         Subclasses define the exact signature and return types appropriate for
         their task (classification vs generation vs full granularity).

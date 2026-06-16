@@ -38,7 +38,7 @@ from torch import nn
 
 from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import LatentActivations
 
 __all__ = [
@@ -315,7 +315,7 @@ class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Gener
     Implementation of a concept explainer using wrappers around sklearn decompositions as `concept_model`.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.
@@ -335,7 +335,7 @@ class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Gener
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         *,
         nb_concepts: int,
         device: torch.device | str = "cpu",
@@ -345,15 +345,15 @@ class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Gener
         Initialize the concept bottleneck explainer based on the Overcomplete BaseOptimDictionaryLearning framework.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
             device (torch.device | str): Device to use for the `concept_module`.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.
                 See the sklearn documentation of the provided `concept_model_class` for more details.
         """
-        self.splitter = model_with_split_points
-        shape = model_with_split_points.get_latent_shape()
+        self.splitter = splitter
+        shape = splitter.get_latent_shape()
 
         concept_model = self.concept_model_class(
             input_size=shape[-1],
@@ -361,7 +361,7 @@ class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Gener
             device=device,
             **kwargs,
         )
-        ConceptAutoEncoderExplainer.__init__(self, model_with_split_points, concept_model=concept_model)
+        ConceptAutoEncoderExplainer.__init__(self, splitter, concept_model=concept_model)
 
     def fit(self, activations: LatentActivations, **kwargs):
         """Fit an Overcomplete OptimDictionaryLearning model on the given activations.

@@ -291,7 +291,7 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
     Fake activations are given to the `NeuronsAsConcepts` explainer
     """
     hidden_size = 32
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
         activation_granularity=ActivationGranularity.TOKEN,
@@ -333,7 +333,7 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
     ],
 )
 def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity):
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitted_encoder)
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
         activation_granularity=activation_granularity,
@@ -375,7 +375,7 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
     larger_input = " ".join(["test" for _ in range(2 * n_tokens)])
     joined_tokens_list.append(larger_input)
 
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
 
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
@@ -434,7 +434,7 @@ def test_llm_labels_from_vocabulary(splitted_encoder: ModelWithSplitPoints):
     hidden_size = 32
     nb_concepts = 3
 
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
 
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
@@ -457,7 +457,7 @@ def test_llm_labels_call_from_concept_module(splitted_encoder: ModelWithSplitPoi
     hidden_size = 32
     nb_concepts = 3
 
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
 
     label = LLMLabels(
         concept_explainer=concept_explainer,
@@ -481,7 +481,7 @@ def test_llm_labels_error_raising(splitted_encoder: ModelWithSplitPoints):
     """
 
     concept_explainer = NeuronsAsConcepts(
-        model_with_split_points=splitted_encoder,
+        splitter=splitted_encoder,
     )
     method = LLMLabels(
         concept_explainer=concept_explainer,

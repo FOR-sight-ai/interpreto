@@ -44,8 +44,8 @@ def test_reconstruction_error(splitted_encoder_ml: ModelWithSplitPoints, activat
     Test the reconstruction error metrics
     """
 
-    neurons_concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
-    pca_concept_explainer = PCAConcepts(model_with_split_points=splitted_encoder_ml, nb_concepts=5)
+    neurons_concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
+    pca_concept_explainer = PCAConcepts(splitter=splitted_encoder_ml, nb_concepts=5)
     pca_concept_explainer.fit(activations)
 
     for metric_class in [MSE, FID]:
@@ -66,7 +66,7 @@ def test_latent_activations_reconstruction_error(splitted_encoder_ml: ModelWithS
     Test the latent activations reconstruction error metrics
     """
 
-    pca_concept_explainer = PCAConcepts(model_with_split_points=splitted_encoder_ml, nb_concepts=5)
+    pca_concept_explainer = PCAConcepts(splitter=splitted_encoder_ml, nb_concepts=5)
     pca_concept_explainer.fit(activations)
 
     base_metric = ReconstructionError(
@@ -85,7 +85,7 @@ def test_fid(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tenso
     """
     Test the fid metrics
     """
-    pca_concept_explainer = PCAConcepts(model_with_split_points=splitted_encoder_ml, nb_concepts=5)
+    pca_concept_explainer = PCAConcepts(splitter=splitted_encoder_ml, nb_concepts=5)
     pca_concept_explainer.fit(activations)
 
     base_metric = ReconstructionError(

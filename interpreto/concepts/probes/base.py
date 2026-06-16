@@ -56,7 +56,7 @@ from torch import nn
 from torch.nn.modules.module import _IncompatibleKeys
 
 from interpreto.concepts.base import ConceptEncoderExplainer, check_fitted
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 # ---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
 
     Integrates any pre-instantiated torch probe into the concept explainer
     pipeline, connecting it to a
-    [ModelWithSplitPoints][interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints]
+    [BaseSplitter][interpreto.concepts.splitters.base_splitter.BaseSplitter]
     for activation extraction.
 
     The probe is provided already instantiated (unfitted or pre-fitted).
@@ -197,7 +197,7 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
     delegates to the probe's own `fit` method.
 
     Args:
-        model_with_split_points (ModelWithSplitPoints): Wrapped transformer model.
+        splitter (BaseSplitter): Wrapped transformer model.
         concept_model (Probe): An instantiated torch probe.
         split_point (str | None): Layer name to extract activations from.
 
@@ -206,20 +206,20 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
         from interpreto.concepts import LinearRegressionProbe, ProbeExplainer
 
         probe = LinearRegressionProbe()
-        explainer = ProbeExplainer(model_with_split_points, probe)
+        explainer = ProbeExplainer(splitter, probe)
         explainer.fit(activations, labels)
         concepts = explainer.activations_to_concepts(activations)
     """
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         concept_model: Probe,
     ):
         if not isinstance(concept_model, Probe):
             raise TypeError(f"concept_model must be a Probe instance, got {type(concept_model).__name__}.")
         super().__init__(
-            model_with_split_points=model_with_split_points,
+            splitter=splitter,
             concept_model=concept_model,
         )
 

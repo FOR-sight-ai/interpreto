@@ -110,9 +110,9 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
     # Load model with split points
     with pytest.raises(ValueError):  # tokenizer is not set
         MWSP(bert_model, "bert.encoder.layer.1")
-    model_with_split_points = MWSP(bert_model, split_point="bert.encoder.layer.1", tokenizer=bert_tokenizer)
-    assert model_with_split_points.split_point == "bert.encoder.layer.1", (
-        f"split_point mismatch: got {model_with_split_points.split_point}, expected 'bert.encoder.layer.1'"
+    splitter = MWSP(bert_model, split_point="bert.encoder.layer.1", tokenizer=bert_tokenizer)
+    assert splitter.split_point == "bert.encoder.layer.1", (
+        f"split_point mismatch: got {splitter.split_point}, expected 'bert.encoder.layer.1'"
     )
     # Load model without split points
     model_without_split_points = MWSP(
@@ -129,9 +129,9 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
     # Load model with split points
     with pytest.raises(ValueError):  # tokenizer is not set
         MWSP(gpt2_model, "transformer.h.1")
-    model_with_split_points = MWSP(gpt2_model, split_point="transformer.h.1", tokenizer=gpt2_tokenizer)
-    assert model_with_split_points.split_point == "transformer.h.1", (
-        f"split_point mismatch: got {model_with_split_points.split_point}, expected 'transformer.h.1'"
+    splitter = MWSP(gpt2_model, split_point="transformer.h.1", tokenizer=gpt2_tokenizer)
+    assert splitter.split_point == "transformer.h.1", (
+        f"split_point mismatch: got {splitter.split_point}, expected 'transformer.h.1'"
     )
     # Load model without split points
     model_without_split_points = MWSP(

@@ -73,11 +73,11 @@ def test_dictionary_metrics_with_dict_and_ce(splitted_encoder_ml: ModelWithSplit
     splitted_encoder_ml.split_point = split
 
     rand1 = torch.rand(32, 32)
-    concept_explainer1 = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer1 = NeuronsAsConcepts(splitter=splitted_encoder_ml)
     concept_explainer1.get_dictionary = lambda: rand1
 
     rand2 = torch.rand(32, 32)
-    concept_explainer2 = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer2 = NeuronsAsConcepts(splitter=splitted_encoder_ml)
     concept_explainer2.get_dictionary = lambda: rand2
 
     for metric in [Stability]:

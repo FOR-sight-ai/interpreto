@@ -42,7 +42,7 @@ class Cockatiel(NMFConcepts):
         Findings of the Association for Computational Linguistics (ACL 2023), pp. 5120–5136, 2023.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (ModelWithSplitPoints): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.

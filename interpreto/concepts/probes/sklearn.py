@@ -47,7 +47,7 @@ from sklearn.svm import SVC
 
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.probes.base import assert_fitted
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -88,25 +88,25 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
 
     Integrates [SklearnProbe][interpreto.concepts.probes.sklearn.SklearnProbe] into the concept
     explainer pipeline, connecting it to a
-    [ModelWithSplitPoints][interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints]
+    [BaseSplitter][interpreto.concepts.splitters.base_splitter.BaseSplitter]
     for activation extraction.
 
     Args:
-        model_with_split_points (ModelWithSplitPoints): Wrapped transformer model.
+        splitter (BaseSplitter): Wrapped transformer model.
         sklearn_class (Any): Scikit-learn estimator class (default: `SVC`).
         sklearn_kwargs (dict[str, Any]): Arguments forwarded to the sklearn estimator.
     """
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         sklearn_class: Any = SVC,
         sklearn_kwargs: dict[str, Any] = {},
     ):
         self.concept_model: SklearnProbe
         concept_model = SklearnProbe(sklearn_class, sklearn_kwargs)
         super().__init__(
-            model_with_split_points=model_with_split_points,
+            splitter=splitter,
             concept_model=concept_model,
         )
 

@@ -43,7 +43,7 @@ def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activati
     """
     d = activations.shape[1]
 
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     assert concept_explainer.is_fitted is True  # splitted_model has a single split so it is fitted
     assert hasattr(concept_explainer, "has_differentiable_concept_encoder")

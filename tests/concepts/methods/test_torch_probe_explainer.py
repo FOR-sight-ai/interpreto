@@ -120,7 +120,7 @@ def test_torch_probe_explainer_fit_and_encode(
     # Instantiate probe and explainer
     probe = probe_cls(**probe_kwargs)
     explainer = ProbeExplainer(
-        model_with_split_points=splitted_encoder_ml,
+        splitter=splitted_encoder_ml,
         concept_model=probe,
     )
 

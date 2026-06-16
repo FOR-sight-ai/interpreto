@@ -39,7 +39,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from interpreto._vendor.overcomplete import optimization as oc_opt
 from interpreto._vendor.overcomplete import sae as oc_sae
 from interpreto.concepts.base import ConceptAutoEncoderExplainer, check_fitted
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import LatentActivations
 
 # Type variables for covariant generics
@@ -116,7 +116,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
     [overcomplete.sae.SAE](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/) variant as `concept_model`.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.
@@ -129,11 +129,11 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
     Examples:
         >>> import datasets
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer
-        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto import BaseSplitter
         >>> from interpreto.concepts import VanillaSAE
         >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> CLS_TOKEN = ModelWithSplitPoints.activation_granularities.CLS_TOKEN
-        >>> WORD = ModelWithSplitPoints.activation_granularities.WORD
+        >>> CLS_TOKEN = BaseSplitter.activation_granularities.CLS_TOKEN
+        >>> WORD = BaseSplitter.activation_granularities.WORD
         ...
         >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
         >>> repo_id = "Qwen/Qwen3-0.6B"
@@ -141,7 +141,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
         ...
         >>> # 1. Split your model in two parts
-        >>> splitted_model = ModelWithSplitPoints(
+        >>> splitted_model = BaseSplitter(
         >>>     model, tokenizer=tokenizer, split_point=5,
         >>> )
         ...
@@ -185,7 +185,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         *,
         nb_concepts: int,
         encoder_module: nn.Module | str | None = None,
@@ -197,7 +197,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         Initialize the concept bottleneck explainer based on the Overcomplete SAE framework.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
             encoder_module (nn.Module | str | None): Encoder module to use to construct the SAE, see [Overcomplete SAE documentation](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/).
@@ -211,7 +211,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
                 "ConceptEncoderDecoder must be a subclass of `overcomplete.sae.SAE`.\n"
                 "Use `interpreto.concepts.methods.SAEExplainerClasses` to get the list of available SAE methods."
             )
-        self.splitter = model_with_split_points
+        self.splitter = splitter
 
         # TODO: this will be replaced with a scan and a better way to select how to pick activations based on model class
         shape = self.splitter.get_latent_shape()
@@ -223,7 +223,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             device=device,
             **kwargs,
         )
-        super().__init__(model_with_split_points, concept_model)
+        super().__init__(splitter, concept_model)
 
     def fit(
         self,
@@ -335,7 +335,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         (NMF and PCA variants) as `concept_model`.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.
@@ -348,11 +348,11 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
     Examples:
         >>> import datasets
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer
-        >>> from interpreto import ModelWithSplitPoints
+        >>> from interpreto import BaseSplitter
         >>> from interpreto.concepts import ICAConcepts
         >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> CLS_TOKEN = ModelWithSplitPoints.activation_granularities.CLS_TOKEN
-        >>> WORD = ModelWithSplitPoints.activation_granularities.WORD
+        >>> CLS_TOKEN = BaseSplitter.activation_granularities.CLS_TOKEN
+        >>> WORD = BaseSplitter.activation_granularities.WORD
         ...
         >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
         >>> repo_id = "Qwen/Qwen3-0.6B"
@@ -360,7 +360,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
         ...
         >>> # 1. Split your model in two parts
-        >>> splitted_model = ModelWithSplitPoints(
+        >>> splitted_model = BaseSplitter(
         >>>     model, tokenizer=tokenizer, split_point=5,
         >>> )
         ...
@@ -401,7 +401,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         *,
         nb_concepts: int,
         device: torch.device | str = "cpu",
@@ -411,7 +411,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         Initialize the concept bottleneck explainer based on the Overcomplete BaseOptimDictionaryLearning framework.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
             device (torch.device | str): Device to use for the `concept_module`.
@@ -423,7 +423,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
             device=device,  # type: ignore
             **kwargs,
         )
-        super().__init__(model_with_split_points, concept_model)
+        super().__init__(splitter, concept_model)
 
     def fit(self, activations: LatentActivations, **kwargs):
         """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
@@ -548,7 +548,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         *,
         nb_concepts: int,
         device: torch.device | str = "cpu",
@@ -559,7 +559,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
         Initialize the concept bottleneck explainer based on the Overcomplete BaseOptimDictionaryLearning framework.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
             device (torch.device | str): Device to use for the `concept_module`.
@@ -568,7 +568,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
                 See the Overcomplete documentation of the provided `concept_model_class` for more details.
         """
         super().__init__(
-            model_with_split_points,
+            splitter,
             nb_concepts=nb_concepts,
             device=device,
             **kwargs,
@@ -653,7 +653,7 @@ class ConvexNMFConcepts(DictionaryLearningExplainer[oc_opt.ConvexNMF]):
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         *,
         nb_concepts: int,
         device: torch.device | str = "cpu",
@@ -663,7 +663,7 @@ class ConvexNMFConcepts(DictionaryLearningExplainer[oc_opt.ConvexNMF]):
         Initialize the concept bottleneck explainer based on the Overcomplete BaseOptimDictionaryLearning framework.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+            splitter (BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
             device (torch.device | str): Device to use for the `concept_module`.
@@ -672,7 +672,7 @@ class ConvexNMFConcepts(DictionaryLearningExplainer[oc_opt.ConvexNMF]):
         """
         kwargs["solver"] = "mu"  # TODO: see if we can support the pgd solver or have an easy way to set parameters
         super().__init__(
-            model_with_split_points=model_with_split_points,
+            splitter=splitter,
             nb_concepts=nb_concepts,
             device=device,
             **kwargs,
