@@ -365,7 +365,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         """
         return self.concept_model.get_dictionary()  # type: ignore
 
-    def __normalize_gradients(self, gradients: Float[torch.Tensor, "t g c"]) -> Float[torch.Tensor, "t g c"]:
+    def _normalize_gradients(self, gradients: Float[torch.Tensor, "t g c"]) -> Float[torch.Tensor, "t g c"]:
         """
         Normalize the gradients as described in parameter `normalization` of `concept_output_gradient`.
         But for a single sample.
@@ -515,5 +515,5 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
 
         # normalize the gradients if required
         if normalization:
-            gradients = [self.__normalize_gradients(g) for g in gradients]
+            gradients = [self._normalize_gradients(g) for g in gradients]
         return gradients
