@@ -116,7 +116,7 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
     )
     # Load model without split points
     model_without_split_points = MWSP(
-        "bert-base-cased",
+        "hf-internal-testing/tiny-random-bert",
         automodel=AutoModelForMaskedLM,  # type: ignore
         split_point="bert.encoder.layer.1",
     )
@@ -135,7 +135,7 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
     )
     # Load model without split points
     model_without_split_points = MWSP(
-        "gpt2",
+        "hf-internal-testing/tiny-random-gpt2",
         automodel=AutoModelForCausalLM,  # type: ignore
         split_point="transformer.h.1",
     )
@@ -145,7 +145,7 @@ def test_loading_possibilities(bert_model, bert_tokenizer, gpt2_model, gpt2_toke
 
     with pytest.raises(InitializationError):
         # Model id with no auto class
-        MWSP("gpt2", "transformer.h.1")
+        MWSP("hf-internal-testing/tiny-random-gpt2", "transformer.h.1")
 
 
 def test_manage_output_tuple():

@@ -30,14 +30,11 @@ from interpreto import SplitterForClassification as SSC
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 REPO_IDS = [
-    "hf-internal-testing/tiny-random-albert",
-    "hf-internal-testing/tiny-random-bart",
     "hf-internal-testing/tiny-random-bert",
-    "hf-internal-testing/tiny-random-distilbert",
-    "hf-internal-testing/tiny-random-ElectraModel",
+    "hf-internal-testing/tiny-random-gpt2",
+    "hf-internal-testing/tiny-random-LlamaForCausalLM",
     "hf-internal-testing/tiny-random-roberta",
     "hf-internal-testing/tiny-random-t5",
-    "hf-internal-testing/tiny-random-gpt2",
 ]
 
 

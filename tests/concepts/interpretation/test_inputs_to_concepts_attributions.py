@@ -96,7 +96,7 @@ def test_inputs_to_concepts_attributions_fast(sentences):
     This test is fast because it only test with one model and explainer.
     While the other tests are slow because they test with multiple models and explainers.
     """
-    inputs_to_concepts_attributions("hf-internal-testing/tiny-random-distilbert", PCAConcepts, KernelShap, sentences)
+    inputs_to_concepts_attributions("hf-internal-testing/tiny-random-bert", PCAConcepts, KernelShap, sentences)
 
 
 @pytest.mark.slow
