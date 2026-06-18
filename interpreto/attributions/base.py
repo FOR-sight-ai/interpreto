@@ -852,20 +852,22 @@ class ImageAttributionOutput:
     Class to store the output of an image-attribution method.
 
     Mirrors `AttributionOutput` with two changes for the image modality:
-    `granularity` is typed as `ImageGranularity` (default `PATCH`), and `elements`
-    holds `(row, col)` integer tuples produced by `ImageGranularity.get_decomposition`
-    instead of decoded strings.
+    `granularity` is typed as `ImageGranularity` (default `PATCH`), and instead of the
+    text `elements` token labels it carries `attributions_image`, a display-ready
+    pixel-resolution `(t, H, W)` map alongside the canonical `(t, g)` `attributions`.
 
     Attributes:
         attributions (SingleAttribution):
-            Attribution score tensor(s) of shape `(t, l)` where `l = H*W` (PIXEL)
-            or `l = num_patches` (PATCH). Stored FLAT — visualization reshapes to
-            2D at render time via `model_inputs_to_explain["pixel_values"].shape[-2:]`.
+            Canonical per-unit attribution scores of shape `(t, g)`, where `g = H*W` (PIXEL)
+            or `g = num_patches` (PATCH). This is the lossless numeric output — one scalar per
+            granularity unit. Stored FLAT; patch `(row, col)` coordinates are derivable on demand
+            from `model_inputs_to_explain["pixel_values"].shape[-2:]` and `patch_size`.
 
-        elements (list[tuple[int, int]] | torch.Tensor):
-            Per-unit labels of shape matching `attributions`' last dim.
-                - PIXEL: list of `(row, col)` pixel coordinates.
-                - PATCH: list of `(patch_row, patch_col)` patch-grid coordinates.
+        attributions_image (Float[torch.Tensor, "t h w"]):
+            Display-ready map of shape `(t, H, W)`, obtained by expanding `attributions` back to
+            pixel resolution in `explain` (NEAREST for gradient methods, the mask resize strategy
+            for masking methods). The visualization draws this directly and never interpolates
+            itself.
 
         model_inputs_to_explain (TensorMapping):
             The output of `image_processor(image, return_tensors="pt")` (a `BatchFeature`,
@@ -896,7 +898,7 @@ class ImageAttributionOutput:
     """
 
     attributions: SingleAttribution
-    elements: list[tuple[int, int]] | torch.Tensor
+    attributions_image: Float[torch.Tensor, "t h w"]
     model_inputs_to_explain: TensorMapping
     targets: torch.Tensor
     classes: torch.Tensor | None = None
@@ -932,7 +934,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
+        resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         use_gradient: bool = False,
         input_x_gradient: bool = True,
@@ -964,7 +966,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         self.perturbator = perturbator or ImageTensorPerturbator()
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
-        self.granularity_resize = granularity_resize
+        self.resize_strategy = resize_strategy
         # patch_size is sourced from the model config; required by ImageGranularity.PATCH
         self.patch_size = int(getattr(model.config, "patch_size", 16))
         # The explainer is the single source of truth for patch_size (it owns model.config).
@@ -1221,7 +1223,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         # Perturbations + scores: same flow as text. The default Perturbator() yields
         # the input unchanged with a None mask, which is what gradient methods need.
         pert_generator: Iterator[TensorMapping]
-        mask_generator: Iterator[Int[torch.Tensor, "p l"] | None]
+        mask_generator: Iterator[Int[torch.Tensor, "p g"] | None]
         pert_generator, mask_generator = split_iterator(
             self.perturbator.perturb(m) for m in model_inputs_to_explain
         )
@@ -1230,8 +1232,9 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             pert_generator, sanitized_targets
         )
 
-        # Aggregate over perturbations: (p, t), (p, l) -> (t, l)
-        contributions: Iterator[Float[torch.Tensor, "t l"]] = (
+        # Aggregate over perturbations: (p, t), (p, l) -> (t, l) in the case of gradient based methods 
+        #                               (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw ie patch_size ** 2
+        contributions: Iterator[Float[torch.Tensor, "t l"] |Float[torch.Tensor, "t g"] ] = (
             self.aggregator(score.detach(), mask)
             for score, mask in zip(scores, mask_generator, strict=True)
         )
@@ -1241,7 +1244,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         granular_contributions: Iterator[Float[torch.Tensor, "t g"]] = (
             self.granularity.granularity_resize(
                 contribution=contribution,
-                granularity_resize_strategy=self.granularity_resize,
+                granularity_resize_strategy=self.resize_strategy,
                 inputs=inputs,
                 patch_size=self.patch_size,
                 aggregate_inputs=self.inference_wrapper.gradients,
@@ -1249,42 +1252,37 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
         )
 
-        # Coordinate labels per granularity unit (replaces text's decoded-token strings).
-        # All samples share the same H, W after image_processor normalization, so the
-        # decomposition is identical across samples — compute it once on the first sample
-        # and share the reference. Text iterates per-sample because each sample can have
-        # a different sequence length; for image that variation doesn't exist.
-        # TODO: revisit — see project_vit_explainer_decomposition_refactor in auto-memory.
-        # `get_decomposition` already replicates internally based on the input's batch dim
-        # (`pixel_values.shape[0]`), but our per-sample BatchFeatures all have batch=1, so
-        # the internal replication is a no-op and we redo it here. Cleaner long-term: either
-        # strip the internal replication (return one decomposition) or concat samples into a
-        # single batched BatchFeature upstream and let `get_decomposition` produce the full
-        # `n_samples` list directly.
-        shared_coords: list[tuple[int, int]] = self.granularity.get_decomposition(
-            model_inputs_to_explain[0],
-            patch_size=self.patch_size,
-            return_coordinates=True,
-        )[0]  # type: ignore
-        granular_inputs_coords: list[list[tuple[int, int]]] = [shared_coords for _ in model_inputs_to_explain]
+        # Display map: expand the (t, g) granularity scores back to a pixel-resolution (t, H, W)
+        # field so the visualization receives a ready-to-draw map and never interpolates itself.
+        # Gradient methods discarded sub-patch detail in the l->g pool, so we re-expand with NEAREST
+        # (honest flat blocks, no invented detail); mask methods reuse the strategy that expanded
+        # their perturbation masks, so the heatmap matches what actually perturbed the model.
+        display_strategy: GranularityResizeStrategy = (
+            GranularityResizeStrategy.NEAREST if self.inference_wrapper.gradients else self.resize_strategy
+        )
 
         results: list[ImageAttributionOutput] = []
-        for contribution, model_input, elements, target, raw_image in zip(
+        for contribution, model_input, target, raw_image in zip(
             granular_contributions,
             model_inputs_to_explain,
-            granular_inputs_coords,
             sanitized_targets,
             raw_images,
             strict=True,
         ):
+            attributions_image: Float[torch.Tensor, "t h w"] = self.granularity.resize_to_image(
+                contribution=contribution,
+                resize_strategy=display_strategy,
+                inputs=model_input,
+                patch_size=self.patch_size,
+            )
 
             attribution_output = ImageAttributionOutput(
                 attributions=contribution.cpu(),
-                elements=elements,
+                attributions_image=attributions_image.cpu(),
                 model_inputs_to_explain=model_input,
                 targets=target.cpu(),
                 granularity=self.granularity,
-                granularity_resize=self.granularity_resize,
+                granularity_resize=self.resize_strategy,
                 inference_mode=self.inference_wrapper.mode,
                 raw_image=raw_image,
             )

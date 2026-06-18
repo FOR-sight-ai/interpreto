@@ -34,7 +34,7 @@ test_imagelime = functools.partial(ImageLime, n_perturbations=1000)
 
 methods = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagekernelshap, ImageLime, test_imagesobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad]
 grad_methods = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagekernelshap,test_imagegrad]
-single_method = [test_saliency, test_smoothgrad]
+single_method = [ImageOcclusion]
 
 def method_name(method_cls):
     # functools.partial has no __name__; the wrapped class lives on .func
@@ -47,16 +47,16 @@ for method_cls in single_method:
     method = method_cls(
         model=model,
         image_processor=processor,
-        granularity=ImageGranularity.PIXEL,
+        granularity=ImageGranularity.PATCH,
     )
 
     output = method.explain(model_inputs=image,targets = [1])[0]
     targets = output.targets
-    elements = output.elements
-    attributions = output.attributions
+    attributions = output.attributions               # canonical (t, g) per-unit scores
+    attributions_image = output.attributions_image   # display-ready (t, H, W) map
     print(targets)
-    print(elements)
-    print(attributions)
+    print("attributions (t, g):", attributions.shape)
+    print("attributions_image (t, H, W):", attributions_image.shape)
 
     with torch.no_grad():
         logits = model(**output.model_inputs_to_explain).logits

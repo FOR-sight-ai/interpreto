@@ -80,7 +80,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
+        resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         input_x_gradient: bool = True,
@@ -97,7 +97,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             granularity (ImageGranularity, optional): The granularity level of the
                 explanation. Options: `PIXEL`, `PATCH`. Defaults to
                 `ImageGranularity.DEFAULT` (= `PATCH`).
-            granularity_resize (GranularityResizeStrategy, optional):
+            resize_strategy (GranularityResizeStrategy, optional):
                 How to aggregate per-pixel gradients into per-patch scores.
                 Options: MEAN, MAX, MIN, SUM, SIGNED_MAX. Ignored when `granularity`
                 is `PIXEL` (no within-unit aggregation needed).
@@ -121,7 +121,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             aggregator=None,  # falls back to default Aggregator() (squeeze p=1)
             device=device,
             granularity=granularity,
-            granularity_resize=granularity_resize,
+            resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=True,
             input_x_gradient=input_x_gradient,

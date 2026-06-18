@@ -69,7 +69,7 @@ class ImageIntegratedGradients(ImageClassificationAttributionExplainer):
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
+        resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         input_x_gradient: bool = True,
@@ -86,7 +86,7 @@ class ImageIntegratedGradients(ImageClassificationAttributionExplainer):
             batch_size (int): batch size for the attribution method.
             granularity (ImageGranularity, optional): granularity level (`PIXEL`, `PATCH`).
                 Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
-            granularity_resize (GranularityResizeStrategy, optional): how to
+            resize_strategy (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel gradients into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             device (torch.device, optional): device on which the attribution method will be run.
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
@@ -106,7 +106,7 @@ class ImageIntegratedGradients(ImageClassificationAttributionExplainer):
             aggregator=TrapezoidalMeanAggregator(),
             device=device,
             granularity=granularity,
-            granularity_resize=granularity_resize,
+            resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=True,
             input_x_gradient=input_x_gradient,

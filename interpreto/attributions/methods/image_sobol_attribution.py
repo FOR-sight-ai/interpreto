@@ -79,7 +79,7 @@ class ImageSobol(ImageClassificationAttributionExplainer):
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
         granularity: ImageGranularity = ImageGranularity.DEFAULT,
-        granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
+        resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_token_perturbations: int = 32,
         sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.TOTAL_ORDER,
@@ -97,7 +97,7 @@ class ImageSobol(ImageClassificationAttributionExplainer):
             batch_size (int): batch size for the attribution method.
             granularity (ImageGranularity, optional): unit over which masks are defined (`PIXEL`, `PATCH`).
                 Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
-            granularity_resize (GranularityResizeStrategy, optional): how to
+            resize_strategy (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel scores into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
             n_token_perturbations (int): Monte-Carlo samples per granularity unit (total
@@ -131,7 +131,7 @@ class ImageSobol(ImageClassificationAttributionExplainer):
             aggregator=aggregator,
             device=device,
             granularity=granularity,
-            granularity_resize=granularity_resize,
+            resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=False,
             preprocess=preprocess,
