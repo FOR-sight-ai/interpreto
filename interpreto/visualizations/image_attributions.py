@@ -26,10 +26,10 @@
 Matplotlib visualization for `ImageAttributionOutput`.
 
 The normalization / percentile-clipping idea follows xplique's `plots/image.py`
-(Apache 2.0, DEEL / Université Paul Sabatier). Reimplemented here to handle
-Interpreto's flat-attribution storage (shape `(t, l)`), reshaped to a 2D heatmap
-at render time using the per-unit `(row, col)` coordinates in
-`ImageAttributionOutput.elements`.
+(Apache 2.0, DEEL / Université Paul Sabatier). The heatmap is read directly from
+the display-ready `(t, H, W)` `ImageAttributionOutput.attributions_image` map;
+`explain` already did the g->l interpolation, so the viz never reshapes or
+interpolates itself.
 """
 
 from __future__ import annotations
@@ -82,8 +82,8 @@ def _prepare_heatmap(
     absolute_value: bool,
 ) -> np.ndarray:
     """
-    Reshape flat `attributions[target_idx]` (shape `(l,)`) into a 2D heatmap using
-    `elements` to recover the grid shape.
+    Read the 2D heatmap `(H, W)` directly from `attributions_image[target_idx]`
+    (already expanded to pixel resolution by `explain`).
 
     The heatmap is returned in the **real attribution-score scale** (after the
     optional abs + percentile clip). It is deliberately NOT rescaled to [0, 1]:
@@ -92,17 +92,13 @@ def _prepare_heatmap(
     method's legend to a meaningless 0->1 axis and make cross-method comparison
     impossible.
     """
-    row = attribution_output.attributions[target_idx].detach().cpu()
+    # `attributions_image` is already the display-ready (t, H, W) map: `explain` did the
+    # g->l interpolation (NEAREST for gradient methods, the mask strategy for masking methods),
+    # so the viz just reads the 2-D slice and never reshapes or interpolates itself.
+    row = attribution_output.attributions_image[target_idx].detach().cpu()
     if row.dtype is torch.bfloat16:
         row = row.to(torch.float32)
-    flat = row.numpy().astype(np.float32)
-
-    elements = attribution_output.elements
-    #for a 30*30 image with patch_size = 2, elements stores [(0,0),(0,1),...,(14,14)] so the heatmap is effectively a 15*15 array, which is what we want.
-    #TODO: This works for rectangular TextGranularity but may break if we introduce other type of Granularities. Check if another solution is needed.
-    rows = max(e[0] for e in elements) + 1
-    cols = max(e[1] for e in elements) + 1
-    heatmap = flat.reshape(rows, cols)
+    heatmap = row.numpy().astype(np.float32)
 
     if absolute_value:
         heatmap = np.abs(heatmap)
@@ -167,11 +163,11 @@ def plot_image_attribution(
     """
     Display attribution heatmap(s) over the underlying image.
 
-    The flat `(t, l)` attributions are reshaped to a 2D grid using `elements`
-    (max row/col + 1). For `ImageGranularity.PATCH` this gives e.g. (14, 14),
-    which matplotlib stretches to the image's (H, W) via `extent`; the
-    `interpolation` kwarg controls whether each patch is shown as a solid block
-    (`'nearest'`, the honest default) or smoothed (`'bilinear'`).
+    The heatmap is the display-ready `(t, H, W)` `attributions_image` map produced
+    by `explain` (the g->l interpolation — NEAREST for gradient methods, the mask
+    strategy for masking methods — is already baked in). It is drawn over the image
+    via `extent`; since it already matches pixel resolution the `interpolation`
+    kwarg only affects any final stretch to the displayed image's size.
 
     Args:
         attribution_output: Output from an image-classification attribution method.
