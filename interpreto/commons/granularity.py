@@ -195,6 +195,8 @@ class GranularityResizeStrategy(GranularityCombinationStrategy):
         """
         if output_size is None:
             _, h_in, w_in = x.shape
+            assert h_in % patch_size == 0, "the height of the image must be divisble by the patch_size"
+            assert w_in % patch_size == 0, "the width of the image must be divisble by the patch_size"
             output_size = (h_in // patch_size, w_in // patch_size)
         # interpolate expects 4-D (N, C, H, W); treat the maps as a single batch of `t` channels
         x4: Float[torch.Tensor, "1 t h_in w_in"] = x.unsqueeze(0)
