@@ -1228,15 +1228,29 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             self.perturbator.perturb(m) for m in model_inputs_to_explain
         )
 
-        scores: Iterator[Float[torch.Tensor, "p t"]] = self.inference_wrapper(
+        # Gradient methods yield signed, per-channel scores (p, t, d, l); mask methods yield (p, t).
+        scores: Iterator[Float[torch.Tensor, "p t d l"] | Float[torch.Tensor, "p t"]] = self.inference_wrapper(
             pert_generator, sanitized_targets
         )
 
-        # Aggregate over perturbations: (p, t), (p, l) -> (t, l) in the case of gradient based methods 
-        #                               (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw ie patch_size ** 2
-        contributions: Iterator[Float[torch.Tensor, "t l"] |Float[torch.Tensor, "t g"] ] = (
+        # Aggregate over perturbations: (p, t, d, l) -> (t, d, l) for gradient methods (the cross-
+        #   perturbation statistic — mean/var/squared-mean — lands per channel, so VarGrad/SquareGrad
+        #   get the faithful formula);
+        #   (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw.
+        aggregated: Iterator[Float[torch.Tensor, "t d l"] | Float[torch.Tensor, "t g"]] = (
             self.aggregator(score.detach(), mask)
             for score, mask in zip(scores, mask_generator, strict=True)
+        )
+
+        # Collapse the 3 channels of gradient scores to a per-pixel value: (t, d, l) -> (t, l).
+        # Signed mean (no abs): for mean/trapezoid methods this keeps direction (positive = pushes
+        # the target logit up), matching the signed attributions the mask methods produce; for
+        # VarGrad/SquareGrad the per-channel statistic is already non-negative so the sign is moot.
+        # Done here, after the per-perturbation statistic, never inside the aggregator (mask methods
+        # share the aggregator and have no channel axis).
+        contributions: Iterator[Float[torch.Tensor, "t l"] | Float[torch.Tensor, "t g"]] = (
+            contribution.mean(dim=1) if self.inference_wrapper.gradients else contribution
+            for contribution in aggregated
         )
 
         # Aggregate over inputs for gradient-based methods: (t, l) -> (t, g).

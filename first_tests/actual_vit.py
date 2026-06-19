@@ -1,6 +1,6 @@
 from PIL import Image
 from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, ImageLime,ImageOcclusion, ImageSquareGrad, ImageVarGrad, ImageKernelShap, ImageSobol
-from interpreto.commons import ImageGranularity, granularity
+from interpreto.commons import ImageGranularity, granularity, GranularityResizeStrategy
 from transformers import AutoModelForImageClassification, AutoImageProcessor, ViTModel
 from interpreto.visualizations import plot_image_attribution, plot_image_attributions_comparison
 import numpy as np
@@ -29,12 +29,14 @@ test_integrated_gradient = functools.partial(ImageIntegratedGradients,granularit
 test_smoothgrad = functools.partial(ImageSmoothGrad,granularity=ImageGranularity.PIXEL)
 test_imagegrad = functools.partial(ImageVarGrad,granularity=ImageGranularity.PIXEL)
 test_squaregrad = functools.partial(ImageSquareGrad,granularity=ImageGranularity.PIXEL)
-test_imagelime = functools.partial(ImageLime, n_perturbations=1000)
+test_imagelime_bilinear = functools.partial(ImageLime, n_perturbations=10,resize_strategy=GranularityResizeStrategy.BILINEAR)
+test_imagelime_bicubic = functools.partial(ImageLime, n_perturbations=10,resize_strategy=GranularityResizeStrategy.BICUBIC)
+test_imagelime_nearest = functools.partial(ImageLime, n_perturbations=10,resize_strategy=GranularityResizeStrategy.NEAREST)
 
 
 methods = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagekernelshap, ImageLime, test_imagesobol, ImageOcclusion, ImageSquareGrad, ImageVarGrad]
 grad_methods = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagekernelshap,test_imagegrad]
-single_method = [ImageOcclusion]
+single_method = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagegrad, test_squaregrad]
 
 def method_name(method_cls):
     # functools.partial has no __name__; the wrapped class lives on .func
@@ -47,7 +49,6 @@ for method_cls in single_method:
     method = method_cls(
         model=model,
         image_processor=processor,
-        granularity=ImageGranularity.PATCH,
     )
 
     output = method.explain(model_inputs=image,targets = [1])[0]
