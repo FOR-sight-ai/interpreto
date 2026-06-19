@@ -108,15 +108,54 @@ def _prepare_heatmap(
     return heatmap
 
 
+def _color_limits(heatmap: np.ndarray, center_zero: bool | None) -> tuple[float, float, bool]:
+    """
+    Decide the colorbar range for one heatmap.
+
+    Attribution scores are now **signed** for the mean/trapezoid gradient methods
+    (Saliency, SmoothGrad, GradientShap, IntegratedGradients) and for the mask
+    methods (Occlusion, LIME, KernelSHAP, Sobol): the sign tells whether a pixel
+    pushes the target logit up or down. For such maps a sequential scale anchored
+    at min/max would put 0 at an arbitrary color; instead we center the range at 0
+    (`[-m, +m]`) so the neutral color means "no contribution" and +/- are readable.
+
+    VarGrad/SquareGrad (and any abs'd map) are non-negative, so we keep the plain
+    min/max range there.
+
+    Returns (vmin, vmax, centered). `center_zero=None` auto-detects (center iff the
+    map straddles zero); pass True/False to force.
+    """
+    lo, hi = float(heatmap.min()), float(heatmap.max())
+    centered = (lo < 0.0 < hi) if center_zero is None else center_zero
+    if centered:
+        m = max(abs(lo), abs(hi)) or 1.0
+        return -m, m, True
+    return lo, hi, False
+
+
+def _to_grayscale(img_disp: np.ndarray) -> np.ndarray:
+    """
+    Collapse a displayable image to a 2D luminance map so it can be drawn under the
+    heatmap as a neutral backdrop (Rec. 601 weights). Already-2D images pass through.
+    """
+    if img_disp.ndim == 2:
+        return img_disp
+    if img_disp.shape[-1] == 1:
+        return img_disp[..., 0]
+    return img_disp[..., :3] @ np.array([0.2989, 0.587, 0.114], dtype=img_disp.dtype)
+
+
 def _draw_attribution_on_ax(
     ax,
     img_disp: np.ndarray,
     heatmap: np.ndarray,
     *,
-    cmap: str,
+    cmap: str | None,
     alpha: float,
     interpolation: str,
     colorbar: bool,
+    center_zero: bool | None,
+    grayscale_background: bool,
     fig,
     **plot_kwargs,
 ):
@@ -128,17 +167,30 @@ def _draw_attribution_on_ax(
     points pixel-for-pixel identical, and — crucially — keeps each panel's
     colorbar tied to that panel's own vmin/vmax, so every method keeps its own
     legend.
+
+    For signed heatmaps the range is centered at 0 and, unless the caller forced a
+    colormap, a diverging map (`bwr`) is used so 0 is white and positive/negative
+    read as red/blue; non-negative maps keep the sequential `jet`.
+
+    When `grayscale_background` is True the underlying image is drawn in grayscale so
+    the colored heatmap stands out against a neutral backdrop.
     """
+    vmin, vmax, centered = _color_limits(heatmap, center_zero)
+    resolved_cmap = cmap if cmap is not None else ("bwr" if centered else "jet")
+
     H_img, W_img = img_disp.shape[:2]
-    ax.imshow(img_disp)
+    if grayscale_background:
+        ax.imshow(_to_grayscale(img_disp), cmap="gray", vmin=0.0, vmax=1.0)
+    else:
+        ax.imshow(img_disp)
     im = ax.imshow(
         heatmap,
         extent=(0, W_img, H_img, 0),
-        cmap=cmap,
+        cmap=resolved_cmap,
         alpha=alpha,
         interpolation=interpolation,
-        vmin=float(heatmap.min()),
-        vmax=float(heatmap.max()),
+        vmin=vmin,
+        vmax=vmax,
         **plot_kwargs,
     )
     if colorbar:
@@ -150,7 +202,7 @@ def plot_image_attribution(
     attribution_output: ImageAttributionOutput,
     image: PILImage | np.ndarray | torch.Tensor | None = None,
     target_idx: int | Iterable[int] | None = None,
-    cmap: str = "jet",
+    cmap: str | None = None,
     alpha: float = 0.5,
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
@@ -158,6 +210,8 @@ def plot_image_attribution(
     img_size: float = 3.0,
     cols: int = 4,
     colorbar: bool = True,
+    center_zero: bool | None = None,
+    grayscale_background: bool = True,
     **plot_kwargs,
 ):
     """
@@ -176,7 +230,8 @@ def plot_image_attribution(
             only the heatmap is shown.
         target_idx: If int, plot only that target. If an iterable of ints, plot
             that subset. If None, one subplot per target.
-        cmap: Matplotlib colormap for the heatmap.
+        cmap: Matplotlib colormap for the heatmap. If None (default), it is chosen
+            per-panel: `bwr` (diverging, white at 0) for signed maps, `jet` otherwise.
         alpha: Heatmap opacity over the image (0-1).
         clip_percentile: Clip at (p, 100-p) to suppress outliers. None disables.
         absolute_value: If True, take abs() before plotting (magnitude only).
@@ -184,6 +239,11 @@ def plot_image_attribution(
         img_size: Subplot side length in inches.
         cols: Max columns when laying out multiple targets in a grid.
         colorbar: If True, attach a per-target colorbar showing the real score range.
+        center_zero: Center the color scale at 0 with a symmetric range. None
+            (default) auto-detects (centers iff the map has both signs); True/False
+            forces it.
+        grayscale_background: If True (default), draw the underlying image in
+            grayscale so the colored heatmap stands out.
         **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
 
     Returns:
@@ -236,6 +296,8 @@ def plot_image_attribution(
             alpha=alpha,
             interpolation=interpolation,
             colorbar=colorbar,
+            center_zero=center_zero,
+            grayscale_background=grayscale_background,
             fig=fig,
             **plot_kwargs,
         )
@@ -259,7 +321,7 @@ def plot_image_attributions_comparison(
     labels: Iterable[str] | None = None,
     image: PILImage | np.ndarray | torch.Tensor | None = None,
     target_idx: int = 0,
-    cmap: str = "jet",
+    cmap: str | None = None,
     alpha: float = 0.5,
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
@@ -267,6 +329,8 @@ def plot_image_attributions_comparison(
     img_size: float = 3.0,
     cols: int = 4,
     colorbar: bool = True,
+    center_zero: bool | None = None,
+    grayscale_background: bool = True,
     **plot_kwargs,
 ):
     """
@@ -290,7 +354,10 @@ def plot_image_attributions_comparison(
             `raw_image`.
         target_idx: Which target to plot for every method (single int — the point
             is to compare methods, holding the target fixed).
-        cmap: Matplotlib colormap for the heatmaps.
+        cmap: Matplotlib colormap for the heatmaps. If None (default), chosen
+            per-panel: `bwr` (diverging, white at 0) for signed maps, `jet` otherwise
+            — so a signed method (e.g. SmoothGrad) and a non-negative one (e.g.
+            VarGrad) in the same grid each get an honest scale.
         alpha: Heatmap opacity over the image (0-1).
         clip_percentile: Clip at (p, 100-p) to suppress outliers. None disables.
         absolute_value: If True, take abs() before plotting (magnitude only).
@@ -298,6 +365,10 @@ def plot_image_attributions_comparison(
         img_size: Subplot side length in inches.
         cols: Max columns when laying out the methods in a grid.
         colorbar: If True, attach a per-method colorbar showing its real score range.
+        center_zero: Center the color scale at 0 with a symmetric range. None
+            (default) auto-detects per panel; True/False forces it.
+        grayscale_background: If True (default), draw the underlying image in
+            grayscale so the colored heatmap stands out.
         **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
 
     Returns:
@@ -352,6 +423,8 @@ def plot_image_attributions_comparison(
             alpha=alpha,
             interpolation=interpolation,
             colorbar=colorbar,
+            center_zero=center_zero,
+            grayscale_background=grayscale_background,
             fig=fig,
             **plot_kwargs,
         )

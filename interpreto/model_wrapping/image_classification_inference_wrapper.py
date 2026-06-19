@@ -131,13 +131,20 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
         targeted_logits_chunk: Float[torch.Tensor, "c t"],
         chunk_slice: slice,
         last_chunk: bool,
-    ) -> Float[torch.Tensor, "c t l"]:
+    ) -> Float[torch.Tensor, "c t d l"]:
         """
         Compute the gradients of the targeted logits with respect to `pixel_values`.
 
-        Done target by target to save memory. Channel and spatial dimensions are
-        collapsed so the output matches the pipeline's flat `l` contract:
-        `(c, 3, H, W) -> (c, H, W) -> (c, H*W=l)`.
+        Done target by target to save memory. Spatial dimensions are flattened to
+        `l = H*W`, but the 3 channels are kept as a `d` axis (signed, no abs):
+        `(c, 3, H, W) -> (c, 3=d, H*W=l)`.
+
+        Keeping channels signed and un-collapsed is what lets the cross-perturbation
+        statistic (mean/var/squared-mean) in the aggregator be applied per channel —
+        which VarGrad/SquareGrad need to compute the correct formula. The channel
+        magnitude collapse (`abs().mean`) happens later, in the explainer, *after* the
+        per-perturbation statistic. For image `d=3` is tiny, so unlike the text wrapper
+        there is no memory reason to collapse early here.
 
         Args:
             inputs (TensorMapping):
@@ -153,7 +160,7 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
 
         Returns:
             gradients_chunk (torch.Tensor):
-                Per-pixel-position attribution scores of shape `(c, t, H*W)`.
+                Signed per-channel per-pixel gradients of shape `(c, t, 3, H*W)`.
         """
         c = chunk_slice.stop - chunk_slice.start
         #We don't need masking compared with the text logic
@@ -181,12 +188,13 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
             if self.input_x_gradient:
                 target_wise_grads = target_wise_grads * pixel_values_chunk
 
-            # text does `.abs().mean(dim=-1)` to collapse the d=768/4096 width dim for memory;
-            # here we collapse channels for the 1D l contract (not memory) and flatten H,W to l=H*W
-            target_wise_mean_grads: Float[torch.Tensor, f"{c} l"] = (
-                target_wise_grads.abs().mean(dim=1).flatten(start_dim=1)
-            )
-            gradients_list.append(target_wise_mean_grads)
+            # Keep channels signed and un-collapsed: (c, 3, H, W) -> (c, 3=d, l=H*W).
+            # The l ordering (row-major over H, W) matches the mask path and resize_to_image's
+            # reshape(t, H, W). No abs / no channel mean here — those happen post-aggregator so the
+            # per-perturbation statistic (mean/var/squared-mean) lands per channel (faithful VarGrad/
+            # SquareGrad).
+            target_wise_per_channel: Float[torch.Tensor, f"{c} d l"] = target_wise_grads.flatten(2, 3)
+            gradients_list.append(target_wise_per_channel)
 
-        # stack per-target results into (c, t, l) — same final shape contract as text
+        # stack per-target results into (c, t, d, l)
         return torch.stack(gradients_list, dim=1)
