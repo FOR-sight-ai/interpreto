@@ -29,7 +29,6 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
 from interpreto.attributions.perturbations.base import EmbeddingsPerturbator
-from interpreto.typing import TensorMapping
 
 
 class GaussianNoisePerturbator(EmbeddingsPerturbator):
@@ -41,7 +40,7 @@ class GaussianNoisePerturbator(EmbeddingsPerturbator):
 
     def __init__(
         self,
-        inputs_embedder: torch.nn.Module | None = None,
+        inputs_embedder: torch.nn.Module,
         n_perturbations: int = 10,
         *,
         std: float = 0.1,
@@ -49,7 +48,7 @@ class GaussianNoisePerturbator(EmbeddingsPerturbator):
         """Instantiate the perturbator.
 
         Args:
-            inputs_embedder (torch.nn.Module | None): Optional embedder used to obtain input embeddings from input IDs.
+            inputs_embedder (torch.nn.Module): Embedder used to obtain input embeddings from input IDs.
             n_perturbations (int): Number of noisy samples to generate.
             std (float): Standard deviation of the Gaussian noise.
         """
@@ -59,23 +58,25 @@ class GaussianNoisePerturbator(EmbeddingsPerturbator):
         self.std = std
 
     @jaxtyped(typechecker=beartype)
-    def perturb_embeds(self, model_inputs: TensorMapping) -> tuple[TensorMapping, None]:
-        """Apply Gaussian noise perturbations on ``inputs_embeds``.
+    def perturb_embeds(self, inputs_embeds: Float[torch.Tensor, "1 l d"]) -> tuple[Float[torch.Tensor, "p l d"], None]:
+        """
+        Apply Gaussian noise perturbations on ``inputs_embeds``.
 
         Args:
-            model_inputs (TensorMapping): Mapping containing the ``inputs_embeds`` tensor and
-                associated masks.
-
+            inputs_embeds (torch.Tensor):
+                Embeddings of the input tokens.
+                Shape: (1, l, d)
         Returns:
-            tuple: The perturbed mapping and ``None`` as no mask is produced.
+            perturbed_embeds (torch.Tensor):
+                Perturbed embeddings.
+                Shape: (p, l, d)
+            mask (None):
+                placeholder
         """
-
-        embeddings: Float[torch.Tensor, "b l d"] = model_inputs["inputs_embeds"]
-        model_inputs["inputs_embeds"] = embeddings.repeat(self.n_perturbations, 1, 1)
-        model_inputs["attention_mask"] = model_inputs["attention_mask"].repeat(self.n_perturbations, 1)
+        # repeat
+        perturbed_embeds: Float[torch.Tensor, "p l d"] = inputs_embeds.repeat(self.n_perturbations, 1, 1)
 
         # add noise
-        # TODO: check if we should not limit this to relevant tokens (not padding, end of sequence, etc.)
-        model_inputs["inputs_embeds"] += torch.randn_like(model_inputs["inputs_embeds"]) * self.std
+        perturbed_embeds += torch.randn_like(perturbed_embeds) * self.std
 
-        return model_inputs, None
+        return perturbed_embeds, None

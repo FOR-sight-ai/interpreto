@@ -40,9 +40,10 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     Kernels,
     LinearRegressionAggregator,
 )
-from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin
+from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.random_perturbation import RandomMaskedTokenPerturbator
 from interpreto.commons import Granularity, GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 
 
 class Lime(MultitaskExplainerMixin, AttributionExplainer):
@@ -72,7 +73,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         granularity: Granularity = Granularity.WORD,
@@ -88,7 +89,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain
             tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
             granularity (Granularity, optional): The level of granularity for the explanation.
@@ -107,10 +108,10 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
                 If None, the kernel width is computed using the `default_kernel_width_fn` function.
             device (torch.device): device on which the attribution method will be run
         """
-        model, replace_token_id = self._set_tokenizer(model, tokenizer)
+        replace_token_id = setup_token_ids(model, tokenizer)
 
         perturbator = RandomMaskedTokenPerturbator(
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             n_perturbations=n_perturbations,
             replace_token_id=replace_token_id,
             granularity=granularity,
@@ -125,7 +126,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
 
         super().__init__(
             model=model,
-            tokenizer=self.tokenizer,
+            tokenizer=tokenizer,
             perturbator=perturbator,
             aggregator=aggregator,
             batch_size=batch_size,

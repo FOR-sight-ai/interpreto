@@ -32,28 +32,26 @@ import pytest
 import torch
 
 from interpreto.concepts import NeuronsAsConcepts
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activations_dict: dict[str, torch.Tensor]):
+def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
     """
     Test that the concept encoding and decoding of the `NeuronsAsConcepts` is the identity
     """
-    split, activations = next(iter(activations_dict.items()))  # dictionary with only one element
     d = activations.shape[1]
 
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder_ml, split_point=split)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     assert concept_explainer.is_fitted is True  # splitted_model has a single split so it is fitted
-    assert concept_explainer.split_point == split
     assert hasattr(concept_explainer, "has_differentiable_concept_encoder")
     assert hasattr(concept_explainer, "has_differentiable_concept_decoder")
     assert concept_explainer.concept_model.nb_concepts == d
 
-    concepts = concept_explainer.encode_activations(activations)
-    reconstructed_activations = concept_explainer.decode_concepts(concepts)
+    concepts = concept_explainer.activations_to_concepts(activations)
+    reconstructed_activations = concept_explainer.concepts_to_activations(concepts)
 
     assert torch.allclose(concepts, activations)  # type: ignore
     assert torch.allclose(reconstructed_activations, activations)  # type: ignore

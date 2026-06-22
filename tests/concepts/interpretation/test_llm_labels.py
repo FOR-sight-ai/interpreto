@@ -35,6 +35,7 @@ import torch
 from transformers import AutoModelForMaskedLM
 
 from interpreto import ModelWithSplitPoints
+from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.interpretations import LLMLabels
 from interpreto.concepts.interpretations.llm_labels import (
@@ -46,8 +47,7 @@ from interpreto.concepts.interpretations.llm_labels import (
     _sample_random,
     _sample_top,
 )
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -275,7 +275,7 @@ def test_build_example_prompt():
 def splitted_encoder() -> ModelWithSplitPoints:
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForMaskedLM,  # type: ignore
     )
 
@@ -291,8 +291,7 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
     Fake activations are given to the `NeuronsAsConcepts` explainer
     """
     hidden_size = 32
-    split = "bert.encoder.layer.1.output"
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
         activation_granularity=ActivationGranularity.TOKEN,
@@ -334,8 +333,7 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
     ],
 )
 def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity):
-    split = "bert.encoder.layer.1.output"
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
+    concept_explainer = NeuronsAsConcepts(splitted_encoder)
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
         activation_granularity=activation_granularity,
@@ -348,7 +346,7 @@ def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activati
         "This is a test. This is another sentence. And yet another one.",
         "This is a second test. This is another sentence. And yet another one.",
     ]
-    activations = splitted_encoder.get_activations(texts, activation_granularity=activation_granularity)[split]
+    activations, _ = splitted_encoder.get_activations(texts, activation_granularity=activation_granularity)
 
     # just verify that everything works, not the content of the labels
     labels = interpretation_method.interpret(
@@ -377,8 +375,7 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
     larger_input = " ".join(["test" for _ in range(2 * n_tokens)])
     joined_tokens_list.append(larger_input)
 
-    split = "bert.encoder.layer.1.output"
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
 
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
@@ -389,9 +386,9 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
     )
 
     # getting the activations
-    activations = splitted_encoder.get_activations(
+    activations, _ = splitted_encoder.get_activations(
         inputs=joined_tokens_list, activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN
-    )[split]
+    )
 
     # From input
     labels = interpretation_method.interpret(
@@ -437,8 +434,7 @@ def test_llm_labels_from_vocabulary(splitted_encoder: ModelWithSplitPoints):
     hidden_size = 32
     nb_concepts = 3
 
-    split = "bert.encoder.layer.1.output"
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
 
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
@@ -461,8 +457,7 @@ def test_llm_labels_call_from_concept_module(splitted_encoder: ModelWithSplitPoi
     hidden_size = 32
     nb_concepts = 3
 
-    split = "bert.encoder.layer.1.output"
-    concept_explainer = NeuronsAsConcepts(model_with_split_points=splitted_encoder, split_point=split)
+    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
 
     label = LLMLabels(
         concept_explainer=concept_explainer,
@@ -486,8 +481,7 @@ def test_llm_labels_error_raising(splitted_encoder: ModelWithSplitPoints):
     """
 
     concept_explainer = NeuronsAsConcepts(
-        model_with_split_points=splitted_encoder,
-        split_point="bert.encoder.layer.1.output",
+        splitter=splitted_encoder,
     )
     method = LLMLabels(
         concept_explainer=concept_explainer,

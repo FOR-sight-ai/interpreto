@@ -36,10 +36,10 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA, FastICA, TruncatedSVD
 from torch import nn
 
-from interpreto import ModelWithSplitPoints
 from interpreto._vendor.overcomplete.optimization import BaseOptimDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
+from interpreto.typing import LatentActivations
 
 __all__ = [
     "ICAConcepts",
@@ -309,20 +309,20 @@ class KMeansWrapper(SkLearnWrapper):
 _SkLearnWrapper_co = TypeVar("_SkLearnWrapper_co", bound=SkLearnWrapper, covariant=True)
 
 
-class SkLearnWrapperExplainer(DictionaryLearningExplainer[SkLearnWrapper], Generic[_SkLearnWrapper_co]):
+class SkLearnWrapperExplainer(ConceptAutoEncoderExplainer[SkLearnWrapper], Generic[_SkLearnWrapper_co]):
     """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/sklearn_wrappers.py)
 
     Implementation of a concept explainer using wrappers around sklearn decompositions as `concept_model`.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.
         concept_model (SkLearnWrapper): A wrapper around a sklearn decomposition for concept extraction.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
-        has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
+        has_differentiable_concept_decoder (bool): Whether the `concepts_to_activations` operation is differentiable.
     """
 
     has_differentiable_concept_encoder = True
@@ -335,10 +335,9 @@ class SkLearnWrapperExplainer(DictionaryLearningExplainer[SkLearnWrapper], Gener
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         *,
         nb_concepts: int,
-        split_point: str | None = None,
         device: torch.device | str = "cpu",
         **kwargs,
     ):
@@ -346,28 +345,35 @@ class SkLearnWrapperExplainer(DictionaryLearningExplainer[SkLearnWrapper], Gener
         Initialize the concept bottleneck explainer based on the Overcomplete BaseOptimDictionaryLearning framework.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
+            splitter (BaseSplitter): The model to apply the explanation on.
+                Its `split_point` attribute determines where activations are extracted.
             nb_concepts (int): Size of the SAE concept space.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
             device (torch.device | str): Device to use for the `concept_module`.
             **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.
                 See the sklearn documentation of the provided `concept_model_class` for more details.
         """
-        self.model_with_split_points = model_with_split_points
-        self.split_point: str = split_point  # type:ignore[assignment]
-        shapes = model_with_split_points.get_latent_shape()
+        self.splitter = splitter
+        shape = splitter.get_latent_shape()
 
         concept_model = self.concept_model_class(
-            input_size=shapes[self.split_point][-1],
+            input_size=shape[-1],
             nb_concepts=nb_concepts,
             device=device,
             **kwargs,
         )
-        ConceptAutoEncoderExplainer.__init__(
-            self, model_with_split_points, concept_model=concept_model, split_point=split_point
-        )
+        ConceptAutoEncoderExplainer.__init__(self, splitter, concept_model=concept_model)
+
+    def fit(self, activations: LatentActivations, **kwargs):
+        """Fit an Overcomplete OptimDictionaryLearning model on the given activations.
+
+        Args:
+            activations (torch.Tensor): The activations used for fitting the `concept_model`.
+            **kwargs (dict): Additional keyword arguments to pass to the `concept_model`.
+                See the Overcomplete documentation of the provided `concept_model` for more details.
+        """
+        if len(activations.shape) != 2:
+            raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        self.concept_model.fit(activations, **kwargs)
 
 
 class PCAConcepts(SkLearnWrapperExplainer[PCAWrapper]):

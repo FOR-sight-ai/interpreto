@@ -73,26 +73,20 @@ TensorBaseline = torch.Tensor | float | int | None
 class ConceptModelProtocol(Protocol):
     """Protocol for concept models."""
 
-    @property
-    def nb_concepts(self) -> int:
-        """Number of concepts."""
-        ...
+    nb_concepts: int
 
     @property
     def fitted(self) -> bool:
         """Wether the concept model has been fitted."""
         ...
 
-    def encode(self, x):
-        """Encode the given activations using the concept model."""
-        ...
-
 
 class IncompatibilityError(TypeError):
-    def __init__(self):
-        message = (
-            "Gradient-based methods require the model to be able to take inputs_embeds as input."
-            + " However, it seems that the model does not support this feature."
-            + " Please check that your model is compatible with the inputs_embeds parameter."
-        )
+    def __init__(self, message: str | None = None):
+        if message is None:
+            message = (
+                "Gradient-based methods require the model to be able to take inputs_embeds as input."
+                + " However, it seems that the model does not support this feature."
+                + " Please check that your model is compatible with the inputs_embeds parameter."
+            )
         super().__init__(message)

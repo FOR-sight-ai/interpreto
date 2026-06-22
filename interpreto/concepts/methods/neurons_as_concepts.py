@@ -32,7 +32,7 @@ import torch
 
 from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -108,39 +108,34 @@ class NeuronsAsConcepts(ConceptAutoEncoderExplainer[IdentityConceptModel]):
     # TODO: Add doc with papers we can redo with it.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str): The split point used to train the `concept_model`.
         concept_model (IdentityConceptModel): An identity concept model for harmonization.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
-        has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
+        has_differentiable_concept_decoder (bool): Whether the `concepts_to_activations` operation is differentiable.
     """
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
-        split_point: str | None = None,
+        splitter: BaseSplitter,
     ):
         """
         Initializes the concept explainer with a given splitted model.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
-                It should have at least one split point on which a concept explainer can be trained.
-            split_point (str | None): The split point used to train the `concept_model`. If None, tries to use the
-                split point of `model_with_split_points` if a single one is defined.
+            splitter (BaseSplitter): The model to apply the explanation on.
+                Its `split_point` attribute determines where activations are extracted.
         """
         # extract the input size from the model activations
-        self.model_with_split_points = model_with_split_points
-        self.split_point: str = split_point  # type: ignore
-        input_size = self.model_with_split_points.get_latent_shape()[self.split_point][-1]
+        self.splitter = splitter
+        input_size = self.splitter.get_latent_shape()[-1]
 
         # initialize
         super().__init__(
-            model_with_split_points=model_with_split_points,
+            splitter=splitter,
             concept_model=IdentityConceptModel(input_size),
-            split_point=self.split_point,
         )
         self.has_differentiable_concept_encoder = True
         self.has_differentiable_concept_decoder = True
