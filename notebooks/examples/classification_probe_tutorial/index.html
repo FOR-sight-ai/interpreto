@@ -1,0 +1,3525 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Interpretability Toolkit for LLMs">
+      
+      
+      
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/notebooks/examples/classification_probe_tutorial/">
+      
+      
+        <link rel="prev" href="../generation_demonstration/">
+      
+      
+        <link rel="next" href="../classification_ngram_concept_tutorial/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/img/interpreto_logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Probing for Linguistic Properties (Classification) - Interpreto</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../assets/css/custom.css">
+    
+      <link rel="stylesheet" href="../../../css/ansi-colours.css">
+    
+      <link rel="stylesheet" href="../../../css/jupyter-cells.css">
+    
+      <link rel="stylesheet" href="../../../css/pandas-dataframe.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#probing-a-sentiment-classifier-for-linguistic-properties" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Interpreto" class="md-header__button md-logo" aria-label="Interpreto" data-md-component="logo">
+      
+  <img src="../../../assets/img/interpreto_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Interpreto
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Probing for Linguistic Properties (Classification)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="http://github.com/FOR-sight-ai/interpreto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    FOR-sight-ai/interpreto
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../attribution_tutorial/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../api/attributions/overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../about/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  About
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../citation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Citation
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Interpreto" class="md-nav__button md-logo" aria-label="Interpreto" data-md-component="logo">
+      
+  <img src="../../../assets/img/interpreto_logo.png" alt="logo">
+
+    </a>
+    Interpreto
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="http://github.com/FOR-sight-ai/interpreto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    FOR-sight-ai/interpreto
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../attribution_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Use Attribution Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../classification_concept_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Classification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../generation_concept_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept-based Explanations for Generation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../generation_probe_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Probing for Truthfulness (Generation)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../classification_demonstration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Classification Demonstration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generation_demonstration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generation Demonstration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Probing for Linguistic Properties (Classification)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Probing for Linguistic Properties (Classification)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-setup-load-the-model-and-split-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 🏗️ Setup: Load the model and split it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-data-load-imdb-and-compute-linguistic-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 📊 Data: Load IMDB and compute linguistic labels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-activations-extract-cls-token-representations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 🚦 Activations: Extract CLS-token representations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-fit-probes-train-several-probe-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 🏋️ Fit probes: Train several probe types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-evaluate-compare-probe-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 📈 Evaluate: Compare probe performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 💬 Discussion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. 💬 Discussion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-do-the-results-tell-us" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What do the results tell us?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#probing-caveats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Probing caveats
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../classification_ngram_concept_tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts Ngrams interpretation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Attribution Explainers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Attribution Explainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/gradient_shap/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    GradientShap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/integrated_gradients/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    IntegratedGradients
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/kernelshap/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    KernelShap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/lime/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Lime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/occlusion/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Occlusion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/saliency/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Saliency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/smoothgrad/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SmoothGrad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/squaregrad/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SquareGrad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/sobol/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14 16.94v-4H5.08l-.03-2.01H14V6.94l5 5Z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Sobol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/methods/vargrad/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    VarGrad
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1_3" id="__nav_3_1_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/metrics/deletion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deletion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/attributions/metrics/insertion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Insertion
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept Explainers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concept Explainers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2_2" id="__nav_3_2_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Splitters
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Splitters
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/splitters/model_with_split_points/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 3h2v2H5v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 0 0-2-2H0v-2h1a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2m14 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3zm-7 12a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-4 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m8 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    ModelWithSplitPoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/splitters/splitter_for_classification/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 3h2v2H5v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 0 0-2-2H0v-2h1a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2m14 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3zm-7 12a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-4 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m8 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SplitterForClassification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/splitters/splitter_for_generation/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 3h2v2H5v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 0 0-2-2H0v-2h1a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2m14 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3zm-7 12a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-4 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m8 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SplitterForGeneration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/probes/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 2v2.07A8 8 0 0 0 4.07 11H2v2h2.07A8 8 0 0 0 11 19.93V22h2v-2.07A8 8 0 0 0 19.93 13H22v-2h-2.07A8 8 0 0 0 13 4.07V2m-2 4.08V8h2V6.09c2.5.41 4.5 2.41 4.92 4.91H16v2h1.91c-.41 2.5-2.41 4.5-4.91 4.92V16h-2v1.91C8.5 17.5 6.5 15.5 6.08 13H8v-2H6.09C6.5 8.5 8.5 6.5 11 6.08M12 11a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Probes (Supervised)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2_4" id="__nav_3_2_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept Spaces (Unsupervised)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concept Spaces (Unsupervised)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/concept_spaces/base/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/concept_spaces/cockatiel/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Cockatiel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/concept_spaces/neurons_as_concepts/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Neurons as Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/concept_spaces/optim/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Optimization Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/concept_spaces/sae/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m23 12-4-4v3h-3.14c-.45-1.72-2-3-3.86-3s-3.41 1.28-3.86 3H5L2 8v8l3-3h3.14c.45 1.72 2 3 3.86 3s3.41-1.28 3.86-3H19v3zm-11 2c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    SAEs (Sparse AutoEncoders)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2_5" id="__nav_3_2_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interpretations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Interpretations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/interpretations/topk_inputs/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 6H2v12h2m7-12-6 6 6 6 1.41-1.42L8.83 13H23v-2H8.83l3.58-3.59z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    TopKInputs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/interpretations/llm_labels/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M16 17H5V7h11l3.55 5m-1.92-6.16C17.27 5.33 16.67 5 16 5H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11c.67 0 1.27-.34 1.63-.85L22 12z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/interpretations/concept_attributions/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 11h-3.18C14.4 9.84 13.3 9 12 9s-2.4.84-2.82 2H6c-.33 0-2-.1-2-2V8c0-1.83 1.54-2 2-2h10.18C16.6 7.16 17.7 8 19 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3c-1.3 0-2.4.84-2.82 2H6C4.39 4 2 5.06 2 8v1c0 2.94 2.39 4 4 4h3.18c.42 1.16 1.52 2 2.82 2s2.4-.84 2.82-2H18c.33 0 2 .1 2 2v1c0 1.83-1.54 2-2 2H7.82C7.4 16.84 6.3 16 5 16a3 3 0 0 0-3 3 3 3 0 0 0 3 3c1.3 0 2.4-.84 2.82-2H18c1.61 0 4-1.07 4-4v-1c0-2.93-2.39-4-4-4m1-7a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1M5 20a1 1 0 0 1-1-1 1 1 0 0 1 1-1 1 1 0 0 1 1 1 1 1 0 0 1-1 1"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Concept Attributions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2_6" id="__nav_3_2_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Metrics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/metrics/overview/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 9h16v2H4zm0 4h10v2H4z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/metrics/consim/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 11h6V8l4 4-4 4v-3H9v3l-4-4 4-4zm-7 9V4h2v16zm18 0V4h2v16z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    ConSim
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/metrics/dictionary_metrics/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 3v15h3V3zm3 2 4 13 3-1-4-13zM5 5v13h3V5zM3 19v2h18v-2z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Dictionary Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/metrics/reconstruction_metrics/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 1c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h2v-2H3V3h11v2h2V3c0-1.11-.89-2-2-2zm6 6c-1.11 0-2 .89-2 2v2h2V9h2V7zm4 0v2h1v1h2V7zm5 0v2h2v11H9v-2H7v2c0 1.11.89 2 2 2h11c1.11 0 2-.89 2-2V9c0-1.11-.89-2-2-2zm-4 5v2h-2v2h2c1.11 0 2-.89 2-2v-2zm-7 1v3h3v-2H9v-1z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Reconstruction Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/concepts/metrics/sparsity_metrics/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 22V8h4v14zm7 0V2h4v20zm7 0v-8h4v8z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+    Sparsity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/visualizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualizations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Citation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-setup-load-the-model-and-split-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 🏗️ Setup: Load the model and split it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-data-load-imdb-and-compute-linguistic-labels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 📊 Data: Load IMDB and compute linguistic labels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-activations-extract-cls-token-representations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 🚦 Activations: Extract CLS-token representations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-fit-probes-train-several-probe-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 🏋️ Fit probes: Train several probe types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-evaluate-compare-probe-performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 📈 Evaluate: Compare probe performance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 💬 Discussion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. 💬 Discussion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-do-the-results-tell-us" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What do the results tell us?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#probing-caveats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Probing caveats
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script>
+(function() {
+  function addWidgetsRenderer() {
+    var requireJsScript = document.createElement('script');
+    requireJsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js';
+
+    var mimeElement = document.querySelector('script[type="application/vnd.jupyter.widget-view+json"]');
+    var jupyterWidgetsScript = document.createElement('script');
+    var widgetRendererSrc = 'https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js';
+    var widgetState;
+
+    // Fallback for older version:
+    try {
+      widgetState = mimeElement && JSON.parse(mimeElement.innerHTML);
+
+      if (widgetState && (widgetState.version_major < 2 || !widgetState.version_major)) {
+        widgetRendererSrc = 'jupyter-js-widgets@*/dist/embed.js';
+      }
+    } catch(e) {}
+
+    jupyterWidgetsScript.src = widgetRendererSrc;
+
+    document.body.appendChild(requireJsScript);
+    document.body.appendChild(jupyterWidgetsScript);
+  }
+
+  document.addEventListener('DOMContentLoaded', addWidgetsRenderer);
+}());
+</script>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p><img alt="interpreto_banner" src="../../../assets/img/interpreto_banner.png" style="display:block; max-width:100%; height:auto; margin:0 auto;" /></p>
+<h1 id="probing-a-sentiment-classifier-for-linguistic-properties">Probing a Sentiment Classifier for Linguistic Properties<a class="headerlink" href="#probing-a-sentiment-classifier-for-linguistic-properties" title="Permanent link">&para;</a></h1>
+<p>In this tutorial we demonstrate <strong>supervised probing</strong> with <code>interpreto.concepts.probes</code>.</p>
+<p>The idea is simple: a model trained for <em>sentiment analysis</em> might also encode <strong>other linguistic properties</strong> in its hidden representations — such as sentence length, presence of negation, or dominant tense. Probes let us test this hypothesis by training lightweight classifiers on the model's internal activations.</p>
+<p>This approach is inspired by the probing literature (Conneau et al. 2018, "What you can cram into a single $&amp;!#* vector").</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li><a href="#setup">🏗️ <strong>Setup</strong>: Load the model and split it</a></li>
+<li><a href="#data">📊 <strong>Data</strong>: Load IMDB and compute linguistic labels</a></li>
+<li><a href="#activations">🚦 <strong>Activations</strong>: Extract CLS-token representations</a></li>
+<li><a href="#fit">🏋️ <strong>Fit probes</strong>: Train several probe types</a></li>
+<li><a href="#evaluate">📈 <strong>Evaluate</strong>: Compare probe performance</a></li>
+<li><a href="#discussion">💬 <strong>Discussion</strong></a></li>
+</ol>
+<p><em>Author: Antonin Poché</em></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">DEVICE</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using device: </span><span class="si">{</span><span class="n">DEVICE</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Using device: cuda
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="1-setup-load-the-model-and-split-it">1. 🏗️ Setup: Load the model and split it <a class="anchor" id="setup"></a><a class="headerlink" href="#1-setup-load-the-model-and-split-it" title="Permanent link">&para;</a></h2>
+<p>We use a DistilBERT model fine-tuned for binary sentiment classification on IMDB.</p>
+<p>We wrap it with <a href="https://for-sight-ai.github.io/interpreto/api/concepts/split_sequence_classification/"><code>SplitSequenceClassification</code></a>, which splits the model at the classification head and extracts [CLS] token activations.</p>
+<p>&gt; ➡️ <strong>Note</strong>
+&gt;
+&gt; The model was trained to predict <em>sentiment</em>. We will probe whether its internal representations also encode <em>other</em> linguistic properties — properties that were never part of its training objective.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">SplitterForClassification</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">splitter</span> <span class="o">=</span> <span class="n">SplitterForClassification</span><span class="p">(</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">model_or_repo_id</span><span class="o">=</span><span class="s2">&quot;textattack/distilbert-base-uncased-imdb&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">device_map</span><span class="o">=</span><span class="n">DEVICE</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
+</code></pre></div>
+
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="2-data-load-imdb-and-compute-linguistic-labels">2. 📊 Data: Load IMDB and compute linguistic labels <a class="anchor" id="data"></a><a class="headerlink" href="#2-data-load-imdb-and-compute-linguistic-labels" title="Permanent link">&para;</a></h2>
+<p>We load a subset of the IMDB test set (1000 samples) — the same domain the model was trained on.</p>
+<p>We then compute <strong>three binary linguistic labels</strong> from the text itself:</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Length</strong></td>
+<td>Is the review longer than the median length?</td>
+</tr>
+<tr>
+<td><strong>Negation</strong></td>
+<td>Does the text contain negation words (not, never, no, don't, ...)?</td>
+</tr>
+<tr>
+<td><strong>Past tense</strong></td>
+<td>Is the text predominantly in the past tense?</td>
+</tr>
+</tbody>
+</table>
+<p>&gt; 🔥 <strong>Tip</strong>
+&gt;
+&gt; These labels are computed from the raw text, not from the model's predictions. The point of probing is to test what <em>other</em> information the model's representations encode beyond its training objective.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dataset</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Load IMDB test set (1000 samples for tractability)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">dataset</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;stanfordnlp/imdb&quot;</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;test[:1000]&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">texts</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">]</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Example (first 200 chars): </span><span class="si">{</span><span class="n">texts</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="mi">200</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Loaded 1000 samples
+Example (first 200 chars): I love sci-fi and am willing to put up with a lot. Sci-fi movies/TV are usually underfunded, under-appreciated and misunderstood. I tried to like this, I really did, but it is to good TV sci-fi as Bab...
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># --- Concept 1: Sentence length (long vs short) ---</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">lengths</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">]</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">median_length</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lengths</span><span class="p">)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">is_long</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.0</span> <span class="k">if</span> <span class="n">l</span> <span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span><span class="o">=</span> <span class="n">median_length</span> <span class="k">else</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">lengths</span><span class="p">]</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># --- Concept 2: Contains negation ---</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">NEGATION_WORDS</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="s2">&quot;not&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="s2">&quot;no&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="s2">&quot;never&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="s2">&quot;neither&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="s2">&quot;nobody&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="s2">&quot;nothing&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    <span class="s2">&quot;nowhere&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="s2">&quot;nor&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>    <span class="s2">&quot;don&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="s2">&quot;doesn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>    <span class="s2">&quot;didn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="s2">&quot;won&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="s2">&quot;wouldn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="s2">&quot;shouldn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>    <span class="s2">&quot;couldn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>    <span class="s2">&quot;isn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>    <span class="s2">&quot;aren&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>    <span class="s2">&quot;wasn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>    <span class="s2">&quot;weren&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>    <span class="s2">&quot;hasn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>    <span class="s2">&quot;haven&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>    <span class="s2">&quot;hadn&#39;t&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a><span class="p">}</span>
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a><span class="k">def</span><span class="w"> </span><span class="nf">has_negation</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>    <span class="n">words</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b\w[\w&#39;]*\b&quot;</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()))</span>
+<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a>    <span class="k">return</span> <span class="mf">1.0</span> <span class="k">if</span> <span class="n">words</span> <span class="o">&amp;</span><span class="n">amp</span><span class="p">;</span> <span class="n">NEGATION_WORDS</span> <span class="k">else</span> <span class="mf">0.0</span>
+<a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a>
+<a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a>
+<a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a><span class="n">contains_negation</span> <span class="o">=</span> <span class="p">[</span><span class="n">has_negation</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">]</span>
+<a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a>
+<a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a><span class="c1"># --- Concept 3: Past tense dominant ---</span>
+<a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a><span class="n">PAST_MARKERS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;was&quot;</span><span class="p">,</span> <span class="s2">&quot;were&quot;</span><span class="p">,</span> <span class="s2">&quot;had&quot;</span><span class="p">,</span> <span class="s2">&quot;did&quot;</span><span class="p">,</span> <span class="s2">&quot;been&quot;</span><span class="p">,</span> <span class="s2">&quot;went&quot;</span><span class="p">,</span> <span class="s2">&quot;said&quot;</span><span class="p">,</span> <span class="s2">&quot;told&quot;</span><span class="p">,</span> <span class="s2">&quot;made&quot;</span><span class="p">,</span> <span class="s2">&quot;got&quot;</span><span class="p">}</span>
+<a id="__codelineno-3-44" name="__codelineno-3-44" href="#__codelineno-3-44"></a><span class="n">PRESENT_MARKERS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;is&quot;</span><span class="p">,</span> <span class="s2">&quot;are&quot;</span><span class="p">,</span> <span class="s2">&quot;has&quot;</span><span class="p">,</span> <span class="s2">&quot;does&quot;</span><span class="p">,</span> <span class="s2">&quot;do&quot;</span><span class="p">,</span> <span class="s2">&quot;goes&quot;</span><span class="p">,</span> <span class="s2">&quot;says&quot;</span><span class="p">,</span> <span class="s2">&quot;tells&quot;</span><span class="p">,</span> <span class="s2">&quot;makes&quot;</span><span class="p">,</span> <span class="s2">&quot;gets&quot;</span><span class="p">}</span>
+<a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a>
+<a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a>
+<a id="__codelineno-3-47" name="__codelineno-3-47" href="#__codelineno-3-47"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_past_tense</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&amp;</span><span class="n">gt</span><span class="p">;</span> <span class="nb">float</span><span class="p">:</span>
+<a id="__codelineno-3-48" name="__codelineno-3-48" href="#__codelineno-3-48"></a>    <span class="n">words</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\b\w+\b&quot;</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+<a id="__codelineno-3-49" name="__codelineno-3-49" href="#__codelineno-3-49"></a>    <span class="n">past_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">PAST_MARKERS</span><span class="p">)</span>
+<a id="__codelineno-3-50" name="__codelineno-3-50" href="#__codelineno-3-50"></a>    <span class="n">present_count</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span> <span class="k">if</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">PRESENT_MARKERS</span><span class="p">)</span>
+<a id="__codelineno-3-51" name="__codelineno-3-51" href="#__codelineno-3-51"></a>    <span class="k">return</span> <span class="mf">1.0</span> <span class="k">if</span> <span class="n">past_count</span> <span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span> <span class="n">present_count</span> <span class="k">else</span> <span class="mf">0.0</span>
+<a id="__codelineno-3-52" name="__codelineno-3-52" href="#__codelineno-3-52"></a>
+<a id="__codelineno-3-53" name="__codelineno-3-53" href="#__codelineno-3-53"></a>
+<a id="__codelineno-3-54" name="__codelineno-3-54" href="#__codelineno-3-54"></a><span class="n">past_tense</span> <span class="o">=</span> <span class="p">[</span><span class="n">is_past_tense</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">]</span>
+<a id="__codelineno-3-55" name="__codelineno-3-55" href="#__codelineno-3-55"></a>
+<a id="__codelineno-3-56" name="__codelineno-3-56" href="#__codelineno-3-56"></a><span class="c1"># --- Combine into a multi-label tensor (n, 3) ---</span>
+<a id="__codelineno-3-57" name="__codelineno-3-57" href="#__codelineno-3-57"></a><span class="n">labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+<a id="__codelineno-3-58" name="__codelineno-3-58" href="#__codelineno-3-58"></a>    <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">is_long</span><span class="p">,</span> <span class="n">contains_negation</span><span class="p">,</span> <span class="n">past_tense</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)),</span>
+<a id="__codelineno-3-59" name="__codelineno-3-59" href="#__codelineno-3-59"></a>    <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span>
+<a id="__codelineno-3-60" name="__codelineno-3-60" href="#__codelineno-3-60"></a><span class="p">)</span>
+<a id="__codelineno-3-61" name="__codelineno-3-61" href="#__codelineno-3-61"></a><span class="n">CONCEPT_NAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;long_text&quot;</span><span class="p">,</span> <span class="s2">&quot;contains_negation&quot;</span><span class="p">,</span> <span class="s2">&quot;past_tense&quot;</span><span class="p">]</span>
+<a id="__codelineno-3-62" name="__codelineno-3-62" href="#__codelineno-3-62"></a>
+<a id="__codelineno-3-63" name="__codelineno-3-63" href="#__codelineno-3-63"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Labels shape: </span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-64" name="__codelineno-3-64" href="#__codelineno-3-64"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Label prevalence: </span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-65" name="__codelineno-3-65" href="#__codelineno-3-65"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - Long text:         </span><span class="si">{</span><span class="n">labels</span><span class="p">[:,</span><span class="w"> </span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-66" name="__codelineno-3-66" href="#__codelineno-3-66"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - Contains negation: </span><span class="si">{</span><span class="n">labels</span><span class="p">[:,</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-67" name="__codelineno-3-67" href="#__codelineno-3-67"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - Past tense:        </span><span class="si">{</span><span class="n">labels</span><span class="p">[:,</span><span class="w"> </span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Labels shape: torch.Size([1000, 3])
+Label prevalence: [0.5019999742507935, 0.9210000038146973, 0.2879999876022339]
+  - Long text:         50.20%
+  - Contains negation: 92.10%
+  - Past tense:        28.80%
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="3-activations-extract-cls-token-representations">3. 🚦 Activations: Extract CLS-token representations <a class="anchor" id="activations"></a><a class="headerlink" href="#3-activations-extract-cls-token-representations" title="Permanent link">&para;</a></h2>
+<p>We extract the [CLS] token activation for each sample. This is the vector that feeds the classification head — a single 768-dimensional vector summarizing the entire input.</p>
+<p><a href="https://for-sight-ai.github.io/interpreto/api/concepts/split_sequence_classification/#interpreto.SplitSequenceClassification.get_activations"><code>SplitSequenceClassification.get_activations()</code></a></p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Extract CLS activations — shape (n, d)</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">activations</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">splitter</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">texts</span><span class="p">,</span> <span class="n">tqdm_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">forward_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;truncation&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Activations shape: </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># Expected: (1000, 768) for DistilBERT</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>
+<code>  0%|          | 0/16 [00:00&lt;?, ?it/s]</code>
+</pre>
+</div>
+</div>
+<div class="output_area">
+<div class="output_text output_subarea">
+<pre>
+<code>Loading weights:   0%|          | 0/104 [00:00&lt;?, ?it/s]</code>
+</pre>
+</div>
+</div>
+<div class="output_area">
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>
+<code>100%|██████████| 16/16 [00:03&lt;00:00,  4.85it/s]
+</code>
+</pre>
+</div>
+</div>
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Activations shape: torch.Size([1000, 768])
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="4-fit-probes-train-several-probe-types">4. 🏋️ Fit probes: Train several probe types <a class="anchor" id="fit"></a><a class="headerlink" href="#4-fit-probes-train-several-probe-types" title="Permanent link">&para;</a></h2>
+<p>We split the data into train/test, then train three different probes:</p>
+<table>
+<thead>
+<tr>
+<th>Probe</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://for-sight-ai.github.io/interpreto/api/concepts/probes/"><code>LinearRegressionProbe</code></a></td>
+<td>Ridge regression (closed-form)</td>
+</tr>
+<tr>
+<td><a href="https://for-sight-ai.github.io/interpreto/api/concepts/probes/"><code>CosineCentroidProbe</code></a></td>
+<td>Cosine similarity to class centroids</td>
+</tr>
+<tr>
+<td><a href="https://for-sight-ai.github.io/interpreto/api/concepts/probes/"><code>LogisticRegressionProbe</code></a></td>
+<td>Gradient-descent logistic regression</td>
+</tr>
+</tbody>
+</table>
+<p>All probes learn a mapping from activations to concept scores: <code>(n, d) → (n, c)</code> where <code>c=3</code> (our three linguistic concepts).</p>
+<p>&gt; ➡️ <strong>Note</strong>
+&gt;
+&gt; We wrap each probe in a <a href="https://for-sight-ai.github.io/interpreto/api/concepts/probes/"><code>ProbeExplainer</code></a> which connects it to the split model. The explainer handles activation format validation and device management.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Train/test split (80/20)</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="n">indices</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">texts</span><span class="p">)))</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="n">train_idx</span><span class="p">,</span> <span class="n">test_idx</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">train_activations</span> <span class="o">=</span> <span class="n">activations</span><span class="p">[</span><span class="n">train_idx</span><span class="p">]</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">test_activations</span> <span class="o">=</span> <span class="n">activations</span><span class="p">[</span><span class="n">test_idx</span><span class="p">]</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">train_labels</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[</span><span class="n">train_idx</span><span class="p">]</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="n">test_labels</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[</span><span class="n">test_idx</span><span class="p">]</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Train: </span><span class="si">{</span><span class="n">train_activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test:  </span><span class="si">{</span><span class="n">test_activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Train: 800 samples
+Test:  200 samples
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.probes</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">CosineCentroidProbe</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">LinearRegressionProbe</span><span class="p">,</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">LogisticRegressionProbe</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">ProbeExplainer</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">Standardization</span><span class="p">,</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">)</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c1"># Define probe configurations</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">probe_configs</span> <span class="o">=</span> <span class="p">{</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="s2">&quot;LinearRegression (ridge)&quot;</span><span class="p">:</span> <span class="n">LinearRegressionProbe</span><span class="p">(</span><span class="n">l2</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">),</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="s2">&quot;CosineCentroid&quot;</span><span class="p">:</span> <span class="n">CosineCentroidProbe</span><span class="p">(</span><span class="n">normalization</span><span class="o">=</span><span class="n">Standardization</span><span class="p">()),</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="s2">&quot;LogisticRegression&quot;</span><span class="p">:</span> <span class="n">LogisticRegressionProbe</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">200</span><span class="p">),</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="p">}</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1"># Train each probe</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="n">explainers</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">probe</span> <span class="ow">in</span> <span class="n">probe_configs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>    <span class="n">explainer</span> <span class="o">=</span> <span class="n">ProbeExplainer</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">probe</span><span class="p">)</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>    <span class="n">explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_activations</span><span class="p">,</span> <span class="n">train_labels</span><span class="p">)</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>    <span class="n">explainers</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">explainer</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✓ </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> fitted (is_fitted=</span><span class="si">{</span><span class="n">explainer</span><span class="o">.</span><span class="n">is_fitted</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>✓ LinearRegression (ridge) fitted (is_fitted=True)
+✓ CosineCentroid fitted (is_fitted=True)
+</code>
+</pre>
+</div>
+</div>
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>✓ LogisticRegression fitted (is_fitted=True)
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="5-evaluate-compare-probe-performance">5. 📈 Evaluate: Compare probe performance <a class="anchor" id="evaluate"></a><a class="headerlink" href="#5-evaluate-compare-probe-performance" title="Permanent link">&para;</a></h2>
+<p>We evaluate each probe on the held-out test set using <strong>AUROC</strong> (Area Under the ROC Curve), which measures how well the probe's scores separate positive from negative samples for each concept.</p>
+<p>An AUROC significantly above 0.5 (chance level) means the model's representations <strong>do encode</strong> that linguistic property.</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">roc_auc_score</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">explainer</span> <span class="ow">in</span> <span class="n">explainers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="c1"># Get concept scores on test set</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    <span class="n">scores</span> <span class="o">=</span> <span class="n">explainer</span><span class="o">.</span><span class="n">activations_to_concepts</span><span class="p">(</span><span class="n">test_activations</span><span class="p">)</span>  <span class="c1"># (n_test, 3)</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="c1"># Compute AUROC per concept</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="n">aurocs</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>        <span class="n">y_true</span> <span class="o">=</span> <span class="n">test_labels</span><span class="p">[:,</span> <span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>        <span class="n">y_score</span> <span class="o">=</span> <span class="n">scores</span><span class="p">[:,</span> <span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>        <span class="c1"># Only compute if both classes are present</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">y_true</span><span class="p">))</span> <span class="o">&amp;</span><span class="n">gt</span><span class="p">;</span> <span class="mi">1</span><span class="p">:</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>            <span class="n">aurocs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">roc_auc_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_score</span><span class="p">))</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>            <span class="n">aurocs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">))</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="n">results</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">aurocs</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="c1"># Display results table</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;Probe&#39;</span><span class="si">:</span><span class="s2">&amp;lt;30</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;Long text&#39;</span><span class="si">:</span><span class="s2">&amp;lt;12</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;Negation&#39;</span><span class="si">:</span><span class="s2">&amp;lt;12</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;Past tense&#39;</span><span class="si">:</span><span class="s2">&amp;lt;12</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;Mean&#39;</span><span class="si">:</span><span class="s2">&amp;lt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">74</span><span class="p">)</span>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">aurocs</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>    <span class="n">mean_auroc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmean</span><span class="p">(</span><span class="n">aurocs</span><span class="p">)</span>
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&amp;lt;30</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">aurocs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">&amp;lt;12.3f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">aurocs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">&amp;lt;12.3f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">aurocs</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">:</span><span class="s2">&amp;lt;12.3f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">mean_auroc</span><span class="si">:</span><span class="s2">&amp;lt;8.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>
+<code>Probe                          Long text    Negation     Past tense   Mean    
+--------------------------------------------------------------------------
+LinearRegression (ridge)       0.574        0.571        0.631        0.592   
+CosineCentroid                 0.609        0.677        0.646        0.644   
+LogisticRegression             0.824        0.727        0.719        0.757   
+</code>
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1"># Visualize results</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">CONCEPT_NAMES</span><span class="p">))</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="n">width</span> <span class="o">=</span> <span class="mf">0.25</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">aurocs</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">width</span><span class="p">,</span> <span class="n">aurocs</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;gray&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Chance level&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Concept&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;AUROC&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Probe Performance: Linguistic Properties in Sentiment Representations&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">width</span><span class="p">)</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">CONCEPT_NAMES</span><span class="p">)</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;lower right&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+
+</div>
+<div class="output_wrapper">
+<div class="output">
+<div class="output_area">
+<div class="output_png output_subarea">
+<img alt="No description has been provided for this image" src="data:image/png;base64,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goh+a58/f1Z4nZSUhAULFsDY2BglS5ZUU1REREQ/H95jQUS/tT59+uDz58/w8vJCXFwcdu3ahbNnz2LKlCnZ8rhVIiKiXwUTCyL6rVWrVg2zZs3Cvn37EBsbCxcXFyxYsAC9e/dWd2hEREQ/FbXeY3Hy5EnMmDEDV65cwfPnz/HXX3+hUaNG6c4THByMgIAA3Lx5E3Z2dhg1ahQ6dOiQLfESEREREVHq1HqPxadPn+Dh4ZHqM+NTEx4ejrp166Jq1aq4du0a+vfvjy5duqT6DGkiIiIiIso+OeapUDKZ7LtXLIYOHYr9+/crPGWkZcuW+PDhQ6rPuCciIiIiouzxU91jce7cuRQ/q+7r6yv9OFBq4uLiFH41US6X4927d8iTJ4/SPx9PRERERPQ7EkIgOjoaNjY20NBIf7DTT5VYvHjxApaWlgpllpaWiIqKwufPn1N9gktgYKDCLzsTEREREVHGPHnyBPny5Uu3zk+VWPyI4cOHIyAgQHodGRmJ/Pnz48mTJzA2NlZjZEREREREOVtUVBTs7OxgZGT03bo/VWJhZWWFly9fKpS9fPkSxsbGaT5vXkdHBzo6OinKjY2NmVgQERERESlBmVsIfqpf3vby8kJQUJBC2dGjR+Hl5aWmiIiIiIiICFBzYvHx40dcu3YN165dA/DlcbLXrl3D48ePAXwZxtS+fXupfo8ePfDw4UMMGTIEYWFhWLx4MbZt24YBAwaoI3wiIiIiIvp/ak0sLl++jBIlSqBEiRIAgICAAJQoUQJjxowBADx//lxKMgDA0dER+/fvx9GjR+Hh4YFZs2Zh5cqV8PX1VUv8RERERET0RY75HYvsEhUVBRMTE0RGRvIeCyIiIiKidGTk3PmnuseCiIiIiIhyJiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkslzqDoDoV1N0XVF1h5BtQv1C1R0CERER5RC8YkFERERERCpjYkFERERERCpTe2KxaNEiODg4QFdXF2XLlsXFixfTrT937ly4ublBT08PdnZ2GDBgAGJjY7MpWiIiIiIiSo1aE4utW7ciICAAY8eORUhICDw8PODr64tXr16lWn/Tpk0YNmwYxo4di9u3b2PVqlXYunUrRowYkc2RExERERHR19SaWMyePRtdu3ZFx44dUahQISxduhT6+vpYvXp1qvXPnj2LChUqoHXr1nBwcEDNmjXRqlWr717lICIiIiKirKW2xCI+Ph5XrlyBj4/P/4LR0ICPjw/OnTuX6jzly5fHlStXpETi4cOHOHDgAOrUqZPmcuLi4hAVFaXwR0REREREmUttj5t98+YNkpKSYGlpqVBuaWmJsLCwVOdp3bo13rx5g4oVK0IIgcTERPTo0SPdoVCBgYEYP358psZORERERESK1H7zdkYEBwdjypQpWLx4MUJCQrBr1y7s378fEydOTHOe4cOHIzIyUvp78uRJNkZMRERERPR7UNsVC3Nzc2hqauLly5cK5S9fvoSVlVWq84wePRrt2rVDly5dAABFixbFp0+f0K1bN4wcORIaGinzJB0dHejo6GT+ChARERERkURtVyy0tbXh6emJoKAgqUwulyMoKAheXl6pzhMTE5MiedDU1AQACCGyLlgiIiIiIkqX2q5YAEBAQAD8/PxQqlQplClTBnPnzsWnT5/QsWNHAED79u1ha2uLwMBAAED9+vUxe/ZslChRAmXLlsX9+/cxevRo1K9fX0owiIiIiIgo+6k1sWjRogVev36NMWPG4MWLFyhevDgOHTok3dD9+PFjhSsUo0aNgkwmw6hRo/D06VNYWFigfv36mDx5srpWgYiIiIiIAMjEbzaGKCoqCiYmJoiMjISxsbG6w6FfUNF1RdUdQrYJ9QtVdwhERESUhTJy7vxTPRWKiIiIiIhyJiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkMiYWRERERESkslzqDoCIiEidiq4rqu4QslWoX6i6QyCiXxSvWBARERERkcqYWBARERERkco4FIqIiIiIfiq/0xDGn2n4Iq9YEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRyphYEBERERGRynKpOwAiIsqBxpmoO4Ls45hf3REQEf0SeMWCiIiIiIhUxsSCiIiIiIhUxsSCiIiIiIhUxsSCiIiIiIhUxsSCiIiIiIhUxsSCiIiIiIhUxsSCiIiIiIhUxsSCiIiIiIhUxh/IIyIiIvoV8IctSc14xYKIiIiIiFTGxIKIiIiIiFTGxIKIiIiIiFTGxIKIiIiIiFTGm7eJiIjol+QwbL+6Q8hWEbrqjoB+d7xiQUREREREKmNiQUREREREKmNiQUREREREKmNiQUREREREKlN7YrFo0SI4ODhAV1cXZcuWxcWLF9Ot/+HDB/j7+8Pa2ho6OjooUKAADhw4kE3REhERERFRatT6VKitW7ciICAAS5cuRdmyZTF37lz4+vrizp07yJs3b4r68fHxqFGjBvLmzYsdO3bA1tYWjx49gqmpafYHT8obZ6LuCLKXY351R0BERESU7dSaWMyePRtdu3ZFx44dAQBLly7F/v37sXr1agwbNixF/dWrV+Pdu3c4e/YstLS0AAAODg7ZGTIREREREaVCbUOh4uPjceXKFfj4+PwvGA0N+Pj44Ny5c6nOs2fPHnh5ecHf3x+WlpYoUqQIpkyZgqSkpDSXExcXh6ioKIU/IiIiIiLKXGpLLN68eYOkpCRYWloqlFtaWuLFixepzvPw4UPs2LEDSUlJOHDgAEaPHo1Zs2Zh0qRJaS4nMDAQJiYm0p+dnV2mrgcREREREeWAm7czQi6XI2/evFi+fDk8PT3RokULjBw5EkuXLk1znuHDhyMyMlL6e/Lk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3LlzdoRJRERERETfofQP5GWFN2/eICkpCZaWlgrllpaWCAsLS3We06dPY9WqVbh27ZpSy4iLi0NcXJz0Oioq6ofjJSIiIiKi1Kl9KFRGREdHo127dlixYgXMzc2VmicwMBAmJibSn52dXRZHSURERET0+1HrFQtzc3Noamri5cuXCuUvX76ElZVVivoPHjxAREQE6tevL5XJ5XIAQK5cuXDnzh04OzsrzDN8+HAEBARIr6OiophcEBERERFlMrUmFtra2vD09ERQUJD0yFi5XI6goCD07t07Rf2CBQsiNDRUoWzUqFGIjo7GvHnzUk0YdHR0oKOjkyXxExERERHRF2pNLAAgICAAfn5+KFWqFMqUKYO5c+fi06dP6NixIwCgffv2sLW1RWBgIHR1dVGkSBGF+U1NTQEgRTkREREREWUftScWLVq0wOvXrzFmzBi8ePECxYsXx6FDh6Qbuh8/fgwNjZ/qVhAiIiIiot+O2hMLAOjdu3eqQ58AIDg4ON15165dm/kBERERERFRhvBSABERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqYyJBRERERERqSyXugMgIiIiSosQAomJiUhKSsrwvLZGmlkQUc4Vq2On7hCyjbW2tbpDyDaxsbFZ2r6mpiZy5coFmUymcltMLIiIiChHio+Px/PnzxETE/ND84+rmjeTI8rZwmWz1B1Cthma6/c5hQ0PD8/yZejr68Pa2hra2toqtfP7vCtERET005DL5QgPD4empiZsbGygra2d4W9U4/Wisii6nMnxNxrgnqilpe4Qso2jmWOWtS2EQHx8PF6/fo3w8HC4urpCQ+PHdyQmFkRERJTjxMfHQy6Xw87ODvr6+j/UhixX1g4hyWl0NVQfyvKz0ND6fbIoXV3dLG1fT08PWlpaePToEeLj41Va3u/zrhAREdFPR5VvT4lIOZnVz9hbiYiIiIhIZUwsiIiIiLKZh50Zjh/ar+4wMmzt1j0wda+crcsMPnsZMtuS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"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="6-discussion">6. 💬 Discussion <a class="anchor" id="discussion"></a><a class="headerlink" href="#6-discussion" title="Permanent link">&para;</a></h2>
+<h3 id="what-do-the-results-tell-us">What do the results tell us?<a class="headerlink" href="#what-do-the-results-tell-us" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>High AUROC for negation</strong>: The sentiment model strongly encodes negation — this makes sense, as negation flips sentiment polarity ("good" vs "not good").</li>
+<li><strong>Moderate AUROC for length</strong>: Sentence length is partially encoded, possibly because longer reviews tend to be more nuanced.</li>
+<li><strong>Variable AUROC for tense</strong>: Past tense encoding depends on the model and dataset — movie reviews are typically in past tense ("the movie was..."), so this may be less discriminative.</li>
+</ul>
+<h3 id="probing-caveats">Probing caveats<a class="headerlink" href="#probing-caveats" title="Permanent link">&para;</a></h3>
+<p>A high probe accuracy does not prove the model <em>uses</em> that information for its task — only that the information is <em>recoverable</em> from the representations. See Hewitt &amp; Liang (2019) for a discussion of probe expressivity and selectivity.</p>
+<h3 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Try probing at <strong>different layers</strong> to see where each property is encoded (earlier layers for syntax, later for semantics).</li>
+<li>Use <a href="https://for-sight-ai.github.io/interpreto/api/concepts/probes/"><code>MeansDiffProbe</code></a> as a minimal baseline (Fisher's discriminant direction).</li>
+<li>Combine probes with <strong>concept attribution</strong> to see which input activates the concept.</li>
+</ul>
+<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Conneau et al. (2018). <em>What you can cram into a single $&amp;!#* vector: Probing sentence embeddings for linguistic properties.</em> ACL.</li>
+<li>Hewitt &amp; Liang (2019). <em>Designing and interpreting probes with control tasks.</em> EMNLP.</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../generation_demonstration/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Generation Demonstration">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Generation Demonstration
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../classification_ngram_concept_tutorial/" class="md-footer__link md-footer__link--next" aria-label="Next: Concepts Ngrams interpretation">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Concepts Ngrams interpretation
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/FOR-sight-ai/interpreto" target="_blank" rel="noopener" title="Interpreto on Github" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/interpreto/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ANITI_Toulouse" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../../assets/js/custom.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
