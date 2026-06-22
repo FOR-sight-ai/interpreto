@@ -167,10 +167,10 @@ class GranularityResizeStrategy(GranularityCombinationStrategy):
 
     def resize(
         self,
-        x: Float[torch.Tensor, "t h_in w_in"],
+        input: Float[torch.Tensor, "t h w"],
         output_size: tuple[int, int] | None = None,
         patch_size: int = 16,
-    ) -> Float[torch.Tensor, "t h_out w_out"]:
+    ) -> Float[torch.Tensor, "t gh gw"]:
         """
         Spatially resize per-channel maps, keeping the 2-D layout.
 
@@ -194,12 +194,12 @@ class GranularityResizeStrategy(GranularityCombinationStrategy):
             Float[torch.Tensor, "t h_out w_out"]: Resized maps, same dtype/device as ``x``.
         """
         if output_size is None:
-            _, h_in, w_in = x.shape
+            _, h_in, w_in = input.shape
             assert h_in % patch_size == 0, "the height of the image must be divisble by the patch_size"
             assert w_in % patch_size == 0, "the width of the image must be divisble by the patch_size"
             output_size = (h_in // patch_size, w_in // patch_size)
         # interpolate expects 4-D (N, C, H, W); treat the maps as a single batch of `t` channels
-        x4: Float[torch.Tensor, "1 t h_in w_in"] = x.unsqueeze(0)
+        x4: Float[torch.Tensor, "1 t h_in w_in"] = input.unsqueeze(0)
         match self:
             case GranularityResizeStrategy.NEAREST:
                 # nearest does not accept align_corners / antialias
@@ -1096,6 +1096,10 @@ class ImageGranularity(Granularity):
                 # pixels are already the finest unit — row-major reshape, no interpolation
                 return contribution.reshape(t, h, w)
             case ImageGranularity.PATCH:
+            
+                assert h_in % patch_size == 0, "the height of the image must be divisble by the patch_size"
+                assert w_in % patch_size == 0, "the width of the image must be divisble by the patch_size"
+                
                 gh, gw = h // patch_size, w // patch_size
                 grid: Float[torch.Tensor, "t gh gw"] = contribution.reshape(t, gh, gw)
                 return resize_strategy.resize(grid, output_size=(h, w))

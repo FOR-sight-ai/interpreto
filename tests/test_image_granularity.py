@@ -42,7 +42,7 @@ from interpreto.commons.granularity import GranularityResizeStrategy
 @pytest.fixture(scope="module")
 def null_matrix():
     """Creates a 10*10 null tensor"""
-    return torch.zeros(10,10)
+    return torch.zeros(1,10,10)
 
 
 @pytest.fixture(scope="module")
@@ -54,7 +54,8 @@ def simple_matrix():
 @pytest.fixture(scope="module")
 def matrix():
     """slightly more difficult matrix"""
-    return torch.tensor([[1,2,3],[4,5,6],[7,8,9]])
+    return torch.tensor([[[1.,0.,0.,0.],[0.,2.,0.,0.],[0.,0.,3.,0.],[0.,0.,0.,4.]]])
+
 
 
 @pytest.fixture(scope="module")
@@ -86,7 +87,55 @@ def wrong_patch_size():
 @pytest.mark.parametrize("output", [(5,7), (50, 13), None])
 @pytest.mark.parametrize("strategy", [GranularityResizeStrategy.NEAREST, GranularityResizeStrategy.BILINEAR, GranularityResizeStrategy.BICUBIC, GranularityResizeStrategy.AREA])
 @pytest.mark.parametrize("patch_size", [1,2])
-def test_verify_output_size(input, output, strategy, patch_size):
+def test_resize_strategy_output_size(input, output, strategy, patch_size):
+    if output != None: 
+        assert strategy.resize(input, output, patch_size).shape == (1,*output) 
+    else:
+        c, h, w = input.shape 
+        h_out = h // patch_size
+        w_out = w // patch_size 
+        assert strategy.resize(input, output, patch_size).shape == (c ,h_out, w_out)
+
+def test_resize_fail(null_matrix, wrong_patch_size):
+    strategy = GranularityResizeStrategy.NEAREST
+    with pytest.raises(AssertionError):
+        strategy.resize(input=null_matrix, output_size=None, patch_size = wrong_patch_size)
+
+def test_resize_nearest(matrix):
+    strategy = GranularityResizeStrategy.NEAREST 
+    bool_tensor = strategy.resize(matrix, output_size= (2,2)) == torch.tensor([[1,0],[0,3]])
+    assert bool_tensor[0,0,0] and bool_tensor[0,0,1] and bool_tensor[0,1,0] and bool_tensor[0,1,1]
+
+def test_resize_bilinear(matrix):
+    strategy = GranularityResizeStrategy.BILINEAR 
+    bool_tensor = strategy.resize(matrix, output_size= (2,2)) - torch.tensor([[30/49,15/49],[15/49,65/49]])
+    bool_tensor = bool_tensor.abs() <= 10**(-5)
+    assert bool_tensor[0,0,0] and bool_tensor[0,0,1] and bool_tensor[0,1,0] and bool_tensor[0,1,1]
+
+def test_resize_bilinear(matrix):
+    strategy = GranularityResizeStrategy.BICUBIC
+    bool_tensor = strategy.resize(matrix, output_size= (2,2)) - torch.tensor([[0.7008,0.1874],[0.1874,1.5164]])
+    print(bool_tensor)
+    bool_tensor = bool_tensor.abs() <= 10**(-5)
+    print(bool_tensor)
+    assert bool_tensor[0,0,0] and bool_tensor[0,0,1] and bool_tensor[0,1,0] and bool_tensor[0,1,1]
+
+def test_resize_area(matrix):
+    strategy = GranularityResizeStrategy.AREA 
+    print(strategy.resize(matrix, output_size= (2,2)))
+    bool_tensor = strategy.resize(matrix, output_size= (2,2)) - torch.tensor([[0.75, 0.],[0., 1.75]])
+    print(bool_tensor)
+    bool_tensor = bool_tensor.abs() <= 10**(-5)
+    print(bool_tensor)
+    assert bool_tensor[0,0,0] and bool_tensor[0,0,1] and bool_tensor[0,1,0] and bool_tensor[0,1,1]
+
+
+@pytest.mark.parametrize("input", [torch.zeros(1,10,10), torch.tensor([[[1.,0.],[0.,1.]]]), torch.tensor([[[1.,2.,3.,10.],[4.,5.,6.,11.],[7.,8.,9.,12.],[7.,8.,9.,12.]]])])
+@pytest.mark.parametrize("contributions", [(5,7), (50, 13), None])
+@pytest.mark.parametrize("strategy", [GranularityResizeStrategy.NEAREST, GranularityResizeStrategy.BILINEAR, GranularityResizeStrategy.BICUBIC, GranularityResizeStrategy.AREA])
+@pytest.mark.parametrize("patch_size", [1,2])
+@pytest.mark.parametrize("granularity", [ImageGranularity.PIXEL, ImageGranularity.PATCH])
+def test_granularity_resize(input, output, strategy, patch_size, granularity):
     if output != None: 
         assert strategy.resize(input, output, patch_size).shape == (1,*output) 
     else:
