@@ -28,7 +28,6 @@ Base class for concept interpretation methods.
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Mapping
 from typing import Any, Literal
 
@@ -292,43 +291,69 @@ class TopKInputs(BaseConceptInterpretationMethod):
 
     def _topk_inputs_from_concepts_activations(
         self,
-        inputs: list[str],  # (nl,)
-        concepts_activations: ConceptsActivations,  # (nl, cpt)
-        concepts_indices: list[int],  # TODO: sanitize this previously
-    ) -> Mapping[int, Any]:
-        # increase the number k to ensure that the top-k inputs are unique
-        k = self.k * max(Counter(inputs).values())
-        k = min(k, concepts_activations.shape[0])
+        inputs: list[str],
+        concepts_activations: torch.Tensor,
+        concepts_indices: list[int],
+    ):
+        device = concepts_activations.device
 
-        # Shape: (n*l, cpt_of_interest)
-        concepts_activations = concepts_activations.T[concepts_indices].T
+        # ------------------------------------------------
+        # we first reduce inputs which are the same by max
+        input_to_id = {}
+        unique_inputs = []
+        inverse_ids_list = []
 
-        # extract indices of the top-k input tokens for each specified concept
-        topk_output = torch.topk(concepts_activations, k=k, dim=0)
-        all_topk_activations = topk_output[0].T  # Shape: (cpt_of_interest, k)
-        all_topk_indices = topk_output[1].T  # Shape: (cpt_of_interest, k)
+        # associate inputs ids to unique inputs
+        for x in inputs:
+            if input_to_id.get(x) is None:
+                input_to_id[x] = len(input_to_id)
+            inverse_ids_list.append(input_to_id[x])
 
-        # create a dictionary with the interpretation
-        interpretation_dict = {}
+        inverse_ids = torch.tensor(inverse_ids_list, device=device, dtype=torch.long)
+
+        # acts:     (n, n_concepts)
+        acts = concepts_activations[:, concepts_indices]
+        unique_inputs = list(input_to_id.keys())
+        n_unique = len(unique_inputs)
+        n_concepts = acts.shape[1]
+
+        # init reduced activations
+        reduced = torch.full(
+            (n_unique, n_concepts),
+            -torch.inf,
+            device=device,
+            dtype=acts.dtype,
+        )
+
+        # reduce activations by max for each unique input
+        # we go from (n, n_concepts) to (n_unique, n_concepts)
+        reduced.scatter_reduce_(
+            dim=0,
+            index=inverse_ids[:, None].expand(-1, n_concepts),
+            src=acts,
+            reduce="amax",
+            include_self=True,
+        )
+
+        # ----------------------------------------------------------------------
+        # Then we compute topk (among max value for each input) for each concept
+        # top_values:     (k, n_concepts)
+        # top_unique_ids: (k, n_concepts)
+        top_values, top_unique_ids = torch.topk(reduced, k=self.k, dim=0)
+
+        # convert top indices to top inputs
         # iterate over required concepts
-        for cpt_idx, topk_activations, topk_indices in zip(
-            concepts_indices, all_topk_activations, all_topk_indices, strict=True
-        ):
-            interpretation_dict[cpt_idx] = {}
+        interpretation_dict = {}
+        for cpt_idx, values, ids in zip(concepts_indices, top_values.T, top_unique_ids.T, strict=True):
+            out = {}
             # iterate over k
-            for activation, input_index in zip(topk_activations, topk_indices, strict=True):
-                # ensure that the input is not already in the interpretation
-                if len(interpretation_dict[cpt_idx]) >= self.k:
+            for activation, unique_id in zip(values, ids, strict=True):
+                if (
+                    activation == 0
+                ):  # TODO: see if we should remove negative values, or maybe optionally return them as top-bottom
                     break
-                if inputs[input_index] in interpretation_dict[cpt_idx]:
-                    continue
-                if activation == 0:
-                    break
-                # set the kth input for the concept
-                interpretation_dict[cpt_idx][inputs[input_index]] = activation.item()
+                out[unique_inputs[int(unique_id)]] = activation.item()
 
-            # if no inputs were found for the concept, set it to None
-            # TODO: see if we should remove the concept completely
-            if len(interpretation_dict[cpt_idx]) == 0:
-                interpretation_dict[cpt_idx] = None
+            interpretation_dict[cpt_idx] = out if out else None
+
         return interpretation_dict

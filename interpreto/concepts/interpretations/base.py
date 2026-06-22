@@ -447,19 +447,25 @@ class BaseConceptInterpretationMethod(ABC):
             # no activation_granularity is needed
             return inputs, list(range(len(inputs)))
 
-        # Get granular texts from the inputs
-        tokens = self.concept_explainer.splitter.tokenizer(
-            inputs,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            return_offsets_mapping=True,
-        )
-        granular_texts: list[list[str]] = self.activation_granularity.value.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
-            tokens,
-            tokenizer=self.concept_explainer.splitter.tokenizer,
-            return_text=True,
-        )
+        if self.activation_granularity == ActivationGranularity.TOKEN:
+            # we can use the tokenizer to split the inputs into tokens
+            granular_texts: list[list[str]] = [
+                self.concept_explainer.splitter.tokenizer.tokenize(text) for text in inputs
+            ]
+        else:
+            # Get granular texts from the inputs
+            tokens = self.concept_explainer.splitter.tokenizer(
+                inputs,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                return_offsets_mapping=True,
+            )
+            granular_texts: list[list[str]] = self.activation_granularity.value.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
+                tokens,
+                tokenizer=self.concept_explainer.splitter.tokenizer,
+                return_text=True,
+            )
 
         granular_flattened_texts = [text for sample_texts in granular_texts for text in sample_texts]
         granular_flattened_sample_id = [i for i, sample_texts in enumerate(granular_texts) for _ in sample_texts]
