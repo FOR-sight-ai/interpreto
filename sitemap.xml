@@ -2,190 +2,194 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/CHANGELOG/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/about/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/citation/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/contributing/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/roadmap/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/visualizations/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/overview/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/gradient_shap/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradients/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernelshap/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/lime/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/occlusion/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/saliency/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/smoothgrad/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/sobol/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/squaregrad/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/methods/vargrad/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/metrics/deletion/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/attributions/metrics/insertion/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/overview/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/probes/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/base/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/cockatiel/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/neurons_as_concepts/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/base/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/concept_attributions/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/llm_labels/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/interpretations/topk_inputs/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/consim/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/dictionary_metrics/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/overview/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/splitters/model_with_split_points/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/splitters/splitter_for_classification/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/api/concepts/splitters/splitter_for_generation/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/attribution_tutorial/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/classification_concept_tutorial/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/generation_concept_tutorial/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/generation_probe_tutorial/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/examples/classification_demonstration/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/examples/classification_ngram_concept_tutorial/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/examples/classification_probe_tutorial/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
+    </url>
+    <url>
+         <loc>https://for-sight-ai.github.io/interpreto/notebooks/examples/fairness_applications/</loc>
+         <lastmod>2026-06-26</lastmod>
     </url>
     <url>
          <loc>https://for-sight-ai.github.io/interpreto/notebooks/examples/generation_demonstration/</loc>
-         <lastmod>2026-06-22</lastmod>
+         <lastmod>2026-06-26</lastmod>
     </url>
 </urlset>
