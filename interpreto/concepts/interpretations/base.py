@@ -351,6 +351,7 @@ class BaseConceptInterpretationMethod(ABC):
                 inputs,
                 activation_granularity=self.activation_granularity,
                 aggregation_strategy=self.aggregation_strategy,
+                forward_kwargs={"truncation": True},
             )
             return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
@@ -384,6 +385,7 @@ class BaseConceptInterpretationMethod(ABC):
             latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 input_ids,
                 activation_granularity=ActivationGranularity.ALL_TOKENS,
+                forward_kwargs={"truncation": True},
             )
         else:
             # we need to add the CLS token and maybe the EOS token to the ids
@@ -411,6 +413,7 @@ class BaseConceptInterpretationMethod(ABC):
             latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 repeated_template_ids,
                 activation_granularity=self.activation_granularity,
+                forward_kwargs={"truncation": True},
             )
 
         # compute the vocabulary's concepts activations
