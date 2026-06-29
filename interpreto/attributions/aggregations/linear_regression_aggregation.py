@@ -157,6 +157,10 @@ class LinearRegressionAggregator(Aggregator):
                 + f"Got {results.shape} perturbations and {results.shape} results."
             )
 
+        # There are no features to regress when the mask has zero width.
+        if l == 0:
+            return results.new_empty((t, 0))
+
         # Define the weights for the linear model
         if self.distance_function is not None:  # LIME
             # Compute distance between perturbations and original input using the mask
