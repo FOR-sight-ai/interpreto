@@ -10,11 +10,11 @@ which learns a translator for each intermediate layer before applying the model 
 
 The original paper focuses on autoregressive language models.
 Interpreto extends the same projection pipeline to sequence classification through
-[`ModelWithSplitPoints`](../../concepts/model_with_split_points.md).
+[`ModelWithSplitPoints`](../../concepts/splitters/model_with_split_points.md).
 
 Constructor arguments and examples are documented directly on the generated class page below.
 When possible, prefer building the lens from a fully loaded Hugging Face model wrapped by
-[`ModelWithSplitPoints`](../../concepts/model_with_split_points.md). Tiny
+[`ModelWithSplitPoints`](../../concepts/splitters/model_with_split_points.md). Tiny
 `hf-internal-testing` checkpoints are convenient fixtures, but they can expose meta-tensor
 loading paths that do not reflect the usual experimental workflow.
 

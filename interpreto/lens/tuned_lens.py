@@ -37,7 +37,7 @@ import torch.nn.functional as F
 from torch import nn
 from transformers.tokenization_utils_base import BatchEncoding
 
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 from ._lens_base import BaseLens, LensInputs, PoolingStrategy
 
@@ -66,8 +66,8 @@ class TunedLens(BaseLens):
 
     Args:
         model_with_split_points (ModelWithSplitPoints): Wrapped model used to extract split activations.
-        split_points (str | list[str] | None): Split points receiving a learned translator.
-            If `None`, translators are created for all split points registered on `model_with_split_points`.
+        split_point (str | None): Split point receiving a learned translator.
+            If `None`, the split point registered on `model_with_split_points` is used.
         head_name (str | None): Optional path to the prediction head.
         pre_head_name (str | None): Optional path to a module applied before the head.
         pooling_strategy (Literal["cls", "mean", "last"] | None): Optional pooling used for
@@ -92,7 +92,7 @@ class TunedLens(BaseLens):
         >>> model_with_split_points = ModelWithSplitPoints(
         ...     model,
         ...     tokenizer=tokenizer,
-        ...     split_points="transformer.h.1.mlp",
+        ...     split_point="transformer.h.1.mlp",
         ... )
         >>> lens = TunedLens(model_with_split_points, top_k=3, initialization_mode="logit_lens")
         >>> _ = lens.fit(["Interpreto helps.", "Interpreto is practical."], epochs=1)
@@ -107,7 +107,7 @@ class TunedLens(BaseLens):
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
-        split_points: str | list[str] | None = None,
+        split_point: str | None = None,
         head_name: str | None = None,
         pre_head_name: str | None = None,
         pooling_strategy: PoolingStrategy | None = None,
@@ -125,16 +125,13 @@ class TunedLens(BaseLens):
         )
 
         if initialization_mode not in {"default", "xavier", "logit_lens"}:
-            raise ValueError(
-                "`initialization_mode` should be one of `'default'`, `'xavier'`, or `'logit_lens'`."
-            )
+            raise ValueError("`initialization_mode` should be one of `'default'`, `'xavier'`, or `'logit_lens'`.")
 
-        self.translated_split_points = self._normalize_split_points(split_points)
+        self.translated_split_points = self._normalize_split_points(split_point)
         self.hidden_size = self._get_hidden_size()
         self.initialization_mode = initialization_mode
         self.translators = {
-            split_point: self._build_translator().to(self.device)
-            for split_point in self.translated_split_points
+            split_point: self._build_translator().to(self.device) for split_point in self.translated_split_points
         }
 
     def _build_translator(self) -> nn.Linear:
@@ -202,7 +199,9 @@ class TunedLens(BaseLens):
         valid_losses = token_losses.masked_select(attention_mask.bool())
         return valid_losses.mean()
 
-    def _sequence_classification_loss(self, projected_logits: torch.Tensor, target_logits: torch.Tensor) -> torch.Tensor:
+    def _sequence_classification_loss(
+        self, projected_logits: torch.Tensor, target_logits: torch.Tensor
+    ) -> torch.Tensor:
         return F.kl_div(
             F.log_softmax(projected_logits, dim=-1),
             F.softmax(target_logits, dim=-1),
@@ -238,7 +237,7 @@ class TunedLens(BaseLens):
     def fit(
         self,
         inputs: LensInputs,
-        split_points: str | list[str] | None = None,
+        split_point: str | None = None,
         epochs: int = 1,
         learning_rate: float = 1e-3,
         weight_decay: float = 0.0,
@@ -249,7 +248,7 @@ class TunedLens(BaseLens):
 
         Args:
             inputs (str | list[str] | BatchEncoding): Training inputs.
-            split_points (str | list[str] | None): Optional subset of translated split points.
+            split_point (str | None): Optional split point to validate against the translated split point.
             epochs (int): Number of training epochs.
             learning_rate (float): Optimizer learning rate.
             weight_decay (float): Optimizer weight decay.
@@ -262,8 +261,10 @@ class TunedLens(BaseLens):
         if epochs < 1:
             raise ValueError("`epochs` must be a strictly positive integer.")
 
-        selected_split_points = self._normalize_split_points(split_points or self.translated_split_points)
-        unknown_split_points = [split_point for split_point in selected_split_points if split_point not in self.translators]
+        selected_split_points = self._normalize_split_points(split_point)
+        unknown_split_points = [
+            split_point for split_point in selected_split_points if split_point not in self.translators
+        ]
         if unknown_split_points:
             raise ValueError(
                 "The following split points do not have translators: " + ", ".join(unknown_split_points) + "."
@@ -277,7 +278,7 @@ class TunedLens(BaseLens):
         )
         history = {
             "loss": [],
-            "split_points": list(selected_split_points),
+            "split_point": selected_split_points[0],
             "epochs": epochs,
         }
 
@@ -298,7 +299,9 @@ class TunedLens(BaseLens):
                         include_reference_logits=True,
                     )
                     if target_logits is None:
-                        raise RuntimeError("Failed to capture the reference logits required by the tuned lens fit path.")
+                        raise RuntimeError(
+                            "Failed to capture the reference logits required by the tuned lens fit path."
+                        )
 
                     optimizer.zero_grad()
                     total_loss: torch.Tensor | None = None
@@ -339,7 +342,7 @@ class TunedLens(BaseLens):
 
         checkpoint = {
             "metadata": {
-                "split_points": list(self.translated_split_points),
+                "split_point": self.translated_split_points[0],
                 "head_name": self.head_name,
                 "pre_head_name": self.pre_head_name,
                 "pooling_strategy": self.pooling_strategy,
@@ -372,9 +375,13 @@ class TunedLens(BaseLens):
         """
         checkpoint = torch.load(Path(path), map_location="cpu")
         metadata = checkpoint["metadata"]
+        split_point = metadata.get("split_point")
+        if split_point is None:
+            saved_split_points = metadata["split_points"]
+            split_point = saved_split_points[0] if isinstance(saved_split_points, list) else saved_split_points
         lens = cls(
             model_with_split_points=model_with_split_points,
-            split_points=metadata["split_points"],
+            split_point=split_point,
             head_name=metadata["head_name"],
             pre_head_name=metadata["pre_head_name"],
             pooling_strategy=metadata["pooling_strategy"],
@@ -384,14 +391,10 @@ class TunedLens(BaseLens):
         )
 
         missing_split_points = [
-            split_point
-            for split_point in lens.translated_split_points
-            if split_point not in checkpoint["translators"]
+            split_point for split_point in lens.translated_split_points if split_point not in checkpoint["translators"]
         ]
         if missing_split_points:
-            raise ValueError(
-                "Missing translator states for split points: " + ", ".join(missing_split_points) + "."
-            )
+            raise ValueError("Missing translator states for split points: " + ", ".join(missing_split_points) + ".")
 
         for split_point in lens.translated_split_points:
             lens.translators[split_point].load_state_dict(checkpoint["translators"][split_point])

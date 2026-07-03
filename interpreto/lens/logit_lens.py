@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import torch
 
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 from ._lens_base import BaseLens, PoolingStrategy
 
@@ -78,7 +78,7 @@ class LogitLens(BaseLens):
         >>> model_with_split_points = ModelWithSplitPoints(
         ...     model,
         ...     tokenizer=tokenizer,
-        ...     split_points="bert.encoder.layer.1.output",
+        ...     split_point="bert.encoder.layer.1.output",
         ... )
         >>> lens = LogitLens(model_with_split_points, top_k=3)
         >>> explanations = lens.explain("Interpreto is useful.")

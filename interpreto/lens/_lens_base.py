@@ -41,7 +41,7 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
-from interpreto.model_wrapping.model_with_split_points import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LabelNames, LensResults, LensTopKOutput
 
 LensInputs = str | list[str] | BatchEncoding
@@ -121,8 +121,7 @@ class BaseLens:
         """
         if not isinstance(model_with_split_points, ModelWithSplitPoints):
             raise TypeError(
-                "The given model should be a ModelWithSplitPoints, "
-                f"but {type(model_with_split_points)} was given."
+                f"The given model should be a ModelWithSplitPoints, but {type(model_with_split_points)} was given."
             )
 
         if model_with_split_points.tokenizer is None:
@@ -135,6 +134,7 @@ class BaseLens:
 
         self.model_with_split_points = model_with_split_points
         self.model = model_with_split_points._model
+        self.split_point = model_with_split_points.split_point
         self.tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast = model_with_split_points.tokenizer
         self.task: LensTask = self._infer_task()
         self.language_model_mode: LanguageModelMode | None = (
@@ -215,9 +215,7 @@ class BaseLens:
         pooling_strategy: PoolingStrategy | None,
     ) -> ProjectionSpec:
         if pooling_strategy not in {None, "cls", "mean", "last"}:
-            raise ValueError(
-                "`pooling_strategy` should be one of `None`, `'cls'`, `'mean'`, or `'last'`."
-            )
+            raise ValueError("`pooling_strategy` should be one of `None`, `'cls'`, `'mean'`, or `'last'`.")
 
         if head_name is not None:
             if self.task == "language_model" and pooling_strategy is not None:
@@ -419,8 +417,7 @@ class BaseLens:
             texts = inputs
         else:
             raise TypeError(
-                "Unsupported input type. Expected `str`, `list[str]`, or `BatchEncoding`, "
-                f"got {type(inputs)}."
+                f"Unsupported input type. Expected `str`, `list[str]`, or `BatchEncoding`, got {type(inputs)}."
             )
 
         self._ensure_padding_token()
@@ -447,25 +444,14 @@ class BaseLens:
 
         return prepared_inputs
 
-    def _normalize_split_points(self, split_points: str | list[str] | None) -> list[str]:
-        if split_points is None:
-            return list(self.model_with_split_points.split_points)
+    def _normalize_split_points(self, split_point: str | None) -> list[str]:
+        if split_point is None:
+            return [self.split_point]
 
-        requested_split_points = [split_points] if isinstance(split_points, str) else split_points
-        invalid_split_points = [
-            split_point
-            for split_point in requested_split_points
-            if split_point not in self.model_with_split_points.split_points
-        ]
-        if invalid_split_points:
-            raise ValueError(
-                "Unknown split points: "
-                + ", ".join(invalid_split_points)
-                + ". Available split points: "
-                + ", ".join(self.model_with_split_points.split_points)
-                + "."
-            )
-        return list(requested_split_points)
+        if split_point != self.split_point:
+            raise ValueError(f"Unknown split point: {split_point}. Available split point: {self.split_point}.")
+
+        return [split_point]
 
     def _get_attention_mask(self, model_inputs: BatchEncoding, hidden_states: torch.Tensor) -> torch.Tensor:
         if "attention_mask" in model_inputs:
@@ -516,9 +502,7 @@ class BaseLens:
             gather_index = last_indices.view(-1, 1, 1).expand(-1, 1, hidden_states.shape[-1])
             return hidden_states.gather(dim=1, index=gather_index).squeeze(1)
 
-        raise ValueError(
-            "`pooling_strategy` should be one of `None`, `'cls'`, `'mean'`, or `'last'`."
-        )
+        raise ValueError("`pooling_strategy` should be one of `None`, `'cls'`, `'mean'`, or `'last'`.")
 
     def _prepare_projection_inputs(
         self,
@@ -569,10 +553,7 @@ class BaseLens:
 
         logits = outputs.logits
         if not isinstance(logits, torch.Tensor):
-            raise TypeError(
-                "The wrapped model should expose `logits` as a torch.Tensor, "
-                f"got {type(logits)} instead."
-            )
+            raise TypeError(f"The wrapped model should expose `logits` as a torch.Tensor, got {type(logits)} instead.")
 
         return activations, logits.to(self.model_device)
 
@@ -585,10 +566,7 @@ class BaseLens:
         if isinstance(logits, tuple):
             logits = logits[0]
         if not isinstance(logits, torch.Tensor):
-            raise TypeError(
-                "The resolved projection head should return a torch.Tensor, "
-                f"got {type(logits)} instead."
-            )
+            raise TypeError(f"The resolved projection head should return a torch.Tensor, got {type(logits)} instead.")
         return logits
 
     def _transform_activations(self, split_point: str, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -603,10 +581,8 @@ class BaseLens:
             transformed_hidden_states = self._transform_activations(split_point, projection_inputs[split_point])
             yield split_point, self._project_hidden_states(transformed_hidden_states)
 
-    def _explain_prepared(
-        self, model_inputs: BatchEncoding, split_points: str | list[str] | None = None
-    ) -> LensResults:
-        selected_split_points = self._normalize_split_points(split_points)
+    def _explain_prepared(self, model_inputs: BatchEncoding, split_point: str | None = None) -> LensResults:
+        selected_split_points = self._normalize_split_points(split_point)
         projection_inputs, _ = self._capture_projection_inputs(
             model_inputs,
             selected_split_points,
@@ -616,11 +592,11 @@ class BaseLens:
 
         results: LensResults = {}
         with torch.no_grad():
-            for split_point, logits in self._iter_projected_logits(
+            for current_split_point, logits in self._iter_projected_logits(
                 projection_inputs,
                 selected_split_points,
             ):
-                results[split_point] = self._format_outputs(logits)
+                results[current_split_point] = self._format_outputs(logits)
 
         return results
 
@@ -683,16 +659,12 @@ class BaseLens:
         elif isinstance(targets, torch.Tensor):
             target_tensor = targets.to(device).long()
         else:
-            raise TypeError(
-                "Sequence-classification targets should be an integer, a list of integers, or a tensor."
-            )
+            raise TypeError("Sequence-classification targets should be an integer, a list of integers, or a tensor.")
 
         if target_tensor.ndim == 2 and target_tensor.shape[-1] == 1:
             target_tensor = target_tensor.squeeze(-1)
         if target_tensor.ndim != 1:
-            raise ValueError(
-                "Sequence-classification targets should be a 1D tensor of shape `(batch_size,)`."
-            )
+            raise ValueError("Sequence-classification targets should be a 1D tensor of shape `(batch_size,)`.")
         if target_tensor.shape[0] != batch_size:
             raise ValueError(
                 "Sequence-classification targets should match the input batch size. "
@@ -914,36 +886,35 @@ class BaseLens:
             return
 
         raise TypeError(
-            "Unsupported input type. Expected `str`, `list[str]`, or `BatchEncoding`, "
-            f"got {type(inputs)}."
+            f"Unsupported input type. Expected `str`, `list[str]`, or `BatchEncoding`, got {type(inputs)}."
         )
 
-    def explain(self, inputs: LensInputs, split_points: str | list[str] | None = None) -> LensResults:
+    def explain(self, inputs: LensInputs, split_point: str | None = None) -> LensResults:
         """
-        Compute lens predictions at the selected split points.
+        Compute lens predictions at the selected split point.
 
         Args:
             inputs (str | list[str] | BatchEncoding): Raw text or tokenized inputs.
-            split_points (str | list[str] | None): Optional subset of split points.
-                If `None`, all split points registered on `model_with_split_points` are used.
+            split_point (str | None): Optional split point to validate against the wrapped
+                `ModelWithSplitPoints`. If `None`, the wrapped split point is used.
 
         Returns:
-            dict[str, LensTopKOutput]: Mapping between split points and formatted predictions.
+            dict[str, LensTopKOutput]: Mapping between the split point and formatted predictions.
                 Each split-point entry contains `top_indices` and `top_scores`.
                 Decoding these indices to tokens or label names is handled by the visualization layer.
         """
         model_inputs = self._prepare_inputs(inputs)
-        return self._explain_prepared(model_inputs, split_points=split_points)
+        return self._explain_prepared(model_inputs, split_point=split_point)
 
     def metrics(
         self,
         inputs: LensInputs,
         targets: LensTargets = None,
-        split_points: str | list[str] | None = None,
+        split_point: str | None = None,
         differentiable: bool = False,
     ) -> dict[str, dict[str, Any]]:
         """
-        Compute decodability metrics at the selected split points.
+        Compute decodability metrics at the selected split point.
 
         For language models, hard-target metrics are computed on token identities derived from
         `inputs` when `targets` is omitted. Causal language models use next-token targets,
@@ -958,12 +929,13 @@ class BaseLens:
             targets (int | list[int] | torch.Tensor | None): Optional hard targets.
                 For sequence classification, provide one label per sample.
                 For language models, tensor targets should match the tokenized input shape.
-            split_points (str | list[str] | None): Optional subset of split points.
+            split_point (str | None): Optional split point to validate against the wrapped
+                `ModelWithSplitPoints`.
             differentiable (bool): If `True`, preserve gradients through the lens metric path.
                 This is useful when reusing the scores as regularizers during training.
 
         Returns:
-            dict[str, dict[str, Any]]: One metrics dictionary per split point.
+            dict[str, dict[str, Any]]: One metrics dictionary keyed by split point.
                 Each dictionary contains:
                 - `mean_max_probability`
                 - `kl_divergence_to_model`
@@ -975,7 +947,7 @@ class BaseLens:
                 - `perplexity` for causal language models
         """
         model_inputs = self._prepare_inputs(inputs)
-        selected_split_points = self._normalize_split_points(split_points)
+        selected_split_points = self._normalize_split_points(split_point)
         projection_inputs, reference_logits = self._capture_projection_inputs(
             model_inputs,
             selected_split_points,
@@ -988,11 +960,11 @@ class BaseLens:
         results: dict[str, dict[str, Any]] = {}
         context_manager = torch.enable_grad() if differentiable else torch.no_grad()
         with context_manager:
-            for split_point, projected_logits in self._iter_projected_logits(
+            for current_split_point, projected_logits in self._iter_projected_logits(
                 projection_inputs,
                 selected_split_points,
             ):
-                results[split_point] = self._compute_metrics(
+                results[current_split_point] = self._compute_metrics(
                     projected_logits,
                     reference_logits,
                     model_inputs,
@@ -1002,13 +974,13 @@ class BaseLens:
 
         return results
 
-    def __call__(self, inputs: LensInputs, split_points: str | list[str] | None = None) -> LensResults:
-        return self.explain(inputs, split_points=split_points)
+    def __call__(self, inputs: LensInputs, split_point: str | None = None) -> LensResults:
+        return self.explain(inputs, split_point=split_point)
 
     def lens(
         self,
         inputs: LensInputs,
-        split_points: str | list[str] | None = None,
+        split_point: str | None = None,
         label_names: LabelNames | None = None,
     ) -> LensResults:
         """
@@ -1016,7 +988,8 @@ class BaseLens:
 
         Args:
             inputs (str | list[str] | BatchEncoding): Raw text or tokenized inputs.
-            split_points (str | list[str] | None): Optional subset of split points.
+            split_point (str | None): Optional split point to validate against the wrapped
+                `ModelWithSplitPoints`.
             label_names (Mapping[int | str, str] | list[str] | tuple[str, ...] | None):
                 Optional display names for sequence-classification labels.
                 If `None`, raw label ids are shown.
@@ -1031,7 +1004,7 @@ class BaseLens:
             ... )
         """
         model_inputs = self._prepare_inputs(inputs)
-        results = self._explain_prepared(model_inputs, split_points=split_points)
+        results = self._explain_prepared(model_inputs, split_point=split_point)
         from interpreto.visualizations import display_lens_results  # noqa: PLC0415
 
         display_lens_results(

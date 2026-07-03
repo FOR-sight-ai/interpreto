@@ -161,7 +161,9 @@ def _render_language_model_html(
     model_inputs: BatchEncoding,
     tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
 ) -> str:
-    raw_tokens = [tokenizer.convert_ids_to_tokens(input_ids.detach().cpu().tolist()) for input_ids in model_inputs["input_ids"]]
+    raw_tokens = [
+        tokenizer.convert_ids_to_tokens(input_ids.detach().cpu().tolist()) for input_ids in model_inputs["input_ids"]
+    ]
     visible_token_indices = _get_visible_token_indices(model_inputs)
 
     sections: list[str] = [
@@ -208,9 +210,7 @@ def _render_language_model_html(
                     f"<span class='lens-token-confidence' style='background: {confidence_color};'></span>"
                     "<span class='lens-tooltip'>"
                     "<div class='lens-tooltip-title'>Top-k predictions</div>"
-                    "<ul class='lens-tooltip-list'>"
-                    + "".join(tooltip_rows)
-                    + "</ul></span></span>"
+                    "<ul class='lens-tooltip-list'>" + "".join(tooltip_rows) + "</ul></span></span>"
                 )
 
             sections.append("</div></div>")
@@ -245,9 +245,7 @@ def _render_sequence_classification_html(
             sections.append(f"<div class='lens-sample-title'>Sample {sample_index + 1}</div>")
             sections.append(f"<div class='lens-sample-text'>{sample_text}</div>")
             sections.append(
-                "<div class='lens-top-choice'>"
-                f"Current top class: {top_label} ({_format_score(top_score)})"
-                "</div>"
+                f"<div class='lens-top-choice'>Current top class: {top_label} ({_format_score(top_score)})</div>"
             )
 
             for label, score in zip(decoded_labels, split_results["top_scores"][sample_index].tolist(), strict=False):

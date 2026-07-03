@@ -7,7 +7,7 @@ Current methods:
 - [Logit Lens](./methods/logit_lens.md): project split activations through the model prediction head.
 - [Tuned Lens](./methods/tuned_lens.md): learn one affine translator per split point before the same projection step.
 
-Both methods are built around [`ModelWithSplitPoints`](../concepts/model_with_split_points.md) and accept the same high-level workflow:
+Both methods are built around [`ModelWithSplitPoints`](../concepts/splitters/model_with_split_points.md) and accept the same high-level workflow:
 
 ```python
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -22,7 +22,7 @@ if tokenizer.pad_token is None:
 model_with_split_points = ModelWithSplitPoints(
     model,
     tokenizer=tokenizer,
-    split_points="transformer.h.1.mlp",
+    split_point="transformer.h.1.mlp",
 )
 
 lens = LogitLens(model_with_split_points, top_k=3)
@@ -30,7 +30,7 @@ explanations = lens.explain("Interpreto is useful.")
 ```
 
 The generated class pages document the constructor arguments and examples in detail.
-Both classes rely on [`ModelWithSplitPoints`](../concepts/model_with_split_points.md).
+Both classes rely on [`ModelWithSplitPoints`](../concepts/splitters/model_with_split_points.md).
 Raw text inputs are tokenized internally by the lens methods with the wrapped tokenizer.
 The wrapped tokenizer should already expose a pad token or an eos token, since the lens methods do not resize model embeddings to introduce new special tokens.
 
