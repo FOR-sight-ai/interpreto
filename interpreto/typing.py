@@ -28,8 +28,8 @@ Generic type annotations for Interpreto
 
 from __future__ import annotations
 
-from collections.abc import Iterable, MutableMapping
-from typing import Generic, Protocol, TypeVar, runtime_checkable
+from collections.abc import Iterable, Mapping, MutableMapping
+from typing import Generic, Protocol, TypeAlias, TypedDict, TypeVar, runtime_checkable
 
 import torch
 from jaxtyping import Float, Int
@@ -68,6 +68,17 @@ ClassificationTarget = (
     int | Int[torch.Tensor, "n"] | Int[torch.Tensor, "n t"] | Iterable[int] | Iterable[Int[torch.Tensor, "t"]]
 )
 TensorBaseline = torch.Tensor | float | int | None
+LabelNames: TypeAlias = Mapping[int | str, str] | list[str] | tuple[str, ...]
+
+
+class LensTopKOutput(TypedDict):
+    """Structured output returned by lens methods for one split point."""
+
+    top_indices: torch.Tensor
+    top_scores: torch.Tensor
+
+
+LensResults: TypeAlias = dict[str, LensTopKOutput]
 
 
 class ConceptModelProtocol(Protocol):

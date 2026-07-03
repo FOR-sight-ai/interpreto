@@ -1,0 +1,59 @@
+# API: Lens
+
+This section groups the lens-based interpretability methods of Interpreto.
+
+Current methods:
+
+- [Logit Lens](./methods/logit_lens.md): project split activations through the model prediction head.
+- [Tuned Lens](./methods/tuned_lens.md): learn one affine translator per split point before the same projection step.
+
+Both methods are built around [`ModelWithSplitPoints`](../concepts/splitters/model_with_split_points.md) and accept the same high-level workflow:
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+from interpreto import LogitLens, ModelWithSplitPoints
+
+model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
+model_with_split_points = ModelWithSplitPoints(
+    model,
+    tokenizer=tokenizer,
+    split_point="transformer.h.1.mlp",
+)
+
+lens = LogitLens(model_with_split_points, top_k=3)
+explanations = lens.explain("Interpreto is useful.")
+```
+
+The generated class pages document the constructor arguments and examples in detail.
+Both classes rely on [`ModelWithSplitPoints`](../concepts/splitters/model_with_split_points.md).
+Raw text inputs are tokenized internally by the lens methods with the wrapped tokenizer.
+The wrapped tokenizer should already expose a pad token or an eos token, since the lens methods do not resize model embeddings to introduce new special tokens.
+
+For sequence classification, three projection cases are supported:
+
+- a model-specific pooler or transform followed by a vector head
+- a sequence-aware classification head that consumes 3D hidden states directly
+- a bare vector head, which requires an explicit `pooling_strategy`
+
+For notebook rendering, the computation and visualization steps can also be split explicitly:
+
+```python
+from interpreto.visualizations import display_lens_results
+
+model_inputs = tokenizer(["Interpreto is useful."], return_tensors="pt", padding=True, truncation=True)
+results = lens.explain(model_inputs)
+display_lens_results(
+    results,
+    model_inputs,
+    tokenizer=tokenizer,
+    task=lens.task,
+)
+```
+
+For sequence classification, readable class names should be passed explicitly through
+`label_names={...}` when displaying the results.
