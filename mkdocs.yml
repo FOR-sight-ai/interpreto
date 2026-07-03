@@ -9,12 +9,16 @@ site_url: https://for-sight-ai.github.io/interpreto/
 nav:
   - Home: index.md
   - Tutorials:
-    - Use Attribution Methods: notebooks/attribution_walkthrough.ipynb
+    - Use Attribution Methods: notebooks/attribution_tutorial.ipynb
     - Concept-based Explanations for Classification: notebooks/classification_concept_tutorial.ipynb
     - Concept-based Explanations for Generation: notebooks/generation_concept_tutorial.ipynb
+    - Probing for Truthfulness (Generation): notebooks/generation_probe_tutorial.ipynb
     - Examples:
+      - Fairness Applications: notebooks/examples/fairness_applications.ipynb
       - Classification Demonstration: notebooks/examples/classification_demonstration.ipynb
       - Generation Demonstration: notebooks/examples/generation_demonstration.ipynb
+      - Probing for Linguistic Properties (Classification): notebooks/examples/classification_probe_tutorial.ipynb
+      - Concepts Ngrams interpretation: notebooks/examples/classification_ngram_concept_tutorial.ipynb
     - Lens Methods: notebooks/lens_notebook.ipynb
   - API Reference:
     - Attribution Explainers:
@@ -35,14 +39,21 @@ nav:
         - Insertion: api/attributions/metrics/insertion.md
     - Concept Explainers:
       - Overview: api/concepts/overview.md
-      - ModelWithSplitPoints: api/concepts/model_with_split_points.md
-      - Methods:
-        - Base Classes: api/concepts/methods/base.md
-        - Cockatiel: api/concepts/methods/cockatiel.md
-        - Neurons as Concepts: api/concepts/methods/neurons_as_concepts.md
-        - Optimization Methods: api/concepts/methods/optim.md
-        - SAEs (Sparse AutoEncoders): api/concepts/methods/sae.md
-      - Concept Interpretations: api/concepts/concepts_interpretations.md
+      - Splitters:
+        - ModelWithSplitPoints: api/concepts/splitters/model_with_split_points.md
+        - SplitterForClassification: api/concepts/splitters/splitter_for_classification.md
+        - SplitterForGeneration: api/concepts/splitters/splitter_for_generation.md
+      - Probes (Supervised): api/concepts/probes.md
+      - Concept Spaces (Unsupervised):
+        - Base Classes: api/concepts/concept_spaces/base.md
+        - Cockatiel: api/concepts/concept_spaces/cockatiel.md
+        - Neurons as Concepts: api/concepts/concept_spaces/neurons_as_concepts.md
+        - Optimization Methods: api/concepts/concept_spaces/optim.md
+        - SAEs (Sparse AutoEncoders): api/concepts/concept_spaces/sae.md
+      - Interpretations:
+        - TopKInputs: api/concepts/interpretations/topk_inputs.md
+        - LLM Labels: api/concepts/interpretations/llm_labels.md
+        - Concept Attributions: api/concepts/interpretations/concept_attributions.md
       - Metrics:
         - Overview: api/concepts/metrics/overview.md
         - ConSim: api/concepts/metrics/consim.md
@@ -166,9 +177,10 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - footnotes
-  - extra
   - admonition
-  - codehilite
+  - tables
+  - abbr
+  - md_in_html
   - markdown.extensions.attr_list
   - toc:
       baselevel: 1
@@ -181,7 +193,6 @@ extra_css:
 
 extra_javascript:
   - assets/js/custom.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 extra:

@@ -42,11 +42,11 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
+from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 from .lens import (
     LogitLens,
     TunedLens,
 )
-from .model_wrapping import ModelWithSplitPoints
 from .visualizations import (
     AttributionVisualization,
     plot_attributions,
@@ -76,6 +76,8 @@ __all__ = [
     "SquareGrad",
     "Saliency",
     "SmoothGrad",
+    "SplitterForClassification",
+    "SplitterForGeneration",
     "Sobol",
     "TunedLens",
     "VarGrad",

@@ -31,10 +31,9 @@ from typing import NamedTuple
 import torch
 from tqdm import tqdm
 
-from interpreto import ModelWithSplitPoints
+from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.base_splitter import BaseSplitter
 
 
 class PromptSetting(NamedTuple):
@@ -144,7 +143,7 @@ class ConSim:
 
     - Step 0:
         Instantiate the ConSim metric
-        with the `model_with_split_points` ($f$) and the `user_llm` ($\\Psi$).
+        with the `splitter` ($f$) and the `user_llm` ($\\Psi$).
 
     - Step 1:
         Select interesting examples for ConSim with the `select_examples` method.
@@ -166,7 +165,7 @@ class ConSim:
         In the Proceedings of the 2025 Association for Computational Linguistics (ACL).
 
     Arguments:
-        model_with_split_points: ModelWithSplitPoints
+        splitter: BaseSplitter
             The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
 
         user_llm: LLMInterface | None
@@ -178,9 +177,6 @@ class ConSim:
             The format of the prompt is:
 
             `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
-
-        activation_granularity: ActivationGranularity
-            The granularity of the activations to use for the explanations.
 
         classes: list[str] | None
             The names of classes of the dataset.
@@ -195,7 +191,7 @@ class ConSim:
         prompt_types: PromptTypes
             Enum of the possible prompts types to use.
 
-        model_with_split_points: ModelWithSplitPoints
+        splitter: BaseSplitter
             The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
 
         split_point: str
@@ -216,13 +212,13 @@ class ConSim:
     Examples:
         Preamble to a metric, fit a concept explainer:
         >>> import datasets
-        >>> from interpreto import ConSim, ModelWithSplitPoints, ICAConcepts, OpenAILLM
+        >>> from interpreto import ConSim, SplitterForClassification, ICAConcepts, OpenAILLM
         >>>
         >>> # ------------------------
         >>> # Load a model and wrap it
-        >>> model_with_split_points = ModelWithSplitPoints(
+        >>> splitter = SplitterForClassification(
         ...     "textattack/bert-base-uncased-ag-news",
-        ...     split_points=["bert.encoder.layer.10.output"],
+        ...     split_point="bert.encoder.layer.10.output",
         ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
         ...     batch_size=4,
         ... )
@@ -231,11 +227,11 @@ class ConSim:
         >>> # Load a dataset and compute activations
         >>> dataset = datasets.load_dataset("fancyzhx/ag_news")
         >>> classes = ["World", "Sports", "Business", "Sci/Tech"]
-        >>> activations = model_with_split_points.get_activations(dataset["train"]["text"])
+        >>> activations, _ = splitter.get_activations(dataset["train"]["text"])
         >>>
         >>> # -------------------------
         >>> # Fit the concept explainer
-        >>> concept_explainer_1 = ICAConcepts(model_with_split_points, nb_concepts=50)
+        >>> concept_explainer_1 = ICAConcepts(splitter, nb_concepts=50)
         >>> concept_explainer.fit(activations)
 
         The two steps of ConSim:
@@ -243,9 +239,8 @@ class ConSim:
         >>> # Step 0: Define the User-LLM and instantiate the ConSim metric
         >>> user_llm = OpenAILLM(api_key="YOUR_OPENAI_API_KEY", model="gpt-4.1-nano")
         >>> consim = ConSim(
-        ...     model_with_split_points,
+        ...     splitter,
         ...     user_llm,
-        ...     activation_granularities=ModelWithSplitPoints.activation_granularities.TOKEN,
         ...     classes=classes,
         ... )
         >>>
@@ -265,32 +260,14 @@ class ConSim:
 
     def __init__(
         self,
-        model_with_split_points: ModelWithSplitPoints,
+        splitter: BaseSplitter,
         user_llm: LLMInterface | None,
-        activation_granularity: ActivationGranularity,
         classes: list[str] | None = None,
-        split_point: str | None = None,
     ):
         """
         Initialize the ConSim metric.
         """
-        self.model_with_split_points = model_with_split_points
-        if split_point is None:
-            if len(self.model_with_split_points.split_points) > 1:
-                raise ValueError(
-                    "If the model has more than one split point, a split point for fitting the concept model should "
-                    f"be specified. Got split point: '{split_point}' with model split points: "
-                    f"{', '.join(self.model_with_split_points.split_points)}."
-                )
-            split_point = self.model_with_split_points.split_points[0]
-
-        if split_point not in self.model_with_split_points.split_points:
-            raise ValueError(
-                f"Split point '{split_point}' not found in model split points: {', '.join(self.model_with_split_points.split_points)}."
-            )
-
-        self.split_point: str = split_point
-        self.activation_granularity: ActivationGranularity = activation_granularity
+        self.splitter = splitter
         self.user_llm: LLMInterface | None = user_llm
         self.classes: list[str] | None = classes
 
@@ -315,7 +292,7 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the inputs.
         """
-        device = device if device is not None else self.model_with_split_points.device
+        device = device if device is not None else self.splitter.device
         all_predictions = []
         for batch_index in tqdm(
             range(0, len(inputs), batch_size),
@@ -325,12 +302,10 @@ class ConSim:
             disable=not tqdm_bar,
         ):
             batch_inputs = inputs[batch_index : batch_index + batch_size]
-            batch_tokens = self.model_with_split_points.tokenizer(
+            batch_tokens = self.splitter.tokenizer(
                 batch_inputs, return_tensors="pt", padding=True, truncation=True
             ).to(device)  # type: ignore
-            logits = self.model_with_split_points._model(
-                batch_tokens["input_ids"], batch_tokens["attention_mask"]
-            ).logits
+            logits = self.splitter._model(batch_tokens["input_ids"], batch_tokens["attention_mask"]).logits
             predictions = torch.argmax(logits, dim=-1)
             all_predictions.append(predictions)
         return torch.cat(all_predictions)
@@ -1272,23 +1247,6 @@ class ConSim:
         """
         local_importances: torch.Tensor | None = None
         if concept_explainer is not None:
-            # Ensure the mwsp of the explainer is the same as the one used in the provided concept_explainer
-            if concept_explainer.split_point not in self.model_with_split_points.split_points:
-                raise ValueError(
-                    "The split point used in the provided `concept_explainer` should be one of the `model_with_split_points` ones."
-                    f"Got split point: '{concept_explainer.split_point}' with model split points: "
-                    f"{', '.join(self.model_with_split_points.split_points)}."
-                )
-            if (
-                concept_explainer.model_with_split_points._model.config.name_or_path
-                != self.model_with_split_points._model.config.name_or_path
-            ):
-                raise ValueError(
-                    "The model used in the provided `concept_explainer` should be the same as the one used in the `model_with_split_points`."
-                    f"Got (concept_explainer) model name or path: '{concept_explainer.model_with_split_points._model.config.name_or_path}'"
-                    f"and (model_with_split_points) model name or path: '{self.model_with_split_points._model.config.name_or_path}'."
-                )
-
             # compute concepts importance  # TODO: when first layers can be skipped pass the concept activations
             # For now we force gradient-input
             # TODO: precise shapes with jaxtyping
@@ -1302,8 +1260,6 @@ class ConSim:
                     samples_to_explain = interesting_samples
                 local_importances_list = concept_explainer.concept_output_gradient(
                     inputs=samples_to_explain,
-                    split_point=self.split_point,
-                    activation_granularity=self.activation_granularity,
                     concepts_x_gradients=True,
                     tqdm_bar=False,
                 )

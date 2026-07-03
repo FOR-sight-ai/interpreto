@@ -28,7 +28,6 @@ import torch
 
 from interpreto import Granularity, IntegratedGradients, KernelShap, Occlusion, SmoothGrad
 from interpreto.attributions.metrics import Deletion, Insertion
-from interpreto.attributions.perturbations import DeletionPerturbator, InsertionPerturbator
 
 test_cases = [
     {  # Test case 1: Insertion metric with Token granularity and 10 perturbations

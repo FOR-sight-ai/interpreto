@@ -129,7 +129,7 @@ class Stability:
         ...     # set seed
         ...     torch.manual_seed(seed)
         ...     # Create a concept model
-        ...     nmf_explainer = NMFConcepts(model_with_split_points, nb_concepts=20, device="cuda", force_relu=True)
+        ...     nmf_explainer = NMFConcepts(splitter, nb_concepts=20, device="cuda", force_relu=True)
         ...     # Fit the concept model
         ...     nmf_explainer.fit(activations)
         ...     concept_explainers.append(nmf_explainer)
