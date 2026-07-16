@@ -34,38 +34,58 @@ interpolates itself.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterable
 from math import ceil
 
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
-from PIL.Image import Image as PILImage
 
 from interpreto.attributions.base import ImageAttributionOutput
 
+# Slack on the [0, 1] range check, to absorb float error in x * std + mean rather than warn
+# about a display that is fine. Wide enough to stay quiet on rounding, far too tight to hide
+# a genuine scale mismatch (those land orders of magnitude out).
+_RANGE_TOLERANCE = 1e-3
 
-def _to_displayable(image: PILImage | np.ndarray | torch.Tensor) -> np.ndarray:
-    """Convert PIL / ndarray / Tensor to a float HxWxC (or HxW) array in [0, 1]."""
-    if isinstance(image, PILImage):
-        arr = np.array(image)
-    elif isinstance(image, torch.Tensor):
-        t = image.detach().cpu()
-        if t.dtype is torch.bfloat16:
-            t = t.to(torch.float32)
-        arr = t.numpy()
-    else:
-        arr = np.asarray(image)
 
-    arr = arr.astype(np.float32)
-    # (C, H, W) -> (H, W, C) when channel-first is detectable.
-    if arr.ndim == 3 and arr.shape[0] in (1, 3) and arr.shape[-1] not in (1, 3):
-        arr = np.transpose(arr, (1, 2, 0))
+def _denormalize(attribution_output: ImageAttributionOutput) -> np.ndarray:
+    """
+    Recover a displayable image from the pre-processed `pixel_values`.
 
-    lo, hi = arr.min(), arr.max()
-    if hi > lo:
-        arr = (arr - lo) / (hi - lo)
-    return arr
+    `x * image_std + image_mean` inverts the processor's normalization exactly, but nothing
+    guarantees the result lands in [0, 1] — that depends on the scale the tensor was in
+    before normalization (`rescale_factor`, the input dtype), which the stats alone do not
+    pin down. So the range is checked rather than assumed, and a violation is reported, not
+    repaired: fitting the observed range would be the min-max stretch this replaced, which
+    silently produces a plausible, wrong image.
+    """
+    if attribution_output.image_mean is None or attribution_output.image_std is None:
+        raise ValueError(
+            "ImageAttributionOutput carries no image_mean/image_std, so pixel_values cannot be "
+            "de-normalized for display. `explain` always sets them; an output built by hand must "
+            "pass them too (image_mean=0, image_std=1 if no normalization was applied)."
+        )
+
+    pixel_values = attribution_output.model_inputs_to_explain["pixel_values"]
+    image = pixel_values.detach().cpu().to(torch.float32)
+    if image.ndim == 4:
+        image = image[0]
+
+    image = image * attribution_output.image_std + attribution_output.image_mean
+
+    lo, hi = float(image.min()), float(image.max())
+    if lo < -_RANGE_TOLERANCE or hi > 1.0 + _RANGE_TOLERANCE:
+        warnings.warn(
+            f"De-normalized image spans [{lo:.3f}, {hi:.3f}], outside the displayable [0, 1]; "
+            "it will be clamped and may look wrong. The image_mean/image_std do not match how "
+            "this tensor was normalized, or it was never in [0, 1] before normalization. With "
+            "preprocess=False, pass the affine that de-normalizes it.",
+            stacklevel=3,
+        )
+
+    return image.clamp(0.0, 1.0).permute(1, 2, 0).numpy()
 
 
 def _clip_percentile(arr: np.ndarray, percentile: float) -> np.ndarray:
@@ -198,7 +218,6 @@ def _draw_attribution_on_ax(
 
 def plot_image_attribution(
     attribution_output: ImageAttributionOutput,
-    image: PILImage | np.ndarray | torch.Tensor | None = None,
     target_idx: int | Iterable[int] | None = None,
     cmap: str | None = None,
     alpha: float = 0.5,
@@ -221,11 +240,11 @@ def plot_image_attribution(
     interpolation is applied — the heatmap's sharpness is fully decided by the
     method's `granularity_resize` strategy.
 
+    The underlying image is de-normalized from the output's own `pixel_values`, so it is
+    always at the model's input resolution — the same grid `attributions_image` lives on.
+
     Args:
         attribution_output: Output from an image-classification attribution method.
-        image: Underlying image (PIL.Image / ndarray / Tensor) to overlay. If None,
-            falls back to `attribution_output.raw_image`. If that's also None,
-            only the heatmap is shown.
         target_idx: If int, plot only that target. If an iterable of ints, plot
             that subset. If None, one subplot per target.
         cmap: Matplotlib colormap for the heatmap. If None (default), `coolwarm`
@@ -248,9 +267,6 @@ def plot_image_attribution(
         (fig, axes) — matplotlib Figure and 2D Axes array. Call `plt.show()`
         from a script, or just keep the reference in a notebook.
     """
-    if image is None:
-        image = attribution_output.raw_image
-
     n_targets = attribution_output.attributions.shape[0]
     if target_idx is None:
         target_indices = list(range(n_targets))
@@ -277,9 +293,7 @@ def plot_image_attribution(
         squeeze=False,
     )
 
-    if image is None:
-        raise ValueError("There is no image in ImageAttributionOutput, which should not happen")
-    img_disp = _to_displayable(image)
+    img_disp = _denormalize(attribution_output)
     targets_tensor = attribution_output.targets
 
     for i, t_idx in enumerate(target_indices):
@@ -316,7 +330,6 @@ def plot_image_attribution(
 def plot_image_attributions_comparison(
     attribution_outputs: Iterable[ImageAttributionOutput],
     labels: Iterable[str] | None = None,
-    image: PILImage | np.ndarray | torch.Tensor | None = None,
     target_idx: int = 0,
     cmap: str | None = None,
     alpha: float = 0.5,
@@ -346,8 +359,6 @@ def plot_image_attributions_comparison(
         attribution_outputs: One `ImageAttributionOutput` per method to compare.
         labels: Optional per-method titles (e.g. method names). If None, panels
             are titled "method 0", "method 1", ... Must match the number of outputs.
-        image: Underlying image to overlay. If None, falls back to each output's
-            `raw_image`.
         target_idx: Which target to plot for every method (single int — the point
             is to compare methods, holding the target fixed).
         cmap: Matplotlib colormap for the heatmaps. If None (default), `coolwarm`
@@ -395,13 +406,7 @@ def plot_image_attributions_comparison(
     for i, (output, label) in enumerate(zip(outputs, label_list, strict=True)):
         ax = axes[i // actual_cols][i % actual_cols]
 
-        img = image if image is not None else output.raw_image
-        if img is None:
-            raise ValueError(
-                f"No image to overlay for '{label}': pass `image=` or ensure the "
-                "output carries a `raw_image`."
-            )
-        img_disp = _to_displayable(img)
+        img_disp = _denormalize(output)
 
         n_targets = output.attributions.shape[0]
         if not 0 <= target_idx < n_targets:
