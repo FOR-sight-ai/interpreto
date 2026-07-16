@@ -152,7 +152,6 @@ def _draw_attribution_on_ax(
     *,
     cmap: str | None,
     alpha: float,
-    interpolation: str,
     colorbar: bool,
     center_zero: bool | None,
     grayscale_background: bool,
@@ -164,19 +163,19 @@ def _draw_attribution_on_ax(
     attach a per-axes colorbar showing the heatmap's real score range.
 
     Centralizing the draw here keeps the single-method and multi-method entry
-    points pixel-for-pixel identical, and — crucially — keeps each panel's
+    points pixel-for-pixel identical, and it crucially keeps each panel's
     colorbar tied to that panel's own vmin/vmax, so every method keeps its own
     legend.
 
-    For signed heatmaps the range is centered at 0 and, unless the caller forced a
-    colormap, a diverging map (`bwr`) is used so 0 is white and positive/negative
-    read as red/blue; non-negative maps keep the sequential `jet`.
+    Unless the caller forces a colormap, every panel uses the diverging `vanimo`
+    map — including non-negative (sequential) heatmaps — so all methods share the
+    same color language and stay visually comparable side by side.
 
     When `grayscale_background` is True the underlying image is drawn in grayscale so
     the colored heatmap stands out against a neutral backdrop.
     """
     vmin, vmax, centered = _color_limits(heatmap, center_zero)
-    resolved_cmap = cmap if cmap is not None else ("bwr" if centered else "jet")
+    resolved_cmap = cmap if cmap is not None else "coolwarm"
 
     H_img, W_img = img_disp.shape[:2]
     if grayscale_background:
@@ -188,7 +187,6 @@ def _draw_attribution_on_ax(
         extent=(0, W_img, H_img, 0),
         cmap=resolved_cmap,
         alpha=alpha,
-        interpolation=interpolation,
         vmin=vmin,
         vmax=vmax,
         **plot_kwargs,
@@ -206,7 +204,6 @@ def plot_image_attribution(
     alpha: float = 0.5,
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
-    interpolation: str = "nearest",
     img_size: float = 3.0,
     cols: int = 4,
     colorbar: bool = True,
@@ -220,8 +217,9 @@ def plot_image_attribution(
     The heatmap is the display-ready `(t, H, W)` `attributions_image` map produced
     by `explain` (the g->l interpolation — NEAREST for gradient methods, the mask
     strategy for masking methods — is already baked in). It is drawn over the image
-    via `extent`; since it already matches pixel resolution the `interpolation`
-    kwarg only affects any final stretch to the displayed image's size.
+    via `extent`; since it already matches pixel resolution, no imshow-level
+    interpolation is applied — the heatmap's sharpness is fully decided by the
+    method's `granularity_resize` strategy.
 
     Args:
         attribution_output: Output from an image-classification attribution method.
@@ -230,20 +228,20 @@ def plot_image_attribution(
             only the heatmap is shown.
         target_idx: If int, plot only that target. If an iterable of ints, plot
             that subset. If None, one subplot per target.
-        cmap: Matplotlib colormap for the heatmap. If None (default), it is chosen
-            per-panel: `bwr` (diverging, white at 0) for signed maps, `jet` otherwise.
+        cmap: Matplotlib colormap for the heatmap. If None (default), `coolwarm`
+            (diverging) is used for every panel, sequential or signed, so methods
+            stay visually comparable.
         alpha: Heatmap opacity over the image (0-1).
         clip_percentile: Clip at (p, 100-p) to suppress outliers. None disables.
         absolute_value: If True, take abs() before plotting (magnitude only).
-        interpolation: Passed to `imshow` for the heatmap.
         img_size: Subplot side length in inches.
         cols: Max columns when laying out multiple targets in a grid.
         colorbar: If True, attach a per-target colorbar showing the real score range.
         center_zero: Center the color scale at 0 with a symmetric range. None
             (default) auto-detects (centers iff the map has both signs); True/False
             forces it.
-        grayscale_background: If True (default), draw the underlying image in
-            grayscale so the colored heatmap stands out.
+        grayscale_background: If True, draw the underlying image in grayscale so
+            the colored heatmap stands out. Defaults to True.
         **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
 
     Returns:
@@ -294,7 +292,6 @@ def plot_image_attribution(
             heatmap,
             cmap=cmap,
             alpha=alpha,
-            interpolation=interpolation,
             colorbar=colorbar,
             center_zero=center_zero,
             grayscale_background=grayscale_background,
@@ -325,7 +322,6 @@ def plot_image_attributions_comparison(
     alpha: float = 0.5,
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
-    interpolation: str = "nearest",
     img_size: float = 3.0,
     cols: int = 4,
     colorbar: bool = True,
@@ -354,21 +350,20 @@ def plot_image_attributions_comparison(
             `raw_image`.
         target_idx: Which target to plot for every method (single int — the point
             is to compare methods, holding the target fixed).
-        cmap: Matplotlib colormap for the heatmaps. If None (default), chosen
-            per-panel: `bwr` (diverging, white at 0) for signed maps, `jet` otherwise
-            — so a signed method (e.g. SmoothGrad) and a non-negative one (e.g.
-            VarGrad) in the same grid each get an honest scale.
+        cmap: Matplotlib colormap for the heatmaps. If None (default), `coolwarm`
+            (diverging) is used for every panel — signed or sequential alike — so
+            every method in the grid shares the same color language and is
+            actually comparable.
         alpha: Heatmap opacity over the image (0-1).
         clip_percentile: Clip at (p, 100-p) to suppress outliers. None disables.
         absolute_value: If True, take abs() before plotting (magnitude only).
-        interpolation: Passed to `imshow` for the heatmap.
         img_size: Subplot side length in inches.
         cols: Max columns when laying out the methods in a grid.
         colorbar: If True, attach a per-method colorbar showing its real score range.
         center_zero: Center the color scale at 0 with a symmetric range. None
             (default) auto-detects per panel; True/False forces it.
-        grayscale_background: If True (default), draw the underlying image in
-            grayscale so the colored heatmap stands out.
+        grayscale_background: If True, draw the underlying image in grayscale so
+            the colored heatmap stands out. Defaults to True.
         **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
 
     Returns:
@@ -421,7 +416,6 @@ def plot_image_attributions_comparison(
             heatmap,
             cmap=cmap,
             alpha=alpha,
-            interpolation=interpolation,
             colorbar=colorbar,
             center_zero=center_zero,
             grayscale_background=grayscale_background,

@@ -1,22 +1,61 @@
+# MIT License
+#
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 print("Beggining of the file ")
-from PIL import Image
-from interpreto.attributions import ImageSaliency, ImageGradientShap, ImageIntegratedGradients, ImageSmoothGrad, ImageLime, ImageOcclusion, ImageSquareGrad, ImageVarGrad, ImageKernelShap, ImageSobol
-from interpreto.commons import ImageGranularity, granularity
-from transformers import AutoModelForImageClassification, AutoImageProcessor
-from interpreto.visualizations.image_attributions import _prepare_heatmap, _draw_attribution_on_ax, _to_displayable
-import numpy as np
-import torch
-import matplotlib.pyplot as plt
-import matplotlib
 import functools
 import os
+
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from PIL import Image
+from transformers import AutoImageProcessor, AutoModelForImageClassification
+
+from interpreto.attributions import (
+    ImageGradientShap,
+    ImageIntegratedGradients,
+    ImageKernelShap,
+    ImageLime,
+    ImageOcclusion,
+    ImageSaliency,
+    ImageSmoothGrad,
+    ImageSobol,
+    ImageSquareGrad,
+    ImageVarGrad,
+)
+from interpreto.commons import ImageGranularity
+from interpreto.visualizations.image_attributions import _draw_attribution_on_ax, _prepare_heatmap, _to_displayable
+
 matplotlib.use("Agg")
-from captum.attr import Saliency, GradientShap, IntegratedGradients, NoiseTunnel, KernelShap, Lime, Occlusion
+from captum.attr import GradientShap, IntegratedGradients, KernelShap, Lime, NoiseTunnel, Occlusion, Saliency
+
 print("End of imports")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = AutoModelForImageClassification.from_pretrained('akahana/vit-base-cats-vs-dogs').to(device)
-processor = AutoImageProcessor.from_pretrained('akahana/vit-base-cats-vs-dogs')
+model = AutoModelForImageClassification.from_pretrained("akahana/vit-base-cats-vs-dogs").to(device)
+processor = AutoImageProcessor.from_pretrained("akahana/vit-base-cats-vs-dogs")
 print("End of models")
 
 image = Image.open("/gpfs/users/debosschu/interpretability_libraries/interpreto/equal_cat_and_dog.jpg")
@@ -40,7 +79,7 @@ def patch_feature_mask(pixel_values, patch_size=16):
     patch_id = 0
     for i in range(0, H, patch_size):
         for j in range(0, W, patch_size):
-            mask[0, 0, i:i+patch_size, j:j+patch_size] = patch_id
+            mask[0, 0, i : i + patch_size, j : j + patch_size] = patch_id
             patch_id += 1
     return mask
 
@@ -67,17 +106,17 @@ def run_captum_integrated_gradients(pv, target):
 
 def run_captum_smoothgrad(pv, target):
     nt = NoiseTunnel(Saliency(model_forward))
-    return to_heatmap(nt.attribute(pv, nt_type='smoothgrad', nt_samples=50, target=target))
+    return to_heatmap(nt.attribute(pv, nt_type="smoothgrad", nt_samples=50, target=target))
 
 
 def run_captum_squaregrad(pv, target):
     nt = NoiseTunnel(Saliency(model_forward))
-    return to_heatmap(nt.attribute(pv, nt_type='smoothgrad_sq', nt_samples=50, target=target))
+    return to_heatmap(nt.attribute(pv, nt_type="smoothgrad_sq", nt_samples=50, target=target))
 
 
 def run_captum_vargrad(pv, target):
     nt = NoiseTunnel(Saliency(model_forward))
-    return to_heatmap(nt.attribute(pv, nt_type='vargrad', nt_samples=50, target=target))
+    return to_heatmap(nt.attribute(pv, nt_type="vargrad", nt_samples=50, target=target))
 
 
 def run_captum_kernel_shap(pv, target):
@@ -95,29 +134,48 @@ def run_captum_occlusion(pv, target):
 
 
 CAPTUM_MAP = {
-    'ImageSaliency': run_captum_saliency,
-    'ImageGradientShap': run_captum_gradient_shap,
-    'ImageIntegratedGradients': run_captum_integrated_gradients,
-    'ImageSmoothGrad': run_captum_smoothgrad,
-    'ImageSquareGrad': run_captum_squaregrad,
-    'ImageVarGrad': run_captum_vargrad,
-    'ImageKernelShap': run_captum_kernel_shap,
-    'ImageLime': run_captum_lime,
-    'ImageOcclusion': run_captum_occlusion,
+    "ImageSaliency": run_captum_saliency,
+    "ImageGradientShap": run_captum_gradient_shap,
+    "ImageIntegratedGradients": run_captum_integrated_gradients,
+    "ImageSmoothGrad": run_captum_smoothgrad,
+    "ImageSquareGrad": run_captum_squaregrad,
+    "ImageVarGrad": run_captum_vargrad,
+    "ImageKernelShap": run_captum_kernel_shap,
+    "ImageLime": run_captum_lime,
+    "ImageOcclusion": run_captum_occlusion,
 }
 
 test_imagekernelshap = functools.partial(ImageKernelShap, n_perturbations=200)
 test_imagesobol = functools.partial(ImageSobol, n_token_perturbations=32)
 test_saliency = functools.partial(ImageSaliency, granularity=ImageGranularity.PIXEL, input_x_gradient=False)
 test_gradient_shap = functools.partial(ImageGradientShap, granularity=ImageGranularity.PIXEL, input_x_gradient=False)
-test_integrated_gradient = functools.partial(ImageIntegratedGradients, granularity=ImageGranularity.PIXEL, input_x_gradient=False)
-test_smoothgrad = functools.partial(ImageSmoothGrad, granularity=ImageGranularity.PIXEL, input_x_gradient=False, n_perturbations=50)
-test_imagegrad = functools.partial(ImageVarGrad, granularity=ImageGranularity.PIXEL, input_x_gradient=False, n_perturbations=50)
-test_squaregrad = functools.partial(ImageSquareGrad, granularity=ImageGranularity.PIXEL, input_x_gradient=False, n_perturbations=50)
+test_integrated_gradient = functools.partial(
+    ImageIntegratedGradients, granularity=ImageGranularity.PIXEL, input_x_gradient=False
+)
+test_smoothgrad = functools.partial(
+    ImageSmoothGrad, granularity=ImageGranularity.PIXEL, input_x_gradient=False, n_perturbations=50
+)
+test_imagegrad = functools.partial(
+    ImageVarGrad, granularity=ImageGranularity.PIXEL, input_x_gradient=False, n_perturbations=50
+)
+test_squaregrad = functools.partial(
+    ImageSquareGrad, granularity=ImageGranularity.PIXEL, input_x_gradient=False, n_perturbations=50
+)
 test_imagelime = functools.partial(ImageLime, n_perturbations=1000)
 
-methods = [test_saliency, test_gradient_shap, test_integrated_gradient, test_smoothgrad, test_imagekernelshap, test_imagelime, test_imagesobol, ImageOcclusion, test_squaregrad, test_imagegrad]
-methods = [test_saliency, test_imagelime,test_smoothgrad]
+methods = [
+    test_saliency,
+    test_gradient_shap,
+    test_integrated_gradient,
+    test_smoothgrad,
+    test_imagekernelshap,
+    test_imagelime,
+    test_imagesobol,
+    ImageOcclusion,
+    test_squaregrad,
+    test_imagegrad,
+]
+methods = [test_saliency, test_imagelime, test_smoothgrad]
 print("Beggining of the methods")
 
 for method_cls in methods:
@@ -146,13 +204,31 @@ for method_cls in methods:
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     fig.suptitle(f"{name} — {target_label}", fontsize=13)
 
-    _draw_attribution_on_ax(axes[0], img_disp, interp_heatmap, cmap='vanimo', alpha=0.5, interpolation='nearest', colorbar=True, center_zero=None, grayscale_background=False, fig=fig)
+    _draw_attribution_on_ax(
+        axes[0],
+        img_disp,
+        interp_heatmap,
+        cmap="vanimo",
+        alpha=0.5,
+        interpolation="nearest",
+        colorbar=True,
+        center_zero=None,
+        grayscale_background=False,
+        fig=fig,
+    )
     axes[0].set_title("Interpreto")
     axes[0].axis("off")
 
     axes[1].imshow(img_disp)
-    im = axes[1].imshow(captum_attr_clipped, extent=(0, W_img, H_img, 0), cmap='vanimo', alpha=0.5, interpolation='nearest',
-                        vmin=float(captum_attr_clipped.min()), vmax=float(captum_attr_clipped.max()))
+    im = axes[1].imshow(
+        captum_attr_clipped,
+        extent=(0, W_img, H_img, 0),
+        cmap="vanimo",
+        alpha=0.5,
+        interpolation="nearest",
+        vmin=float(captum_attr_clipped.min()),
+        vmax=float(captum_attr_clipped.max()),
+    )
     fig.colorbar(im, ax=axes[1], fraction=0.046, pad=0.04)
     axes[1].set_title("Captum")
     axes[1].axis("off")

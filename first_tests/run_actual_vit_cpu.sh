@@ -9,6 +9,6 @@
 
 cd /gpfs/users/debosschu/interpretability_libraries/interpreto/first_tests
 
-source /gpfs/users/debosschu/interpretability_libraries/interpreto/.new_venv/bin/activate 
+source /gpfs/users/debosschu/interpretability_libraries/interpreto/.new_venv/bin/activate
 
 python3 actual_vit.py

@@ -1090,18 +1090,18 @@ class ImageGranularity(Granularity):
             torch.Tensor: Pixel-resolution map of shape `(t, H, W)`.
         """
         t = contribution.shape[0]
-        h, w = int(inputs["pixel_values"].shape[-2]), int(inputs["pixel_values"].shape[-1])
+        h_in, w_in = int(inputs["pixel_values"].shape[-2]), int(inputs["pixel_values"].shape[-1])
         match self:
             case ImageGranularity.PIXEL:
                 # pixels are already the finest unit — row-major reshape, no interpolation
-                return contribution.reshape(t, h, w)
+                return contribution.reshape(t, h_in, w_in)
             case ImageGranularity.PATCH:
-            
+
                 assert h_in % patch_size == 0, "the height of the image must be divisble by the patch_size"
                 assert w_in % patch_size == 0, "the width of the image must be divisble by the patch_size"
-                
-                gh, gw = h // patch_size, w // patch_size
+
+                gh, gw = h_in // patch_size, w_in // patch_size
                 grid: Float[torch.Tensor, "t gh gw"] = contribution.reshape(t, gh, gw)
-                return resize_strategy.resize(grid, output_size=(h, w))
+                return resize_strategy.resize(grid, output_size=(h_in, w_in))
             case _:
                 raise NotImplementedError(f"Granularity {self} not implemented for image resizing.")

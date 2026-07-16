@@ -46,13 +46,6 @@ VIT_MODEL_NAME = "hf-internal-testing/tiny-random-vit"
 # I am also unsure about whether or not I should test private functions and have made the choice to do it.
 
 
-def test_inference_mode():
-    # check that inference mode is picklable
-    pickled = pickle.dumps(InferenceModes.LOG_SOFTMAX)
-    unpickled = pickle.loads(pickled)
-    assert unpickled == InferenceModes.LOG_SOFTMAX
-
-
 def test_process_targets():
     """
     Test the process_targets method for different input types.

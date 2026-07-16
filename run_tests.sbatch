@@ -11,6 +11,6 @@
 cd /gpfs/users/debosschu/interpretability_libraries/interpreto
 
 
-source /gpfs/users/debosschu/interpretability_libraries/interpreto/.new_venv/bin/activate 
+source /gpfs/users/debosschu/interpretability_libraries/interpreto/.new_venv/bin/activate
 echo "Launching the function"
-python3 -m pytest -v -ra --tb=short --color=no tests/model_wrapping/test_image_classification_inference_wrapper.py 
+python3 -m pytest -v -ra --tb=short --color=no tests/model_wrapping/test_image_classification_inference_wrapper.py
