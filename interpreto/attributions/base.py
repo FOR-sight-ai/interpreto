@@ -29,7 +29,7 @@ Basic standard classes for attribution methods
 from __future__ import annotations
 
 import itertools
-from abc import ABC, abstractmethod, ABCMeta
+from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, MutableMapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -55,25 +55,25 @@ from interpreto.attributions.perturbations.base import (
 )
 from interpreto.commons import TextGranularity
 from interpreto.commons.generator_tools import split_iterator
-from interpreto.commons.granularity import GranularityAggregationStrategy, GranularityResizeStrategy
-from interpreto.commons.granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityAggregationStrategy, GranularityResizeStrategy, ImageGranularity
 from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
-from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
 from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
+from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
-def setup_token_ids(model: PreTrainedModel, tokenizer: PreTrainedTokenizer | BaseImageProcessor, require_mask_token: bool = True) -> int|None:
+def setup_token_ids(
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizer | BaseImageProcessor, require_mask_token: bool = True
+) -> int | None:
     """
     Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
 
     Returns the mask token ID.
     """
 
-    if isinstance(tokenizer,BaseImageProcessor):
+    if isinstance(tokenizer, BaseImageProcessor):
         return None
-
 
     resize_token_embeddings = False
 
@@ -303,7 +303,7 @@ class AttributionExplainer(ABC):
             device=device,
             mode=inference_mode,
         )  # type: ignore
-        self.perturbator = perturbator 
+        self.perturbator = perturbator
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.granularity_aggregation_strategy = granularity_aggregation_strategy
@@ -508,7 +508,9 @@ class AttributionExplainer(ABC):
                 inputs=inputs,  # type: ignore
                 tokenizer=self.tokenizer,
                 aggregate_inputs=self.inference_wrapper.gradients,  # Gradient-based methods
-                aggregate_targets=isinstance(self.inference_wrapper, TextGenerationInferenceWrapper),  # Generation models
+                aggregate_targets=isinstance(
+                    self.inference_wrapper, TextGenerationInferenceWrapper
+                ),  # Generation models
             )
             for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
         )
@@ -697,13 +699,11 @@ class TextClassificationAttributionExplainer(AttributionExplainer):
         return model_inputs, sanitized_targets
 
 
-
 class TextGenerationExplainer(AttributionExplainer):
     _associated_inference_wrapper = TextGenerationInferenceWrapper
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
-    _model_task= ModelTask.GENERATION
-
+    _model_task = ModelTask.GENERATION
 
     def normalize_target_ids_with_leading_space(self, target: torch.Tensor) -> torch.Tensor:
         """Ensure target text starts with a space and return retokenized target ids."""
@@ -962,7 +962,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 and assumed already normalized.
 
                 NOTE: `BatchFeature` carries no provenance — it is a plain mapping, and
-                `_validate_batch_feature` only checks the key, dtype and batch size. So
+                `_validate_batch_feature` only checks the key, dtype and shape. So
                 we cannot tell a processed `BatchFeature` from a hand-built raw one, and
                 this flag is the ONLY signal. Consequence: `explain(image_processor(img))`
                 under the default `preprocess=True` will double-normalize. Pass a raw
@@ -1196,7 +1196,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             - Iterables of any of the above are flattened recursively.
 
         A `BatchFeature` carries no provenance — `_validate_batch_feature` checks the key,
-        dtype and batch size, none of which say whether the processor ever ran. So a
+        dtype and shape, none of which say whether the processor ever ran. So a
         hand-built raw `BatchFeature` is indistinguishable from a processed one, and the
         flag is the only signal we have. Hence `explain(image_processor(img))` under the
         default `preprocess=True` double-normalizes; that is the documented cost of the
@@ -1237,8 +1237,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 tensor = tensor.unsqueeze(0)
             if tensor.ndim != 4 or tensor.shape[1] != 3 or tensor.shape[0] != 1:
                 raise ValueError(
-                    "When preprocess=False, expected pixel_values of shape (1, 3, H, W), "
-                    f"got {tuple(tensor.shape)}."
+                    f"When preprocess=False, expected pixel_values of shape (1, 3, H, W), got {tuple(tensor.shape)}."
                 )
             return [BatchFeature(data={"pixel_values": tensor})]
 
@@ -1262,12 +1261,14 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 "Use `image_processor(image, return_tensors='pt')`. "
                 f"Got {type(bf['pixel_values'])}."
             )
-        if bf["pixel_values"].shape[0] != 1:
+        if bf["pixel_values"].ndim != 4 or bf["pixel_values"].shape[0] != 1:
             raise ValueError(
-                "The BatchFeature must contain a single sample to be processed. "
+                "The BatchFeature must hold a single-sample (1, 3, H, W) pixel_values tensor. "
                 "Pre-process images one by one, or pass an iterable. "
-                f"Got {bf['pixel_values'].shape[0]} samples."
+                f"Got shape {tuple(bf['pixel_values'].shape)}."
             )
+        if bf["pixel_values"].shape[1] not in {1, 3}:
+            raise ValueError("The BatchFeature number of channels (C) should be either 1 or 3")
         return bf
 
     def explain(
@@ -1300,9 +1301,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         # the input unchanged with a None mask, which is what gradient methods need.
         pert_generator: Iterator[TensorMapping]
         mask_generator: Iterator[Int[torch.Tensor, "p g"] | None]
-        pert_generator, mask_generator = split_iterator(
-            self.perturbator.perturb(m) for m in model_inputs_to_explain
-        )
+        pert_generator, mask_generator = split_iterator(self.perturbator.perturb(m) for m in model_inputs_to_explain)
 
         # Gradient methods yield signed, per-channel scores (p, t, d, l); mask methods yield (p, t).
         scores: Iterator[Float[torch.Tensor, "p t d l"] | Float[torch.Tensor, "p t"]] = self.inference_wrapper(
@@ -1314,8 +1313,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         #   get the faithful formula);
         #   (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw.
         aggregated: Iterator[Float[torch.Tensor, "t d l"] | Float[torch.Tensor, "t g"]] = (
-            self.aggregator(score.detach(), mask)
-            for score, mask in zip(scores, mask_generator, strict=True)
+            self.aggregator(score.detach(), mask) for score, mask in zip(scores, mask_generator, strict=True)
         )
 
         # Collapse the 3 channels of gradient scores to a per-pixel value: (t, d, l) -> (t, l).
@@ -1379,6 +1377,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             results.append(attribution_output)
         return results
 
+
 class FactoryGeneratedMeta(ABCMeta):
     """
     Metaclass to distinguish classes generated by the MultitaskExplainerMixin.
@@ -1394,13 +1393,17 @@ class MultitaskExplainerMixin(AttributionExplainer):
         if isinstance(cls, FactoryGeneratedMeta):
             return super().__new__(cls)  # type: ignore
         if model.__class__.__name__.endswith("ForSequenceClassification"):
-            t = FactoryGeneratedMeta("Classification" + cls.__name__, (cls, TextClassificationAttributionExplainer), {})
+            t = FactoryGeneratedMeta(
+                "Classification" + cls.__name__, (cls, TextClassificationAttributionExplainer), {}
+            )
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
             t = FactoryGeneratedMeta("Generation" + cls.__name__, (cls, TextGenerationExplainer), {})
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForImageClassification"):
-            t = FactoryGeneratedMeta("Classification" + cls.__name__, (cls, ImageClassificationAttributionExplainer), {})
+            t = FactoryGeneratedMeta(
+                "Classification" + cls.__name__, (cls, ImageClassificationAttributionExplainer), {}
+            )
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         raise NotImplementedError(
             "Model type not supported for Explainer. Use a ModelForSequenceClassification, a ModelForCausalLM model or a LMHeadModel model."
