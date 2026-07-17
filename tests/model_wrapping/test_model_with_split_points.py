@@ -35,7 +35,7 @@ from transformers import (
 )
 
 from interpreto import ModelWithSplitPoints as MWSP
-from interpreto.commons.granularity import TextGranularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity, InitializationError
 
 AG = MWSP.activation_granularities

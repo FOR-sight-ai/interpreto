@@ -26,7 +26,7 @@
 import pytest
 import torch
 
-from interpreto import TextGranularity, IntegratedGradients, KernelShap, Occlusion, SmoothGrad
+from interpreto import IntegratedGradients, KernelShap, Occlusion, SmoothGrad, TextGranularity
 from interpreto.attributions.metrics import Deletion, Insertion
 
 test_cases = [

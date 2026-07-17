@@ -22,7 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import pickle
 
 import numpy as np
 import pytest
@@ -31,7 +30,7 @@ from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 from transformers.image_processing_utils import BatchFeature
 
-from interpreto.attributions.base import ImageClassificationAttributionExplainer, InferenceModes
+from interpreto.attributions.base import ImageClassificationAttributionExplainer
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
