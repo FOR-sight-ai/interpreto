@@ -70,8 +70,13 @@ def _denormalize(attribution_output: ImageAttributionOutput) -> np.ndarray:
 
     pixel_values = attribution_output.model_inputs_to_explain["pixel_values"]
     image = pixel_values.detach().cpu().to(torch.float32)
-    if image.ndim == 4:
-        image = image[0]
+    if image.ndim != 4 or image.shape[0] != 1:
+        raise ValueError(
+            f"expected pixel_values of shape (1, 3, H, W), got {tuple(image.shape)}. "
+            "Explain images one at a time — `explain` returns one output per image."
+        )
+
+    image = image[0]
 
     image = image * attribution_output.image_std + attribution_output.image_mean
 
@@ -128,29 +133,28 @@ def _prepare_heatmap(
     return heatmap
 
 
-def _color_limits(heatmap: np.ndarray, center_zero: bool | None) -> tuple[float, float, bool]:
+def _color_limits(heatmap: np.ndarray, center_zero: bool = True) -> tuple[float, float]:
     """
     Decide the colorbar range for one heatmap.
 
-    Attribution scores are now **signed** for the mean/trapezoid gradient methods
-    (Saliency, SmoothGrad, GradientShap, IntegratedGradients) and for the mask
-    methods (Occlusion, LIME, KernelSHAP, Sobol): the sign tells whether a pixel
-    pushes the target logit up or down. For such maps a sequential scale anchored
-    at min/max would put 0 at an arbitrary color; instead we center the range at 0
-    (`[-m, +m]`) so the neutral color means "no contribution" and +/- are readable.
+    Attribution scores are signed: the sign tells whether a pixel pushes the target
+    logit up or down. Centering the range at 0 (`[-m, +m]`, m = max|score|) pins the
+    neutral color to "no contribution" and makes hue track sign, in every panel. A
+    non-negative map (VarGrad/SquareGrad, or any abs'd map) then uses only the upper
+    half of the scale.
 
-    VarGrad/SquareGrad (and any abs'd map) are non-negative, so we keep the plain
-    min/max range there.
+    `m` is per-heatmap, so a color means the same sign across methods but not the
+    same magnitude that is what each panel's colorbar is for.
 
-    Returns (vmin, vmax, centered). `center_zero=None` auto-detects (center iff the
-    map straddles zero); pass True/False to force.
+    Pass `center_zero=False` for a plain min/max range.
+
+    Returns (vmin, vmax).
     """
     lo, hi = float(heatmap.min()), float(heatmap.max())
-    centered = (lo < 0.0 < hi) if center_zero is None else center_zero
-    if centered:
+    if center_zero:
         m = max(abs(lo), abs(hi)) or 1.0
-        return -m, m, True
-    return lo, hi, False
+        return -m, m
+    return lo, hi
 
 
 def _to_grayscale(img_disp: np.ndarray) -> np.ndarray:
@@ -158,10 +162,12 @@ def _to_grayscale(img_disp: np.ndarray) -> np.ndarray:
     Collapse a displayable image to a 2D luminance map so it can be drawn under the
     heatmap as a neutral backdrop (Rec. 601 weights). Already-2D images pass through.
     """
-    if img_disp.ndim == 2:
-        return img_disp
+    if img_disp.ndim != 3:
+        raise ValueError("_to_grascale only supports 3D ndarrays (H,W,C)")
     if img_disp.shape[-1] == 1:
         return img_disp[..., 0]
+    if img_disp.shape[-1] != 3:
+        raise ValueError("the image should either be grayscale (C = 1) or RGB (C = 3)")
     return img_disp[..., :3] @ np.array([0.2989, 0.587, 0.114], dtype=img_disp.dtype)
 
 
@@ -170,10 +176,10 @@ def _draw_attribution_on_ax(
     img_disp: np.ndarray,
     heatmap: np.ndarray,
     *,
-    cmap: str | None,
+    cmap: str,
     alpha: float,
     colorbar: bool,
-    center_zero: bool | None,
+    center_zero: bool,
     grayscale_background: bool,
     fig,
     **plot_kwargs,
@@ -187,15 +193,14 @@ def _draw_attribution_on_ax(
     colorbar tied to that panel's own vmin/vmax, so every method keeps its own
     legend.
 
-    Unless the caller forces a colormap, every panel uses the diverging `vanimo`
-    map — including non-negative (sequential) heatmaps — so all methods share the
-    same color language and stay visually comparable side by side.
+    Unless the caller forces a colormap, every panel uses the diverging `coolwarm`
+    map so all methods share the same color language and stay visually comparable
+    side by side.
 
     When `grayscale_background` is True the underlying image is drawn in grayscale so
     the colored heatmap stands out against a neutral backdrop.
     """
-    vmin, vmax, centered = _color_limits(heatmap, center_zero)
-    resolved_cmap = cmap if cmap is not None else "coolwarm"
+    vmin, vmax = _color_limits(heatmap, center_zero)
 
     H_img, W_img = img_disp.shape[:2]
     if grayscale_background:
@@ -205,7 +210,7 @@ def _draw_attribution_on_ax(
     im = ax.imshow(
         heatmap,
         extent=(0, W_img, H_img, 0),
-        cmap=resolved_cmap,
+        cmap=cmap,
         alpha=alpha,
         vmin=vmin,
         vmax=vmax,
@@ -219,14 +224,14 @@ def _draw_attribution_on_ax(
 def plot_image_attribution(
     attribution_output: ImageAttributionOutput,
     target_idx: int | Iterable[int] | None = None,
-    cmap: str | None = None,
+    cmap: str = "coolwarm",
     alpha: float = 0.5,
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
     img_size: float = 3.0,
     cols: int = 4,
     colorbar: bool = True,
-    center_zero: bool | None = None,
+    center_zero: bool = True,
     grayscale_background: bool = True,
     **plot_kwargs,
 ):
@@ -247,8 +252,8 @@ def plot_image_attribution(
         attribution_output: Output from an image-classification attribution method.
         target_idx: If int, plot only that target. If an iterable of ints, plot
             that subset. If None, one subplot per target.
-        cmap: Matplotlib colormap for the heatmap. If None (default), `coolwarm`
-            (diverging) is used for every panel, sequential or signed, so methods
+        cmap: Matplotlib colormap for the heatmap. Defaults to `coolwarm`
+            (diverging), used for every panel, sequential or signed, so methods
             stay visually comparable.
         alpha: Heatmap opacity over the image (0-1).
         clip_percentile: Clip at (p, 100-p) to suppress outliers. None disables.
@@ -256,9 +261,9 @@ def plot_image_attribution(
         img_size: Subplot side length in inches.
         cols: Max columns when laying out multiple targets in a grid.
         colorbar: If True, attach a per-target colorbar showing the real score range.
-        center_zero: Center the color scale at 0 with a symmetric range. None
-            (default) auto-detects (centers iff the map has both signs); True/False
-            forces it.
+        center_zero: Center the color scale at 0 with a symmetric range. Defaults
+            to True, so the neutral color always means "no contribution" and hue
+            tracks sign. False falls back to a plain min/max range.
         grayscale_background: If True, draw the underlying image in grayscale so
             the colored heatmap stands out. Defaults to True.
         **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
@@ -279,9 +284,7 @@ def plot_image_attribution(
         raise ValueError("target_idx is empty — pass None to plot all targets.")
     for t_idx in target_indices:
         if not 0 <= t_idx < n_targets:
-            raise IndexError(
-                f"target_idx {t_idx} out of range for {n_targets} targets."
-            )
+            raise IndexError(f"target_idx {t_idx} out of range for {n_targets} targets.")
     n_plots = len(target_indices)
 
     actual_cols = min(cols, n_plots)
@@ -331,14 +334,14 @@ def plot_image_attributions_comparison(
     attribution_outputs: Iterable[ImageAttributionOutput],
     labels: Iterable[str] | None = None,
     target_idx: int = 0,
-    cmap: str | None = None,
+    cmap: str = "coolwarm",
     alpha: float = 0.5,
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
     img_size: float = 3.0,
     cols: int = 4,
     colorbar: bool = True,
-    center_zero: bool | None = None,
+    center_zero: bool = True,
     grayscale_background: bool = True,
     **plot_kwargs,
 ):
@@ -361,8 +364,8 @@ def plot_image_attributions_comparison(
             are titled "method 0", "method 1", ... Must match the number of outputs.
         target_idx: Which target to plot for every method (single int — the point
             is to compare methods, holding the target fixed).
-        cmap: Matplotlib colormap for the heatmaps. If None (default), `coolwarm`
-            (diverging) is used for every panel — signed or sequential alike — so
+        cmap: Matplotlib colormap for the heatmaps. Defaults to `coolwarm`
+            (diverging), used for every panel — signed or sequential alike — so
             every method in the grid shares the same color language and is
             actually comparable.
         alpha: Heatmap opacity over the image (0-1).
@@ -371,8 +374,10 @@ def plot_image_attributions_comparison(
         img_size: Subplot side length in inches.
         cols: Max columns when laying out the methods in a grid.
         colorbar: If True, attach a per-method colorbar showing its real score range.
-        center_zero: Center the color scale at 0 with a symmetric range. None
-            (default) auto-detects per panel; True/False forces it.
+        center_zero: Center the color scale at 0 with a symmetric range. Defaults
+            to True for every panel, so hue tracks sign across the whole grid.
+            Magnitudes still differ per panel — read them off the colorbars. False
+            falls back to a plain min/max range per panel.
         grayscale_background: If True, draw the underlying image in grayscale so
             the colored heatmap stands out. Defaults to True.
         **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
@@ -389,9 +394,7 @@ def plot_image_attributions_comparison(
     else:
         label_list = list(labels)
         if len(label_list) != len(outputs):
-            raise ValueError(
-                f"labels has {len(label_list)} entries but there are {len(outputs)} outputs."
-            )
+            raise ValueError(f"labels has {len(label_list)} entries but there are {len(outputs)} outputs.")
 
     n_plots = len(outputs)
     actual_cols = min(cols, n_plots)
@@ -410,9 +413,7 @@ def plot_image_attributions_comparison(
 
         n_targets = output.attributions.shape[0]
         if not 0 <= target_idx < n_targets:
-            raise IndexError(
-                f"target_idx {target_idx} out of range for '{label}' ({n_targets} targets)."
-            )
+            raise IndexError(f"target_idx {target_idx} out of range for '{label}' ({n_targets} targets).")
 
         heatmap = _prepare_heatmap(output, target_idx, clip_percentile, absolute_value)
         _draw_attribution_on_ax(
