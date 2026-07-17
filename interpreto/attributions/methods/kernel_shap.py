@@ -39,7 +39,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
-from interpreto.commons.granularity import TextGranularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 

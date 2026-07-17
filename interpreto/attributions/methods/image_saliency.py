@@ -30,14 +30,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from interpreto.attributions.perturbations import ImageTensorPerturbator
 import torch
 from transformers.image_processing_utils import BaseImageProcessor
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
-from interpreto.commons.granularity import GranularityResizeStrategy
-from interpreto.commons.granularity import ImageGranularity
+from interpreto.attributions.perturbations import ImageTensorPerturbator
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -117,7 +116,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             model=model,
             image_processor=image_processor,
             batch_size=batch_size,
-            perturbator= ImageTensorPerturbator(),
+            perturbator=ImageTensorPerturbator(),
             aggregator=None,  # falls back to default Aggregator() (squeeze p=1)
             device=device,
             granularity=granularity,

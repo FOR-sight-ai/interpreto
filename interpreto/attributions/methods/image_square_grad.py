@@ -37,8 +37,7 @@ from transformers.modeling_utils import PreTrainedModel
 from interpreto.attributions.aggregations import SquaredMeanAggregator
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import GaussianNoiseImagePerturbator
-from interpreto.commons.granularity import GranularityResizeStrategy
-from interpreto.commons.granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 

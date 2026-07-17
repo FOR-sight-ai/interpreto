@@ -81,6 +81,7 @@ class GaussianNoisePerturbator(TextTensorPerturbator):
 
         return perturbed_embeds, None
 
+
 class GaussianNoiseImagePerturbator(ImageTensorPerturbator):
     """
     Image-side analog of `GaussianNoisePerturbator`.

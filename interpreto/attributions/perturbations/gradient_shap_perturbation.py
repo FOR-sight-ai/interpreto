@@ -28,8 +28,8 @@ from __future__ import annotations
 import torch
 
 from interpreto.attributions.perturbations.linear_interpolation_perturbation import (
+    LinearInterpolationImagePerturbator,
     LinearInterpolationPerturbator,
-    LinearInterpolationImagePerturbator
 )
 from interpreto.typing import TensorBaseline
 
@@ -79,6 +79,7 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
         Generates random interpolation coefficients (alphas) for GradientSHAP.
         """
         return torch.rand(self.n_perturbations, 1, 1, device=device)
+
 
 class GradientShapImagePerturbator(LinearInterpolationImagePerturbator):
     """

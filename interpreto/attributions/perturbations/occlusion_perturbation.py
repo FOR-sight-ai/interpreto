@@ -29,8 +29,8 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TextMaskPerturbator, ImageMaskPerturbator
-from interpreto.commons.granularity import TextGranularity, ImageGranularity
+from interpreto.attributions.perturbations.base import ImageMaskPerturbator, TextMaskPerturbator
+from interpreto.commons.granularity import ImageGranularity, TextGranularity
 
 
 class OcclusionPerturbator(TextMaskPerturbator):
@@ -79,6 +79,7 @@ class OcclusionPerturbator(TextMaskPerturbator):
         mask: Float[torch.Tensor, "{p} {l}"] = torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)
         assert mask.shape[0] == p
         return mask
+
 
 class OcclusionImagePerturbator(ImageMaskPerturbator):
     """

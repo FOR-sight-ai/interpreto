@@ -50,8 +50,8 @@ from .attributions import (
     VarGrad,
 )
 from .commons import (
-    TextGranularity,
     ImageGranularity,
+    TextGranularity,
 )
 from .model_wrapping import ModelWithSplitPoints
 from .visualizations import (

@@ -117,9 +117,7 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
             f"expected per-sample pixel_values of shape (3, H, W), got {tuple(pv.shape)}"
         )
 
-        prepared = {
-            key: torch.stack([elem[key] for elem in inputs]).to(self.device) for key in inputs[0].keys()
-        }
+        prepared = {key: torch.stack([elem[key] for elem in inputs]).to(self.device) for key in inputs[0].keys()}
         # key should always be pixel_values for ViT but we keep the more general form for later
         if for_gradients:
             prepared["pixel_values"] = prepared["pixel_values"].detach().requires_grad_(True)
@@ -163,7 +161,7 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
                 Signed per-channel per-pixel gradients of shape `(c, t, 3, H*W)`.
         """
         c = chunk_slice.stop - chunk_slice.start
-        #We don't need masking compared with the text logic
+        # We don't need masking compared with the text logic
         pixel_values: Float[torch.Tensor, "b 3 h w"] = inputs["pixel_values"]  # type: ignore
         pixel_values_chunk: Float[torch.Tensor, f"{c} 3 h w"] = pixel_values[chunk_slice]
 

@@ -28,7 +28,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.base import TextTensorPerturbator, ImageTensorPerturbator
+from interpreto.attributions.perturbations.base import ImageTensorPerturbator, TextTensorPerturbator
 from interpreto.typing import TensorBaseline
 
 
@@ -135,6 +135,7 @@ class LinearInterpolationPerturbator(TextTensorPerturbator):
         perturbed_embeds: Float[torch.Tensor, "p l d"] = (1 - alphas) * inputs_embeds + alphas * baseline
 
         return perturbed_embeds, None
+
 
 class LinearInterpolationImagePerturbator(ImageTensorPerturbator):
     """

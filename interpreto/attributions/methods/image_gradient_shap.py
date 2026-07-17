@@ -37,8 +37,7 @@ from transformers.modeling_utils import PreTrainedModel
 from interpreto.attributions.aggregations import MeanAggregator
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import GradientShapImagePerturbator
-from interpreto.commons.granularity import GranularityResizeStrategy
-from interpreto.commons.granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -100,9 +99,7 @@ class ImageGradientShap(ImageClassificationAttributionExplainer):
             preprocess (bool, optional): if True, raw inputs are routed through `image_processor`.
                 Defaults to True.
         """
-        perturbator = GradientShapImagePerturbator(
-            baseline=baseline, n_perturbations=n_perturbations, std=noise_std
-        )
+        perturbator = GradientShapImagePerturbator(baseline=baseline, n_perturbations=n_perturbations, std=noise_std)
         super().__init__(
             model=model,
             image_processor=image_processor,

@@ -35,7 +35,7 @@ from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import TextTensorPerturbator
-from interpreto.commons.granularity import TextGranularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 

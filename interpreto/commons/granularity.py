@@ -36,7 +36,6 @@ from torch.nn.functional import interpolate
 from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
-from torchvision.transforms.v2 import functional as F2
 
 # TODO I dont know where to put this...
 END_SENTENCE = (".", "?", "!")
@@ -71,6 +70,7 @@ SENTENCE_SPLIT_EXCEPTIONS = (
     "U.K.",
     "E.U.",
 )
+
 
 class GranularityCombinationStrategy(Enum):
     pass
@@ -156,6 +156,7 @@ class GranularityAggregationStrategy(GranularityCombinationStrategy):
             case _:
                 raise NotImplementedError(f"Aggregation strategy {self} not implemented.")
 
+
 class GranularityResizeStrategy(GranularityCombinationStrategy):
     # TODO: evaluate if it needs an unfold function such as GranularityAggregationStrategy
     # NOTE: torch has no hamming/lanczos modes, and torchvision only offers them via the CPU-only
@@ -216,15 +217,14 @@ class GranularityResizeStrategy(GranularityCombinationStrategy):
         return resized.squeeze(0)
 
 
-
-
-
 class Granularity(Enum):
-    #TODO: look if it's possible to refactor some functions in TextGranularity and ImageGranularity
+    # TODO: look if it's possible to refactor some functions in TextGranularity and ImageGranularity
     """
     Abstract Granularity class to harmonize typing.
     """
+
     pass
+
 
 class TextGranularity(Granularity):
     """
@@ -332,7 +332,9 @@ class TextGranularity(Granularity):
                 n_inputs = inputs["input_ids"].shape[0]  # type: ignore
 
                 if TextGranularity.__word_ids_are_usable(tokenizer, inputs):
-                    return [TextGranularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)]
+                    return [
+                        TextGranularity.__word_get_indices_from_word_ids(inputs.word_ids(i)) for i in range(n_inputs)
+                    ]
 
                 return [
                     TextGranularity.__word_get_indices_from_input_ids(inputs["input_ids"][i], tokenizer)
@@ -979,7 +981,6 @@ class TextGranularity(Granularity):
         return contribution
 
 
-
 class ImageGranularity(Granularity):
     """
     Enumeration of granularity levels for image classification explainers.
@@ -1054,7 +1055,9 @@ class ImageGranularity(Granularity):
                 # pass patch_size by keyword: leaving output_size=None lets resize derive the
                 # patch grid (h // patch_size, w // patch_size). Passing it positionally would bind
                 # patch_size to output_size and resize to a literal patch_size x patch_size grid.
-                resized: Float[torch.Tensor, "t hg wg"] = granularity_resize_strategy.resize(grid, patch_size=patch_size)
+                resized: Float[torch.Tensor, "t hg wg"] = granularity_resize_strategy.resize(
+                    grid, patch_size=patch_size
+                )
                 # row-major reflatten back to (t, g = hp*wp)
                 return resized.reshape(t, -1)
             case _:
@@ -1096,7 +1099,6 @@ class ImageGranularity(Granularity):
                 # pixels are already the finest unit — row-major reshape, no interpolation
                 return contribution.reshape(t, h_in, w_in)
             case ImageGranularity.PATCH:
-
                 assert h_in % patch_size == 0, "the height of the image must be divisble by the patch_size"
                 assert w_in % patch_size == 0, "the width of the image must be divisble by the patch_size"
 

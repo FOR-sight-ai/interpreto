@@ -39,8 +39,7 @@ from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregat
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import SobolImagePerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
-from interpreto.commons.granularity import GranularityResizeStrategy
-from interpreto.commons.granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 

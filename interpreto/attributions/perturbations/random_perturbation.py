@@ -34,7 +34,12 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TextGranularity, TextMaskPerturbator, ImageGranularity, ImageMaskPerturbator
+from interpreto.attributions.perturbations.base import (
+    ImageGranularity,
+    ImageMaskPerturbator,
+    TextGranularity,
+    TextMaskPerturbator,
+)
 
 
 class RandomMaskedTokenPerturbator(TextMaskPerturbator):

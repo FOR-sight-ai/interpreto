@@ -44,7 +44,7 @@ from transformers.tokenization_utils import PreTrainedTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
-from interpreto.commons.granularity import TextGranularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.splitting_utils import (
     get_layer_by_idx,
     sort_paths,

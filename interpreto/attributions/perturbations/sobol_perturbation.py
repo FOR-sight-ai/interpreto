@@ -36,8 +36,8 @@ from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TextMaskPerturbator, ImageMaskPerturbator
-from interpreto.commons.granularity import TextGranularity, ImageGranularity
+from interpreto.attributions.perturbations.base import ImageMaskPerturbator, TextMaskPerturbator
+from interpreto.commons.granularity import ImageGranularity, TextGranularity
 
 
 class SequenceSamplers(Enum):
@@ -110,6 +110,7 @@ class SobolTokenPerturbator(TextMaskPerturbator):
         masks: Float[torch.Tensor, p, l] = torch.concat([A, B, C.view(l * k, l)], dim=0)
 
         return (masks < 0.5).float()
+
 
 class SobolImagePerturbator(ImageMaskPerturbator):
     """

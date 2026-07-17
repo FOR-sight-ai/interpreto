@@ -34,8 +34,8 @@ from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import TextMaskPerturbator, ImageMaskPerturbator
-from interpreto.commons.granularity import TextGranularity, ImageGranularity
+from interpreto.attributions.perturbations.base import ImageMaskPerturbator, TextMaskPerturbator
+from interpreto.commons.granularity import ImageGranularity, TextGranularity
 
 
 class ShapTokenPerturbator(TextMaskPerturbator):
@@ -171,7 +171,7 @@ class ShapImagePerturbator(ImageMaskPerturbator):
         p, l = self.n_perturbations, mask_dim
 
         # cannot draw more distinct masks than 2**l
-        #For images l < 20 is very unlikely
+        # For images l < 20 is very unlikely
         if l < 20 and p > 2**l:
             p = 2**l
 
@@ -180,8 +180,8 @@ class ShapImagePerturbator(ImageMaskPerturbator):
 
         # number of selected units k per perturbation, weighted by the Shapley kernel
         possible_k: Float[Tensor, f"{l - 1}"] = torch.arange(1, l, dtype=torch.float)
-        #Change from the text implementation: follows the actual value of the KernelSHAP
-        probability_to_select_k_elements: Float[Tensor, f"{l - 1}"] = ((l - 1)/(possible_k * (l - possible_k)))
+        # Change from the text implementation: follows the actual value of the KernelSHAP
+        probability_to_select_k_elements: Float[Tensor, f"{l - 1}"] = (l - 1) / (possible_k * (l - possible_k))
         probability_to_select_k_elements: Float[Tensor, f"{l}"] = torch.cat(
             [torch.zeros(1), probability_to_select_k_elements]
         )

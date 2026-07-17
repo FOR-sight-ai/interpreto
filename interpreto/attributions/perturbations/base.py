@@ -40,8 +40,6 @@ from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranu
 from interpreto.typing import TensorMapping
 
 
-
-
 class Perturbator(ABC):
     """
     Abstract Base class for perturbators.
@@ -53,6 +51,7 @@ class Perturbator(ABC):
 
     def __call__(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         return self.perturb(model_inputs)
+
 
 class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
     """
@@ -133,10 +132,12 @@ class TextTensorPerturbator(TensorPerturbator):
         """
         return inputs_embeds, None
 
+
 class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
     @abstractmethod
     def get_mask(self):
         pass
+
 
 class TextMaskPerturbator(MaskPerturbator):
     """
@@ -261,6 +262,7 @@ class TextMaskPerturbator(MaskPerturbator):
                 repeats[0] = model_inputs["input_ids"].shape[0]
                 model_inputs[k] = model_inputs[k].repeat(*repeats)
         return model_inputs, gran_mask
+
 
 class ImageTensorPerturbator(TensorPerturbator):
     """
@@ -446,9 +448,7 @@ class ImageMaskPerturbator(MaskPerturbator):
         # apply the mask in flattened spatial space, broadcasting across channels
         flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
         spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
-        perturbed_flat: Float[torch.Tensor, "p 3 l"] = (
-            flat * (1 - spatial_mask) + self.replace_value * spatial_mask
-        )
+        perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + self.replace_value * spatial_mask
         perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
 
         inputs["pixel_values"] = perturbed_pixel_values

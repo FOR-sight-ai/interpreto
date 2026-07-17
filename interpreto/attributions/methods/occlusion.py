@@ -41,7 +41,7 @@ from interpreto.attributions.base import (
     setup_token_ids,
 )
 from interpreto.attributions.perturbations import OcclusionPerturbator
-from interpreto.commons.granularity import TextGranularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 

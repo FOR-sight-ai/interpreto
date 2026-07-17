@@ -42,7 +42,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin, setup_token_ids
 from interpreto.attributions.perturbations.random_perturbation import RandomMaskedTokenPerturbator
-from interpreto.commons import TextGranularity, GranularityAggregationStrategy
+from interpreto.commons import GranularityAggregationStrategy, TextGranularity
 
 
 class Lime(MultitaskExplainerMixin, AttributionExplainer):

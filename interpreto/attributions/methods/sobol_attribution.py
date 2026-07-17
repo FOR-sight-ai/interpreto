@@ -40,7 +40,7 @@ from interpreto.attributions.perturbations.sobol_perturbation import (
     SequenceSamplers,
     SobolTokenPerturbator,
 )
-from interpreto.commons.granularity import TextGranularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 
 
 class Sobol(MultitaskExplainerMixin, AttributionExplainer):

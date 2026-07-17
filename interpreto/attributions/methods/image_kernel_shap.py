@@ -40,8 +40,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
 from interpreto.attributions.perturbations import ShapImagePerturbator
-from interpreto.commons.granularity import GranularityResizeStrategy
-from interpreto.commons.granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
