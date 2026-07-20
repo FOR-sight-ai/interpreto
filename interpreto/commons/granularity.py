@@ -997,71 +997,70 @@ class ImageGranularity(Granularity):
 
     PIXEL = "pixel"
     PATCH = "patch"
-    DEFAULT = PATCH
 
-    def granularity_resize(
-        self,
-        contribution: torch.Tensor,
-        granularity_resize_strategy: GranularityResizeStrategy | None = None,
-        inputs: TensorMapping | None = None,
-        patch_size: int = 16,
-        aggregate_inputs: bool = False,
-    ) -> Float[torch.Tensor, "t g"]:
-        """
-        Resize `contribution` of shape `(t, l=H*W)` to the chosen granularity.
+    #    def granularity_resize(
+    #         self,
+    #         contribution: torch.Tensor,
+    #         granularity_resize_strategy: GranularityResizeStrategy | None = None,
+    #         inputs: TensorMapping | None = None,
+    #         patch_size: int = 16,
+    #         aggregate_inputs: bool = False,
+    #     ) -> Float[torch.Tensor, "t g"]:
+    #         """
+    #         Resize `contribution` of shape `(t, l=H*W)` to the chosen granularity.
 
-        Image-native counterpart of `TextGranularity.granularity_score_aggregation`: instead of
-        treating a unit as an unordered bag of pixels and reducing it to a scalar, it keeps the 2-D
-        spatial layout and interpolates the whole grid (see `GranularityResizeStrategy`).
+    #         Image-native counterpart of `TextGranularity.granularity_score_aggregation`: instead of
+    #         treating a unit as an unordered bag of pixels and reducing it to a scalar, it keeps the 2-D
+    #         spatial layout and interpolates the whole grid (see `GranularityResizeStrategy`).
 
-        This is only used to downsample, never to upsample. It is also only ever called by gradient methods.
+    #         This is only used to downsample, never to upsample. It is also only ever called by gradient methods.
 
-        - PIXEL: identity — pixels are already the finest unit.
-        - PATCH: reshape `(t, H*W)` → `(t, H, W)` (row-major), spatially resize to the patch grid,
-          then reflatten row-major to `(t, g)`.
+    #         - PIXEL: identity — pixels are already the finest unit.
+    #         - PATCH: reshape `(t, H*W)` → `(t, H, W)` (row-major), spatially resize to the patch grid,
+    #           then reflatten row-major to `(t, g)`.
 
-        Args:
-            contribution (torch.Tensor): Per-pixel attribution scores of shape `(t, l)`.
-            granularity_resize_strategy (GranularityResizeStrategy | None):
-                Interpolation mode for PATCH. Required for PATCH, ignored for PIXEL.
-            inputs (TensorMapping | None): Required for PATCH to read H, W from `pixel_values`.
-            patch_size (int): Patch side length; the pixel grid is reduced by this factor.
-            aggregate_inputs (bool): If False (perturbation methods), returns `contribution`
-                unchanged — granularity is already encoded in the perturbation masks.
-                If True (gradient methods), resizes the per-pixel field to granularity units.
+    #         Args:
+    #             contribution (torch.Tensor): Per-pixel attribution scores of shape `(t, l)`.
+    #             granularity_resize_strategy (GranularityResizeStrategy | None):
+    #                 Interpolation mode for PATCH. Required for PATCH, ignored for PIXEL.
+    #             inputs (TensorMapping | None): Required for PATCH to read H, W from `pixel_values`.
+    #             patch_size (int): Patch side length; the pixel grid is reduced by this factor.
+    #             aggregate_inputs (bool): If False (perturbation methods), returns `contribution`
+    #                 unchanged — granularity is already encoded in the perturbation masks.
+    #                 If True (gradient methods), resizes the per-pixel field to granularity units.
 
-        Returns:
-            torch.Tensor: Resized contribution of shape `(t, g)`.
-        """
-        # Perturbation methods: granularity is already in the masks, return as-is
-        if not aggregate_inputs:
-            return contribution
+    #         Returns:
+    #             torch.Tensor: Resized contribution of shape `(t, g)`.
+    #         """
+    #         # Perturbation methods: granularity is already in the masks, return as-is
+    #         if not aggregate_inputs:
+    #             return contribution
 
-        match self:
-            case ImageGranularity.PIXEL:
-                # pixels are the finest unit — nothing to resize
-                return contribution
-            case ImageGranularity.PATCH:
-                if granularity_resize_strategy is None:
-                    raise ValueError("granularity_resize_strategy must be provided for PATCH granularity.")
-                if inputs is None:
-                    raise ValueError("Inputs are required for PATCH granularity to read H, W.")
+    #         match self:
+    #             case ImageGranularity.PIXEL:
+    #                 # pixels are the finest unit — nothing to resize
+    #                 return contribution
+    #             case ImageGranularity.PATCH:
+    #                 if granularity_resize_strategy is None:
+    #                     raise ValueError("granularity_resize_strategy must be provided for PATCH granularity.")
+    #                 if inputs is None:
+    #                     raise ValueError("Inputs are required for PATCH granularity to read H, W.")
 
-                t = contribution.shape[0]
-                h, w = int(inputs["pixel_values"].shape[-2]), int(inputs["pixel_values"].shape[-1])
-                # row-major reshape — matches get_indices (index = row*W + col) and the inference
-                # wrapper's flatten(start_dim=1)
-                grid: Float[torch.Tensor, "t h w"] = contribution.reshape(t, h, w)
-                # pass patch_size by keyword: leaving output_size=None lets resize derive the
-                # patch grid (h // patch_size, w // patch_size). Passing it positionally would bind
-                # patch_size to output_size and resize to a literal patch_size x patch_size grid.
-                resized: Float[torch.Tensor, "t hg wg"] = granularity_resize_strategy.resize(
-                    grid, patch_size=patch_size
-                )
-                # row-major reflatten back to (t, g = hp*wp)
-                return resized.reshape(t, -1)
-            case _:
-                raise NotImplementedError(f"Granularity {self} not implemented for resizing.")
+    #                 t = contribution.shape[0]
+    #                 h, w = int(inputs["pixel_values"].shape[-2]), int(inputs["pixel_values"].shape[-1])
+    #                 # row-major reshape — matches get_indices (index = row*W + col) and the inference
+    #                 # wrapper's flatten(start_dim=1)
+    #                 grid: Float[torch.Tensor, "t h w"] = contribution.reshape(t, h, w)
+    #                 # pass patch_size by keyword: leaving output_size=None lets resize derive the
+    #                 # patch grid (h // patch_size, w // patch_size). Passing it positionally would bind
+    #                 # patch_size to output_size and resize to a literal patch_size x patch_size grid.
+    #                 resized: Float[torch.Tensor, "t hg wg"] = granularity_resize_strategy.resize(
+    #                     grid, patch_size=patch_size
+    #                 )
+    #                 # row-major reflatten back to (t, g = hp*wp)
+    #                 return resized.reshape(t, -1)
+    #             case _:
+    #                 raise NotImplementedError(f"Granularity {self} not implemented for resizing.")
 
     def resize_to_image(
         self,
@@ -1073,8 +1072,7 @@ class ImageGranularity(Granularity):
         """
         Expand per-granularity-unit scores `(t, g)` back to a pixel-resolution map `(t, H, W)`.
 
-        Inverse direction of `granularity_resize`.
-        This function expands granularity units back *up* to the pixel grid, so
+        This function expands granularity units back up to the pixel grid, so
         the visualization receives a display-ready field and never has to interpolate itself. The
         interpolation policy (which `resize_strategy` to pass) is decided by the caller, since it
         depends on the method family (NEAREST for gradient methods, the  resize_    strategy for masking
@@ -1099,9 +1097,7 @@ class ImageGranularity(Granularity):
                 # pixels are already the finest unit — row-major reshape, no interpolation
                 return contribution.reshape(t, h_in, w_in)
             case ImageGranularity.PATCH:
-                assert h_in % patch_size == 0, "the height of the image must be divisble by the patch_size"
-                assert w_in % patch_size == 0, "the width of the image must be divisble by the patch_size"
-
+                # divisibility is guaranteed upstream by `_validate_batch_feature`
                 gh, gw = h_in // patch_size, w_in // patch_size
                 grid: Float[torch.Tensor, "t gh gw"] = contribution.reshape(t, gh, gw)
                 return resize_strategy.resize(grid, output_size=(h_in, w_in))

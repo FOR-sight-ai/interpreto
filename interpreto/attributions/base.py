@@ -852,7 +852,7 @@ class ImageAttributionOutput:
     Class to store the output of an image-attribution method.
 
     Mirrors `AttributionOutput` with two changes for the image modality:
-    `granularity` is typed as `ImageGranularity` (default `PATCH`), and instead of the
+    `granularity` is typed as `ImageGranularity` (required), and instead of the
     text `elements` token labels it carries `attributions_image`, a display-ready
     pixel-resolution `(t, H, W)` map alongside the canonical `(t, g)` `attributions`.
 
@@ -895,8 +895,8 @@ class ImageAttributionOutput:
             Optional tensor of class labels.
 
         granularity (ImageGranularity):
-            The granularity level of the explanation. Defaults to `ImageGranularity.DEFAULT`
-            (= `PATCH`).
+            The granularity level of the explanation. Required: it is fixed by the method
+            family (`PIXEL` for gradient-based, `PATCH` for perturbation-based).
 
         granularity_resize (GranularityResizeStrategy):
             The interpolation strategy used to resize per-pixel scores to the specified granularity.
@@ -909,10 +909,10 @@ class ImageAttributionOutput:
     attributions_image: Float[torch.Tensor, "t h w"]
     model_inputs_to_explain: TensorMapping
     targets: torch.Tensor
+    granularity: ImageGranularity
     image_mean: torch.Tensor | None = None
     image_std: torch.Tensor | None = None
     classes: torch.Tensor | None = None
-    granularity: ImageGranularity = ImageGranularity.DEFAULT
     granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR
     inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
 
@@ -938,11 +938,11 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         self,
         model: PreTrainedModel,
         image_processor: BaseImageProcessor,
+        granularity: ImageGranularity,
         batch_size: int = 4,
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
-        granularity: ImageGranularity = ImageGranularity.DEFAULT,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         use_gradient: bool = False,
@@ -982,6 +982,21 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 `preprocess=True` and either stat is supplied.
         """
         # does not call setup_token_id because there is no need for a PAD token
+
+        # Granularity is a strict function of the method family, so the two arguments cannot
+        # be chosen independently. Gradient methods differentiate with respect to every pixel and only
+        # afterwards resize the field, so PIXEL is their native unit; perturbation methods
+        # encode granularity in the masks themselves so PATCH is the smallest meaningful unit
+        if use_gradient and granularity is ImageGranularity.PATCH:
+            raise ValueError(
+                "granularity=PATCH is invalid for a gradient-based method: gradients are "
+                "computed per pixel, so PIXEL is the granularity these methods explain at."
+            )
+        if not use_gradient and granularity is ImageGranularity.PIXEL:
+            raise ValueError(
+                "granularity=PIXEL is invalid for a perturbation-based method: masking single "
+                "pixels is intractable and carries no semantic unit. Use PATCH."
+            )
 
         self.image_processor = image_processor
         self.preprocess = preprocess
@@ -1269,6 +1284,13 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             )
         if bf["pixel_values"].shape[1] not in {1, 3}:
             raise ValueError("The BatchFeature number of channels (C) should be either 1 or 3")
+        # unconditional: a ViT cannot patchify a non-divisible image, whatever the method family
+        h, w = bf["pixel_values"].shape[-2], bf["pixel_values"].shape[-1]
+        if h % self.patch_size or w % self.patch_size:
+            raise ValueError(
+                f"The image sides must both be multiples of the model's patch_size "
+                f"({self.patch_size}). Got ({h}, {w})."
+            )
         return bf
 
     def explain(
@@ -1327,18 +1349,12 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             for contribution in aggregated
         )
 
-        # Aggregate over inputs for gradient-based methods: (t, l) -> (t, g).
-        # Image granularity signature: patch_size instead of tokenizer; no aggregate_targets.
-        granular_contributions: Iterator[Float[torch.Tensor, "t g"]] = (
-            self.granularity.granularity_resize(
-                contribution=contribution,
-                granularity_resize_strategy=self.resize_strategy,
-                inputs=inputs,
-                patch_size=self.patch_size,
-                aggregate_inputs=self.inference_wrapper.gradients,
-            )
-            for contribution, inputs in zip(contributions, model_inputs_to_explain, strict=True)
-        )
+        # NOTE: a `granularity.granularity_resize(...)` pool used to sit here, mapping (t, l) -> (t, g)
+        # for gradient methods. It is gone because granularity is now fixed by the method family:
+        # gradient methods are always PIXEL, so g == l and the pool was the identity; perturbation
+        # methods encode granularity in their masks, so they were already returned unchanged. The
+        # function is kept, commented out, in `commons/granularity.py` in case a future method needs
+        # a granularity other than its family's native one. `contributions` is thus already (t, g).
 
         # Display map: expand the (t, g) granularity scores back to a pixel-resolution (t, H, W)
         # field so the visualization receives a ready-to-draw map and never interpolates itself.
@@ -1351,7 +1367,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
 
         results: list[ImageAttributionOutput] = []
         for contribution, model_input, target in zip(
-            granular_contributions,
+            contributions,
             model_inputs_to_explain,
             sanitized_targets,
             strict=True,
