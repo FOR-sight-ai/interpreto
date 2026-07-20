@@ -38,6 +38,7 @@ from PIL import Image
 from transformers import ViTImageProcessor
 
 from interpreto.attributions.base import ImageAttributionOutput
+from interpreto.interpreto import ImageGranularity
 from interpreto.visualizations.image_attributions import (
     _clip_percentile,
     _color_limits,
@@ -261,6 +262,7 @@ def _processed_output(processor, image, fill_value, n_targets=1):
     return ImageAttributionOutput(
         attributions=torch.full((n_targets, 4), fill_value),
         attributions_image=torch.full((n_targets, h, w), fill_value),
+        granularity=ImageGranularity.PIXEL,
         model_inputs_to_explain=inputs,
         targets=torch.arange(n_targets),
         image_mean=torch.as_tensor(processor.image_mean, dtype=torch.float32).view(-1, 1, 1),
@@ -295,7 +297,7 @@ def test_plot_image_attribution_centers_the_clim_on_zero(vit_processor, image, f
 
 
 @pytest.mark.parametrize("target_idx", [None, 0, [0, 2]])
-def test_plot_image_attribution_runs_on_a_real_image(vit_processor, image, target_idx):
+def test_plot_image_attribution_runs_on_a_fake_image(vit_processor, image, target_idx):
     # Smoke test: the whole path (de-normalize, grayscale, heatmap, colorbar) must draw a
     # real processed image without raising.
     output = _processed_output(vit_processor, image, 1.0, n_targets=3)
