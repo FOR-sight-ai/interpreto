@@ -69,7 +69,6 @@ class ImageSquareGrad(ImageClassificationAttributionExplainer):
         model: PreTrainedModel,
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
-        granularity: ImageGranularity = ImageGranularity.DEFAULT,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
@@ -85,8 +84,6 @@ class ImageSquareGrad(ImageClassificationAttributionExplainer):
             model (PreTrainedModel): model to explain (ViT-family).
             image_processor (BaseImageProcessor): Hugging Face image processor associated with the model.
             batch_size (int): batch size for the attribution method.
-            granularity (ImageGranularity, optional): granularity level (`PIXEL`, `PATCH`).
-                Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
             resize_strategy (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel gradients into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             device (torch.device, optional): device on which the attribution method will be run.
@@ -106,7 +103,7 @@ class ImageSquareGrad(ImageClassificationAttributionExplainer):
             perturbator=perturbator,
             aggregator=SquaredMeanAggregator(),
             device=device,
-            granularity=granularity,
+            granularity=ImageGranularity.PIXEL,
             resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=True,

@@ -61,10 +61,9 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
     [Paper](https://arxiv.org/abs/1705.07874)
 
     Examples:
-        >>> from interpreto import ImageGranularity, ImageKernelShap
+        >>> from interpreto import ImageKernelShap
         >>> method = ImageKernelShap(model, image_processor, batch_size=4,
-        >>>                          n_perturbations=1000,
-        >>>                          granularity=ImageGranularity.PATCH)
+        >>>                          n_perturbations=1000)
         >>> explanations = method.explain(image)
     """
 
@@ -73,7 +72,6 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
         model: PreTrainedModel,
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
-        granularity: ImageGranularity = ImageGranularity.DEFAULT,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_perturbations: int = 1000,
@@ -88,8 +86,6 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
             model (PreTrainedModel): model to explain (ViT-family).
             image_processor (BaseImageProcessor): Hugging Face image processor associated with the model.
             batch_size (int): batch size for the attribution method.
-            granularity (ImageGranularity, optional): unit over which coalitions are defined (`PIXEL`, `PATCH`).
-                Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
             resize_strategy (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel scores into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
@@ -102,7 +98,7 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
         """
         # patch_size is reconciled from model.config by the explainer __init__.
         perturbator = ShapImagePerturbator(
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             n_perturbations=n_perturbations,
             replace_value=replace_value,
             device=device,
@@ -120,7 +116,7 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
             perturbator=perturbator,
             aggregator=aggregator,
             device=device,
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=False,

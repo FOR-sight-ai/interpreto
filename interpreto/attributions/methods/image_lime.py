@@ -64,10 +64,9 @@ class ImageLime(ImageClassificationAttributionExplainer):
     [Paper](https://arxiv.org/abs/1602.04938)
 
     Examples:
-        >>> from interpreto import ImageGranularity, ImageLime
+        >>> from interpreto import ImageLime
         >>> method = ImageLime(model, image_processor, batch_size=4,
         >>>                    n_perturbations=100,
-        >>>                    granularity=ImageGranularity.PATCH,
         >>>                    distance_function=ImageLime.distance_functions.COSINE)
         >>> explanations = method.explain(image)
     """
@@ -79,7 +78,6 @@ class ImageLime(ImageClassificationAttributionExplainer):
         model: PreTrainedModel,
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
-        granularity: ImageGranularity = ImageGranularity.DEFAULT,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_perturbations: int = 100,
@@ -97,8 +95,6 @@ class ImageLime(ImageClassificationAttributionExplainer):
             model (PreTrainedModel): model to explain (ViT-family).
             image_processor (BaseImageProcessor): Hugging Face image processor associated with the model.
             batch_size (int): batch size for the attribution method.
-            granularity (ImageGranularity, optional): unit over which masks are defined (`PIXEL`, `PATCH`).
-                Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
             resize_strategy (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel scores into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
@@ -116,7 +112,7 @@ class ImageLime(ImageClassificationAttributionExplainer):
         """
         # patch_size is reconciled from model.config by the explainer __init__.
         perturbator = RandomMaskedImagePerturbator(
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             n_perturbations=n_perturbations,
             perturb_probability=perturb_probability,
             replace_value=replace_value,
@@ -135,7 +131,7 @@ class ImageLime(ImageClassificationAttributionExplainer):
             perturbator=perturbator,
             aggregator=aggregator,
             device=device,
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=False,

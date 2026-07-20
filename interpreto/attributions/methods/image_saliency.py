@@ -78,7 +78,6 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
         model: PreTrainedModel,
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
-        granularity: ImageGranularity = ImageGranularity.DEFAULT,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
@@ -93,9 +92,6 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             image_processor (BaseImageProcessor): Hugging Face image processor
                 associated with the model.
             batch_size (int): batch size for the attribution method.
-            granularity (ImageGranularity, optional): The granularity level of the
-                explanation. Options: `PIXEL`, `PATCH`. Defaults to
-                `ImageGranularity.DEFAULT` (= `PATCH`).
             resize_strategy (GranularityResizeStrategy, optional):
                 How to aggregate per-pixel gradients into per-patch scores.
                 Options: MEAN, MAX, MIN, SUM, SIGNED_MAX. Ignored when `granularity`
@@ -119,7 +115,7 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             perturbator=ImageTensorPerturbator(),
             aggregator=None,  # falls back to default Aggregator() (squeeze p=1)
             device=device,
-            granularity=granularity,
+            granularity=ImageGranularity.PIXEL,
             resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=True,

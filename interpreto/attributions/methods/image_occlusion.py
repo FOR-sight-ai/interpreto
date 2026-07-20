@@ -59,8 +59,7 @@ class ImageOcclusion(ImageClassificationAttributionExplainer):
 
     Examples:
         >>> from interpreto import ImageOcclusion
-        >>> method = ImageOcclusion(model, image_processor, batch_size=4,
-        >>>                         granularity=ImageGranularity.PATCH)
+        >>> method = ImageOcclusion(model, image_processor, batch_size=4)
         >>> explanations = method.explain(image)
     """
 
@@ -69,7 +68,6 @@ class ImageOcclusion(ImageClassificationAttributionExplainer):
         model: PreTrainedModel,
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
-        granularity: ImageGranularity = ImageGranularity.DEFAULT,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         replace_value: float = 0.0,
@@ -83,8 +81,6 @@ class ImageOcclusion(ImageClassificationAttributionExplainer):
             model (PreTrainedModel): model to explain (ViT-family).
             image_processor (BaseImageProcessor): Hugging Face image processor associated with the model.
             batch_size (int): batch size for the attribution method.
-            granularity (ImageGranularity, optional): unit occluded one at a time (`PIXEL`, `PATCH`).
-                Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
             resize_strategy (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel scores into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
@@ -96,7 +92,7 @@ class ImageOcclusion(ImageClassificationAttributionExplainer):
         """
         # patch_size is reconciled from model.config by the explainer __init__.
         perturbator = OcclusionImagePerturbator(
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             replace_value=replace_value,
         )
         super().__init__(
@@ -106,7 +102,7 @@ class ImageOcclusion(ImageClassificationAttributionExplainer):
             perturbator=perturbator,
             aggregator=OcclusionAggregator(),
             device=device,
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=False,

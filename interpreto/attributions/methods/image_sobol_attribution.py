@@ -60,10 +60,9 @@ class ImageSobol(ImageClassificationAttributionExplainer):
     [Paper](https://arxiv.org/abs/2111.04138)
 
     Examples:
-        >>> from interpreto import ImageGranularity, ImageSobol
+        >>> from interpreto import ImageSobol
         >>> method = ImageSobol(model, image_processor, batch_size=4,
         >>>                     n_token_perturbations=32,
-        >>>                     granularity=ImageGranularity.PATCH,
         >>>                     sobol_indices_order=ImageSobol.sobol_indices_orders.FIRST_ORDER,
         >>>                     sampler=ImageSobol.samplers.SOBOL)
         >>> explanations = method.explain(image)
@@ -77,7 +76,6 @@ class ImageSobol(ImageClassificationAttributionExplainer):
         model: PreTrainedModel,
         image_processor: BaseImageProcessor,
         batch_size: int = 4,
-        granularity: ImageGranularity = ImageGranularity.DEFAULT,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_token_perturbations: int = 32,
@@ -94,8 +92,6 @@ class ImageSobol(ImageClassificationAttributionExplainer):
             model (PreTrainedModel): model to explain (ViT-family).
             image_processor (BaseImageProcessor): Hugging Face image processor associated with the model.
             batch_size (int): batch size for the attribution method.
-            granularity (ImageGranularity, optional): unit over which masks are defined (`PIXEL`, `PATCH`).
-                Defaults to `ImageGranularity.DEFAULT` (= `PATCH`).
             resize_strategy (GranularityResizeStrategy, optional): how to
                 aggregate per-pixel scores into per-patch scores (MEAN, MAX, MIN, SUM, SIGNED_MAX).
             inference_mode (Callable, optional): inference mode (LOGITS, SOFTMAX, LOG_SOFTMAX).
@@ -111,7 +107,7 @@ class ImageSobol(ImageClassificationAttributionExplainer):
         """
         # patch_size is reconciled from model.config by the explainer __init__.
         perturbator = SobolImagePerturbator(
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             n_token_perturbations=n_token_perturbations,
             sampler=sampler,
             replace_value=replace_value,
@@ -129,7 +125,7 @@ class ImageSobol(ImageClassificationAttributionExplainer):
             perturbator=perturbator,
             aggregator=aggregator,
             device=device,
-            granularity=granularity,
+            granularity=ImageGranularity.PATCH,
             resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=False,
