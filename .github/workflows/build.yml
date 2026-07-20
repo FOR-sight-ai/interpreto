@@ -11,6 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30  # minutes
+    max-parallel: 1
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     strategy:
       matrix:
@@ -76,7 +77,7 @@ jobs:
         ]
 
         image_model_ids = [
-        "hf-internal-testing/tiny-random-vit",
+            "hf-internal-testing/tiny-random-vit",
             "hf-internal-testing/tiny-random-BeitForImageClassification",
             "hf-internal-testing/tiny-random-ViTForImageClassification",
             "akahana/vit-base-cats-vs-dogs",
