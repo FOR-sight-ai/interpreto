@@ -38,7 +38,7 @@ from PIL import Image
 from transformers import ViTImageProcessor
 
 from interpreto.attributions.base import ImageAttributionOutput
-from interpreto.interpreto import ImageGranularity
+from interpreto.commons.granularity import ImageGranularity
 from interpreto.visualizations.image_attributions import (
     _clip_percentile,
     _color_limits,
