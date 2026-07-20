@@ -28,9 +28,7 @@ import pytest
 import torch
 from torch.nn.functional import interpolate
 
-# local import – the module is supplied alongside this test file
-from interpreto import ImageGranularity
-from interpreto.commons.granularity import GranularityResizeStrategy
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 
 # --------
 # Fixtures
