@@ -144,7 +144,9 @@ def test_denormalize_inverts_the_normalization(image_mean, image_std):
 
     out = _denormalize(output)
 
-    assert np.allclose(out, image[0].permute(1, 2, 0).numpy())
+    # atol is float32-sized: allclose defaults to 1e-8, below one float32 ULP, so a pixel drawn
+    # near 0 fails the round-trip on rounding alone.
+    assert np.allclose(out, image[0].permute(1, 2, 0).numpy(), atol=1e-6)
 
 
 def test_denormalize_returns_channel_last_float_array():
