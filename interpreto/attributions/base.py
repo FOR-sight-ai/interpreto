@@ -1223,9 +1223,10 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         and `pixel_values` for `input_ids`. The `str` branch is replaced by raw-image
         branches; text has no `preprocess` flag because tokenization cannot be skipped.
         """
-        # check BatchFeature BEFORE Iterable — BatchFeature is a UserDict and would
-        # otherwise match the Iterable branch and recurse into its keys.
+
         if isinstance(model_inputs, BatchFeature):
+            if model_inputs["pixel_values"].ndim == 3:  # expand a single (3, H, W) to (1, 3, H, W)
+                model_inputs["pixel_values"] = model_inputs["pixel_values"].unsqueeze(0)
             validated = self._validate_batch_feature(model_inputs)
             if not self.preprocess:
                 return [validated]
@@ -1243,7 +1244,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 processed = self.image_processor(model_inputs, return_tensors="pt")
                 return [self._validate_batch_feature(processed)]
 
-            # preprocess=False: only Tensor is allowed; assume already normalized.
+            # preprocess=False: PIL.Image and np.ndarray are not allowed.
             if not isinstance(model_inputs, torch.Tensor):
                 raise ValueError(
                     f"When preprocess=False, raw inputs must be torch.Tensor, got {type(model_inputs)}. "
