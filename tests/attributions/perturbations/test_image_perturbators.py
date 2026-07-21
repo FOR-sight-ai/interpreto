@@ -54,6 +54,8 @@ CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-ViTForImageClassification",
 ]
 
+SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
+
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
 image_embedding_perturbators = [
@@ -114,6 +116,80 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
     assert not issubclass(perturbator_class, TextTensorPerturbator)
 
     patch_size = 2
+    p = 15
+
+    perturbator = perturbator_class(patch_size=patch_size)
+    perturbator.n_perturbations = p
+
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
+
+    for img in images:
+        processed_image = image_processor(img, return_tensors="pt")
+        assert isinstance(processed_image, BatchFeature)
+
+        perturbed_inputs, masks = perturbator.perturb(processed_image)
+
+        assert isinstance(perturbed_inputs, BatchFeature)
+        assert "pixel_values" in perturbed_inputs.keys()
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+
+        _, _, h, w = processed_image["pixel_values"].shape
+        g = (h // patch_size) * (w // patch_size)
+        if isinstance(perturbator, OcclusionImagePerturbator):
+            real_p = g + 1
+        elif isinstance(perturbator, SobolImagePerturbator):
+            k = perturbator.n_token_perturbations
+            real_p = (g + 2) * k
+        else:
+            real_p = perturbator.n_perturbations
+
+        assert perturbed_inputs["pixel_values"].shape == (real_p, 3, h, w)
+
+        assert isinstance(masks, torch.Tensor)
+        assert masks.shape[0] == perturbed_inputs["pixel_values"].shape[0]
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("model_name", SLOW_MODELS)
+@pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
+def test_slow_image_embedding_perturbator(perturbator_class, model_name, images):
+    """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
+    assert issubclass(perturbator_class, ImageTensorPerturbator)
+    assert not issubclass(perturbator_class, ImageMaskPerturbator)
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    assert not issubclass(perturbator_class, TextTensorPerturbator)
+
+    p = 10
+    perturbator = perturbator_class(n_perturbations=p)
+
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
+
+    for img in images:
+        processed_image = image_processor(img, return_tensors="pt")
+        assert isinstance(processed_image, BatchFeature)
+
+        perturbed_inputs, _ = perturbator.perturb(processed_image)
+
+        assert isinstance(perturbed_inputs, MutableMapping)
+
+        assert "pixel_values" in perturbed_inputs.keys()
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+
+        _, _, h, w = processed_image["pixel_values"].shape
+        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("model_name", SLOW_MODELS)
+@pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
+def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
+    """Mirror of test_token_perturbators for the image mask-based perturbators."""
+    assert issubclass(perturbator_class, ImageMaskPerturbator)
+    assert not issubclass(perturbator_class, ImageTensorPerturbator)
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    assert not issubclass(perturbator_class, TextTensorPerturbator)
+
+    patch_size = 16
     p = 15
 
     perturbator = perturbator_class(patch_size=patch_size)
