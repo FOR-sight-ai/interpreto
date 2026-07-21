@@ -28,7 +28,7 @@ Image-side LIME method for ViT-family classification models.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from enum import Enum
 
 import torch
@@ -87,6 +87,8 @@ class ImageLime(ImageClassificationAttributionExplainer):
         kernel_width: float | Callable | None = None,
         device: torch.device | None = None,
         preprocess: bool = True,
+        image_mean: Sequence[float] | float | torch.Tensor | None = None,
+        image_std: Sequence[float] | float | torch.Tensor | None = None,
     ):
         """
         Initialize the attribution method.
@@ -109,6 +111,9 @@ class ImageLime(ImageClassificationAttributionExplainer):
             device (torch.device, optional): device on which the attribution method will be run.
             preprocess (bool, optional): if True, raw inputs are routed through `image_processor`.
                 Defaults to True.
+            image_mean / image_std (Sequence[float] | float | torch.Tensor | None, optional):
+                de-normalization affine `x * image_std + image_mean`. Required when
+                `preprocess=False`; must be omitted when `preprocess=True`.
         """
         # patch_size is reconciled from model.config by the explainer __init__.
         perturbator = RandomMaskedImagePerturbator(
@@ -136,4 +141,6 @@ class ImageLime(ImageClassificationAttributionExplainer):
             inference_mode=inference_mode,
             use_gradient=False,
             preprocess=preprocess,
+            image_mean=image_mean,
+            image_std=image_std,
         )

@@ -28,7 +28,7 @@ Image-side Saliency method for ViT-family classification models.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import torch
 from transformers.image_processing_utils import BaseImageProcessor
@@ -83,6 +83,8 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         input_x_gradient: bool = True,
         preprocess: bool = True,
+        image_mean: Sequence[float] | float | torch.Tensor | None = None,
+        image_std: Sequence[float] | float | torch.Tensor | None = None,
     ):
         """
         Initialize the attribution method.
@@ -107,6 +109,9 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
                 torch.Tensor) are routed through `image_processor`. If False, inputs
                 must already be `BatchFeature` or normalized `(1, 3, H, W)` tensors.
                 Defaults to True.
+            image_mean / image_std (Sequence[float] | float | torch.Tensor | None, optional):
+                de-normalization affine `x * image_std + image_mean`. Required when
+                `preprocess=False`; must be omitted when `preprocess=True`.
         """
         super().__init__(
             model=model,
@@ -121,4 +126,6 @@ class ImageSaliency(ImageClassificationAttributionExplainer):
             use_gradient=True,
             input_x_gradient=input_x_gradient,
             preprocess=preprocess,
+            image_mean=image_mean,
+            image_std=image_std,
         )
