@@ -24,6 +24,7 @@
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import torch
@@ -60,6 +61,9 @@ from interpreto.attributions.perturbations import (
     ShapImagePerturbator,
 )
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
+from interpreto.visualizations import plot_image_attribution
+
+plt.switch_backend("Agg")  # headless: render into a buffer, never open a window.
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -250,3 +254,8 @@ def test_vision_attribution_methods_fast(
     for o in output:
         assert torch.equal(o.image_mean, expected_mean)
         assert torch.equal(o.image_std, expected_std)
+
+    # The produced outputs must be plottable: run the viz end-to-end on the Agg backend.
+    for o in output:
+        fig, _ = plot_image_attribution(o)
+        plt.close(fig)
