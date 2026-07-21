@@ -113,7 +113,7 @@ class GradientShapImagePerturbator(LinearInterpolationImagePerturbator):
         baseline = self.adjust_baseline(self.baseline, pixel_values)
         baseline = baseline.to(pixel_values.device)
 
-        baseline = baseline.unsqueeze(0).repeat(self.n_perturbations, 1, 1, 1)  # (p, 3, H, W)
+        baseline: Float[torch.Tensor, "p,3,H,W"] = baseline.unsqueeze(0).repeat(self.n_perturbations, 1, 1, 1)
         baseline += torch.randn_like(baseline) * self.std
         return baseline
 

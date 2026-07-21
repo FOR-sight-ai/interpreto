@@ -211,7 +211,7 @@ class LinearInterpolationImagePerturbator(ImageTensorPerturbator):
             perturbed_embeds: Shape (p, 3, H, W).
             mask: None — granularity is applied post-hoc by the aggregator.
         """
-        baseline: Float[torch.Tensor, "_ 3 H W"] = self._generate_baseline(pixel_values)
+        baseline: Float[torch.Tensor, "1 3 H W"] = self._generate_baseline(pixel_values)
         alphas: Float[torch.Tensor, "p 1 1 1"] = self._generate_alphas(pixel_values.shape, pixel_values.device)
 
         perturbed_embeds: Float[torch.Tensor, "p 3 H W"] = (1 - alphas) * pixel_values + alphas * baseline
