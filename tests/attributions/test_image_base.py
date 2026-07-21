@@ -344,7 +344,7 @@ def test_process_model_inputs(model_name):
 
     # 1. Unsupported type (not BatchFeature, raw image, or Iterable)
     explainer = ImageClassificationAttributionExplainer(
-        model, image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
+        model, image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE, patch_size=2
     )
     with pytest.raises(ValueError, match="not supported for method process_model_inputs"):
         explainer.process_model_inputs(42)  # type: ignore
