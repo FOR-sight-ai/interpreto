@@ -344,7 +344,11 @@ def test_process_model_inputs(model_name):
 
     # 1. Unsupported type (not BatchFeature, raw image, or Iterable)
     explainer = ImageClassificationAttributionExplainer(
-        model, image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE, patch_size=2
+        model,
+        image_processor,
+        ImageGranularity.PATCH,
+        batch_size=2,
+        device=DEVICE,
     )
     with pytest.raises(ValueError, match="not supported for method process_model_inputs"):
         explainer.process_model_inputs(42)  # type: ignore
@@ -370,7 +374,7 @@ def test_process_model_inputs(model_name):
     # --- Valid cases ---
 
     # BatchFeature passed directly
-    bf = BatchFeature(data={"pixel_values": torch.zeros(1, 3, 4, 4)})
+    bf = BatchFeature(data={"pixel_values": torch.zeros(1, 3, 16, 16)})
     result = explainer.process_model_inputs(bf)
     _assert_batch_feature_list(result, expected_length=1)
 
