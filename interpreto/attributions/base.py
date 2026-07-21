@@ -1278,7 +1278,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             )
         if bf["pixel_values"].ndim != 4 or bf["pixel_values"].shape[0] != 1:
             raise ValueError(
-                "The BatchFeature must hold a single-sample (1, 3, H, W) pixel_values tensor. "
+                "The BatchFeature must hold a single-sample and must be 4 dimensional (1, 3, H, W) pixel_values tensor. "
                 "Pre-process images one by one, or pass an iterable. "
                 f"Got shape {tuple(bf['pixel_values'].shape)}."
             )

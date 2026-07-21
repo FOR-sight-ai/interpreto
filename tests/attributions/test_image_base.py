@@ -60,20 +60,18 @@ def test_init_explainer(model_name, use_gradient, granularity, clash):
     image_processor = AutoImageProcessor.from_pretrained(model_name)
     if clash:
         with pytest.raises(ValueError):
-            ImageClassificationAttributionExplainer(
+            _ = ImageClassificationAttributionExplainer(
                 model,
                 image_processor,
-                ImageGranularity.PATCH,
                 granularity,
                 use_gradient=use_gradient,
                 batch_size=2,
                 device=DEVICE,
             )
     else:
-        ImageClassificationAttributionExplainer(
+        _ = ImageClassificationAttributionExplainer(
             model,
             image_processor,
-            ImageGranularity.PATCH,
             granularity,
             use_gradient=use_gradient,
             batch_size=2,
@@ -353,7 +351,14 @@ def test_process_model_inputs(model_name):
 
     # 2. preprocess=False with a non-tensor raw input
     explainer_no_preprocess = ImageClassificationAttributionExplainer(
-        model, image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE, preprocess=False
+        model,
+        image_processor,
+        ImageGranularity.PATCH,
+        batch_size=2,
+        device=DEVICE,
+        preprocess=False,
+        image_mean=0.0,
+        image_std=1.0,
     )
     with pytest.raises(ValueError, match="must be torch.Tensor"):
         explainer_no_preprocess.process_model_inputs(image)
