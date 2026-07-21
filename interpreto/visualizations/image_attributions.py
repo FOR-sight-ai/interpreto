@@ -26,10 +26,8 @@
 Matplotlib visualization for `ImageAttributionOutput`.
 
 The normalization / percentile-clipping idea follows xplique's `plots/image.py`
-(Apache 2.0, DEEL / Université Paul Sabatier). The heatmap is read directly from
-the display-ready `(t, H, W)` `ImageAttributionOutput.attributions_image` map;
-`explain` already did the g->l interpolation, so the viz never reshapes or
-interpolates itself.
+(Apache 2.0, DEEL / Université Paul Sabatier). The heatmap is reconstructed on demand
+from the canonical `(t, g)` `ImageAttributionOutput.attributions` via `resize_to_image`.
 """
 
 from __future__ import annotations
@@ -107,8 +105,9 @@ def _prepare_heatmap(
     absolute_value: bool,
 ) -> np.ndarray:
     """
-    Read the 2D heatmap `(H, W)` directly from `attributions_image[target_idx]`
-    (already expanded to pixel resolution by `explain`).
+    Reconstruct the 2D heatmap `(H, W)` for one target by expanding the canonical
+    `(t, g)` `attributions` back to pixel resolution via `resize_to_image`, then
+    take slice `target_idx`.
 
     The heatmap is returned in the **real attribution-score scale** (after the
     optional abs + percentile clip). It is deliberately NOT rescaled to [0, 1]:
@@ -117,10 +116,14 @@ def _prepare_heatmap(
     method's legend to a meaningless 0->1 axis and make cross-method comparison
     impossible.
     """
-    # `attributions_image` is already the display-ready (t, H, W) map: `explain` did the
-    # g->l interpolation (NEAREST for gradient methods, the mask strategy for masking methods),
-    # so the viz just reads the 2-D slice and never reshapes or interpolates itself.
-    row = attribution_output.attributions_image[target_idx].detach().cpu()
+
+    attributions_image = attribution_output.granularity.resize_to_image(
+        contribution=attribution_output.attributions,
+        resize_strategy=attribution_output.granularity_resize,
+        inputs=attribution_output.model_inputs_to_explain,
+        patch_size=attribution_output.patch_size,
+    )
+    row = attributions_image[target_idx].detach().cpu()
     if row.dtype is torch.bfloat16:
         row = row.to(torch.float32)
     heatmap = row.numpy().astype(np.float32)

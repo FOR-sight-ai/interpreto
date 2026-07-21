@@ -38,7 +38,7 @@ from PIL import Image
 from transformers import ViTImageProcessor
 
 from interpreto.attributions.base import ImageAttributionOutput
-from interpreto.commons.granularity import ImageGranularity
+from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.visualizations.image_attributions import (
     _clip_percentile,
     _color_limits,
@@ -66,9 +66,15 @@ def test_clip_percentile_pulls_tails_to_bounds():
 
 
 def test_prepare_heatmap():
-    # _prepare_heatmap only reads `.attributions_image`, so a SimpleNamespace stand-in is enough.
-    # (1, 2, 2): t=1 target, 2x2 spatial. Mixed signs + a value >1 on purpose.
-    output = SimpleNamespace(attributions_image=torch.tensor([[[10.0, 20.0], [-3.0, 0.0]]]))
+    # PIXEL granularity makes it a pure (t, g)->(t, H, W)
+    # reshape: g=4 over a (1, 3, 2, 2) pixel grid -> the same (1, 2, 2) map, mixed signs + a value >1.
+    output = SimpleNamespace(
+        attributions=torch.tensor([[10.0, 20.0, -3.0, 0.0]]),
+        granularity=ImageGranularity.PIXEL,
+        granularity_resize=GranularityResizeStrategy.NEAREST,
+        model_inputs_to_explain={"pixel_values": torch.zeros(1, 3, 2, 2)},
+        patch_size=1,
+    )
 
     # absolute_value=True -> no negative values
     abs_out = _prepare_heatmap(output, target_idx=0, clip_percentile=None, absolute_value=True)
@@ -261,10 +267,12 @@ def _processed_output(processor, image, fill_value, n_targets=1):
     # A genuinely processed image, with a constant attribution map tailored to its size.
     inputs = processor(image, return_tensors="pt")
     h, w = inputs["pixel_values"].shape[-2:]
+    # PIXEL granularity: attributions is (n, g=H*W) and _prepare_heatmap reshapes it back to
+    # (n, H, W). A constant fill keeps the reconstructed map constant, as the tests expect.
     return ImageAttributionOutput(
-        attributions=torch.full((n_targets, 4), fill_value),
-        attributions_image=torch.full((n_targets, h, w), fill_value),
+        attributions=torch.full((n_targets, h * w), fill_value),
         granularity=ImageGranularity.PIXEL,
+        patch_size=16,
         model_inputs_to_explain=inputs,
         targets=torch.arange(n_targets),
         image_mean=torch.as_tensor(processor.image_mean, dtype=torch.float32).view(-1, 1, 1),

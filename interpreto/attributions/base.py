@@ -853,8 +853,10 @@ class ImageAttributionOutput:
 
     Mirrors `AttributionOutput` with two changes for the image modality:
     `granularity` is typed as `ImageGranularity` (required), and instead of the
-    text `elements` token labels it carries `attributions_image`, a display-ready
-    pixel-resolution `(t, H, W)` map alongside the canonical `(t, g)` `attributions`.
+    text `elements` token labels it carries `patch_size`, enough for the visualization
+    to reconstruct a display-ready pixel-resolution `(t, H, W)` map on demand from the
+    canonical `(t, g)` `attributions` (see `ImageGranularity.resize_to_image`). The map
+    is no longer stored: it is pure derived state and duplicated the largest tensor.
 
     Attributes:
         attributions (SingleAttribution):
@@ -863,11 +865,11 @@ class ImageAttributionOutput:
             granularity unit. Stored FLAT; patch `(row, col)` coordinates are derivable on demand
             from `model_inputs_to_explain["pixel_values"].shape[-2:]` and `patch_size`.
 
-        attributions_image (Float[torch.Tensor, "t h w"]):
-            Display-ready map of shape `(t, H, W)`, obtained by expanding `attributions` back to
-            pixel resolution in `explain` (NEAREST for gradient methods, the mask resize strategy
-            for masking methods). The visualization draws this directly and never interpolates
-            itself.
+        patch_size (int):
+            Patch side length, used to lay out PATCH-granularity scores on the pixel grid
+            (`gh, gw = H // patch_size, W // patch_size`). Stored so the visualization can
+            rebuild the display-ready `(t, H, W)` map from `attributions` via `resize_to_image`.
+            Ignored for PIXEL granularity, where `g == H*W` and the expansion is a pure reshape.
 
         model_inputs_to_explain (TensorMapping):
             The output of `image_processor(image, return_tensors="pt")` (a `BatchFeature`,
@@ -906,10 +908,10 @@ class ImageAttributionOutput:
     """
 
     attributions: SingleAttribution
-    attributions_image: Float[torch.Tensor, "t h w"]
     model_inputs_to_explain: TensorMapping
     targets: torch.Tensor
     granularity: ImageGranularity
+    patch_size: int
     image_mean: torch.Tensor | None = None
     image_std: torch.Tensor | None = None
     classes: torch.Tensor | None = None
@@ -1356,15 +1358,6 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         # function is kept, commented out, in `commons/granularity.py` in case a future method needs
         # a granularity other than its family's native one. `contributions` is thus already (t, g).
 
-        # Display map: expand the (t, g) granularity scores back to a pixel-resolution (t, H, W)
-        # field so the visualization receives a ready-to-draw map and never interpolates itself.
-        # Gradient methods discarded sub-patch detail in the l->g pool, so we re-expand with NEAREST
-        # (honest flat blocks, no invented detail); mask methods reuse the strategy that expanded
-        # their perturbation masks, so the heatmap matches what actually perturbed the model.
-        display_strategy: GranularityResizeStrategy = (
-            GranularityResizeStrategy.NEAREST if self.inference_wrapper.gradients else self.resize_strategy
-        )
-
         results: list[ImageAttributionOutput] = []
         for contribution, model_input, target in zip(
             contributions,
@@ -1372,21 +1365,14 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             sanitized_targets,
             strict=True,
         ):
-            attributions_image: Float[torch.Tensor, "t h w"] = self.granularity.resize_to_image(
-                contribution=contribution,
-                resize_strategy=display_strategy,
-                inputs=model_input,
-                patch_size=self.patch_size,
-            )
-
             attribution_output = ImageAttributionOutput(
                 attributions=contribution.cpu(),
-                attributions_image=attributions_image.cpu(),
                 model_inputs_to_explain=model_input,
                 targets=target.cpu(),
                 image_mean=self.image_mean,
                 image_std=self.image_std,
                 granularity=self.granularity,
+                patch_size=self.patch_size,
                 granularity_resize=self.resize_strategy,
                 inference_mode=self.inference_wrapper.mode,
             )
