@@ -46,6 +46,7 @@ from interpreto.attributions.perturbations.base import (
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
+from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 
 CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
@@ -170,7 +171,7 @@ def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
     inputs = torch.randn(1, 3, 8, 8)
 
     # Test with invalid baseline type
-    with pytest.raises(TypeError, match="Expected baseline to be a torch.Tensor"):
+    with pytest.raises(TypeError, match="Type-check error"):
         LinearInterpolationImagePerturbator.adjust_baseline("invalid", inputs)  # type: ignore
 
     # Test with mismatched tensor shape
