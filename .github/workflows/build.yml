@@ -73,6 +73,7 @@ jobs:
             "hf-internal-testing/tiny-random-LlamaForCausalLM",
             "hf-internal-testing/tiny-random-roberta",
             "hf-internal-testing/tiny-random-t5",
+            "hf-internal-testing/tiny-random-MistralForCausalLM",
             "textattack/bert-base-uncased-imdb",
         ]
 
