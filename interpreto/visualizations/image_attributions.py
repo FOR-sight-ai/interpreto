@@ -42,13 +42,8 @@ from matplotlib import pyplot as plt
 
 from interpreto.attributions.base import ImageAttributionOutput
 
-# Slack on the [0, 1] range check, to absorb float error in x * std + mean rather than warn
-# about a display that is fine. Wide enough to stay quiet on rounding, far too tight to hide
-# a genuine scale mismatch (those land orders of magnitude out).
-_RANGE_TOLERANCE = 1e-3
 
-
-def _denormalize(attribution_output: ImageAttributionOutput) -> np.ndarray:
+def _denormalize(attribution_output: ImageAttributionOutput, range_tolerance: float = 1e-3) -> np.ndarray:
     """
     Recover a displayable image from the pre-processed `pixel_values`.
 
@@ -58,6 +53,12 @@ def _denormalize(attribution_output: ImageAttributionOutput) -> np.ndarray:
     pin down. So the range is checked rather than assumed, and a violation is reported, not
     repaired: fitting the observed range would be the min-max stretch this replaced, which
     silently produces a plausible, wrong image.
+
+    Args:
+        range_tolerance: slack on the [0, 1] range check, to absorb float error in
+            `x * std + mean` rather than warn about a display that is fine. Wide enough to stay
+            quiet on rounding, far too tight to hide a genuine scale mismatch (those land orders
+            of magnitude out).
     """
     if attribution_output.image_mean is None or attribution_output.image_std is None:
         raise ValueError(
@@ -79,7 +80,7 @@ def _denormalize(attribution_output: ImageAttributionOutput) -> np.ndarray:
     image = image * attribution_output.image_std + attribution_output.image_mean
 
     lo, hi = float(image.min()), float(image.max())
-    if lo < -_RANGE_TOLERANCE or hi > 1.0 + _RANGE_TOLERANCE:
+    if lo < -range_tolerance or hi > 1.0 + range_tolerance:
         warnings.warn(
             f"De-normalized image spans [{lo:.3f}, {hi:.3f}], outside the displayable [0, 1]; "
             "it will be clamped and may look wrong. The image_mean/image_std do not match how "
@@ -225,7 +226,7 @@ def _draw_attribution_on_ax(
 
 
 def plot_image_attribution(
-    attribution_output: ImageAttributionOutput,
+    attribution_output: ImageAttributionOutput | Iterable[ImageAttributionOutput],
     target_idx: int | Iterable[int] | None = None,
     cmap: str = "coolwarm",
     alpha: float = 0.5,
@@ -251,10 +252,19 @@ def plot_image_attribution(
     The underlying image is de-normalized from the output's own `pixel_values`, so it is
     always at the model's input resolution — the same grid `attributions_image` lives on.
 
+    A single output is drawn one panel per target (its one image repeated). An
+    iterable of outputs — e.g. `explain([img_a, img_b, img_c], [...])`, which
+    returns one output per image — is drawn one image per output, with
+    `target_idx` resolved independently against each output's own targets. The
+    two compose: a list of multi-target outputs flattens to one panel per
+    (output, target) pair.
+
     Args:
-        attribution_output: Output from an image-classification attribution method.
+        attribution_output: One `ImageAttributionOutput`, or an iterable of them
+            (one per image). Each is de-normalized from its own `pixel_values`,
+            so a list renders several different images in one figure.
         target_idx: If int, plot only that target. If an iterable of ints, plot
-            that subset. If None, one subplot per target.
+            that subset. If None, one subplot per target. Applied per output.
         cmap: Matplotlib colormap for the heatmap. Defaults to `coolwarm`
             (diverging), used for every panel, sequential or signed, so methods
             stay visually comparable.
@@ -275,21 +285,33 @@ def plot_image_attribution(
         (fig, axes) — matplotlib Figure and 2D Axes array. Call `plt.show()`
         from a script, or just keep the reference in a notebook.
     """
-    n_targets = attribution_output.attributions.shape[0]
-    if target_idx is None:
-        target_indices = list(range(n_targets))
-    elif isinstance(target_idx, int):
-        target_indices = [target_idx]
+    if isinstance(attribution_output, ImageAttributionOutput):
+        outputs = [attribution_output]
     else:
-        target_indices = list(target_idx)
+        outputs = list(attribution_output)
+        if not outputs:
+            raise ValueError("attribution_output is an empty iterable — pass at least one output.")
 
-    if not target_indices:
-        raise ValueError("target_idx is empty — pass None to plot all targets.")
-    for t_idx in target_indices:
-        if not 0 <= t_idx < n_targets:
-            raise IndexError(f"target_idx {t_idx} out of range for {n_targets} targets.")
-    n_plots = len(target_indices)
+    panels: list[tuple[np.ndarray, ImageAttributionOutput, int]] = []
+    for output in outputs:
+        n_targets = output.attributions.shape[0]
+        if target_idx is None:
+            target_indices = list(range(n_targets))
+        elif isinstance(target_idx, int):
+            target_indices = [target_idx]
+        else:
+            target_indices = list(target_idx)
 
+        if not target_indices:
+            raise ValueError("target_idx is empty — pass None to plot all targets.")
+        for t_idx in target_indices:
+            if not 0 <= t_idx < n_targets:
+                raise IndexError(f"target_idx {t_idx} out of range for {n_targets} targets.")
+
+        img_disp = _denormalize(output)
+        panels.extend((img_disp, output, t_idx) for t_idx in target_indices)
+
+    n_plots = len(panels)
     actual_cols = min(cols, n_plots)
     n_rows = ceil(n_plots / actual_cols)
     fig, axes = plt.subplots(
@@ -299,12 +321,9 @@ def plot_image_attribution(
         squeeze=False,
     )
 
-    img_disp = _denormalize(attribution_output)
-    targets_tensor = attribution_output.targets
-
-    for i, t_idx in enumerate(target_indices):
+    for i, (img_disp, output, t_idx) in enumerate(panels):
         ax = axes[i // actual_cols][i % actual_cols]
-        heatmap = _prepare_heatmap(attribution_output, t_idx, clip_percentile, absolute_value)
+        heatmap = _prepare_heatmap(output, t_idx, clip_percentile, absolute_value)
 
         _draw_attribution_on_ax(
             ax,
@@ -322,7 +341,7 @@ def plot_image_attribution(
         # TODO: pair class index with its human-readable label (model.config.id2label).
         # Needs the id2label mapping plumbed in — either as a kwarg to this function
         # or stored on ImageAttributionOutput at explain() time.
-        ax.set_title(f"target {int(targets_tensor[t_idx].item())}")
+        ax.set_title(f"target {int(output.targets[t_idx].item())}")
         ax.axis("off")
 
     # Hide unused cells in the last row.

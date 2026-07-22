@@ -203,7 +203,7 @@ def test_denormalize_warns_and_clamps_when_out_of_range(pixel_value, expected_sp
 @pytest.mark.parametrize(
     "error_value",
     [
-        1e-4,  # above float32 eps (~1.2e-7) so it survives, below _RANGE_TOLERANCE so it stays quiet
+        1e-4,  # above float32 eps (~1.2e-7) so it survives, below range_tolerance so it stays quiet
         -1e-4,
     ],
 )
