@@ -36,9 +36,11 @@ from interpreto.attributions import (
     ImageGradientShap,
     ImageIntegratedGradients,
     ImageKernelShap,
+    ImageLime,
     ImageOcclusion,
     ImageSaliency,
     ImageSmoothGrad,
+    ImageSobol,
     ImageSquareGrad,
     ImageVarGrad,
 )
@@ -50,7 +52,13 @@ from interpreto.attributions.aggregations.base import (
     TrapezoidalMeanAggregator,
     VarianceAggregator,
 )
-from interpreto.attributions.aggregations.linear_regression_aggregation import LinearRegressionAggregator
+from interpreto.attributions.aggregations.linear_regression_aggregation import (
+    DistancesFromMask,
+    Kernels,
+    LinearRegressionAggregator,
+    default_kernel_width_fn,
+)
+from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
 from interpreto.attributions.base import ImageAttributionOutput
 from interpreto.attributions.perturbations import (
     GaussianNoiseImagePerturbator,
@@ -58,8 +66,11 @@ from interpreto.attributions.perturbations import (
     ImageTensorPerturbator,
     LinearInterpolationImagePerturbator,
     OcclusionImagePerturbator,
+    RandomMaskedImagePerturbator,
     ShapImagePerturbator,
+    SobolImagePerturbator,
 )
+from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.visualizations import plot_image_attribution
 
@@ -171,6 +182,83 @@ INPUT_FIXTURES = [
 ]
 
 
+def _assert_explains_and_plots(
+    explainer,
+    processor,
+    perturbator_cls,
+    aggregator_cls,
+    inputs,
+    targets,
+    granularity,
+    resize_strategy,
+    preprocess,
+    image_mean,
+    image_std,
+):
+    """
+    Shared body for the vision method tests. Given an already-built explainer, check that its
+    perturbator/aggregator are the expected types, run `explain`, and check the outputs: length,
+    type, granularity/resize strategy, that everything is on the CPU, that the stored per-output
+    model inputs match a fresh deterministic re-run, and that the de-normalization stats are the
+    expected ones. Finally confirm each output is plottable on the Agg backend.
+
+    Method-specific knobs (Sobol's sampler/order, LIME's kernel_width, ...) are *not* checked
+    here — those stay in each method's test. This only covers what every method shares.
+
+    Returns the list of `ImageAttributionOutput`, or `None` when the call was expected to raise
+    (preprocess=False with raw PIL/ndarray inputs) and short-circuited — the caller must stop too.
+    """
+    assert isinstance(explainer.perturbator, perturbator_cls)
+    assert isinstance(explainer.aggregator, aggregator_cls)
+
+    # preprocess=False rejects raw PIL/ndarray: they can only be normalized by the processor.
+    items = inputs if isinstance(inputs, list) else [inputs]
+    if not preprocess and any(isinstance(i, (Image.Image, np.ndarray)) for i in items):
+        with pytest.raises(ValueError, match="raw inputs must be torch.Tensor"):
+            explainer.explain(inputs, targets)
+        return None
+
+    output = explainer.explain(inputs, targets)
+
+    expected_len = len(inputs) if isinstance(inputs, list) else 1
+    assert len(output) == expected_len
+    assert all(isinstance(o, ImageAttributionOutput) for o in output)
+    assert all(o.granularity is granularity for o in output)
+    assert all(o.granularity_resize is resize_strategy for o in output)
+    assert all(o.attributions.device.type == "cpu" for o in output)
+    assert all(o.targets.device.type == "cpu" for o in output)
+
+    # Reassemble the per-output model inputs (scattered one-per-ImageAttributionOutput) and check
+    # they match a fresh, deterministic re-run of process_model_inputs on the same raw inputs.
+    stored_inputs = [o.model_inputs_to_explain for o in output]
+    expected_inputs = explainer.process_model_inputs(inputs)
+    for stored, expected in zip(stored_inputs, expected_inputs, strict=True):
+        assert stored.keys() == expected.keys()
+        assert all(torch.equal(stored[key], expected[key]) for key in expected)
+
+    if preprocess:
+        if getattr(processor, "do_normalize", False):
+            expected_mean = torch.as_tensor(processor.image_mean, dtype=torch.float32).view(-1, 1, 1)
+            expected_std = torch.as_tensor(processor.image_std, dtype=torch.float32).view(-1, 1, 1)
+        else:
+            expected_mean = torch.as_tensor(0.0, dtype=torch.float32).view(-1, 1, 1)
+            expected_std = torch.as_tensor(1.0, dtype=torch.float32).view(-1, 1, 1)
+    else:
+        expected_mean = torch.as_tensor(image_mean, dtype=torch.float32).view(-1, 1, 1)
+        expected_std = torch.as_tensor(image_std, dtype=torch.float32).view(-1, 1, 1)
+
+    for o in output:
+        assert torch.equal(o.image_mean, expected_mean)
+        assert torch.equal(o.image_std, expected_std)
+
+    # The produced outputs must be plottable: run the viz end-to-end on the Agg backend.
+    for o in output:
+        fig, _ = plot_image_attribution(o)
+        plt.close(fig)
+
+    return output
+
+
 @pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
 @pytest.mark.parametrize("preprocess, image_mean, image_std", [(True, None, None), (False, 2.0, 0.75)])
 @pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
@@ -212,50 +300,244 @@ def test_vision_attribution_methods_fast(
             image_std=image_std,
         )
 
-    assert isinstance(explainer.perturbator, perturbator)
-    assert isinstance(explainer.aggregator, aggregator)
+    _assert_explains_and_plots(
+        explainer,
+        processor,
+        perturbator,
+        aggregator,
+        inputs,
+        targets,
+        granularity,
+        resize_strategy,
+        preprocess,
+        image_mean,
+        image_std,
+    )
 
-    # preprocess=False rejects raw PIL/ndarray: they can only be normalized by the processor.
-    items = inputs if isinstance(inputs, list) else [inputs]
-    if not preprocess and any(isinstance(i, (Image.Image, np.ndarray)) for i in items):
-        with pytest.raises(ValueError, match="raw inputs must be torch.Tensor"):
-            explainer.explain(inputs, targets)
+
+# Sobol carries its own machinery (quasi-MC SequenceSampler + variance-based aggregation),
+# so it gets its own test rather than a FAST_METHOD_SPECS row: it takes `n_token_perturbations`
+# (not `n_perturbations`) and two extra knobs, the indices `order` and the `sampler`, both worth
+# sweeping. Kept to a small representative set: both orders, all three samplers.
+SOBOL_SPECS = [
+    (5, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL),
+    (5, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON),
+    (5, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube),
+]
+
+
+@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
+@pytest.mark.parametrize("preprocess, image_mean, image_std", [(True, None, None), (False, 2.0, 0.75)])
+@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
+@pytest.mark.parametrize("n_token_perturbations, order, sampler", SOBOL_SPECS)
+def test_image_sobol(
+    request,
+    model_and_processor,
+    n_token_perturbations,
+    order,
+    sampler,
+    resize_strategy,
+    preprocess,
+    image_mean,
+    image_std,
+    input_fixture,
+    targets,
+):
+    model, processor = model_and_processor
+    inputs = request.getfixturevalue(input_fixture)
+
+    explainer = ImageSobol(
+        model,
+        processor,
+        n_token_perturbations=n_token_perturbations,
+        sobol_indices_order=order,
+        sampler=sampler,
+        resize_strategy=resize_strategy,
+        preprocess=preprocess,
+        image_mean=image_mean,
+        image_std=image_std,
+    )
+
+    # The two Sobol-specific knobs must land on the right objects (stored as their `.value`).
+    assert explainer.perturbator.sampler_class == sampler.value
+    assert explainer.aggregator.sobol_indices_order == order.value
+
+    output = _assert_explains_and_plots(
+        explainer,
+        processor,
+        SobolImagePerturbator,
+        SobolAggregator,
+        inputs,
+        targets,
+        ImageGranularity.PATCH,
+        resize_strategy,
+        preprocess,
+        image_mean,
+        image_std,
+    )
+    if output is None:  # preprocess=False + raw PIL/ndarray short-circuited in the helper.
         return
 
-    output = explainer.explain(inputs, targets)
+    # The Sobol perturbator builds ((g + 2) * k, g) masks, where g = gh * gw is the number of
+    # patches and k = n_token_perturbations. Derive g from the processed pixel grid and the
+    # reconciled patch_size, then check the mask directly (mirrors the text-side Sobol test).
+    _, _, height, width = explainer.process_model_inputs(inputs)[0]["pixel_values"].shape
+    patch_size = explainer.perturbator.patch_size
+    seq_len = (height // patch_size) * (width // patch_size)
+    mask = explainer.perturbator.get_mask(seq_len)
+    assert isinstance(mask, torch.Tensor)
+    assert mask.shape == ((seq_len + 2) * n_token_perturbations, seq_len)
+    assert mask.dtype == torch.float32
 
-    expected_len = len(inputs) if isinstance(inputs, list) else 1
-    assert len(output) == expected_len
-    assert all(isinstance(o, ImageAttributionOutput) for o in output)
-    assert all(o.granularity is granularity for o in output)
-    assert all(o.granularity_resize is resize_strategy for o in output)
-    assert all(o.attributions.device.type == "cpu" for o in output)
-    assert all(o.targets.device.type == "cpu" for o in output)
 
-    # Reassemble the per-output model inputs (scattered one-per-ImageAttributionOutput) and check
-    # they match a fresh, deterministic re-run of process_model_inputs on the same raw inputs.
-    stored_inputs = [o.model_inputs_to_explain for o in output]
-    expected_inputs = explainer.process_model_inputs(inputs)
-    for stored, expected in zip(stored_inputs, expected_inputs, strict=True):
-        assert stored.keys() == expected.keys()
-        assert all(torch.equal(stored[key], expected[key]) for key in expected)
+# LIME carries its own machinery (random masking + a similarity-weighted linear surrogate), so
+# like Sobol it gets its own test rather than a FAST_METHOD_SPECS row: on top of `n_perturbations`
+# it takes `perturb_probability`, the `distance_function`, and the `kernel_width`, all worth
+# sweeping. Values mirror the text-side LIME test: the three distance functions paired with the
+# three kernel_width forms (None -> default fn, an int, a float).
+LIME_SPECS = [
+    (5, 0.5, DistancesFromMask.HAMMING, None),
+    (5, 0.8, DistancesFromMask.EUCLIDEAN, 5),
+    (5, 0.5, DistancesFromMask.COSINE, 0.5),
+]
 
-    if preprocess:
-        if getattr(processor, "do_normalize", False):
-            expected_mean = torch.as_tensor(processor.image_mean, dtype=torch.float32).view(-1, 1, 1)
-            expected_std = torch.as_tensor(processor.image_std, dtype=torch.float32).view(-1, 1, 1)
-        else:
-            expected_mean = torch.as_tensor(0.0, dtype=torch.float32).view(-1, 1, 1)
-            expected_std = torch.as_tensor(1.0, dtype=torch.float32).view(-1, 1, 1)
+
+@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
+@pytest.mark.parametrize("preprocess, image_mean, image_std", [(True, None, None), (False, 2.0, 0.75)])
+@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
+@pytest.mark.parametrize("n_perturbations, perturb_probability, distance_function, kernel_width", LIME_SPECS)
+def test_image_lime(
+    request,
+    model_and_processor,
+    n_perturbations,
+    perturb_probability,
+    distance_function,
+    kernel_width,
+    resize_strategy,
+    preprocess,
+    image_mean,
+    image_std,
+    input_fixture,
+    targets,
+):
+    model, processor = model_and_processor
+    inputs = request.getfixturevalue(input_fixture)
+
+    explainer = ImageLime(
+        model,
+        processor,
+        n_perturbations=n_perturbations,
+        perturb_probability=perturb_probability,
+        distance_function=distance_function,
+        kernel_width=kernel_width,
+        resize_strategy=resize_strategy,
+        preprocess=preprocess,
+        image_mean=image_mean,
+        image_std=image_std,
+    )
+
+    # The LIME-specific knobs must land on the right objects.
+    assert explainer.perturbator.n_perturbations == n_perturbations
+    assert pytest.approx(explainer.perturbator.perturb_probability, rel=1e-6) == perturb_probability
+    assert explainer.aggregator.distance_function == distance_function
+    assert explainer.aggregator.similarity_kernel == Kernels.EXPONENTIAL
+    # kernel_width=None falls back to the default kernel-width function; otherwise it is stored as-is.
+    if kernel_width is None:
+        assert explainer.aggregator.kernel_width == default_kernel_width_fn
     else:
-        expected_mean = torch.as_tensor(image_mean, dtype=torch.float32).view(-1, 1, 1)
-        expected_std = torch.as_tensor(image_std, dtype=torch.float32).view(-1, 1, 1)
+        assert explainer.aggregator.kernel_width == kernel_width
 
-    for o in output:
-        assert torch.equal(o.image_mean, expected_mean)
-        assert torch.equal(o.image_std, expected_std)
+    output = _assert_explains_and_plots(
+        explainer,
+        processor,
+        RandomMaskedImagePerturbator,
+        LinearRegressionAggregator,
+        inputs,
+        targets,
+        ImageGranularity.PATCH,
+        resize_strategy,
+        preprocess,
+        image_mean,
+        image_std,
+    )
+    if output is None:  # preprocess=False + raw PIL/ndarray short-circuited in the helper.
+        return
 
-    # The produced outputs must be plottable: run the viz end-to-end on the Agg backend.
-    for o in output:
-        fig, _ = plot_image_attribution(o)
-        plt.close(fig)
+    # The LIME perturbator builds (n_perturbations, g) masks, where g = gh * gw is the number of
+    # patches. Derive g from the processed pixel grid and the reconciled patch_size, then check
+    # the mask directly (mirrors the text-side LIME test).
+    _, _, height, width = explainer.process_model_inputs(inputs)[0]["pixel_values"].shape
+    patch_size = explainer.perturbator.patch_size
+    seq_len = (height // patch_size) * (width // patch_size)
+    mask = explainer.perturbator.get_mask(seq_len)
+    assert isinstance(mask, torch.Tensor)
+    assert mask.shape == (n_perturbations, seq_len)
+    assert mask.dtype == torch.float32
+
+
+# End-to-end smoke test against a *real* ViT (not the tiny random one). The point is to catch
+# any shape/dtype drift between what `explain` returns and what the viz consumes that the tiny
+# model can hide. Everything else is deliberately kept small: one resize strategy (BILINEAR),
+# preprocess=True only, and a handful of representative inputs. All ten methods run in the same
+# function — Sobol and LIME use their default parameters here, so they need none of their extra
+# knobs and construct exactly like the others. The raw tensor/ndarray are deliberately given a
+# real, non-square size (3, 340, 270) so the processor's resize/crop path is actually exercised.
+@pytest.fixture(scope="module")
+def large_tensor() -> torch.Tensor:
+    return torch.rand(3, 340, 270)
+
+
+@pytest.fixture(scope="module")
+def large_ndarray() -> np.ndarray:
+    return np.random.rand(3, 340, 270).astype(np.float32)
+
+
+SLOW_INPUT_FIXTURES = [
+    ("image_list", [0, 1]),
+    ("large_tensor", 0),
+    ("large_ndarray", 0),
+]
+
+SLOW_METHOD_SPECS = FAST_METHOD_SPECS + [
+    (ImageSobol, SobolImagePerturbator, SobolAggregator, ImageGranularity.PATCH),
+    (ImageLime, RandomMaskedImagePerturbator, LinearRegressionAggregator, ImageGranularity.PATCH),
+]
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("input_fixture, targets", SLOW_INPUT_FIXTURES)
+@pytest.mark.parametrize("attribution_method, perturbator, aggregator, granularity", SLOW_METHOD_SPECS)
+def test_vision_attribution_methods_slow(
+    request,
+    attribution_method,
+    perturbator,
+    aggregator,
+    granularity,
+    input_fixture,
+    targets,
+):
+    model = AutoModelForImageClassification.from_pretrained(SLOW_MODELS[0])
+    processor = AutoImageProcessor.from_pretrained(SLOW_MODELS[0])
+    inputs = request.getfixturevalue(input_fixture)
+
+    # Default parameters for every method (Sobol/LIME included), so construction is uniform.
+    explainer = attribution_method(
+        model,
+        processor,
+        resize_strategy=GranularityResizeStrategy.BILINEAR,
+        preprocess=True,
+    )
+
+    _assert_explains_and_plots(
+        explainer,
+        processor,
+        perturbator,
+        aggregator,
+        inputs,
+        targets,
+        granularity,
+        GranularityResizeStrategy.BILINEAR,
+        preprocess=True,
+        image_mean=None,
+        image_std=None,
+    )
