@@ -80,7 +80,7 @@ class ImageLime(ImageClassificationAttributionExplainer):
         batch_size: int = 4,
         resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
-        n_perturbations: int = 100,
+        n_perturbations: int = 1000,
         perturb_probability: float = 0.5,
         replace_value: float = 0.0,
         distance_function: DistancesFromMaskProtocol = DistancesFromMask.COSINE,
