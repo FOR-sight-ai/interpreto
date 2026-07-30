@@ -37,9 +37,9 @@ from transformers import PreTrainedTokenizer
 from interpreto.attributions.perturbations.base import (
     ImageGranularity,
     ImageMaskPerturbator,
-    TextGranularity,
     TextMaskPerturbator,
 )
+from interpreto.commons.granularity import TextGranularity
 
 
 class RandomMaskedTokenPerturbator(TextMaskPerturbator):
