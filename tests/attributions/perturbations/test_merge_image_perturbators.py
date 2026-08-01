@@ -117,7 +117,7 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
     assert issubclass(perturbator_class, ImageMaskPerturbator)
     assert not issubclass(perturbator_class, ImageTensorPerturbator)
-    assert not issubclass(prbator_class, TextMaskPerturbator)
+    assert not issubclass(pertubator_class, TextMaskPerturbator)
     assert not issubclass(perturbator_class, TextTensorPerturbator)
 
     patch_size = 2
@@ -294,7 +294,7 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
 
 def test_image_occlusion_masks():
-    perturbator = _image_variant(OcclusionPerturbator)()
+    perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))
