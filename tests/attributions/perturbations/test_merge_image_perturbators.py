@@ -188,10 +188,10 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
 def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
-    assert isinstance(perturbator_class, ImageMaskPerturbator)
-    assert not isinstance(perturbator_class, ImageTensorPerturbator)
-    assert not isinstance(perturbator_class, TextMaskPerturbator)
-    assert not isinstance(perturbator_class, TextTensorPerturbator)
+    assert issubclass(perturbator_class, ImageMaskPerturbator)
+    assert not issubclass(perturbator_class, ImageTensorPerturbator)
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    assert not issubclass(perturbator_class, TextTensorPerturbator)
 
     patch_size = 16
     p = 15
@@ -213,7 +213,7 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if issubclass(perturbator, OcclusionPerturbator):
+        if isinstance(perturbator, OcclusionPerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
             k = perturbator.n_token_perturbations

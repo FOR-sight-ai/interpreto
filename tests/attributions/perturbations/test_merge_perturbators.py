@@ -40,8 +40,17 @@ from interpreto.commons.granularity import TextGranularity
 #     GradientShapPerturbator,
 # ]
 
+
+def _text_variant(method_class: type) -> type:
+    """
+    Combine a method perturbator with the text modality base, as the explainer does at
+    construction time. The method class alone leaves `perturb` abstract.
+    """
+    return type("Text" + method_class.__name__, (method_class, TextMaskPerturbator), {"__slots__": ()})
+
+
 tokens_perturbators = [
-    OcclusionPerturbator,
+    _text_variant(OcclusionPerturbator),
     # RandomMaskedTokenPerturbator,
     # ShapTokenPerturbator,
     # SobolTokenPerturbator,
@@ -82,7 +91,7 @@ tokens_perturbators = [
 @pytest.mark.parametrize("perturbator_class", tokens_perturbators)
 def test_token_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
-    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    assert issubclass(perturbator_class, TextMaskPerturbator)
     p = 10
 
     replace_token = "[REPLACE]"
@@ -91,19 +100,19 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         bert_model.resize_token_embeddings(len(bert_tokenizer))
     replace_token_id = bert_tokenizer.convert_tokens_to_ids(replace_token)  # type: ignore
 
-    # if perturbator_class in [OcclusionPerturbator, SobolTokenPerturbator]:
-    if perturbator_class in (OcclusionPerturbator,):
+    # if issubclass(perturbator_class, (OcclusionPerturbator, SobolTokenPerturbator)):
+    if issubclass(perturbator_class, OcclusionPerturbator):
         # the number of perturbations depends on the sequence length
         perturbator = perturbator_class(
-            tokenizer=bert_tokenizer,
+            processor=bert_tokenizer,
             granularity=TextGranularity.ALL_TOKENS,
-            replace_token_id=replace_token_id,
+            replace_value=replace_token_id,
         )
     else:
         perturbator = perturbator_class(
-            tokenizer=bert_tokenizer,
+            processor=bert_tokenizer,
             granularity=TextGranularity.ALL_TOKENS,
-            replace_token_id=replace_token_id,
+            replace_value=replace_token_id,
             n_perturbations=p,
         )
 
@@ -307,9 +316,9 @@ if __name__ == "__main__":
     bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
     bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
 
-    test_token_perturbators(
-        SobolTokenPerturbator,
-        sentences=sentences,
-        bert_model=bert_model,
-        bert_tokenizer=bert_tokenizer,
-    )
+    # test_token_perturbators(
+    #     SobolTokenPerturbator,
+    #     sentences=sentences,
+    #     bert_model=bert_model,
+    #     bert_tokenizer=bert_tokenizer,
+    # )
