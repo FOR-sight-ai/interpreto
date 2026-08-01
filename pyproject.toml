@@ -224,6 +224,7 @@ ignore = [
   "PLR2004", # unnamed numerical constants used
   "PLR0913", # too many arguments
   "PLR0915", # too many statements
+  "PLR0915", # too many statements
   "UP037",   # invalid type annotation (incompatible with single dimension jaxtyping)
   "W191",    # indentation contains tabs (handled by format)
 ]
