@@ -159,7 +159,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
     # To be changed according to the final form of the explainer:
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {})
     if aggregation_strategy is not None:
-        explainer_kwargs["granularity_aggregation_strategy"] = aggregation_strategy
+        explainer_kwargs["combination_strategy"] = aggregation_strategy
     explainer = attribution_explainer(
         model, processor=processor, batch_size=3, device=DEVICE, granularity=granularity, **explainer_kwargs
     )

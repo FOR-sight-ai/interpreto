@@ -91,7 +91,8 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         bert_model.resize_token_embeddings(len(bert_tokenizer))
     replace_token_id = bert_tokenizer.convert_tokens_to_ids(replace_token)  # type: ignore
 
-    if perturbator_class in [OcclusionPerturbator, SobolTokenPerturbator]:
+    # if perturbator_class in [OcclusionPerturbator, SobolTokenPerturbator]:
+    if perturbator_class in (OcclusionPerturbator,):
         # the number of perturbations depends on the sequence length
         perturbator = perturbator_class(
             tokenizer=bert_tokenizer,

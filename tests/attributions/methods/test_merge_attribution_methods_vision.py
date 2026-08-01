@@ -247,7 +247,7 @@ def test_vision_attribution_methods_fast(
         explainer = attribution_method(
             model,
             processor,
-            resize_strategy=resize_strategy,
+            combination_strategy=resize_strategy,
             preprocess=preprocess,
             image_mean=image_mean,
             image_std=image_std,
@@ -257,7 +257,7 @@ def test_vision_attribution_methods_fast(
             model,
             processor,
             n_perturbations=5,
-            resize_strategy=resize_strategy,
+            combination_strategy=resize_strategy,
             preprocess=preprocess,
             image_mean=image_mean,
             image_std=image_std,
