@@ -32,14 +32,11 @@ from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 from transformers.image_processing_utils import BatchFeature
 
-from interpreto.attributions.aggregations.base import (
-    OcclusionAggregator,
-)
+from interpreto.attribution.perturbations.smoothgrad_merged import SmoothGrad
+from interpreto.attributions.aggregations.base import MeanAggregator, OcclusionAggregator
 from interpreto.attributions.base_merged import ImageAttributionOutput
-from interpreto.attributions.methods.occlusion_merge import Occlusion as ImageOcclusion
-from interpreto.attributions.perturbations.occlusion_perturbation_merged import (
-    OcclusionPerturbator as OcclusionImagePerturbator,
-)
+from interpreto.attributions.methods.occlusion_merge import Occlusion
+from interpreto.attributions.perturbations.occlusion_perturbation_merged import OcclusionPerturbator
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.visualizations.image_attributions_merge import plot_image_attribution
 
@@ -127,7 +124,8 @@ def model_and_processor():
 
 
 FAST_METHOD_SPECS = [
-    (ImageOcclusion, OcclusionImagePerturbator, OcclusionAggregator, ImageGranularity.PATCH),
+    (Occlusion, OcclusionPerturbator, OcclusionAggregator, ImageGranularity.PATCH),
+    (SmoothGrad, GaussianNoiseImagePerturbator, MeanAggregator, ImageGranularity.PIXEL),
 ]
 
 
@@ -242,8 +240,8 @@ def test_vision_attribution_methods_fast(
     model, processor = model_and_processor
     inputs = request.getfixturevalue(input_fixture)
 
-    #    if attribution_method in (ImageOcclusion, ImageSaliency):
-    if attribution_method in (ImageOcclusion,):
+    #    if attribution_method in (Occlusion, ImageSaliency):
+    if attribution_method in (Occlusion,):
         explainer = attribution_method(
             model,
             processor,

@@ -37,6 +37,7 @@ from interpreto.attributions.perturbations.base_merged import (
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
+from interpreto.attributions.perturbations.gaussian_noise_perturbation_merged import GaussianNoisePerturbator
 from interpreto.attributions.perturbations.occlusion_perturbation_merged import (
     OcclusionPerturbator,
 )
@@ -53,11 +54,11 @@ SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
 
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
-# image_embedding_perturbators = [
-#     GaussianNoiseImagePerturbator,
-#     LinearInterpolationImagePerturbator,
-#     GradientShapImagePerturbator,
-# ]
+image_embedding_perturbators = [
+    GaussianNoisePerturbator,
+    #     LinearInterpolationImagePerturbator,
+    #     GradientShapImagePerturbator,
+]
 
 
 def _image_variant(method_class: type) -> type:
@@ -153,34 +154,34 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
         assert masks.shape[0] == perturbed_inputs["pixel_values"].shape[0]
 
 
-# @pytest.mark.slow
-# @pytest.mark.parametrize("model_name", SLOW_MODELS)
-# @pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
-# def test_slow_image_embedding_perturbator(perturbator_class, model_name, images):
-#     """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
-#     assert issubclass(perturbator_class, ImageTensorPerturbator)
-#     assert not issubclass(perturbator_class, ImageMaskPerturbator)
-#     assert not issubclass(perturbator_class, TextMaskPerturbator)
-#     assert not issubclass(perturbator_class, TextTensorPerturbator)
+@pytest.mark.slow
+@pytest.mark.parametrize("model_name", SLOW_MODELS)
+@pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
+def test_slow_image_embedding_perturbator(perturbator_class, model_name, images):
+    """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
+    assert issubclass(perturbator_class, ImageTensorPerturbator)
+    assert not issubclass(perturbator_class, ImageMaskPerturbator)
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    assert not issubclass(perturbator_class, TextTensorPerturbator)
 
-#     p = 10
-#     perturbator = perturbator_class(n_perturbations=p)
+    p = 10
+    perturbator = perturbator_class(n_perturbations=p)
 
-#     image_processor = AutoImageProcessor.from_pretrained(model_name)
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
 
-#     for img in images:
-#         processed_image = image_processor(img, return_tensors="pt")
-#         assert isinstance(processed_image, BatchFeature)
+    for img in images:
+        processed_image = image_processor(img, return_tensors="pt")
+        assert isinstance(processed_image, BatchFeature)
 
-#         perturbed_inputs, _ = perturbator.perturb(processed_image)
+        perturbed_inputs, _ = perturbator.perturb(processed_image)
 
-#         assert isinstance(perturbed_inputs, MutableMapping)
+        assert isinstance(perturbed_inputs, MutableMapping)
 
-#         assert "pixel_values" in perturbed_inputs.keys()
-#         assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+        assert "pixel_values" in perturbed_inputs.keys()
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
 
-#         _, _, h, w = processed_image["pixel_values"].shape
-#         assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
+        _, _, h, w = processed_image["pixel_values"].shape
+        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
 
 
 @pytest.mark.slow

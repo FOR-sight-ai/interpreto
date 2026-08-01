@@ -53,7 +53,8 @@ import torch
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 
-from interpreto.attributions.methods.occlusion_merge import Occlusion as ImageOcclusion
+from interpreto.attributions.methods.occlusion_merge import Occlusion
+from interpreto.attriutions.methods.smoothgrad_merged import SmoothGrad
 from interpreto.visualizations.image_attributions_merge import plot_image_attribution
 
 plt.switch_backend("Agg")  # headless: render into a buffer, never open a window.
@@ -80,9 +81,9 @@ SANITY_METHODS = [
     # ImageGradientShap,
     # ImageIntegratedGradients,
     # ImageKernelShap,
-    ImageOcclusion,
+    Occlusion,
     # ImageSaliency,
-    # ImageSmoothGrad,
+    SmoothGrad,
     # ImageSobol,
     # ImageSquareGrad,
     # ImageVarGrad,

@@ -27,6 +27,7 @@ import pytest
 import torch
 
 from interpreto.attributions.perturbations.base_merged import TextMaskPerturbator
+from interpreto.attributions.perturbations.gaussian_noise_perturbation_merged import GaussianNoisePerturbator
 from interpreto.attributions.perturbations.occlusion_perturbation_merged import (
     OcclusionPerturbator,
 )
@@ -34,11 +35,11 @@ from interpreto.attributions.perturbations.occlusion_perturbation_merged import 
 # from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import TextGranularity
 
-# embeddings_perturbators = [
-#     GaussianNoisePerturbator,
-#     LinearInterpolationPerturbator,
-#     GradientShapPerturbator,
-# ]
+embeddings_perturbators = [
+    GaussianNoisePerturbator,
+    #    LinearInterpolationPerturbator,
+    #    GradientShapPerturbator,
+]
 
 
 def _text_variant(method_class: type) -> type:
@@ -57,35 +58,35 @@ tokens_perturbators = [
 ]
 
 
-# @pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
-# def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
-#     """test all perturbators respect the API"""
-#     assert not issubclass(perturbator_class, TextMaskPerturbator)
-#     p = 10
-#     d = 32
-#     inputs_embedder = bert_model.get_input_embeddings()
+@pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
+def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
+    """test all perturbators respect the API"""
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    p = 10
+    d = 32
+    inputs_embedder = bert_model.get_input_embeddings()
 
-#     perturbator = perturbator_class(inputs_embedder=inputs_embedder, n_perturbations=p)
+    perturbator = perturbator_class(inputs_embedder=inputs_embedder, n_perturbations=p)
 
-#     for sent in sentences:
-#         elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
-#         assert isinstance(elem, MutableMapping)
-#         l = elem["input_ids"].shape[1]
+    for sent in sentences:
+        elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
+        assert isinstance(elem, MutableMapping)
+        l = elem["input_ids"].shape[1]
 
-#         perturbed_inputs, masks = perturbator.perturb(elem)
+        perturbed_inputs, masks = perturbator.perturb(elem)
 
-#         assert isinstance(perturbed_inputs, MutableMapping)
+        assert isinstance(perturbed_inputs, MutableMapping)
 
-#         # inputs are embedded before perturbation
-#         assert "inputs_embeds" in perturbed_inputs.keys()
-#         assert isinstance(perturbed_inputs["inputs_embeds"], torch.Tensor)
-#         assert perturbed_inputs["inputs_embeds"].shape == (p, l, d)
+        # inputs are embedded before perturbation
+        assert "inputs_embeds" in perturbed_inputs.keys()
+        assert isinstance(perturbed_inputs["inputs_embeds"], torch.Tensor)
+        assert perturbed_inputs["inputs_embeds"].shape == (p, l, d)
 
-#         assert "attention_mask" in perturbed_inputs.keys()
-#         assert isinstance(perturbed_inputs["attention_mask"], torch.Tensor)
-#         assert perturbed_inputs["attention_mask"].shape == (p, l)
+        assert "attention_mask" in perturbed_inputs.keys()
+        assert isinstance(perturbed_inputs["attention_mask"], torch.Tensor)
+        assert perturbed_inputs["attention_mask"].shape == (p, l)
 
-#         assert torch.all(torch.isclose(perturbed_inputs["attention_mask"], elem["attention_mask"], atol=1e-5))
+        assert torch.all(torch.isclose(perturbed_inputs["attention_mask"], elem["attention_mask"], atol=1e-5))
 
 
 @pytest.mark.parametrize("perturbator_class", tokens_perturbators)

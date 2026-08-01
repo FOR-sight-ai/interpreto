@@ -38,6 +38,7 @@ from transformers import (
 
 from interpreto.attributions.base_merged import AttributionOutput
 from interpreto.attributions.methods.occlusion_merge import Occlusion
+from interpreto.attributions.methods.smoothgrad_merged import SmoothGrad
 from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
@@ -46,6 +47,10 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 attribution_method_kwargs = {
     Occlusion: {"inference_mode": InferenceModes.SOFTMAX},
+    SmoothGrad: {
+        "n_perturbations": 3,
+        "noise_std": 0.1,
+    },
 }
 
 
@@ -394,4 +399,4 @@ if __name__ == "__main__":
     test_attribution_output_size(bert_model, bert_processor, Occlusion, sentences)
     # test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
     # test_attribution_methods_memory_management_classification(IntegratedGradients)
-    # test_attribution_methods_memory_management_generation(SmoothGrad)
+    test_attribution_methods_memory_management_generation(SmoothGrad)
