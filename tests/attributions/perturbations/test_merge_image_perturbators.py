@@ -139,7 +139,7 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if issubclass(perturbator, OcclusionPerturbator):
+        if isinstance(perturbator, OcclusionPerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
             k = perturbator.n_token_perturbations
