@@ -284,7 +284,10 @@ def test_basic_mask_based_methods():
 
 
 def test_occlusion_masks():
-    perturbator = OcclusionPerturbator()
+    # OcclusionPerturbator only carries the method half: `perturb` stays abstract until it is
+    # combined with a modality base, as the explainer does at construction time.
+    occlusion_class = type("TextOcclusionPerturbator", (OcclusionPerturbator, TextMaskPerturbator), {"__slots__": ()})
+    perturbator = occlusion_class()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))

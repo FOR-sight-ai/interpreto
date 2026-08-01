@@ -33,11 +33,12 @@ from transformers.image_processing_utils import BatchFeature
 from interpreto.attributions.perturbations.base_merged import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
+    MaskPerturbator,
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
 from interpreto.attributions.perturbations.occlusion_perturbation_merged import (
-    OcclusionPerturbator as OcclusionImagePerturbator,
+    OcclusionPerturbator,
 )
 
 # from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
@@ -58,8 +59,17 @@ FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 #     GradientShapImagePerturbator,
 # ]
 
+
+def _image_variant(method_class: type) -> type:
+    """
+    Combine a method perturbator with the image modality base, as the explainer does at
+    construction time. The method class alone leaves `perturb` abstract.
+    """
+    return type("Image" + method_class.__name__, (method_class, ImageMaskPerturbator), {"__slots__": ()})
+
+
 image_mask_perturbators = [
-    OcclusionImagePerturbator,
+    _image_variant(OcclusionPerturbator),
     # RandomMaskedImagePerturbator,
     # ShapImagePerturbator,
     # SobolImagePerturbator,
@@ -104,7 +114,7 @@ def images():
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
 def test_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
-    assert issubclass(perturbator_class, ImageMaskPerturbator)
+    assert issubclass(perturbator_class, MaskPerturbator)
     assert not issubclass(perturbator_class, ImageTensorPerturbator)
     assert not issubclass(perturbator_class, TextMaskPerturbator)
     assert not issubclass(perturbator_class, TextTensorPerturbator)
@@ -129,7 +139,7 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if isinstance(perturbator, OcclusionImagePerturbator):
+        if issubclass(perturbator, OcclusionPerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
             k = perturbator.n_token_perturbations
@@ -203,7 +213,7 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if isinstance(perturbator, OcclusionImagePerturbator):
+        if issubclass(perturbator, OcclusionPerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
             k = perturbator.n_token_perturbations
@@ -283,7 +293,7 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
 
 def test_image_occlusion_masks():
-    perturbator = OcclusionImagePerturbator()
+    perturbator = _image_variant(OcclusionPerturbator)()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))

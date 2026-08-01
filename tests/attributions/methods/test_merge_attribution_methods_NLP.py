@@ -151,17 +151,17 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
     model_loader = ALL_MODEL_LOADERS[model_name]
 
     model = model_loader.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    processor = AutoTokenizer.from_pretrained(model_name)
 
     assert model is not None, f"Model loading failed {model_name}"
-    assert tokenizer is not None, f"Tokenizer failed to load for {model_name}"
+    assert processor is not None, f"Tokenizer failed to load for {model_name}"
 
     # To be changed according to the final form of the explainer:
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {})
     if aggregation_strategy is not None:
         explainer_kwargs["granularity_aggregation_strategy"] = aggregation_strategy
     explainer = attribution_explainer(
-        model, tokenizer=tokenizer, batch_size=3, device=DEVICE, granularity=granularity, **explainer_kwargs
+        model, processor=processor, batch_size=3, device=DEVICE, granularity=granularity, **explainer_kwargs
     )
 
     # we need to test both type of inputs: text, list_text, tokenized_text, tokenized_list_text:
@@ -173,14 +173,14 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
         "This is two sentences. The goal is",
     ]
     list_tokenized_texts = [
-        tokenizer(text, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+        processor(text, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
         for text in list_texts
     ]
 
     if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
         list_targets = ["video", "and I like it.", ["nice", "good"], "a great library", "to test."]
         list_tokenized_targets = [
-            tokenizer(target, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+            processor(target, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
             for target in list_targets
         ]
         list_texts_complete = list_texts + list_tokenized_texts + list_texts
@@ -281,7 +281,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
 @pytest.mark.slow
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_memory_management_classification(attribution_explainer):
-    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    processor = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
     model = AutoModelForSequenceClassification.from_pretrained(
         "hf-internal-testing/tiny-random-bert",
         num_labels=2048,
@@ -290,7 +290,7 @@ def test_attribution_methods_memory_management_classification(attribution_explai
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
     explainer = attribution_explainer(
         model,
-        tokenizer=tokenizer,
+        processor=processor,
         batch_size=16,
         device=DEVICE,
         granularity=TextGranularity.ALL_TOKENS,
@@ -318,12 +318,12 @@ def test_attribution_methods_memory_management_classification(attribution_explai
 @pytest.mark.slow
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_memory_management_generation(attribution_explainer):
-    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+    processor = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
     model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
     explainer = attribution_explainer(
         model,
-        tokenizer=tokenizer,
+        processor=processor,
         batch_size=16,
         device=DEVICE,
         granularity=TextGranularity.ALL_TOKENS,
@@ -385,13 +385,13 @@ if __name__ == "__main__":
     #     aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
     # )
     bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
-    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+    bert_processor = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
     sentences = [
         "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
         "Interpreto is magical",
         "Testing interpreto",
     ]
-    test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
+    test_attribution_output_size(bert_model, bert_processor, Occlusion, sentences)
     # test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
     # test_attribution_methods_memory_management_classification(IntegratedGradients)
     # test_attribution_methods_memory_management_generation(SmoothGrad)

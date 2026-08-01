@@ -243,7 +243,7 @@ def test_vision_attribution_methods_fast(
     inputs = request.getfixturevalue(input_fixture)
 
     #    if attribution_method in (ImageOcclusion, ImageSaliency):
-    if attribution_method in (ImageOcclusion):
+    if attribution_method in (ImageOcclusion,):
         explainer = attribution_method(
             model,
             processor,
