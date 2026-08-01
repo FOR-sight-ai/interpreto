@@ -33,8 +33,9 @@ from .base_merged import TensorPerturbator
 
 class GaussianNoisePerturbator(TensorPerturbator):
     """
-    Modality-agnostic Gaussian noise: `n_perturbations` independently noised copies of the input
-    tensor. It is combined with a modality base at runtime by the explainer, which is what decides
+    Modality-agnostic Gaussian noise Perturbator.
+
+    It is combined with a modality base at runtime by the explainer, which is what decides
     whether the tensor is `(1, l, d)` embeddings or `(1, 3, H, W)` pixel values.
     """
 
@@ -64,6 +65,6 @@ class GaussianNoisePerturbator(TensorPerturbator):
                 is no mask to report.
         """
         # Repeat along the perturbation axis only, whatever the rank of the trailing dimensions.
-        perturbed: Float[torch.Tensor, "p *rest"] = inputs.repeat((self.n_perturbations,) + (1,) * (inputs.ndim - 1))
+        perturbed: Float[torch.Tensor, "p *rest"] = inputs.repeat(self.n_perturbations, *(1,) * (inputs.ndim - 1))
         perturbed += torch.randn_like(perturbed) * self.std
         return perturbed, None
