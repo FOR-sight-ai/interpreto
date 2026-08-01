@@ -41,6 +41,26 @@ from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
 class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
+    """
+    The Occlusion method is a perturbation-based approach to interpret model behavior by analyzing
+    the impact of removing or masking parts of the input text. The principle is simple: by
+    systematically occluding (i.e., masking, deleting, or replacing) specific tokens or spans in the
+    input and observing how the model's output changes, one can infer the relative importance of
+    each part of the input to the model's behavior.
+
+    **Reference:**
+    Zeiler and Fergus (2014). *Visualizing and understanding convolutional networks.*
+    [Paper](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53)
+
+    Examples:
+        >>> from interpreto import TextGranularity, Occlusion
+        >>> from interpreto.attributions import InferenceModes
+        >>> method = Occlusion(model, processor, batch_size=4,
+        >>>                    inference_mode=InferenceModes.SOFTMAX,
+        >>>                    granularity=TextGranularity.WORD)
+        >>> explanations = method(text)
+    """
+
     def __init__(
         self,
         model: PreTrainedModel,

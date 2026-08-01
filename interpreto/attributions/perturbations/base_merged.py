@@ -90,7 +90,10 @@ class Perturbator(ABC):
 
 class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
     """
-    method overriden in subclasses that perturb the tensor (instead of masking it) representing the input
+    Specific class for perturbators working on input embeddings
+    All perturbators working on input embeddings only should inherit from this class
+
+    By default, it only convert input IDs to embeddings using the model's input embedder.
     """
 
     __slots__ = ("inputs_embedder",)
@@ -99,7 +102,7 @@ class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
         """
         Args:
             inputs_embedder: module converting input IDs to embeddings. Optional: the image
-                side works directly on `pixel_values` and has no such indirection.
+                side works directly on `pixel_values` and has no need for an embedder.
         """
         super().__init__(**kwargs)
         self.inputs_embedder = None if inputs_embedder is None else deepcopy(inputs_embedder).cpu()
@@ -111,10 +114,7 @@ class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
 
 class TextTensorPerturbator(TensorPerturbator):
     """
-    Specific class for perturbators working on input embeddings
-    All perturbators working on input embeddings only should inherit from this class
-
-    By default, it only convert input IDs to embeddings using the model's input embedder.
+    Text specific class that inherits from TensorPerturbator.
     """
 
     __slots__ = ()
@@ -123,8 +123,7 @@ class TextTensorPerturbator(TensorPerturbator):
         """
         Args:
             inputs_embedder: Model's module to convert input IDs to embeddings. Optional on
-                `TensorPerturbator` because the image path has no such indirection, but
-                mandatory here: `perturb` cannot embed anything without it.
+                `TensorPerturbator` but mandatory here: `perturb` cannot embed anything without it.
         """
         super().__init__(inputs_embedder=inputs_embedder, **kwargs)
 
@@ -183,8 +182,8 @@ class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
     Perturbator that hides granularity units by overwriting them with a baseline, rather than
     editing the input tensor directly.
 
-    Owns the fields that only make sense once a granularity-wise mask must be expanded to input
-    resolution: the baseline written into masked units, the strategy used for the expansion, and
+    Owns the fields that only make sense for Mask based methods:
+    the baseline written into masked units, the strategy used for the expansion, and
     the patch grid that defines the units on the image side.
     """
 
@@ -225,9 +224,7 @@ class TextMaskPerturbator(MaskPerturbator):
     Base class for perturbations consisting in applying masks on token (or groups of tokens)
     All perturbators working on input IDs by applying a mask should inherit from this class
 
-    Adds no fields of its own: everything it needs is declared and bound by `Perturbator`.
-    `__slots__` MUST stay empty — this class is combined with a method perturbator at runtime,
-    and two bases that each add instance layout raise a lay-out conflict.
+    This class is combined with a method perturbator at runtime.
     """
 
     __slots__ = ()
@@ -334,16 +331,13 @@ class ImageTensorPerturbator(TensorPerturbator):
     """
     Image-side analog of `TextTensorPerturbator`.
 
-    Operates directly on `pixel_values` of shape `(1, 3, H, W)`. Despite the
-    "Embeddings" name (kept for naming symmetry with the text side), this
-    works in raw pixel space — there is no IDs-to-embeddings indirection like
-    `inputs_embedder` on the text side, because `pixel_values` is already a
-    float tensor straight from the image processor.
+    Operates directly on `pixel_values` of shape `(1, 3, H, W)`.
 
     Subclasses override `perturb_tensor` to produce a `(p, 3, H, W)` batch.
-    The returned mask is `None`; granularity is applied post-hoc by the
-    aggregator via `granularity_score_aggregation(..., aggregate_inputs=True)`.
+
     Used by gradient-style methods (Saliency, SmoothGrad, IntegratedGradient).
+
+    This class is combined with a method perturbator at runtime.
     """
 
     __slots__ = ()
@@ -384,30 +378,12 @@ class ImageMaskPerturbator(MaskPerturbator):
     Masking-based perturbator: each perturbation hides a subset of granularity
     units by overwriting their pixel positions with a
     constant `replace_value` baseline. This is the basis for perturbation
-    methods (Occlusion, LIME, KernelShap, Sobol), mirroring the role of
-    `IdsPerturbator` for the text side.
+    methods (Occlusion, LIME, KernelShap, Sobol).
 
-    Flow (mirrors `IdsPerturbator.perturb`):
-      1. Build the `(g, l)` association matrix from the granularity, where
-         `g` = number of granularity units and `l = H*W` pixel positions.
-      2. Ask the subclass for a granularity-wise mask `gran_mask (p, g)` via
-         `get_mask`. `1` = masked (replaced), `0` = kept — same convention as text.
-      3. Expand to pixel space: `real_mask = gran_mask @ assoc -> (p, l)`.
-      4. Overwrite masked pixel positions with `replace_value`, broadcasting
-         across the 3 channels, and reshape back to `(p, 3, H, W)`.
-      5. Return `(perturbed_inputs, gran_mask)`. The aggregator consumes
-         `gran_mask`; `granularity_score_aggregation(..., aggregate_inputs=False)`
-         then returns scores unchanged because granularity is already encoded
-         in the masks.
+    perturb uses an interpolation strategy rather than an association matrix
+    which was deemed more natural for images.
 
-    Differences from `IdsPerturbator`:
-      - Replacement is a per-position float baseline (`replace_value`) applied
-        across all 3 channels, not an integer `replace_token_id`.
-        TODO: extend `replace_value` to support a per-channel `(3,)` tensor and
-        a full `(1, 3, H, W)` baseline image (e.g. blurred input), captum-style.
-        Kept scalar for the MVP.
-      - `pixel_values` is spatially flattened to `(1, 3, l)` to apply the mask,
-        then reshaped, instead of operating on a 1D token axis.
+    This class is combined with a method perturbator at runtime.
     """
 
     __slots__ = ()

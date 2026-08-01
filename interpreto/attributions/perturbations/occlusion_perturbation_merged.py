@@ -50,11 +50,11 @@ class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make t
         super().__init__(n_perturbations=-1, **kwargs)
 
     @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p l"]:
+    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p g"]:
         """Return a mask performing single-token occlusions.
 
         Args:
-            mask_dim (int): Length of the input sequence.
+            mask_dim (int): Length of the granularity depedent input sequence.
 
         Returns:
             torch.Tensor: Tensor of shape ``(mask_dim + 1, mask_dim)`` where the
@@ -62,9 +62,9 @@ class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make t
                 identity matrix.
         """
 
-        l = mask_dim
-        p = l + 1
-        mask: Float[torch.Tensor, "{p} {l}"] = torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)
+        g = mask_dim
+        p = g + 1
+        mask: Float[torch.Tensor, "{p} {g}"] = torch.cat([torch.zeros(1, g), torch.eye(g)], dim=0)
         assert mask.shape[0] == p
         return mask
 
