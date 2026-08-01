@@ -36,6 +36,7 @@ from interpreto.attributions.aggregations.base import MeanAggregator, OcclusionA
 from interpreto.attributions.base_merged import ImageAttributionOutput
 from interpreto.attributions.methods.occlusion_merge import Occlusion
 from interpreto.attributions.methods.smoothgrad_merged import SmoothGrad
+from interpreto.attributions.perturbations.gaussian_noise_perturbation_merged import GaussianNoisePerturbator
 from interpreto.attributions.perturbations.occlusion_perturbation_merged import OcclusionPerturbator
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.visualizations.image_attributions_merge import plot_image_attribution
@@ -125,7 +126,7 @@ def model_and_processor():
 
 FAST_METHOD_SPECS = [
     (Occlusion, OcclusionPerturbator, OcclusionAggregator, ImageGranularity.PATCH),
-    (SmoothGrad, GaussianNoiseImagePerturbator, MeanAggregator, ImageGranularity.PIXEL),
+    (SmoothGrad, GaussianNoisePerturbator, MeanAggregator, ImageGranularity.PIXEL),
 ]
 
 
