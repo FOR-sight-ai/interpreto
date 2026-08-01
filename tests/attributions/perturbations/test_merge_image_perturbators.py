@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from collections.abc import MutableMapping
 from pathlib import Path
 
 import pytest
@@ -33,7 +34,6 @@ from transformers.image_processing_utils import BatchFeature
 from interpreto.attributions.perturbations.base_merged import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
-    MaskPerturbator,
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
@@ -54,23 +54,23 @@ SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
 
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
+
+def _image_variant(method_class: type, modality_base: type) -> type:
+    """
+    Combine a method perturbator with an image modality base, as the explainer does at
+    construction time. The method class alone leaves `perturb` abstract.
+    """
+    return type("Image" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
+
+
 image_embedding_perturbators = [
-    GaussianNoisePerturbator,
+    _image_variant(GaussianNoisePerturbator, ImageTensorPerturbator),
     #     LinearInterpolationImagePerturbator,
     #     GradientShapImagePerturbator,
 ]
 
-
-def _image_variant(method_class: type) -> type:
-    """
-    Combine a method perturbator with the image modality base, as the explainer does at
-    construction time. The method class alone leaves `perturb` abstract.
-    """
-    return type("Image" + method_class.__name__, (method_class, ImageMaskPerturbator), {"__slots__": ()})
-
-
 image_mask_perturbators = [
-    _image_variant(OcclusionPerturbator),
+    _image_variant(OcclusionPerturbator, ImageMaskPerturbator),
     # RandomMaskedImagePerturbator,
     # ShapImagePerturbator,
     # SobolImagePerturbator,
@@ -82,42 +82,42 @@ def images():
     return [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))]
 
 
-# @pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
-# @pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
-# def test_image_embedding_perturbator(perturbator_class, model_name, images):
-#     """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
-#     assert issubclass(perturbator_class, ImageTensorPerturbator)
-#     assert not issubclass(perturbator_class, ImageMaskPerturbator)
-#     assert not issubclass(perturbator_class, TextMaskPerturbator)
-#     assert not issubclass(perturbator_class, TextTensorPerturbator)
+@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
+def test_image_embedding_perturbator(perturbator_class, model_name, images):
+    """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
+    assert issubclass(perturbator_class, ImageTensorPerturbator)
+    assert not issubclass(perturbator_class, ImageMaskPerturbator)
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    assert not issubclass(perturbator_class, TextTensorPerturbator)
 
-#     p = 10
-#     perturbator = perturbator_class(n_perturbations=p)
+    p = 10
+    perturbator = perturbator_class(n_perturbations=p)
 
-#     image_processor = AutoImageProcessor.from_pretrained(model_name)
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
 
-#     for img in images:
-#         processed_image = image_processor(img, return_tensors="pt")
-#         assert isinstance(processed_image, BatchFeature)
+    for img in images:
+        processed_image = image_processor(img, return_tensors="pt")
+        assert isinstance(processed_image, BatchFeature)
 
-#         perturbed_inputs, _ = perturbator.perturb(processed_image)
+        perturbed_inputs, _ = perturbator.perturb(processed_image)
 
-#         assert isinstance(perturbed_inputs, MutableMapping)
+        assert isinstance(perturbed_inputs, MutableMapping)
 
-#         assert "pixel_values" in perturbed_inputs.keys()
-#         assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+        assert "pixel_values" in perturbed_inputs.keys()
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
 
-#         _, _, h, w = processed_image["pixel_values"].shape
-#         assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
+        _, _, h, w = processed_image["pixel_values"].shape
+        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
 
 
 @pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
 def test_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
-    assert issubclass(perturbator_class, MaskPerturbator)
+    assert issubclass(perturbator_class, ImageMaskPerturbator)
     assert not issubclass(perturbator_class, ImageTensorPerturbator)
-    assert not issubclass(perturbator_class, TextMaskPerturbator)
+    assert not issubclass(prbator_class, TextMaskPerturbator)
     assert not issubclass(perturbator_class, TextTensorPerturbator)
 
     patch_size = 2

@@ -26,7 +26,7 @@ from collections.abc import MutableMapping
 import pytest
 import torch
 
-from interpreto.attributions.perturbations.base_merged import TextMaskPerturbator
+from interpreto.attributions.perturbations.base_merged import TextMaskPerturbator, TextTensorPerturbator
 from interpreto.attributions.perturbations.gaussian_noise_perturbation_merged import GaussianNoisePerturbator
 from interpreto.attributions.perturbations.occlusion_perturbation_merged import (
     OcclusionPerturbator,
@@ -35,23 +35,23 @@ from interpreto.attributions.perturbations.occlusion_perturbation_merged import 
 # from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import TextGranularity
 
+
+def _text_variant(method_class: type, modality_base: type) -> type:
+    """
+    Combine a method perturbator with a text modality base, as the explainer does at construction
+    time. The method class alone leaves `perturb` abstract.
+    """
+    return type("Text" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
+
+
 embeddings_perturbators = [
-    GaussianNoisePerturbator,
+    _text_variant(GaussianNoisePerturbator, TextTensorPerturbator),
     #    LinearInterpolationPerturbator,
     #    GradientShapPerturbator,
 ]
 
-
-def _text_variant(method_class: type) -> type:
-    """
-    Combine a method perturbator with the text modality base, as the explainer does at
-    construction time. The method class alone leaves `perturb` abstract.
-    """
-    return type("Text" + method_class.__name__, (method_class, TextMaskPerturbator), {"__slots__": ()})
-
-
 tokens_perturbators = [
-    _text_variant(OcclusionPerturbator),
+    _text_variant(OcclusionPerturbator, TextMaskPerturbator),
     # RandomMaskedTokenPerturbator,
     # ShapTokenPerturbator,
     # SobolTokenPerturbator,
@@ -61,6 +61,7 @@ tokens_perturbators = [
 @pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
 def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
+    assert issubclass(perturbator_class, TextTensorPerturbator)
     assert not issubclass(perturbator_class, TextMaskPerturbator)
     p = 10
     d = 32
