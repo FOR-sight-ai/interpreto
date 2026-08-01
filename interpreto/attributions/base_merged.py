@@ -374,6 +374,21 @@ class AttributionExplainer(ABC):
             )
         return {}
 
+    def _text_only_kwargs(self, model: PreTrainedModel) -> dict[str, Any]:
+        """
+        Pack the text-only constructor arguments for a `TensorPerturbator`.
+
+        Text modalities perturb the token embeddings, so they need the module that produces them.
+        `ImageClassificationAttributionExplainer` overrides it.
+
+        Args:
+            model (PreTrainedModel): the model being explained.
+
+        Returns:
+            dict[str, Any]: the `inputs_embedder` keyword.
+        """
+        return {"inputs_embedder": model.get_input_embeddings()}
+
     @property
     def device(self) -> torch.device:
         """
@@ -1141,6 +1156,18 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         Their consistency is checked by `_resolve_normalization_stats`, not here.
         """
         return {"preprocess": preprocess, "image_mean": image_mean, "image_std": image_std}
+
+    def _text_only_kwargs(self, model: PreTrainedModel) -> dict[str, Any]:
+        """
+        Image side so we need no inputs_embedder.
+
+        Args:
+            model (PreTrainedModel): unused, kept for signature compatibility.
+
+        Returns:
+            dict[str, Any]: an empty dict.
+        """
+        return {}
 
     def _resolve_normalization_stats(
         self,
