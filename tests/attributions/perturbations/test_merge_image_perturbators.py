@@ -117,7 +117,7 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
     assert issubclass(perturbator_class, ImageMaskPerturbator)
     assert not issubclass(perturbator_class, ImageTensorPerturbator)
-    assert not issubclass(pertubator_class, TextMaskPerturbator)
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
     assert not issubclass(perturbator_class, TextTensorPerturbator)
 
     patch_size = 2

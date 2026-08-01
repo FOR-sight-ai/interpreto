@@ -35,8 +35,8 @@ from transformers.image_processing_utils import BatchFeature
 from interpreto.attributions.aggregations.base import MeanAggregator, OcclusionAggregator
 from interpreto.attributions.base_merged import ImageAttributionOutput
 from interpreto.attributions.methods.occlusion_merge import Occlusion
+from interpreto.attributions.methods.smoothgrad_merged import SmoothGrad
 from interpreto.attributions.perturbations.occlusion_perturbation_merged import OcclusionPerturbator
-from interpreto.attributions.perturbations.smoothgrad_merged import SmoothGrad
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.visualizations.image_attributions_merge import plot_image_attribution
 
