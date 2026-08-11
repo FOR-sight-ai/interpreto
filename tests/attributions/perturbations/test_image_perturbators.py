@@ -48,7 +48,7 @@ from interpreto.attributions.perturbations.base import (
 )
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 
-CLASSIFICATION_MODELS = [
+IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
@@ -77,7 +77,7 @@ def images():
     return [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))]
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
 def test_image_embedding_perturbator(perturbator_class, model_name, images):
     """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
@@ -106,7 +106,7 @@ def test_image_embedding_perturbator(perturbator_class, model_name, images):
         assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
 def test_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""

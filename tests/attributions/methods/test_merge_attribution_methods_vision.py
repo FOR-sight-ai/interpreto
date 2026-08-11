@@ -45,7 +45,7 @@ plt.switch_backend("Agg")  # headless: render into a buffer, never open a window
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-CLASSIFICATION_MODELS = [
+IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
@@ -118,7 +118,7 @@ def small_ndarray_list(small_ndarray_1, small_ndarray_2) -> list[np.ndarray]:
 
 @pytest.fixture(scope="module")
 def model_and_processor():
-    model_name = CLASSIFICATION_MODELS[0]
+    model_name = IMAGE_CLASSIFICATION_MODELS[0]
     model = AutoModelForImageClassification.from_pretrained(model_name)
     processor = AutoImageProcessor.from_pretrained(model_name)
     return model, processor

@@ -37,7 +37,7 @@ from interpreto.commons.granularity import ImageGranularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-CLASSIFICATION_MODELS = [
+IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
@@ -45,7 +45,7 @@ CLASSIFICATION_MODELS = [
 ]
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize(
     "use_gradient, granularity, clash",
     [
@@ -156,7 +156,7 @@ def test_resolve_normalization_stats_returns(
 # I am also unsure about whether or not I should test private functions and have made the choice to do it.
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_process_targets(model_name):
     """
     Test the process_targets method for different input types.
@@ -226,7 +226,7 @@ def test_process_targets(model_name):
         explainer.process_targets("invalid_input")  # type: ignore
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_validate_batch_feature(model_name):
     """
     Test the _validate_batch_feature method for the 3 failure cases and the valid case.
@@ -256,7 +256,7 @@ def test_validate_batch_feature(model_name):
 _validate = ImageClassificationAttributionExplainer._validate_batch_feature
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("patch_size", [2, 16])
 @pytest.mark.parametrize("pixel_values", [torch.zeros(1, 3, 224, 224), torch.ones(1, 3, 16, 16)])
 def test_validate_batch_feature_patch_size_returns(model_name, patch_size, pixel_values):
@@ -265,7 +265,7 @@ def test_validate_batch_feature_patch_size_returns(model_name, patch_size, pixel
     _validate(explainer, bf)
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("patch_size", [7, 19])
 @pytest.mark.parametrize("pixel_values", [torch.zeros(1, 3, 226, 226), torch.ones(1, 3, 16, 16)])
 def test_validate_batch_feature_patch_size_raises(model_name, patch_size, pixel_values):
@@ -279,7 +279,7 @@ def test_validate_batch_feature_patch_size_raises(model_name, patch_size, pixel_
 # from test_base.py (text modality) and adapted to BatchFeature/pixel_values inputs,
 # for the same reason as above: process_inputs_to_explain_and_targets is itself a
 # copy of the text-side method (see base.py).
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_process_inputs_to_explain_and_targets(model_name):
     model = AutoModelForImageClassification.from_pretrained(model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
@@ -329,7 +329,7 @@ def _assert_batch_feature_list(result, expected_length):
     assert "pixel_values" in result[0].keys()
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_process_model_inputs(model_name):
     """
     Test process_model_inputs: the 3 ValueError cases, and that valid inputs are

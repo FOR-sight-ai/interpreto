@@ -62,7 +62,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 IMAGES_DIR = Path(__file__).parents[1] / "fixtures" / "images"
 
-CLASSIFICATION_MODELS = [
+IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
@@ -167,7 +167,7 @@ def test_image_classification_wrapper_fast():
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_image_classification_wrapper(model_name):
     # images divided in two batches which we could see as different samples in interpreto
     # for each sample there are several perturbed images
