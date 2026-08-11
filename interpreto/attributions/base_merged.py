@@ -1082,12 +1082,12 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         if use_gradient and granularity is ImageGranularity.PATCH:
             raise ValueError(
                 "granularity=PATCH is invalid for a gradient-based method: gradients are "
-                "computed per pixel, so PIXEL is the granularity these methods explain at."
+                "computed per pixel, so PIXEL is the granularity these methods explain at. Use PIXEL"
             )
         if not use_gradient and granularity is ImageGranularity.PIXEL:
             raise ValueError(
                 "granularity=PIXEL is invalid for a perturbation-based method: masking single "
-                "pixels is intractable and carries no semantic unit. Use PATCH."
+                "pixels is intractable. Use PATCH."
             )
 
         self.image_processor = processor
