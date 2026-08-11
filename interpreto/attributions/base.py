@@ -703,7 +703,7 @@ class TextClassificationAttributionExplainer(AttributionExplainer):
         return model_inputs, sanitized_targets
 
 
-class TextGenerationExplainer(AttributionExplainer):
+class TextGenerationAttributionExplainer(AttributionExplainer):
     _associated_inference_wrapper = TextGenerationInferenceWrapper
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
@@ -915,7 +915,7 @@ class ImageAttributionOutput:
     model_inputs_to_explain: TensorMapping
     targets: torch.Tensor
     granularity: ImageGranularity
-    patch_size: int
+    patch_size: int = 16
     image_mean: torch.Tensor | None = None
     image_std: torch.Tensor | None = None
     classes: torch.Tensor | None = None
@@ -1405,7 +1405,7 @@ class MultitaskExplainerMixin(AttributionExplainer):
             )
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
-            t = FactoryGeneratedMeta("Generation" + cls.__name__, (cls, TextGenerationExplainer), {})
+            t = FactoryGeneratedMeta("Generation" + cls.__name__, (cls, TextGenerationAttributionExplainer), {})
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForImageClassification"):
             t = FactoryGeneratedMeta(
