@@ -53,15 +53,14 @@ from interpreto.attributions.perturbations.base_merged import (
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
-from interpreto.commons import TextGranularity
-from interpreto.commons.generator_tools import split_iterator
-from interpreto.commons.granularity import (
+from interpreto.commons import (
     Granularity,
     GranularityAggregationStrategy,
-    GranularityCombinationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
+    TextGranularity,
 )
+from interpreto.commons.generator_tools import split_iterator
 from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
 from interpreto.model_wrapping.text_classification_inference_wrapper import TextClassificationInferenceWrapper
