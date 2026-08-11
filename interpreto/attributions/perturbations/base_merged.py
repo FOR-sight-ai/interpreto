@@ -373,7 +373,7 @@ class ImageTensorPerturbator(TensorPerturbator):
 
 class ImageMaskPerturbator(MaskPerturbator):
     """
-    Image-side analog of `IdsPerturbator`.
+    Image-side analog of `TextMaskPerturbator`.
 
     Masking-based perturbator: each perturbation hides a subset of granularity
     units by overwriting their pixel positions with a
