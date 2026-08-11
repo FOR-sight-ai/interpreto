@@ -103,12 +103,18 @@ def wrong_patch_size():
 @pytest.mark.parametrize("patch_size", [1, 2])
 def test_resize_strategy_output_size(input, output, strategy, patch_size):
     if output is not None:
-        assert strategy.resize(input, output, patch_size).shape == (1, *output)
+        assert strategy.resize(input, output, patch_size).shape == (1, *output), (
+            "resize() with an explicit output_size must return shape (1, *output). The leading "
+            "1 comes from this test's single-channel input fixtures, not output_size"
+        )
     else:
         c, h, w = input.shape
         h_out = h // patch_size
         w_out = w // patch_size
-        assert strategy.resize(input, output, patch_size).shape == (c, h_out, w_out)
+        assert strategy.resize(input, output, patch_size).shape == (c, h_out, w_out), (
+            "resize() with output_size=None and input.shape = (c,h,w) must have shape "
+            "(c, h//patch_size, w // patch_size)"
+        )
 
 
 def test_resize_fail(null_matrix, wrong_patch_size):
@@ -120,14 +126,19 @@ def test_resize_fail(null_matrix, wrong_patch_size):
 def test_resize_nearest(matrix):
     strategy = GranularityResizeStrategy.NEAREST
     bool_tensor = strategy.resize(matrix, output_size=(2, 2)) == torch.tensor([[1, 0], [0, 3]])
-    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1]
+    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1], (
+        "NEAREST resize of the 4x4 diagonal matrix to 2x2 must match the expected "
+        "nearest-neighbor sample [[1,0],[0,3]]"
+    )
 
 
 def test_resize_bilinear(matrix):
     strategy = GranularityResizeStrategy.BILINEAR
     bool_tensor = strategy.resize(matrix, output_size=(2, 2)) - torch.tensor([[30 / 49, 15 / 49], [15 / 49, 65 / 49]])
     bool_tensor = bool_tensor.abs() <= 10 ** (-5)
-    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1]
+    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1], (
+        "BILINEAR resize of the 4x4 diagonal matrix to 2x2 must match the analytically expected values within 1e-5"
+    )
 
 
 def test_resize_bicubic(matrix):
@@ -137,7 +148,9 @@ def test_resize_bicubic(matrix):
     ).squeeze(0)
     bool_tensor = strategy.resize(matrix, output_size=(2, 2)) - expected
     bool_tensor = bool_tensor.abs() <= 10 ** (-5)
-    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1]
+    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1], (
+        "BICUBIC resize must match torch.nn.functional.interpolate's own bicubic+antialias output within 1e-5"
+    )
 
 
 def test_resize_area(matrix):
@@ -147,7 +160,10 @@ def test_resize_area(matrix):
     print(bool_tensor)
     bool_tensor = bool_tensor.abs() <= 10 ** (-5)
     print(bool_tensor)
-    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1]
+    assert bool_tensor[0, 0, 0] and bool_tensor[0, 0, 1] and bool_tensor[0, 1, 0] and bool_tensor[0, 1, 1], (
+        "AREA resize of the 4x4 diagonal matrix to 2x2 must match the expected area-averaged "
+        "values [[0.75,0],[0,1.75]] within 1e-5"
+    )
 
 
 # NOTE: this used to be a test for the now useless granularity_resize function. We keep it for now in case it proves useful later
@@ -221,4 +237,7 @@ def test_resize_to_image_output_size(granularity, h_in, w_in, t, strategy):
         patch_size=PATCH_SIZE,
     )
 
-    assert resized.shape == (t, h_in, w_in)
+    assert resized.shape == (t, h_in, w_in), (
+        "resize_to_image must land on the full pixel grid (t, h_in, w_in) regardless of "
+        "starting granularity (PIXEL vs PATCH) or resize strategy"
+    )
