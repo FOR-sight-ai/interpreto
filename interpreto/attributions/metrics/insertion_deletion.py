@@ -50,12 +50,12 @@ from interpreto.attributions.perturbations.insertion_deletion_perturbation impor
 )
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import (
     InferenceModes,
     InferenceWrapper,
 )
+from interpreto.model_wrapping.text_classification_inference_wrapper import TextClassificationInferenceWrapper
+from interpreto.model_wrapping.text_generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.typing import SingleAttribution
 
 
