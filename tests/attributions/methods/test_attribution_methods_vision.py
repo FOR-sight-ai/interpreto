@@ -208,8 +208,12 @@ def _assert_explains_and_plots(
     Returns the list of `ImageAttributionOutput`, or `None` when the call was expected to raise
     (preprocess=False with raw PIL/ndarray inputs) and short-circuited — the caller must stop too.
     """
-    assert isinstance(explainer.perturbator, perturbator_cls)
-    assert isinstance(explainer.aggregator, aggregator_cls)
+    assert isinstance(explainer.perturbator, perturbator_cls), (
+        f"explainer.perturbator must be an instance of {perturbator_cls}, got {type(explainer.perturbator)}"
+    )
+    assert isinstance(explainer.aggregator, aggregator_cls), (
+        f"explainer.aggregator must be an instance of {aggregator_cls}, got {type(explainer.aggregator)}"
+    )
 
     # preprocess=False rejects raw PIL/ndarray: they can only be normalized by the processor.
     items = inputs if isinstance(inputs, list) else [inputs]
@@ -221,20 +225,39 @@ def _assert_explains_and_plots(
     output = explainer.explain(inputs, targets)
 
     expected_len = len(inputs) if isinstance(inputs, list) else 1
-    assert len(output) == expected_len
-    assert all(isinstance(o, ImageAttributionOutput) for o in output)
-    assert all(o.granularity is granularity for o in output)
-    assert all(o.granularity_resize is resize_strategy for o in output)
-    assert all(o.attributions.device.type == "cpu" for o in output)
-    assert all(o.targets.device.type == "cpu" for o in output)
+    assert len(output) == expected_len, (
+        "explain() must return one ImageAttributionOutput per input for list inputs, or exactly one for a single "
+        f"input; expected {expected_len}, got {len(output)}"
+    )
+    assert all(isinstance(o, ImageAttributionOutput) for o in output), (
+        "every element of output must be an ImageAttributionOutput"
+    )
+    assert all(o.granularity is granularity for o in output), (
+        "every output must carry the granularity the explainer was built with"
+    )
+    assert all(o.granularity_resize is resize_strategy for o in output), (
+        "every output must carry the resize strategy the explainer was built with"
+    )
+    assert all(o.attributions.device.type == "cpu" for o in output), (
+        "attributions must be moved back to CPU regardless of the compute device"
+    )
+    assert all(o.targets.device.type == "cpu" for o in output), (
+        "targets must be moved back to CPU regardless of the compute device"
+    )
 
     # Reassemble the per-output model inputs (scattered one-per-ImageAttributionOutput) and check
     # they match a fresh, deterministic re-run of process_model_inputs on the same raw inputs.
     stored_inputs = [o.model_inputs_to_explain for o in output]
     expected_inputs = explainer.process_model_inputs(inputs)
     for stored, expected in zip(stored_inputs, expected_inputs, strict=True):
-        assert stored.keys() == expected.keys()
-        assert all(torch.equal(stored[key], expected[key]) for key in expected)
+        assert stored.keys() == expected.keys(), (
+            "the model inputs stored on each output must have the same keys as a fresh process_model_inputs "
+            "call on the same raw inputs"
+        )
+        assert all(torch.equal(stored[key], expected[key]) for key in expected), (
+            "the model inputs stored on each output must equal, tensor for tensor, a fresh process_model_inputs "
+            "call on the same raw inputs"
+        )
 
     if preprocess:
         if getattr(processor, "do_normalize", False):
@@ -248,8 +271,12 @@ def _assert_explains_and_plots(
         expected_std = torch.as_tensor(image_std, dtype=torch.float32).view(-1, 1, 1)
 
     for o in output:
-        assert torch.equal(o.image_mean, expected_mean)
-        assert torch.equal(o.image_std, expected_std)
+        assert torch.equal(o.image_mean, expected_mean), (
+            "each output must store the image_mean actually used to normalize it"
+        )
+        assert torch.equal(o.image_std, expected_std), (
+            "each output must store the image_std actually used to normalize it"
+        )
 
     # The produced outputs must be plottable: run the viz end-to-end on the Agg backend.
     for o in output:
@@ -359,8 +386,14 @@ def test_image_sobol(
     )
 
     # The two Sobol-specific knobs must land on the right objects (stored as their `.value`).
-    assert explainer.perturbator.sampler_class == sampler.value
-    assert explainer.aggregator.sobol_indices_order == order.value
+    assert explainer.perturbator.sampler_class == sampler.value, (
+        "explainer.perturbator.sampler_class should be the sampler value passed as input. "
+        f"Expected {sampler.value}, got {explainer.perturbator.sampler_class}"
+    )
+    assert explainer.aggregator.sobol_indices_order == order.value, (
+        "explainer.aggregator.sobol_indices_order should be the order value passed as input. "
+        f"Expected {order.value}, got {explainer.aggregator.sobol_indices_order}"
+    )
 
     output = _assert_explains_and_plots(
         explainer,
@@ -385,9 +418,12 @@ def test_image_sobol(
     patch_size = explainer.perturbator.patch_size
     seq_len = (height // patch_size) * (width // patch_size)
     mask = explainer.perturbator.get_mask(seq_len)
-    assert isinstance(mask, torch.Tensor)
-    assert mask.shape == ((seq_len + 2) * n_token_perturbations, seq_len)
-    assert mask.dtype == torch.float32
+    assert isinstance(mask, torch.Tensor), "get_mask must return a torch.Tensor"
+    assert mask.shape == ((seq_len + 2) * n_token_perturbations, seq_len), (
+        "Sobol mask must have shape ((seq_len + 2) * n_token_perturbations, seq_len). Expected "
+        f"{((seq_len + 2) * n_token_perturbations, seq_len)}, got {tuple(mask.shape)}"
+    )
+    assert mask.dtype == torch.float32, "Sobol mask.dtype must be torch.float32"
 
 
 # LIME carries its own machinery (random masking + a similarity-weighted linear surrogate), so
@@ -437,15 +473,33 @@ def test_image_lime(
     )
 
     # The LIME-specific knobs must land on the right objects.
-    assert explainer.perturbator.n_perturbations == n_perturbations
-    assert pytest.approx(explainer.perturbator.perturb_probability, rel=1e-6) == perturb_probability
-    assert explainer.aggregator.distance_function == distance_function
-    assert explainer.aggregator.similarity_kernel == Kernels.EXPONENTIAL
+    assert explainer.perturbator.n_perturbations == n_perturbations, (
+        "explainer.perturbator.n_perturbations should be the n_perturbations passed as input. "
+        f"Expected {n_perturbations}, got {explainer.perturbator.n_perturbations}"
+    )
+    assert pytest.approx(explainer.perturbator.perturb_probability, rel=1e-6) == perturb_probability, (
+        "explainer.perturbator.perturb_probability should be the perturb_probability passed as input. "
+        f"Expected {perturb_probability}, got {explainer.perturbator.perturb_probability}"
+    )
+    assert explainer.aggregator.distance_function == distance_function, (
+        "explainer.aggregator.distance_function should be the distance_function passed as input. "
+        f"Expected {distance_function}, got {explainer.aggregator.distance_function}"
+    )
+    assert explainer.aggregator.similarity_kernel == Kernels.EXPONENTIAL, (
+        "explainer.aggregator.similarity_kernel should be the exponential kernel LIME always uses. "
+        f"Expected {Kernels.EXPONENTIAL}, got {explainer.aggregator.similarity_kernel}"
+    )
     # kernel_width=None falls back to the default kernel-width function; otherwise it is stored as-is.
     if kernel_width is None:
-        assert explainer.aggregator.kernel_width == default_kernel_width_fn
+        assert explainer.aggregator.kernel_width == default_kernel_width_fn, (
+            "explainer.aggregator.kernel_width should fall back to default_kernel_width_fn when kernel_width=None. "
+            f"Got {explainer.aggregator.kernel_width}"
+        )
     else:
-        assert explainer.aggregator.kernel_width == kernel_width
+        assert explainer.aggregator.kernel_width == kernel_width, (
+            "explainer.aggregator.kernel_width should be the kernel_width passed as input. "
+            f"Expected {kernel_width}, got {explainer.aggregator.kernel_width}"
+        )
 
     output = _assert_explains_and_plots(
         explainer,
@@ -470,9 +524,12 @@ def test_image_lime(
     patch_size = explainer.perturbator.patch_size
     seq_len = (height // patch_size) * (width // patch_size)
     mask = explainer.perturbator.get_mask(seq_len)
-    assert isinstance(mask, torch.Tensor)
-    assert mask.shape == (n_perturbations, seq_len)
-    assert mask.dtype == torch.float32
+    assert isinstance(mask, torch.Tensor), "get_mask must return a torch.Tensor"
+    assert mask.shape == (n_perturbations, seq_len), (
+        f"LIME mask must have shape (n_perturbations, seq_len). Expected {(n_perturbations, seq_len)}, got "
+        f"{tuple(mask.shape)}"
+    )
+    assert mask.dtype == torch.float32, "LIME mask.dtype must be torch.float32"
 
 
 # End-to-end smoke test against a *real* ViT (not the tiny random one). The point is to catch
