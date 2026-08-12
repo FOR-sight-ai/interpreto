@@ -169,8 +169,12 @@ def _assert_explains_and_plots(
     Returns the list of `ImageAttributionOutput`, or `None` when the call was expected to raise
     (preprocess=False with raw PIL/ndarray inputs) and short-circuited — the caller must stop too.
     """
-    assert isinstance(explainer.perturbator, perturbator_cls)
-    assert isinstance(explainer.aggregator, aggregator_cls)
+    assert isinstance(explainer.perturbator, perturbator_cls), (
+        f"explainer.perturbator must be an instance of {perturbator_cls}, got {type(explainer.perturbator)}"
+    )
+    assert isinstance(explainer.aggregator, aggregator_cls), (
+        f"explainer.aggregator must be an instance of {aggregator_cls}, got {type(explainer.aggregator)}"
+    )
 
     # preprocess=False rejects raw PIL/ndarray: they can only be normalized by the processor.
     items = inputs if isinstance(inputs, list) else [inputs]
@@ -182,20 +186,39 @@ def _assert_explains_and_plots(
     output = explainer.explain(inputs, targets)
 
     expected_len = len(inputs) if isinstance(inputs, list) else 1
-    assert len(output) == expected_len
-    assert all(isinstance(o, ImageAttributionOutput) for o in output)
-    assert all(o.granularity is granularity for o in output)
-    assert all(o.granularity_resize is resize_strategy for o in output)
-    assert all(o.attributions.device.type == "cpu" for o in output)
-    assert all(o.targets.device.type == "cpu" for o in output)
+    assert len(output) == expected_len, (
+        "explain() must return one ImageAttributionOutput per input for list inputs, or exactly one for a single "
+        f"input; expected {expected_len}, got {len(output)}"
+    )
+    assert all(isinstance(o, ImageAttributionOutput) for o in output), (
+        "every element of output must be an ImageAttributionOutput"
+    )
+    assert all(o.granularity is granularity for o in output), (
+        "every output must carry the granularity the explainer was built with"
+    )
+    assert all(o.granularity_resize is resize_strategy for o in output), (
+        "every output must carry the resize strategy the explainer was built with"
+    )
+    assert all(o.attributions.device.type == "cpu" for o in output), (
+        "attributions must be moved back to CPU regardless of the compute device"
+    )
+    assert all(o.targets.device.type == "cpu" for o in output), (
+        "targets must be moved back to CPU regardless of the compute device"
+    )
 
     # Reassemble the per-output model inputs (scattered one-per-ImageAttributionOutput) and check
     # they match a fresh, deterministic re-run of process_model_inputs on the same raw inputs.
     stored_inputs = [o.model_inputs_to_explain for o in output]
     expected_inputs = explainer.process_model_inputs(inputs)
     for stored, expected in zip(stored_inputs, expected_inputs, strict=True):
-        assert stored.keys() == expected.keys()
-        assert all(torch.equal(stored[key], expected[key]) for key in expected)
+        assert stored.keys() == expected.keys(), (
+            "the model inputs stored on each output must have the same keys as a fresh process_model_inputs "
+            "call on the same raw inputs"
+        )
+        assert all(torch.equal(stored[key], expected[key]) for key in expected), (
+            "the model inputs stored on each output must equal, tensor for tensor, a fresh process_model_inputs "
+            "call on the same raw inputs"
+        )
 
     if preprocess:
         if getattr(processor, "do_normalize", False):
@@ -209,8 +232,12 @@ def _assert_explains_and_plots(
         expected_std = torch.as_tensor(image_std, dtype=torch.float32).view(-1, 1, 1)
 
     for o in output:
-        assert torch.equal(o.image_mean, expected_mean)
-        assert torch.equal(o.image_std, expected_std)
+        assert torch.equal(o.image_mean, expected_mean), (
+            "each output must store the image_mean actually used to normalize it"
+        )
+        assert torch.equal(o.image_std, expected_std), (
+            "each output must store the image_std actually used to normalize it"
+        )
 
     # The produced outputs must be plottable: run the viz end-to-end on the Agg backend.
     for o in output:
