@@ -65,7 +65,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
-  "transformers>=4.22.0",
+  "transformers>=4.22.0,<5.8.0",
   "nltk",
   "torch>=2.0",
   "nnsight>=0.5.1,<0.6.0",
