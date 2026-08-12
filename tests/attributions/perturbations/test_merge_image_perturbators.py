@@ -86,10 +86,18 @@ def images():
 @pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
 def test_image_embedding_perturbator(perturbator_class, model_name, images):
     """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
-    assert issubclass(perturbator_class, ImageTensorPerturbator)
-    assert not issubclass(perturbator_class, ImageMaskPerturbator)
-    assert not issubclass(perturbator_class, TextMaskPerturbator)
-    assert not issubclass(perturbator_class, TextTensorPerturbator)
+    assert issubclass(perturbator_class, ImageTensorPerturbator), (
+        "image embedding perturbators must subclass ImageTensorPerturbator"
+    )
+    assert not issubclass(perturbator_class, ImageMaskPerturbator), (
+        "image embedding perturbators must not subclass ImageMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextMaskPerturbator), (
+        "image embedding perturbators must not subclass TextMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextTensorPerturbator), (
+        "image embedding perturbators must not subclass TextTensorPerturbator"
+    )
 
     p = 10
     perturbator = perturbator_class(n_perturbations=p)
@@ -98,27 +106,40 @@ def test_image_embedding_perturbator(perturbator_class, model_name, images):
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
-        assert isinstance(processed_image, BatchFeature)
+        assert isinstance(processed_image, BatchFeature), "the image processor must return a BatchFeature"
 
         perturbed_inputs, _ = perturbator.perturb(processed_image)
 
-        assert isinstance(perturbed_inputs, MutableMapping)
+        assert isinstance(perturbed_inputs, MutableMapping), "perturbed_inputs must be a MutableMapping"
 
-        assert "pixel_values" in perturbed_inputs.keys()
-        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+        assert "pixel_values" in perturbed_inputs.keys(), "perturbed_inputs must have the 'pixel_values' key"
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor), (
+            'perturbed_inputs["pixel_values"] must be a torch.Tensor'
+        )
 
         _, _, h, w = processed_image["pixel_values"].shape
-        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
+        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w), (
+            'perturbed_inputs["pixel_values"] must have shape (n_perturbations, 3, H, W). Expected '
+            f"{(p, 3, h, w)}, got {tuple(perturbed_inputs['pixel_values'].shape)}"
+        )
 
 
 @pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
 def test_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
-    assert issubclass(perturbator_class, ImageMaskPerturbator)
-    assert not issubclass(perturbator_class, ImageTensorPerturbator)
-    assert not issubclass(perturbator_class, TextMaskPerturbator)
-    assert not issubclass(perturbator_class, TextTensorPerturbator)
+    assert issubclass(perturbator_class, ImageMaskPerturbator), (
+        "image mask perturbators must subclass ImageMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, ImageTensorPerturbator), (
+        "image mask perturbators must not subclass ImageTensorPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextMaskPerturbator), (
+        "image mask perturbators must not subclass TextMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextTensorPerturbator), (
+        "image mask perturbators must not subclass TextTensorPerturbator"
+    )
 
     patch_size = 2
     p = 15
@@ -130,13 +151,15 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
-        assert isinstance(processed_image, BatchFeature)
+        assert isinstance(processed_image, BatchFeature), "the image processor must return a BatchFeature"
 
         perturbed_inputs, masks = perturbator.perturb(processed_image)
 
-        assert isinstance(perturbed_inputs, BatchFeature)
-        assert "pixel_values" in perturbed_inputs.keys()
-        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+        assert isinstance(perturbed_inputs, BatchFeature), "perturbed_inputs must be a BatchFeature"
+        assert "pixel_values" in perturbed_inputs.keys(), "perturbed_inputs must have the 'pixel_values' key"
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor), (
+            'perturbed_inputs["pixel_values"] must be a torch.Tensor'
+        )
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
@@ -148,10 +171,17 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
         else:
             real_p = perturbator.n_perturbations
 
-        assert perturbed_inputs["pixel_values"].shape == (real_p, 3, h, w)
+        assert perturbed_inputs["pixel_values"].shape == (real_p, 3, h, w), (
+            'perturbed_inputs["pixel_values"] must have shape (real_p, 3, H, W), where real_p accounts for the '
+            "method's actual number of masks (g+1 for Occlusion, (g+2)*k for Sobol, n_perturbations otherwise). "
+            f"Expected {(real_p, 3, h, w)}, got {tuple(perturbed_inputs['pixel_values'].shape)}"
+        )
 
-        assert isinstance(masks, torch.Tensor)
-        assert masks.shape[0] == perturbed_inputs["pixel_values"].shape[0]
+        assert isinstance(masks, torch.Tensor), "masks must be a torch.Tensor"
+        assert masks.shape[0] == perturbed_inputs["pixel_values"].shape[0], (
+            "there must be exactly one mask per perturbed sample ie the shapes of the masks and the inputs "
+            "should match"
+        )
 
 
 @pytest.mark.slow
@@ -159,10 +189,18 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 @pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
 def test_slow_image_embedding_perturbator(perturbator_class, model_name, images):
     """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
-    assert issubclass(perturbator_class, ImageTensorPerturbator)
-    assert not issubclass(perturbator_class, ImageMaskPerturbator)
-    assert not issubclass(perturbator_class, TextMaskPerturbator)
-    assert not issubclass(perturbator_class, TextTensorPerturbator)
+    assert issubclass(perturbator_class, ImageTensorPerturbator), (
+        "image embedding perturbators must subclass ImageTensorPerturbator"
+    )
+    assert not issubclass(perturbator_class, ImageMaskPerturbator), (
+        "image embedding perturbators must not subclass ImageMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextMaskPerturbator), (
+        "image embedding perturbators must not subclass TextMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextTensorPerturbator), (
+        "image embedding perturbators must not subclass TextTensorPerturbator"
+    )
 
     p = 10
     perturbator = perturbator_class(n_perturbations=p)
@@ -171,17 +209,22 @@ def test_slow_image_embedding_perturbator(perturbator_class, model_name, images)
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
-        assert isinstance(processed_image, BatchFeature)
+        assert isinstance(processed_image, BatchFeature), "the image processor must return a BatchFeature"
 
         perturbed_inputs, _ = perturbator.perturb(processed_image)
 
-        assert isinstance(perturbed_inputs, MutableMapping)
+        assert isinstance(perturbed_inputs, MutableMapping), "perturbed_inputs must be a MutableMapping"
 
-        assert "pixel_values" in perturbed_inputs.keys()
-        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+        assert "pixel_values" in perturbed_inputs.keys(), "perturbed_inputs must have the 'pixel_values' key"
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor), (
+            'perturbed_inputs["pixel_values"] must be a torch.Tensor'
+        )
 
         _, _, h, w = processed_image["pixel_values"].shape
-        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w)
+        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w), (
+            'perturbed_inputs["pixel_values"] must have shape (n_perturbations, 3, H, W). Expected '
+            f"{(p, 3, h, w)}, got {tuple(perturbed_inputs['pixel_values'].shape)}"
+        )
 
 
 @pytest.mark.slow
@@ -189,10 +232,18 @@ def test_slow_image_embedding_perturbator(perturbator_class, model_name, images)
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
 def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
-    assert issubclass(perturbator_class, ImageMaskPerturbator)
-    assert not issubclass(perturbator_class, ImageTensorPerturbator)
-    assert not issubclass(perturbator_class, TextMaskPerturbator)
-    assert not issubclass(perturbator_class, TextTensorPerturbator)
+    assert issubclass(perturbator_class, ImageMaskPerturbator), (
+        "image mask perturbators must subclass ImageMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, ImageTensorPerturbator), (
+        "image mask perturbators must not subclass ImageTensorPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextMaskPerturbator), (
+        "image mask perturbators must not subclass TextMaskPerturbator"
+    )
+    assert not issubclass(perturbator_class, TextTensorPerturbator), (
+        "image mask perturbators must not subclass TextTensorPerturbator"
+    )
 
     patch_size = 16
     p = 15
@@ -204,13 +255,15 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
-        assert isinstance(processed_image, BatchFeature)
+        assert isinstance(processed_image, BatchFeature), "the image processor must return a BatchFeature"
 
         perturbed_inputs, masks = perturbator.perturb(processed_image)
 
-        assert isinstance(perturbed_inputs, BatchFeature)
-        assert "pixel_values" in perturbed_inputs.keys()
-        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor)
+        assert isinstance(perturbed_inputs, BatchFeature), "perturbed_inputs must be a BatchFeature"
+        assert "pixel_values" in perturbed_inputs.keys(), "perturbed_inputs must have the 'pixel_values' key"
+        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor), (
+            'perturbed_inputs["pixel_values"] must be a torch.Tensor'
+        )
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
@@ -222,10 +275,17 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
         else:
             real_p = perturbator.n_perturbations
 
-        assert perturbed_inputs["pixel_values"].shape == (real_p, 3, h, w)
+        assert perturbed_inputs["pixel_values"].shape == (real_p, 3, h, w), (
+            'perturbed_inputs["pixel_values"] must have shape (real_p, 3, H, W), where real_p accounts for the '
+            "method's actual number of masks (g+1 for Occlusion, (g+2)*k for Sobol, n_perturbations otherwise). "
+            f"Expected {(real_p, 3, h, w)}, got {tuple(perturbed_inputs['pixel_values'].shape)}"
+        )
 
-        assert isinstance(masks, torch.Tensor)
-        assert masks.shape[0] == perturbed_inputs["pixel_values"].shape[0]
+        assert isinstance(masks, torch.Tensor), "masks must be a torch.Tensor"
+        assert masks.shape[0] == perturbed_inputs["pixel_values"].shape[0], (
+            "there must be exactly one mask per perturbed sample ie the shapes of the masks and the inputs "
+            "should match"
+        )
 
 
 # def test_linear_interpolation_image_perturbation_adjust_baseline():
@@ -297,4 +357,7 @@ def test_image_occlusion_masks():
     perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
-        assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))
+        assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)), (
+            "Occlusion's mask must be an all-zeros reference row (nothing occluded, for the baseline output "
+            "to diff against) stacked with the identity matrix (each row occludes exactly one unit)"
+        )
