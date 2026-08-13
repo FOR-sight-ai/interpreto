@@ -39,7 +39,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from PIL.Image import Image as PILImage
-from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer
+from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 
 from interpreto.attributions.aggregations.base import Aggregator
@@ -77,8 +77,8 @@ def setup_token_ids(
     Returns the mask token ID.
     """
 
-    if not isinstance(tokenizer, PreTrainedTokenizer):
-        raise TypeError(f"setup_token_ids expects a PreTrainedTokenizer, got {type(tokenizer)}")
+    if not isinstance(tokenizer, PreTrainedTokenizerBase):
+        raise TypeError(f"setup_token_ids expects a PreTrainedTokenizerBase, got {type(tokenizer)}")
 
     resize_token_embeddings = False
 
