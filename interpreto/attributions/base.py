@@ -30,7 +30,7 @@ from __future__ import annotations
 
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
-from collections.abc import Callable, Iterable, Iterator, MutableMapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -882,8 +882,7 @@ class ImageAttributionOutput:
         image_mean (torch.Tensor | None):
             Per-channel mean used to normalize `pixel_values`. Together with `image_std`
             it is the affine that de-normalizes the image for visualization purposes:
-            `x * image_std + image_mean`. Sourced from the explainer's `image_processor`
-            when `preprocess=True`, or supplied by the user when `preprocess=False`.
+            `x * image_std + image_mean`. Sourced from the explainer's `image_processor`.
             Identity `0` when no normalization was applied.
 
             Defaults to `None` so that an output built without it fails loudly at display
@@ -953,39 +952,13 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         use_gradient: bool = False,
         input_x_gradient: bool = True,
-        preprocess: bool = True,
-        image_mean: Sequence[float] | float | torch.Tensor | None = None,
-        image_std: Sequence[float] | float | torch.Tensor | None = None,
     ) -> None:
         """
         Args mirror `AttributionExplainer.__init__` with `tokenizer` -> `image_processor`
         and `granularity` typed as `ImageGranularity`. See parent for shared semantics.
 
-        Additional image-only args:
-            preprocess (bool): Whether interpreto runs `image_processor` on the input.
-                If True, EVERY input — including the `pixel_values` of a `BatchFeature` —
-                is routed through `image_processor`. If False, the input is taken as-is
-                and assumed already normalized.
-
-                NOTE: `BatchFeature` carries no provenance — it is a plain mapping, and
-                `_validate_batch_feature` only checks the key, dtype and shape. So
-                we cannot tell a processed `BatchFeature` from a hand-built raw one, and
-                this flag is the ONLY signal. Consequence: `explain(image_processor(img))`
-                under the default `preprocess=True` will double-normalize. Pass a raw
-                image with `preprocess=True`, or a processed one with `preprocess=False`.
-
-            image_mean / image_std (Sequence[float] | float | None): the affine that
-                de-normalizes the image for visualization purposes, via
-                `x * image_std + image_mean`. Required when `preprocess=False` (we cannot
-                know what the user applied; guessing yields a plausible-looking wrong
-                image). Forbidden when `preprocess=True` (we derive them from
-                `image_processor`). For un-normalized input pass the identity
-                `image_mean=0, image_std=1`; for a raw `[0, 255]` tensor, `image_mean=0,
-                image_std=1/255`.
-
-        Raises:
-            ValueError: if `preprocess=False` and either stat is missing, or if
-                `preprocess=True` and either stat is supplied.
+        The given image must be the raw image as the preprocessing is done by interpreto
+        using the image_processor given as argument.
         """
         # does not call setup_token_id because there is no need for a PAD token
 
@@ -1005,8 +978,6 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             )
 
         self.image_processor = image_processor
-        self.preprocess = preprocess
-        self.image_mean, self.image_std = self._resolve_normalization_stats(image_mean, image_std)
 
         self.inference_wrapper = self._associated_inference_wrapper(
             model,
@@ -1034,45 +1005,20 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             self.perturbator.patch_size = self.patch_size
             self.perturbator.granularity_combination_strategy = self.resize_strategy
 
-    def _resolve_normalization_stats(
-        self,
-        image_mean: Sequence[float] | float | torch.Tensor | None,
-        image_std: Sequence[float] | float | torch.Tensor | None,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def _resolve_normalization_stats(self) -> tuple[torch.Tensor, torch.Tensor]:
         """
-        Decide the de-normalization affine from `self.preprocess`, and validate.
+        Returns the normalization statistics used by the image_processor so that they may be
+        given to the visualization module.
 
-        Keyed on the FLAG, not on whether processing actually ran: `preprocess=True` means
-        we own the stats, so we read them off `self.image_processor` regardless of which
-        input branch a given sample later takes.
-
-        `do_normalize=False` -> identity. The processor keeps `image_mean`/`image_std` as
-        class attributes even when it never applies them (`ViTImageProcessor.image_mean` is
-        0.5 regardless), so reading them blindly would de-normalize an image that was never
-        normalized.
+        If the image_processor does not have a do_normalize step then the function returns
+        0.0 and 1.0 (Since the do_normalize step does x * image_std + image_mean, 0.0 and 1.0
+        is equivalent to the identity function).
         """
-        if self.preprocess:
-            if image_mean is not None or image_std is not None:
-                raise ValueError(
-                    "image_mean/image_std must not be supplied when preprocess=True: they are "
-                    "derived from image_processor, so a supplied value would be silently "
-                    "discarded. Either drop them, or set preprocess=False to own the "
-                    "normalization yourself."
-                )
-            if not getattr(self.image_processor, "do_normalize", False):
-                image_mean, image_std = 0.0, 1.0
-            else:
-                image_mean = self.image_processor.image_mean
-                image_std = self.image_processor.image_std
-
-        elif image_mean is None or image_std is None:
-            raise ValueError(
-                "preprocess=False requires both image_mean and image_std: the input is assumed "
-                "already normalized and we cannot know which statistics were applied, so "
-                "guessing would produce a plausible-looking but wrong image. Pass the affine "
-                "that de-normalizes it (x * image_std + image_mean) — use image_mean=0, "
-                "image_std=1 if no normalization was applied."
-            )
+        if not getattr(self.image_processor, "do_normalize", False):
+            image_mean, image_std = 0.0, 1.0
+        else:
+            image_mean = self.image_processor.image_mean
+            image_std = self.image_processor.image_std
 
         return (
             torch.as_tensor(image_mean, dtype=torch.float32).view(-1, 1, 1),
@@ -1207,33 +1153,21 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         """
         Normalize image inputs to a list of `BatchFeature` mappings, one per sample.
 
-        `self.preprocess` decides whether the image processor runs, for EVERY input type:
-            - `preprocess=True`: `PIL.Image`, `np.ndarray`, `torch.Tensor`, and the
-              `pixel_values` of a `BatchFeature` are all routed through
-              `self.image_processor`.
-            - `preprocess=False`: `BatchFeature` is passed through after validation, and
-              `torch.Tensor` of shape `(1, 3, H, W)` or `(3, H, W)` (auto-unsqueezed) is
-              wrapped as `BatchFeature` directly. Both are assumed already normalized.
-            - Iterables of any of the above are flattened recursively.
+        The image processor runs on every input type: `PIL.Image`, `np.ndarray`,
+        `torch.Tensor`, and the `pixel_values` of a `BatchFeature` are all routed through
+        `self.image_processor`. Iterables of any of the above are flattened recursively.
 
-        A `BatchFeature` carries no provenance — `_validate_batch_feature` checks the key,
-        dtype and shape, none of which say whether the processor ever ran. So a
-        hand-built raw `BatchFeature` is indistinguishable from a processed one, and the
-        flag is the only signal we have. Hence `explain(image_processor(img))` under the
-        default `preprocess=True` double-normalizes; that is the documented cost of the
-        flag meaning what it says.
+        Inputs should be raw. `explain(image_processor(img))` double-normalizes. Correct use
+        is to  pass the raw image and let interpreto process it.
 
         Mirrors text `process_model_inputs` with `BatchFeature` for `BatchEncoding`
-        and `pixel_values` for `input_ids`. The `str` branch is replaced by raw-image
-        branches; text has no `preprocess` flag because tokenization cannot be skipped.
+        and `pixel_values` for `input_ids`.
         """
 
         if isinstance(model_inputs, BatchFeature):
             if model_inputs["pixel_values"].ndim == 3:  # expand a single (3, H, W) to (1, 3, H, W)
                 model_inputs["pixel_values"] = model_inputs["pixel_values"].unsqueeze(0)
             validated = self._validate_batch_feature(model_inputs)
-            if not self.preprocess:
-                return [validated]
             # MVP is ViT-classification-only, where pixel_values is the only key. Re-processing
             # rebuilds from pixel_values alone, so any other key a BatchFeature legally carries
             # (bool_masked_pos, interpolate_pos_encoding) would be dropped here. Nothing in scope
@@ -1241,27 +1175,10 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             processed = self.image_processor(validated["pixel_values"], return_tensors="pt")
             return [self._validate_batch_feature(processed)]
 
-        # Raw-image types (PIL.Image is NOT Iterable on the class level; np.ndarray and
-        # torch.Tensor ARE — so we must catch them before the Iterable branch).
+        # Raw-image types.
         if isinstance(model_inputs, (PILImage, np.ndarray, torch.Tensor)):
-            if self.preprocess:
-                processed = self.image_processor(model_inputs, return_tensors="pt")
-                return [self._validate_batch_feature(processed)]
-
-            # preprocess=False: PIL.Image and np.ndarray are not allowed.
-            if not isinstance(model_inputs, torch.Tensor):
-                raise ValueError(
-                    f"When preprocess=False, raw inputs must be torch.Tensor, got {type(model_inputs)}. "
-                    "Either set preprocess=True, or pre-process via image_processor and pass BatchFeature."
-                )
-            tensor = model_inputs
-            if tensor.ndim == 3:
-                tensor = tensor.unsqueeze(0)
-            if tensor.ndim != 4 or tensor.shape[1] != 3 or tensor.shape[0] != 1:
-                raise ValueError(
-                    f"When preprocess=False, expected pixel_values of shape (1, 3, H, W), got {tuple(tensor.shape)}."
-                )
-            return [BatchFeature(data={"pixel_values": tensor})]
+            processed = self.image_processor(model_inputs, return_tensors="pt")
+            return [self._validate_batch_feature(processed)]
 
         if isinstance(model_inputs, Iterable):
             return list(itertools.chain(*[self.process_model_inputs(item) for item in model_inputs]))
@@ -1363,6 +1280,8 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         # function is kept, commented out, in `commons/granularity.py` in case a future method needs
         # a granularity other than its family's native one. `contributions` is thus already (t, g).
 
+        image_mean, image_std = self._resolve_normalization_stats()
+
         results: list[ImageAttributionOutput] = []
         for contribution, model_input, target in zip(
             contributions,
@@ -1374,8 +1293,8 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 attributions=contribution.cpu(),
                 model_inputs_to_explain=model_input,
                 targets=target.cpu(),
-                image_mean=self.image_mean,
-                image_std=self.image_std,
+                image_mean=image_mean,
+                image_std=image_std,
                 granularity=self.granularity,
                 patch_size=self.patch_size,
                 granularity_resize=self.resize_strategy,

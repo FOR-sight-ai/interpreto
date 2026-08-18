@@ -28,7 +28,7 @@ Image-side Integrated Gradients method for ViT-family classification models.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 
 import torch
 from transformers.image_processing_utils import BaseImageProcessor
@@ -73,9 +73,6 @@ class ImageIntegratedGradients(ImageClassificationAttributionExplainer):
         input_x_gradient: bool = True,
         n_perturbations: int = 10,
         baseline: torch.Tensor | float | None = None,
-        preprocess: bool = True,
-        image_mean: Sequence[float] | float | torch.Tensor | None = None,
-        image_std: Sequence[float] | float | torch.Tensor | None = None,
     ):
         """
         Initialize the attribution method.
@@ -92,11 +89,6 @@ class ImageIntegratedGradients(ImageClassificationAttributionExplainer):
                 before the channel-collapse step. Defaults to True.
             n_perturbations (int): number of interpolation steps between baseline and input.
             baseline (torch.Tensor | float | None): baseline pixel values for the interpolation path.
-            preprocess (bool, optional): if True, raw inputs are routed through `image_processor`.
-                Defaults to True.
-            image_mean / image_std (Sequence[float] | float | torch.Tensor | None, optional):
-                de-normalization affine `x * image_std + image_mean`. Required when
-                `preprocess=False`; must be omitted when `preprocess=True`.
         """
         perturbator = LinearInterpolationImagePerturbator(baseline=baseline, n_perturbations=n_perturbations)
         super().__init__(
@@ -111,7 +103,4 @@ class ImageIntegratedGradients(ImageClassificationAttributionExplainer):
             inference_mode=inference_mode,
             use_gradient=True,
             input_x_gradient=input_x_gradient,
-            preprocess=preprocess,
-            image_mean=image_mean,
-            image_std=image_std,
         )

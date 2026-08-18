@@ -83,9 +83,10 @@ def _denormalize(attribution_output: ImageAttributionOutput, range_tolerance: fl
     if lo < -range_tolerance or hi > 1.0 + range_tolerance:
         warnings.warn(
             f"De-normalized image spans [{lo:.3f}, {hi:.3f}], outside the displayable [0, 1]; "
-            "it will be clamped and may look wrong. The image_mean/image_std do not match how "
-            "this tensor was normalized, or it was never in [0, 1] before normalization. With "
-            "preprocess=False, pass the affine that de-normalizes it.",
+            "it will be clamped and may look wrong. This may be because of a problem with the "
+            "pre-processing pipeline or because your image was not in [0, 1] before "
+            "normalization. If this is the case, consider changing the rescale factor of the "
+            "image_processor so that the rescaled image falls within the [0, 1] range.",
             stacklevel=3,
         )
 

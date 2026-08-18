@@ -28,7 +28,7 @@ Image-side KernelSHAP method for ViT-family classification models.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 
 import torch
 from transformers.image_processing_utils import BaseImageProcessor
@@ -77,9 +77,6 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
         n_perturbations: int = 1000,
         replace_value: float = 0.0,
         device: torch.device | None = None,
-        preprocess: bool = True,
-        image_mean: Sequence[float] | float | torch.Tensor | None = None,
-        image_std: Sequence[float] | float | torch.Tensor | None = None,
     ):
         """
         Initialize the attribution method.
@@ -95,11 +92,6 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
             replace_value (float): baseline value written into masked units across all
                 channels. `0.0` is the per-channel mean after standard ViT normalization.
             device (torch.device, optional): device on which the attribution method will be run.
-            preprocess (bool, optional): if True, raw inputs are routed through `image_processor`.
-                Defaults to True.
-            image_mean / image_std (Sequence[float] | float | torch.Tensor | None, optional):
-                de-normalization affine `x * image_std + image_mean`. Required when
-                `preprocess=False`; must be omitted when `preprocess=True`.
         """
         # patch_size is reconciled from model.config by the explainer __init__.
         perturbator = ShapImagePerturbator(
@@ -125,7 +117,4 @@ class ImageKernelShap(ImageClassificationAttributionExplainer):
             resize_strategy=resize_strategy,
             inference_mode=inference_mode,
             use_gradient=False,
-            preprocess=preprocess,
-            image_mean=image_mean,
-            image_std=image_std,
         )

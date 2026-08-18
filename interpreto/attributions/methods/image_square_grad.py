@@ -28,7 +28,7 @@ Image-side SquareGrad method for ViT-family classification models.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 
 import torch
 from transformers.image_processing_utils import BaseImageProcessor
@@ -75,9 +75,6 @@ class ImageSquareGrad(ImageClassificationAttributionExplainer):
         input_x_gradient: bool = True,
         n_perturbations: int = 10,
         noise_std: float = 0.1,
-        preprocess: bool = True,
-        image_mean: Sequence[float] | float | torch.Tensor | None = None,
-        image_std: Sequence[float] | float | torch.Tensor | None = None,
     ):
         """
         Initialize the attribution method.
@@ -94,11 +91,6 @@ class ImageSquareGrad(ImageClassificationAttributionExplainer):
                 before the channel-collapse step. Defaults to True.
             n_perturbations (int): number of noisy samples whose squared gradient is averaged.
             noise_std (float): standard deviation of the Gaussian noise added to `pixel_values`.
-            preprocess (bool, optional): if True, raw inputs are routed through `image_processor`.
-                Defaults to True.
-            image_mean / image_std (Sequence[float] | float | torch.Tensor | None, optional):
-                de-normalization affine `x * image_std + image_mean`. Required when
-                `preprocess=False`; must be omitted when `preprocess=True`.
         """
         perturbator = GaussianNoiseImagePerturbator(n_perturbations=n_perturbations, std=noise_std)
         super().__init__(
@@ -113,7 +105,4 @@ class ImageSquareGrad(ImageClassificationAttributionExplainer):
             inference_mode=inference_mode,
             use_gradient=True,
             input_x_gradient=input_x_gradient,
-            preprocess=preprocess,
-            image_mean=image_mean,
-            image_std=image_std,
         )
