@@ -36,7 +36,7 @@ The masking is done in *raw pixel space*, on purpose:
   - it exercises the real preprocessing path (rescale + normalize) end to end.
 The processor rescales by 1/255 then normalizes with mean = std = 0.5, so painting the raw
 background with `image_mean * 255` (~128) lands on a normalized 0.0 — the neutral baseline that
-carries no signal. The perturbed image is then handed to the explainer with `preprocess=True`.
+carries no signal. The perturbed image is then handed to the explainer as a raw image.
 
 This test does NOT assert anything about *where* the attribution lands yet — it only runs every
 method end to end and saves both the perturbed input and the heatmaps to `sanity_check_outputs/`
@@ -145,8 +145,7 @@ def test_image_methods_sanity(model_and_processor, raw_image, attribution_method
     masked_image = _keep_box_raw(raw_image, box, background)
     masked_image.save(OUTPUT_DIR / f"{label_name}_input.png")
 
-    # preprocess=True: the raw perturbed image goes through the real rescale+normalize path.
-    explainer = attribution_method(model, processor, preprocess=True)
+    explainer = attribution_method(model, processor)
     output = explainer.explain(masked_image, target)
 
     # Basic smoke checks only — no claim yet about *where* the attribution concentrates.

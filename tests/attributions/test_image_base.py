@@ -79,65 +79,31 @@ def test_init_explainer(model_name, use_gradient, granularity, clash):
         )
 
 
-def _stats_self(preprocess, image_processor=None):
-    """A stand-in for `self`: _resolve_normalization_stats only reads these two attributes."""
-    return SimpleNamespace(preprocess=preprocess, image_processor=image_processor)
-
-
 _resolve_normalization_stats = ImageClassificationAttributionExplainer._resolve_normalization_stats
 
 
 @pytest.mark.parametrize(
-    "preprocess, image_mean, image_std",
+    "processor, expected_mean, expected_std",
     [
-        # preprocess=True owns the stats, so supplying any of them is the error.
-        (True, 0.5, None),
-        (True, None, 0.5),
-        (True, 0.5, 0.5),
-        # preprocess=False cannot guess them, so omitting any of them is the error.
-        (False, None, None),
-        (False, 0.5, None),
-        (False, None, 0.5),
-    ],
-)
-def test_resolve_normalization_stats_raises(preprocess, image_mean, image_std):
-    processor = SimpleNamespace(do_normalize=True, image_mean=[0.5] * 3, image_std=[0.5] * 3)
-    with pytest.raises(ValueError):
-        _resolve_normalization_stats(_stats_self(preprocess, processor), image_mean, image_std)
-
-
-@pytest.mark.parametrize(
-    "preprocess, processor, image_mean, image_std, expected_mean, expected_std",
-    [
-        # preprocess=True, do_normalize=True: the processor's stats are used verbatim.
+        # do_normalize=True: the processor's stats are used verbatim.
         (
-            True,
             SimpleNamespace(do_normalize=True, image_mean=[0.1, 0.2, 0.3], image_std=[0.4, 0.5, 0.6]),
-            None,
-            None,
             [0.1, 0.2, 0.3],
             [0.4, 0.5, 0.6],
         ),
         # do_normalize=False: identity, NOT the processor's stats, which it keeps regardless.
         (
-            True,
             SimpleNamespace(do_normalize=False, image_mean=[0.5] * 3, image_std=[0.5] * 3),
-            None,
-            None,
             [0.0],
             [1.0],
         ),
         # do_normalize absent entirely: getattr defaults to False, so also identity.
-        (True, SimpleNamespace(), None, None, [0.0], [1.0]),
-        # preprocess=False: the caller's stats pass through, scalar and per-channel alike.
-        (False, None, 0.5, 0.25, [0.5], [0.25]),
-        (False, None, [0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.1, 0.2, 0.3], [0.4, 0.5, 0.6]),
+        (SimpleNamespace(), [0.0], [1.0]),
     ],
 )
-def test_resolve_normalization_stats_returns(
-    preprocess, processor, image_mean, image_std, expected_mean, expected_std
-):
-    mean, std = _resolve_normalization_stats(_stats_self(preprocess, processor), image_mean, image_std)
+def test_resolve_normalization_stats_returns(processor, expected_mean, expected_std):
+    # SimpleNamespace stands in for `self`: _resolve_normalization_stats only reads image_processor.
+    mean, std = _resolve_normalization_stats(SimpleNamespace(image_processor=processor))
 
     # (-1, 1, 1) so a scalar broadcasts over C and a per-channel stat aligns with it.
     assert mean.shape == (len(expected_mean), 1, 1), (
@@ -358,7 +324,7 @@ def _assert_batch_feature_list(result, expected_length):
 @pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_process_model_inputs(model_name):
     """
-    Test process_model_inputs: the 3 ValueError cases, and that valid inputs are
+    Test process_model_inputs: the ValueError case, and that valid inputs are
     normalized to a list of BatchFeature (with "pixel_values" as a key), one per
     sample, matching the input length for iterables.
     """
@@ -366,9 +332,8 @@ def test_process_model_inputs(model_name):
     image_processor = AutoImageProcessor.from_pretrained(model_name)
     image = Image.new("RGB", (4, 4))
 
-    # --- ValueError cases ---
+    # --- ValueError case: unsupported type (not BatchFeature, raw image, or Iterable) ---
 
-    # 1. Unsupported type (not BatchFeature, raw image, or Iterable)
     explainer = ImageClassificationAttributionExplainer(
         model,
         image_processor,
@@ -379,24 +344,6 @@ def test_process_model_inputs(model_name):
     with pytest.raises(ValueError, match="not supported for method process_model_inputs"):
         explainer.process_model_inputs(42)  # type: ignore
 
-    # 2. preprocess=False with a non-tensor raw input
-    explainer_no_preprocess = ImageClassificationAttributionExplainer(
-        model,
-        image_processor,
-        ImageGranularity.PATCH,
-        batch_size=2,
-        device=DEVICE,
-        preprocess=False,
-        image_mean=0.0,
-        image_std=1.0,
-    )
-    with pytest.raises(ValueError, match="must be torch.Tensor"):
-        explainer_no_preprocess.process_model_inputs(image)
-
-    # 3. preprocess=False with a tensor of the wrong shape
-    with pytest.raises(ValueError, match="expected pixel_values of shape"):
-        explainer_no_preprocess.process_model_inputs(torch.zeros(2, 3, 4, 4))
-
     # --- Valid cases ---
 
     # BatchFeature passed directly
@@ -404,20 +351,16 @@ def test_process_model_inputs(model_name):
     result = explainer.process_model_inputs(bf)
     _assert_batch_feature_list(result, expected_length=1)
 
-    # Raw PIL image, preprocess=True (default): routed through image_processor
+    # Raw PIL image: routed through image_processor
     result = explainer.process_model_inputs(image)
     _assert_batch_feature_list(result, expected_length=1)
 
-    # Raw np.ndarray, preprocess=True (default): routed through image_processor
+    # Raw np.ndarray: routed through image_processor
     array = np.array(image)
     result = explainer.process_model_inputs(array)
     _assert_batch_feature_list(result, expected_length=1)
 
-    # Raw tensor of shape (1, 3, H, W), preprocess=False: wrapped as-is
-    result = explainer_no_preprocess.process_model_inputs(torch.zeros(1, 3, 4, 4))
-    _assert_batch_feature_list(result, expected_length=1)
-
-    # Iterable of raw PIL images, preprocess=True: one BatchFeature per sample
+    # Iterable of raw PIL images: one BatchFeature per sample
     images = [image, image, image]
     result = explainer.process_model_inputs(images)
     _assert_batch_feature_list(result, expected_length=len(images))

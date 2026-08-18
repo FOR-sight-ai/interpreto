@@ -191,9 +191,6 @@ def _assert_explains_and_plots(
     targets,
     granularity,
     resize_strategy,
-    preprocess,
-    image_mean,
-    image_std,
 ):
     """
     Shared body for the vision method tests. Given an already-built explainer, check that its
@@ -205,8 +202,7 @@ def _assert_explains_and_plots(
     Method-specific knobs (Sobol's sampler/order, LIME's kernel_width, ...) are *not* checked
     here — those stay in each method's test. This only covers what every method shares.
 
-    Returns the list of `ImageAttributionOutput`, or `None` when the call was expected to raise
-    (preprocess=False with raw PIL/ndarray inputs) and short-circuited — the caller must stop too.
+    Returns the list of `ImageAttributionOutput`.
     """
     assert isinstance(explainer.perturbator, perturbator_cls), (
         f"explainer.perturbator must be an instance of {perturbator_cls}, got {type(explainer.perturbator)}"
@@ -214,13 +210,6 @@ def _assert_explains_and_plots(
     assert isinstance(explainer.aggregator, aggregator_cls), (
         f"explainer.aggregator must be an instance of {aggregator_cls}, got {type(explainer.aggregator)}"
     )
-
-    # preprocess=False rejects raw PIL/ndarray: they can only be normalized by the processor.
-    items = inputs if isinstance(inputs, list) else [inputs]
-    if not preprocess and any(isinstance(i, (Image.Image, np.ndarray)) for i in items):
-        with pytest.raises(ValueError, match="raw inputs must be torch.Tensor"):
-            explainer.explain(inputs, targets)
-        return None
 
     output = explainer.explain(inputs, targets)
 
@@ -259,16 +248,12 @@ def _assert_explains_and_plots(
             "call on the same raw inputs"
         )
 
-    if preprocess:
-        if getattr(processor, "do_normalize", False):
-            expected_mean = torch.as_tensor(processor.image_mean, dtype=torch.float32).view(-1, 1, 1)
-            expected_std = torch.as_tensor(processor.image_std, dtype=torch.float32).view(-1, 1, 1)
-        else:
-            expected_mean = torch.as_tensor(0.0, dtype=torch.float32).view(-1, 1, 1)
-            expected_std = torch.as_tensor(1.0, dtype=torch.float32).view(-1, 1, 1)
+    if getattr(processor, "do_normalize", False):
+        expected_mean = torch.as_tensor(processor.image_mean, dtype=torch.float32).view(-1, 1, 1)
+        expected_std = torch.as_tensor(processor.image_std, dtype=torch.float32).view(-1, 1, 1)
     else:
-        expected_mean = torch.as_tensor(image_mean, dtype=torch.float32).view(-1, 1, 1)
-        expected_std = torch.as_tensor(image_std, dtype=torch.float32).view(-1, 1, 1)
+        expected_mean = torch.as_tensor(0.0, dtype=torch.float32).view(-1, 1, 1)
+        expected_std = torch.as_tensor(1.0, dtype=torch.float32).view(-1, 1, 1)
 
     for o in output:
         assert torch.equal(o.image_mean, expected_mean), (
@@ -287,7 +272,6 @@ def _assert_explains_and_plots(
 
 
 @pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("preprocess, image_mean, image_std", [(True, None, None), (False, 2.0, 0.75)])
 @pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
 @pytest.mark.parametrize("attribution_method, perturbator, aggregator, granularity", FAST_METHOD_SPECS)
 def test_vision_attribution_methods_fast(
@@ -298,9 +282,6 @@ def test_vision_attribution_methods_fast(
     aggregator,
     granularity,
     resize_strategy,
-    preprocess,
-    image_mean,
-    image_std,
     input_fixture,
     targets,
 ):
@@ -312,9 +293,6 @@ def test_vision_attribution_methods_fast(
             model,
             processor,
             resize_strategy=resize_strategy,
-            preprocess=preprocess,
-            image_mean=image_mean,
-            image_std=image_std,
         )
     else:
         explainer = attribution_method(
@@ -322,9 +300,6 @@ def test_vision_attribution_methods_fast(
             processor,
             n_perturbations=5,
             resize_strategy=resize_strategy,
-            preprocess=preprocess,
-            image_mean=image_mean,
-            image_std=image_std,
         )
 
     _assert_explains_and_plots(
@@ -336,9 +311,6 @@ def test_vision_attribution_methods_fast(
         targets,
         granularity,
         resize_strategy,
-        preprocess,
-        image_mean,
-        image_std,
     )
 
 
@@ -354,7 +326,6 @@ SOBOL_SPECS = [
 
 
 @pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("preprocess, image_mean, image_std", [(True, None, None), (False, 2.0, 0.75)])
 @pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
 @pytest.mark.parametrize("n_token_perturbations, order, sampler", SOBOL_SPECS)
 def test_image_sobol(
@@ -364,9 +335,6 @@ def test_image_sobol(
     order,
     sampler,
     resize_strategy,
-    preprocess,
-    image_mean,
-    image_std,
     input_fixture,
     targets,
 ):
@@ -380,9 +348,6 @@ def test_image_sobol(
         sobol_indices_order=order,
         sampler=sampler,
         resize_strategy=resize_strategy,
-        preprocess=preprocess,
-        image_mean=image_mean,
-        image_std=image_std,
     )
 
     # The two Sobol-specific knobs must land on the right objects (stored as their `.value`).
@@ -395,7 +360,7 @@ def test_image_sobol(
         f"Expected {order.value}, got {explainer.aggregator.sobol_indices_order}"
     )
 
-    output = _assert_explains_and_plots(
+    _assert_explains_and_plots(
         explainer,
         processor,
         SobolImagePerturbator,
@@ -404,12 +369,7 @@ def test_image_sobol(
         targets,
         ImageGranularity.PATCH,
         resize_strategy,
-        preprocess,
-        image_mean,
-        image_std,
     )
-    if output is None:  # preprocess=False + raw PIL/ndarray short-circuited in the helper.
-        return
 
     # The Sobol perturbator builds ((g + 2) * k, g) masks, where g = gh * gw is the number of
     # patches and k = n_token_perturbations. Derive g from the processed pixel grid and the
@@ -439,7 +399,6 @@ LIME_SPECS = [
 
 
 @pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("preprocess, image_mean, image_std", [(True, None, None), (False, 2.0, 0.75)])
 @pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
 @pytest.mark.parametrize("n_perturbations, perturb_probability, distance_function, kernel_width", LIME_SPECS)
 def test_image_lime(
@@ -450,9 +409,6 @@ def test_image_lime(
     distance_function,
     kernel_width,
     resize_strategy,
-    preprocess,
-    image_mean,
-    image_std,
     input_fixture,
     targets,
 ):
@@ -467,9 +423,6 @@ def test_image_lime(
         distance_function=distance_function,
         kernel_width=kernel_width,
         resize_strategy=resize_strategy,
-        preprocess=preprocess,
-        image_mean=image_mean,
-        image_std=image_std,
     )
 
     # The LIME-specific knobs must land on the right objects.
@@ -501,7 +454,7 @@ def test_image_lime(
             f"Expected {kernel_width}, got {explainer.aggregator.kernel_width}"
         )
 
-    output = _assert_explains_and_plots(
+    _assert_explains_and_plots(
         explainer,
         processor,
         RandomMaskedImagePerturbator,
@@ -510,12 +463,7 @@ def test_image_lime(
         targets,
         ImageGranularity.PATCH,
         resize_strategy,
-        preprocess,
-        image_mean,
-        image_std,
     )
-    if output is None:  # preprocess=False + raw PIL/ndarray short-circuited in the helper.
-        return
 
     # The LIME perturbator builds (n_perturbations, g) masks, where g = gh * gw is the number of
     # patches. Derive g from the processed pixel grid and the reconciled patch_size, then check
@@ -534,8 +482,8 @@ def test_image_lime(
 
 # End-to-end smoke test against a *real* ViT (not the tiny random one). The point is to catch
 # any shape/dtype drift between what `explain` returns and what the viz consumes that the tiny
-# model can hide. Everything else is deliberately kept small: one resize strategy (BILINEAR),
-# preprocess=True only, and a handful of representative inputs. All ten methods run in the same
+# model can hide. Everything else is deliberately kept small: one resize strategy (BILINEAR)
+# and a handful of representative inputs. All ten methods run in the same
 # function — Sobol and LIME use their default parameters here, so they need none of their extra
 # knobs and construct exactly like the others. The raw tensor/ndarray are deliberately given a
 # real, non-square size (3, 340, 270) so the processor's resize/crop path is actually exercised.
@@ -582,7 +530,6 @@ def test_vision_attribution_methods_slow(
         model,
         processor,
         resize_strategy=GranularityResizeStrategy.BILINEAR,
-        preprocess=True,
     )
 
     _assert_explains_and_plots(
@@ -594,7 +541,4 @@ def test_vision_attribution_methods_slow(
         targets,
         granularity,
         GranularityResizeStrategy.BILINEAR,
-        preprocess=True,
-        image_mean=None,
-        image_std=None,
     )
