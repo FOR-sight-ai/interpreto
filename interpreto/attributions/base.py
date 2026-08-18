@@ -53,13 +53,17 @@ from interpreto.attributions.perturbations.base import (
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
-from interpreto.commons import TextGranularity
+from interpreto.commons import (
+    GranularityAggregationStrategy,
+    GranularityResizeStrategy,
+    ImageGranularity,
+    TextGranularity,
+)
 from interpreto.commons.generator_tools import split_iterator
-from interpreto.commons.granularity import GranularityAggregationStrategy, GranularityResizeStrategy, ImageGranularity
-from interpreto.model_wrapping.classification_inference_wrapper import TextClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
+from interpreto.model_wrapping.text_classification_inference_wrapper import TextClassificationInferenceWrapper
+from interpreto.model_wrapping.text_generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
@@ -699,7 +703,7 @@ class TextClassificationAttributionExplainer(AttributionExplainer):
         return model_inputs, sanitized_targets
 
 
-class TextGenerationExplainer(AttributionExplainer):
+class TextGenerationAttributionExplainer(AttributionExplainer):
     _associated_inference_wrapper = TextGenerationInferenceWrapper
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
@@ -911,7 +915,7 @@ class ImageAttributionOutput:
     model_inputs_to_explain: TensorMapping
     targets: torch.Tensor
     granularity: ImageGranularity
-    patch_size: int
+    patch_size: int = 16
     image_mean: torch.Tensor | None = None
     image_std: torch.Tensor | None = None
     classes: torch.Tensor | None = None
@@ -992,12 +996,12 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         if use_gradient and granularity is ImageGranularity.PATCH:
             raise ValueError(
                 "granularity=PATCH is invalid for a gradient-based method: gradients are "
-                "computed per pixel, so PIXEL is the granularity these methods explain at."
+                "computed per pixel, so PIXEL is the granularity these methods explain at. Use PIXEL"
             )
         if not use_gradient and granularity is ImageGranularity.PIXEL:
             raise ValueError(
                 "granularity=PIXEL is invalid for a perturbation-based method: masking single "
-                "pixels is intractable and carries no semantic unit. Use PATCH."
+                "pixels is intractable. Use PATCH."
             )
 
         self.image_processor = image_processor
@@ -1401,7 +1405,7 @@ class MultitaskExplainerMixin(AttributionExplainer):
             )
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
-            t = FactoryGeneratedMeta("Generation" + cls.__name__, (cls, TextGenerationExplainer), {})
+            t = FactoryGeneratedMeta("Generation" + cls.__name__, (cls, TextGenerationAttributionExplainer), {})
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForImageClassification"):
             t = FactoryGeneratedMeta(

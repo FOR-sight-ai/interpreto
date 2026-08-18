@@ -55,14 +55,17 @@ def test_clip_percentile_constant_is_unchanged():
     # A constant array is a fixed point: lo == hi == 10, clip is a no-op.
     arr = np.full(20, 10.0)
     out = _clip_percentile(arr, percentile=np.random.uniform(0, 50))
-    assert np.array_equal(out, arr)
+    assert np.array_equal(out, arr), "clipping a constant array must be a no-op since lo == hi"
 
 
 def test_clip_percentile_pulls_tails_to_bounds():
     arr = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     out = _clip_percentile(arr, percentile=0.2)
     expected = np.array([1.008, 2.0, 3.0, 4.0, 4.992])
-    assert np.allclose(out, expected)
+    assert np.allclose(out, expected), (
+        "0.2 percentile clip must pull the two tail values (lo and hi) to lo = 1.008 and "
+        "hi = 4.992, and must leave the middle three unchanged"
+    )
 
 
 def test_prepare_heatmap():
@@ -78,12 +81,15 @@ def test_prepare_heatmap():
 
     # absolute_value=True -> no negative values
     abs_out = _prepare_heatmap(output, target_idx=0, clip_percentile=None, absolute_value=True)
-    assert (abs_out >= 0).all()
+    assert (abs_out >= 0).all(), (
+        "since absolute_value=True is passed as an argument all the values of the heatmap must be positive."
+    )
+    assert issubclass(abs_out.dtype.type, np.floating), "_prepare_heatmap should return an output containing floats"
 
-    # absolute_value=False -> floating dtype, and scores kept in real scale (NOT rescaled to [0,1])
+    # absolute_value=False
     raw_out = _prepare_heatmap(output, target_idx=0, clip_percentile=None, absolute_value=False)
-    assert issubclass(raw_out.dtype.type, np.floating)
-    assert raw_out.max() > 1.0 or raw_out.min() < 0.0
+    assert issubclass(raw_out.dtype.type, np.floating), "_prepare_heatmap should return an output containing floats"
+    assert raw_out.min() < 0.0, "_prepare_heatmap with absolute_value=False should keep its negative values."
 
 
 @pytest.mark.parametrize(
@@ -96,7 +102,10 @@ def test_prepare_heatmap():
 )
 def test_color_limits(values, expected):
     out = _color_limits(np.array(values, dtype=np.float32))
-    assert out == expected
+    assert out == expected, (
+        "_color_limits must center the range so that 0 is at equal distance of +/- max(|lo|,|hi|) "
+        "whether or not the values straddle 0"
+    )
 
 
 def _denorm_output(pixel_values, image_mean=0.5, image_std=0.5):
@@ -152,7 +161,9 @@ def test_denormalize_inverts_the_normalization(image_mean, image_std):
 
     # atol is float32-sized: allclose defaults to 1e-8, below one float32 ULP, so a pixel drawn
     # near 0 fails the round-trip on rounding alone.
-    assert np.allclose(out, image[0].permute(1, 2, 0).numpy(), atol=1e-6)
+    assert np.allclose(out, image[0].permute(1, 2, 0).numpy(), atol=1e-6), (
+        "_denormalize must exactly invert the normalization and recover the original image within float32 rounding"
+    )
 
 
 def test_denormalize_returns_channel_last_float_array():
@@ -160,9 +171,11 @@ def test_denormalize_returns_channel_last_float_array():
 
     out = _denormalize(output)
 
-    assert isinstance(out, np.ndarray)
-    assert issubclass(out.dtype.type, np.floating)
-    assert out.shape == (8, 6, 3)  # (C, H, W) -> (H, W, C) for imshow
+    assert isinstance(out, np.ndarray), "_denormalize must return a numpy array"
+    assert issubclass(out.dtype.type, np.floating), "_denormalize must return a numpy array containing floats"
+    assert out.shape == (8, 6, 3), (  # (C, H, W) -> (H, W, C) for imshow
+        "_denormalize with image of shape (C,H,W) must return channel-last (H, W, C) as imshow expects."
+    )
 
 
 @pytest.mark.parametrize(
@@ -196,7 +209,7 @@ def test_denormalize_warns_and_clamps_when_out_of_range(pixel_value, expected_sp
     with pytest.warns(UserWarning, match=expected_span):
         out = _denormalize(output)
 
-    assert out.min() >= 0.0 and out.max() <= 1.0
+    assert out.min() >= 0.0 and out.max() <= 1.0, "_denormalize output should have values in [0,1]"
 
 
 @pytest.mark.filterwarnings("error")
@@ -215,7 +228,9 @@ def test_denormalize_does_not_warn_inside_the_tolerance(error_value):
     # the de-normalized image really does leave [0, 1] — only the tolerance keeps it quiet,
     # so the test is not passing just because the values landed in range.
     denormalized = pixel_values * 0.5 + 0.5
-    assert denormalized.min() < 0.0 or denormalized.max() > 1.0
+    assert denormalized.min() < 0.0 or denormalized.max() > 1.0, (
+        "sanity check on the fixture itself to test if that the tolerance does not trigger a warning"
+    )
 
     _denormalize(_denorm_output(pixel_values))
 
@@ -243,8 +258,10 @@ def test_to_grayscale_matches_the_rec601_formula(dtype):
     out = _to_grayscale(img)
 
     expected = 0.2989 * img[..., 0] + 0.587 * img[..., 1] + 0.114 * img[..., 2]
-    assert out.shape == (8, 6)
-    assert np.allclose(out, expected)
+    assert out.shape == (8, 6), "_to_grayscale with input of shape (H,W,C) should return an output of size (H,W)"
+    assert np.allclose(out, expected), (
+        "_to_grayscale output must match the Rec.601 luma weights (0.2989, 0.587, 0.114) applied by hand"
+    )
 
 
 @pytest.fixture
@@ -281,13 +298,14 @@ def _processed_output(processor, image, fill_value, n_targets=1):
 
 
 def test_denormalize_round_trips_a_real_processed_image(vit_processor, image):
-    # The processor rescales by 1/255 and then normalizes; _denormalize undoes the normalize,
-    # so it must land back on the rescaled image — not the raw [0, 255] one.
+    # The processor rescales by 1/255 and then normalizes; _denormalize undoes the normalize
     output = _processed_output(vit_processor, image, 1.0)
 
     out = _denormalize(output)
 
-    assert np.allclose(out, np.asarray(image) / 255.0, atol=1e-6)
+    assert np.allclose(out, np.asarray(image) / 255.0, atol=1e-6), (
+        "_denormalize on a real ViTImageProcessor output must undo the ViT's processor normalization"
+    )
 
 
 @pytest.mark.parametrize("fill_value", [1.0, 0.0, -1.0])
@@ -300,8 +318,10 @@ def test_plot_image_attribution_centers_the_clim_on_zero(vit_processor, image, f
     fig, axes = plot_image_attribution(output)
     try:
         backdrop, heatmap = axes[0][0].images
-        assert backdrop.get_clim() == (0.0, 1.0)  # true luminance, not autoscaled contrast
-        assert heatmap.get_clim() == (-1.0, 1.0)
+        assert backdrop.get_clim() == (0.0, 1.0), "the image should keep its luminance"
+        assert heatmap.get_clim() == (-1.0, 1.0), (
+            "the heatmap should be centered on 0 with v_min = -1.0 and v_max = 1.0"
+        )
     finally:
         plt.close(fig)
 

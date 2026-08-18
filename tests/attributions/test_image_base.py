@@ -37,7 +37,7 @@ from interpreto.commons.granularity import ImageGranularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-CLASSIFICATION_MODELS = [
+IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
@@ -45,7 +45,7 @@ CLASSIFICATION_MODELS = [
 ]
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize(
     "use_gradient, granularity, clash",
     [
@@ -84,7 +84,7 @@ def _stats_self(preprocess, image_processor=None):
     return SimpleNamespace(preprocess=preprocess, image_processor=image_processor)
 
 
-_resolve = ImageClassificationAttributionExplainer._resolve_normalization_stats
+_resolve_normalization_stats = ImageClassificationAttributionExplainer._resolve_normalization_stats
 
 
 @pytest.mark.parametrize(
@@ -103,7 +103,7 @@ _resolve = ImageClassificationAttributionExplainer._resolve_normalization_stats
 def test_resolve_normalization_stats_raises(preprocess, image_mean, image_std):
     processor = SimpleNamespace(do_normalize=True, image_mean=[0.5] * 3, image_std=[0.5] * 3)
     with pytest.raises(ValueError):
-        _resolve(_stats_self(preprocess, processor), image_mean, image_std)
+        _resolve_normalization_stats(_stats_self(preprocess, processor), image_mean, image_std)
 
 
 @pytest.mark.parametrize(
@@ -137,15 +137,23 @@ def test_resolve_normalization_stats_raises(preprocess, image_mean, image_std):
 def test_resolve_normalization_stats_returns(
     preprocess, processor, image_mean, image_std, expected_mean, expected_std
 ):
-    mean, std = _resolve(_stats_self(preprocess, processor), image_mean, image_std)
+    mean, std = _resolve_normalization_stats(_stats_self(preprocess, processor), image_mean, image_std)
 
     # (-1, 1, 1) so a scalar broadcasts over C and a per-channel stat aligns with it.
-    assert mean.shape == (len(expected_mean), 1, 1)
-    assert std.shape == (len(expected_std), 1, 1)
-    assert mean.dtype is torch.float32
-    assert std.dtype is torch.float32
-    assert torch.allclose(mean.flatten(), torch.tensor(expected_mean))
-    assert torch.allclose(std.flatten(), torch.tensor(expected_std))
+    assert mean.shape == (len(expected_mean), 1, 1), (
+        "_resolve_normalization_stats must return mean shaped (C, 1, 1) for broadcasting over (C, H, W)"
+    )
+    assert std.shape == (len(expected_std), 1, 1), (
+        "_resolve_normalization_stats must return std shaped (C, 1, 1) for broadcasting over (C, H, W)"
+    )
+    assert mean.dtype is torch.float32, "_resolve_normalization_stats must return mean as float32"
+    assert std.dtype is torch.float32, "_resolve_normalization_stats must return std as float32"
+    assert torch.allclose(mean.flatten(), torch.tensor(expected_mean)), (
+        "_resolve_normalization_stats must return the expected mean values"
+    )
+    assert torch.allclose(std.flatten(), torch.tensor(expected_std)), (
+        "_resolve_normalization_stats must return the expected std values"
+    )
 
 
 # NOTE FOR REVIEWERS: test_inference_mode and test_process_targets below are copied
@@ -156,7 +164,7 @@ def test_resolve_normalization_stats_returns(
 # I am also unsure about whether or not I should test private functions and have made the choice to do it.
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_process_targets(model_name):
     """
     Test the process_targets method for different input types.
@@ -169,8 +177,10 @@ def test_process_targets(model_name):
 
     # Single integer
     result = explainer.process_targets(3, expected_length=1)
-    assert len(result) == 1  # type: ignore
-    assert torch.equal(result[0], torch.tensor([3]))  # type: ignore
+    assert len(result) == 1, "a single int target must normalize to a list of exactly one tensor"  # type: ignore
+    assert torch.equal(result[0], torch.tensor([3])), (  # type: ignore
+        "a single int target of 3 must normalize to tensor([3])"
+    )
 
     # Single integer with mismatch
     with pytest.raises(ValueError, match="Mismatch.*length of the inputs is 2"):
@@ -178,14 +188,18 @@ def test_process_targets(model_name):
 
     # 1D tensor
     result = explainer.process_targets(torch.tensor([1, 2, 3]), expected_length=3)
-    assert len(result) == 3  # type: ignore
-    assert all(torch.equal(r.squeeze(), torch.tensor(v)) for r, v in zip(result, [1, 2, 3], strict=True))  # type: ignore
+    assert len(result) == 3, (  # type: ignore
+        "a 1D tensor of n targets must normalize to a list of n tensors, one per target"
+    )
+    assert all(torch.equal(r.squeeze(), torch.tensor(v)) for r, v in zip(result, [1, 2, 3], strict=True)), (  # type: ignore
+        "each tensor normalized from a 1D input must equal its corresponding original target value"
+    )
 
     # 2D tensor
     tensor = torch.tensor([[1], [2], [3]])
     result = explainer.process_targets(tensor, expected_length=3)
-    assert len(result) == 3  # type: ignore
-    assert all(r.shape == (1,) for r in result)
+    assert len(result) == 3, "a 2D tensor of shape (n, 1) must normalize to a list of n tensors"  # type: ignore
+    assert all(r.shape == (1,) for r in result), "each tensor normalized from a 2D input must keep its original shape"
 
     # Tensor with floats
     tensor = torch.tensor([[1.0], [2.0]])
@@ -199,8 +213,10 @@ def test_process_targets(model_name):
 
     # Iterable of ints
     result = explainer.process_targets([1, 2, 3], expected_length=3)
-    assert len(result) == 3  # type: ignore
-    assert all(torch.equal(r, torch.tensor([v])) for r, v in zip(result, [1, 2, 3], strict=True))
+    assert len(result) == 3, "an iterable of n ints must normalize to a list of n tensors"  # type: ignore
+    assert all(torch.equal(r, torch.tensor([v])) for r, v in zip(result, [1, 2, 3], strict=True)), (
+        "each normalized tensor must keep the same value as its corresponding input tensor"
+    )
 
     # Iterable of ints with mismatch
     with pytest.raises(ValueError, match="Mismatch.*length of the inputs is 2"):
@@ -209,7 +225,7 @@ def test_process_targets(model_name):
     # Iterable of tensors
     tensors = [torch.tensor([1]), torch.tensor([2])]
     result = explainer.process_targets(tensors, expected_length=2)
-    assert result == tensors
+    assert result == tensors, "an iterable of already-valid tensors must be passed through unchanged"
 
     # Iterable of float tensors
     tensors = [torch.tensor([1.0]), torch.tensor([2.0])]
@@ -226,7 +242,7 @@ def test_process_targets(model_name):
         explainer.process_targets("invalid_input")  # type: ignore
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_validate_batch_feature(model_name):
     """
     Test the _validate_batch_feature method for the 3 failure cases and the valid case.
@@ -256,7 +272,7 @@ def test_validate_batch_feature(model_name):
 _validate = ImageClassificationAttributionExplainer._validate_batch_feature
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("patch_size", [2, 16])
 @pytest.mark.parametrize("pixel_values", [torch.zeros(1, 3, 224, 224), torch.ones(1, 3, 16, 16)])
 def test_validate_batch_feature_patch_size_returns(model_name, patch_size, pixel_values):
@@ -265,7 +281,7 @@ def test_validate_batch_feature_patch_size_returns(model_name, patch_size, pixel
     _validate(explainer, bf)
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize("patch_size", [7, 19])
 @pytest.mark.parametrize("pixel_values", [torch.zeros(1, 3, 226, 226), torch.ones(1, 3, 16, 16)])
 def test_validate_batch_feature_patch_size_raises(model_name, patch_size, pixel_values):
@@ -279,7 +295,7 @@ def test_validate_batch_feature_patch_size_raises(model_name, patch_size, pixel_
 # from test_base.py (text modality) and adapted to BatchFeature/pixel_values inputs,
 # for the same reason as above: process_inputs_to_explain_and_targets is itself a
 # copy of the text-side method (see base.py).
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_process_inputs_to_explain_and_targets(model_name):
     model = AutoModelForImageClassification.from_pretrained(model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
@@ -294,28 +310,38 @@ def test_process_inputs_to_explain_and_targets(model_name):
         BatchFeature(data={"pixel_values": torch.ones(1, 3, 4, 4)}),
     ]
 
-    # 1. Case with explicit targets (ints)
+    # 1. Case with explicit targets (list)
     targets = [0, 1]
     processed_inputs, processed_targets = explainer.process_inputs_to_explain_and_targets(
         model_inputs, targets=targets
     )
-    assert len(processed_inputs) == 2  # type: ignore
-    assert len(processed_targets) == 2  # type: ignore
-    assert all(isinstance(t, torch.Tensor) for t in processed_targets)
+    assert len(processed_inputs) == 2, (  # type: ignore
+        "process_inputs_to_explain_and_targets must keep one processed input per model input"
+    )
+    assert len(processed_targets) == 2, (  # type: ignore
+        "process_inputs_to_explain_and_targets must return one target per model input"
+    )
+    assert all(isinstance(t, torch.Tensor) for t in processed_targets), "each processed target must be a tensor"
 
     # 2. Case with explicit targets (tensor)
     targets_tensor = torch.tensor([1, 0])
     processed_inputs, processed_targets = explainer.process_inputs_to_explain_and_targets(
         model_inputs, targets=targets_tensor
     )
-    assert len(processed_targets) == 2  # type: ignore
-    assert all(isinstance(t, torch.Tensor) for t in processed_targets)
+    assert len(processed_targets) == 2, (  # type: ignore
+        "process_inputs_to_explain_and_targets must return one target per model input"
+    )
+    assert all(isinstance(t, torch.Tensor) for t in processed_targets), "each processed target must be a tensor"
 
     # 3. Case with no targets (should use logits + argmax)
     processed_inputs, processed_targets = explainer.process_inputs_to_explain_and_targets(model_inputs)
     processed_targets = list(processed_targets).copy()
-    assert len(processed_targets) == 2
-    assert [t.item() for t in processed_targets] == [1, 0]
+    assert len(processed_targets) == 2, "process_inputs_to_explain_and_targets must return one target per model input"
+    assert [t.item() for t in processed_targets] == [1, 0], (
+        "with no targets given, process_inputs_to_explain_and_targets must fall back to per-input "
+        "predictions from self.inference_wrapper (mocked here at the beginning of the test function "
+        "to return 1 and 0)"
+    )
 
     # 4. Mismatched targets
     with pytest.raises(ValueError, match="Mismatch.*length of the inputs"):
@@ -323,13 +349,13 @@ def test_process_inputs_to_explain_and_targets(model_name):
 
 
 def _assert_batch_feature_list(result, expected_length):
-    assert isinstance(result, list)
-    assert len(result) == expected_length
-    assert all(isinstance(bf, BatchFeature) for bf in result)
-    assert "pixel_values" in result[0].keys()
+    assert isinstance(result, list), "process_model_inputs must return a list"
+    assert len(result) == expected_length, "process_model_inputs must return one BatchFeature per input"
+    assert all(isinstance(bf, BatchFeature) for bf in result), "each element of result must be a BatchFeature"
+    assert "pixel_values" in result[0].keys(), "the returned result must carry a 'pixel_values' key"
 
 
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_process_model_inputs(model_name):
     """
     Test process_model_inputs: the 3 ValueError cases, and that valid inputs are

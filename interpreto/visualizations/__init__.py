@@ -22,6 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .attributions import AttributionVisualization, plot_attributions
 from .concepts import plot_concepts
 from .image_attributions import plot_image_attribution, plot_image_attributions_comparison
+from .text_attributions import AttributionVisualization, plot_attributions

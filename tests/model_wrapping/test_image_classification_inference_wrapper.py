@@ -22,29 +22,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# MIT License
-#
-# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
-# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
-# CRIAQ and ANITI - https://www.deel.ai/.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including witho"ut limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
 
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -62,7 +39,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 IMAGES_DIR = Path(__file__).parents[1] / "fixtures" / "images"
 
-CLASSIFICATION_MODELS = [
+IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
@@ -167,7 +144,7 @@ def test_image_classification_wrapper_fast():
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 def test_image_classification_wrapper(model_name):
     # images divided in two batches which we could see as different samples in interpreto
     # for each sample there are several perturbed images
