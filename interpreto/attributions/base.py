@@ -68,7 +68,7 @@ from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs
 
 
 def setup_token_ids(
-    model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase | BaseImageProcessor, require_mask_token: bool = True
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase, require_mask_token: bool = True
 ) -> int | None:
     """
     Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
