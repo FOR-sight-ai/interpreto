@@ -311,15 +311,15 @@ class ImageTensorPerturbator(TensorPerturbator):
 
 class ImageMaskPerturbator(MaskPerturbator):
     """
-    Image-side analog of `IdsPerturbator`.
+    Image-side analog of `TextMaskPerturbator`.
 
     Masking-based perturbator: each perturbation hides a subset of granularity
     units by overwriting their pixel positions with a
     constant `replace_value` baseline. This is the basis for perturbation
     methods (Occlusion, LIME, KernelShap, Sobol), mirroring the role of
-    `IdsPerturbator` for the text side.
+    `TextMaskPerturbator` for the text side.
 
-    Flow (mirrors `IdsPerturbator.perturb`):
+    Flow (mirrors `TextMaskPerturbator.perturb`):
       1. Build the `(g, l)` association matrix from the granularity, where
          `g` = number of granularity units and `l = H*W` pixel positions.
       2. Ask the subclass for a granularity-wise mask `gran_mask (p, g)` via
@@ -332,7 +332,7 @@ class ImageMaskPerturbator(MaskPerturbator):
          then returns scores unchanged because granularity is already encoded
          in the masks.
 
-    Differences from `IdsPerturbator`:
+    Differences from `TextMaskPerturbator`:
       - Replacement is a per-position float baseline (`replace_value`) applied
         across all 3 channels, not an integer `replace_token_id`.
         TODO: extend `replace_value` to support a per-channel `(3,)` tensor and
