@@ -40,8 +40,7 @@ from tqdm import tqdm
 from transformers import AutoModel, T5ForConditionalGeneration
 from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_utils import PreTrainedModel
-from transformers.tokenization_utils import PreTrainedTokenizerBase
-from transformers.tokenization_utils_base import BatchEncoding
+from transformers.tokenization_utils_base import BatchEncoding, PreTrainedTokenizerBase
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity

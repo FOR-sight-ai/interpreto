@@ -34,7 +34,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from transformers import BatchEncoding
-from transformers.tokenization_utils import PreTrainedTokenizerBase
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
 from interpreto.commons.granularity import TextGranularity
 from interpreto.typing import SingleAttribution

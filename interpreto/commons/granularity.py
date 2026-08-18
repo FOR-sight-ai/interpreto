@@ -33,8 +33,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Bool, Float, Int, jaxtyped
 from torch.nn.functional import interpolate
-from transformers.tokenization_utils import PreTrainedTokenizerBase
-from transformers.tokenization_utils_base import BatchEncoding
+from transformers.tokenization_utils_base import BatchEncoding, PreTrainedTokenizerBase
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 # TODO I dont know where to put this...
