@@ -30,7 +30,7 @@ import numpy as np
 import pytest
 import torch
 from torch import nn
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, BatchEncoding, PreTrainedTokenizerBase
 from transformers.modeling_outputs import CausalLMOutput
 
 from interpreto import (
@@ -135,7 +135,7 @@ COPY_SHIFT = 2
 SEPARATOR_TOKEN = " "
 
 
-class LetterTokenizer(PreTrainedTokenizer):
+class LetterTokenizer(PreTrainedTokenizerBase):
     """Minimal character tokenizer for this test: 26 capitals plus a separator/mask space token."""
 
     vocab_files_names: dict[str, str] = {}

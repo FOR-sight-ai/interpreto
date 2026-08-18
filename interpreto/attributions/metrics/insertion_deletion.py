@@ -39,7 +39,7 @@ from typing import Any
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from transformers import BatchEncoding, PreTrainedTokenizer
+from transformers import BatchEncoding, PreTrainedTokenizerBase
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.base import AttributionOutput, setup_token_ids
@@ -74,7 +74,7 @@ class InsertionDeletionBase:
     def __init__(
         self,
         model: Any,
-        tokenizer: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizerBase,
         batch_size: int = 4,
         device: torch.device | None = None,
         n_perturbations: int = 100,
@@ -85,7 +85,7 @@ class InsertionDeletionBase:
 
         Args:
             model (PreTrainedModel): model used to generate explanations
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the inference of the metric
             device (torch.device): device on which the attribution method will be run
             n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
@@ -515,7 +515,7 @@ class Insertion(MultitaskMetricMixin, InsertionDeletionBase):
 
     Args:
         model (PreTrainedModel): model used to generate explanations
-        tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+        tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
         granularity (TextGranularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run
@@ -575,7 +575,7 @@ class Deletion(MultitaskMetricMixin, InsertionDeletionBase):
 
     Args:
         model (PreTrainedModel): model used to generate explanations
-        tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+        tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
         granularity (TextGranularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run

@@ -34,7 +34,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerBase
 
 from interpreto.attributions.perturbations.base import ImageMaskPerturbator, TextMaskPerturbator
 from interpreto.commons.granularity import ImageGranularity, TextGranularity
@@ -53,7 +53,7 @@ class SequenceSamplers(Enum):
 class SobolTokenPerturbator(TextMaskPerturbator):
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizer | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         granularity: TextGranularity = TextGranularity.TOKEN,
         replace_token_id: int = 0,
         n_token_perturbations: int = 16,
@@ -63,7 +63,7 @@ class SobolTokenPerturbator(TextMaskPerturbator):
         Initialize the perturbator.
 
         Args:
-            tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase | None): Hugging Face tokenizer associated with the model
             inputs_embedder (torch.nn.Module | None): optional inputs embedder
             nb_token_perturbations (int): number of Monte Carlo samples perturbations for each token.
             granularity (str): granularity level of the perturbations (token, word, sentence, etc.)

@@ -32,7 +32,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerBase
 
 from interpreto.attributions.perturbations.base import ImageMaskPerturbator, TextMaskPerturbator
 from interpreto.commons.granularity import ImageGranularity, TextGranularity
@@ -41,7 +41,7 @@ from interpreto.commons.granularity import ImageGranularity, TextGranularity
 class ShapTokenPerturbator(TextMaskPerturbator):
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizer | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         granularity: TextGranularity = TextGranularity.TOKEN,
         replace_token_id: int = 0,
         n_perturbations: int = 1000,
@@ -51,7 +51,7 @@ class ShapTokenPerturbator(TextMaskPerturbator):
         Initialize the perturbator.
 
         Args:
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             inputs_embedder (torch.nn.Module | None): optional inputs embedder
             replace_token_id (int): the token id to use for replacing the masked tokens
             n_perturbations (int): the number of perturbations to generate

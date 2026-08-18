@@ -40,7 +40,7 @@ from tqdm import tqdm
 from transformers import AutoModel, T5ForConditionalGeneration
 from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_utils import PreTrainedModel
-from transformers.tokenization_utils import PreTrainedTokenizer
+from transformers.tokenization_utils import PreTrainedTokenizerBase
 from transformers.tokenization_utils_base import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
@@ -158,7 +158,7 @@ class ModelWithSplitPoints(LanguageModel):
         config (PretrainedConfig): Custom configuration for the loaded model.
             If not specified, it will be instantiated with the default configuration for the model.
 
-        tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): Custom tokenizer for the loaded model.
+        tokenizer (PreTrainedTokenizerBase | PreTrainedTokenizerFast | None): Custom tokenizer for the loaded model.
             If not specified, it will be instantiated with the default tokenizer for the model.
 
             :warning: If `model_or_repo_id` is a `transformers.PreTrainedModel` object, then `tokenizer` **must be defined**.
@@ -194,7 +194,7 @@ class ModelWithSplitPoints(LanguageModel):
         split_points (list[str]): Getter/setters for model paths corresponding to split points inside the loaded model.
             Automatically handle validation, sorting and resolving int paths to strings.
 
-        tokenizer (PreTrainedTokenizer): Tokenizer for the loaded model, either given by the user or loaded from the repo_id.
+        tokenizer (PreTrainedTokenizerBase): Tokenizer for the loaded model, either given by the user or loaded from the repo_id.
 
         _model (transformers.PreTrainedModel): Huggingface transformers model wrapped by NNSight.
 
@@ -268,7 +268,7 @@ class ModelWithSplitPoints(LanguageModel):
         split_points: str | int | list[str] | list[int] | tuple[str] | tuple[int],
         *args: tuple[Any],
         automodel: type[AutoModel] | None = None,
-        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
+        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast | None = None,
         config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,

@@ -40,7 +40,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from PIL.Image import Image as PILImage
-from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer
+from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 
 from interpreto.attributions.aggregations.base import Aggregator
@@ -68,7 +68,7 @@ from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs
 
 
 def setup_token_ids(
-    model: PreTrainedModel, tokenizer: PreTrainedTokenizer | BaseImageProcessor, require_mask_token: bool = True
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase | BaseImageProcessor, require_mask_token: bool = True
 ) -> int | None:
     """
     Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
@@ -257,7 +257,7 @@ class AttributionExplainer(ABC):
     def __init__(
         self,
         model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizerBase,
         batch_size: int = 4,
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
@@ -273,7 +273,7 @@ class AttributionExplainer(ABC):
 
         Args:
             model (PreTrainedModel): The model to be explained.
-            tokenizer (PreTrainedTokenizer): The tokenizer associated with the model.
+            tokenizer (PreTrainedTokenizerBase): The tokenizer associated with the model.
             batch_size (int): The batch size used for model inference.
             perturbator (Perturbator, optional): Instance used to generate input perturbations.
                 If None, the perturbator returns only the original input.

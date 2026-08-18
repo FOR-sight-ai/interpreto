@@ -34,7 +34,7 @@ from copy import deepcopy
 import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerBase
 
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity, TextGranularity
 from interpreto.typing import TensorMapping
@@ -149,7 +149,7 @@ class TextMaskPerturbator(MaskPerturbator):
 
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizer | None,
+        tokenizer: PreTrainedTokenizerBase | None,
         replace_token_id: int,
         n_perturbations: int = 1,
         granularity: TextGranularity = TextGranularity.TOKEN,

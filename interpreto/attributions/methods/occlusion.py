@@ -32,7 +32,7 @@ from collections.abc import Callable
 from typing import Any
 
 import torch
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerBase
 
 from interpreto.attributions.aggregations.base import OcclusionAggregator
 from interpreto.attributions.base import (
@@ -69,7 +69,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
     def __init__(
         self,
         model: Any,
-        tokenizer: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizerBase,
         batch_size: int = 4,
         granularity: TextGranularity = TextGranularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
@@ -81,7 +81,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
 
         Args:
             model (PreTrainedModel): model to explain
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
             granularity (TextGranularity, optional): The level of granularity for the explanation.
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
