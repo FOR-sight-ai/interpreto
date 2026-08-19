@@ -34,9 +34,9 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from transformers import BatchEncoding
-from transformers.tokenization_utils import PreTrainedTokenizer
+from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 from interpreto.typing import SingleAttribution
 
 
@@ -54,8 +54,8 @@ class InsertionDeletionPerturbator:
     correspond to the first target, the next `p` rows to the second target, and so on.
 
     Attributes:
-        tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model.
-        granularity (Granularity): Level at which deletion should be applied. Set after initialization.
+        tokenizer (PreTrainedTokenizerBase | None): Hugging Face tokenizer associated with the model.
+        granularity (TextGranularity): Level at which deletion should be applied. Set after initialization.
         n_perturbations (int): Number of perturbations to generate.
         max_percentage_perturbed (float): Maximum percentage of tokens in the sequence to be perturbed.
         replace_token_id (int): Token used to replace deleted elements.
@@ -69,11 +69,11 @@ class InsertionDeletionPerturbator:
         "max_percentage_perturbed",
     )
 
-    granularity: Granularity
+    granularity: TextGranularity
 
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizer | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         n_perturbations: int = 100,
         max_percentage_perturbed: float = 1.0,
         replace_token_id: int = 0,

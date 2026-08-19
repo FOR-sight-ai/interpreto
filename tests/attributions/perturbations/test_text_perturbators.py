@@ -35,9 +35,9 @@ from interpreto.attributions.perturbations import (
     ShapTokenPerturbator,
     SobolTokenPerturbator,
 )
-from interpreto.attributions.perturbations.base import IdsPerturbator
+from interpreto.attributions.perturbations.base import TextMaskPerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 
 embeddings_perturbators = [
     GaussianNoisePerturbator,
@@ -56,7 +56,7 @@ tokens_perturbators = [
 @pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
 def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
-    assert not issubclass(perturbator_class, IdsPerturbator)
+    assert not issubclass(perturbator_class, TextMaskPerturbator)
     p = 10
     d = 32
     inputs_embedder = bert_model.get_input_embeddings()
@@ -87,7 +87,7 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
 @pytest.mark.parametrize("perturbator_class", tokens_perturbators)
 def test_token_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
-    assert issubclass(perturbator_class, IdsPerturbator)
+    assert issubclass(perturbator_class, TextMaskPerturbator)
     p = 10
 
     replace_token = "[REPLACE]"
@@ -100,13 +100,13 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         # the number of perturbations depends on the sequence length
         perturbator = perturbator_class(
             tokenizer=bert_tokenizer,
-            granularity=Granularity.ALL_TOKENS,
+            granularity=TextGranularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
         )
     else:
         perturbator = perturbator_class(
             tokenizer=bert_tokenizer,
-            granularity=Granularity.ALL_TOKENS,
+            granularity=TextGranularity.ALL_TOKENS,
             replace_token_id=replace_token_id,
             n_perturbations=p,
         )
@@ -161,30 +161,30 @@ def test_basic_mask_based_methods():
 
     # tests
     # assert torch.equal(
-    #     IdsPerturbator.apply_mask(embeddings, all_mask, mask_embed),
+    #     TextMaskPerturbator.apply_mask(embeddings, all_mask, mask_embed),
     #     mask_embed.reshape(1, 1, embedding_dim).repeat(1, sequence_length, 1),
     # )
-    # assert torch.equal(IdsPerturbator.apply_mask(embeddings, no_mask, mask_embed), embeddings.unsqueeze(0))
+    # assert torch.equal(TextMaskPerturbator.apply_mask(embeddings, no_mask, mask_embed), embeddings.unsqueeze(0))
 
     assert torch.equal(
-        IdsPerturbator.apply_mask(ids, all_mask, mask_id),
+        TextMaskPerturbator.apply_mask(ids, all_mask, mask_id),
         (mask_id * torch.ones_like(ids)).unsqueeze(0).squeeze(-1),
     )
-    assert torch.equal(IdsPerturbator.apply_mask(ids, no_mask, mask_id), ids.unsqueeze(0).squeeze(-1))
+    assert torch.equal(TextMaskPerturbator.apply_mask(ids, no_mask, mask_id), ids.unsqueeze(0).squeeze(-1))
     assert torch.equal(
-        IdsPerturbator.apply_mask(ids, float_mask, mask_id),
+        TextMaskPerturbator.apply_mask(ids, float_mask, mask_id),
         (ids.unsqueeze(0) * (1 - float_mask).unsqueeze(-1) + mask_id * float_mask.unsqueeze(-1)).squeeze(-1),
     )
     assert torch.equal(
-        IdsPerturbator.apply_mask(ids, binary_mask, mask_id),
+        TextMaskPerturbator.apply_mask(ids, binary_mask, mask_id),
         (ids.unsqueeze(0) * (1 - binary_mask).unsqueeze(-1) + mask_id * binary_mask.unsqueeze(-1)).squeeze(-1),
     )
     # assert torch.equal(
-    #     IdsPerturbator.apply_mask(embeddings, float_mask, mask_embed),
+    #     TextMaskPerturbator.apply_mask(embeddings, float_mask, mask_embed),
     #     embeddings.unsqueeze(0) * (1 - float_mask).unsqueeze(-1) + mask_embed * float_mask.unsqueeze(-1),
     # )
     # assert torch.equal(
-    #     IdsPerturbator.apply_mask(embeddings, binary_mask, mask_embed),
+    #     TextMaskPerturbator.apply_mask(embeddings, binary_mask, mask_embed),
     #     embeddings.unsqueeze(0) * (1 - binary_mask).unsqueeze(-1) + mask_embed * binary_mask.unsqueeze(-1),
     # )
 

@@ -31,12 +31,12 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import torch
-from transformers import PreTrainedModel, PreTrainedTokenizer
+from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 from interpreto.attributions.aggregations import SquaredMeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import GaussianNoisePerturbator
-from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -67,9 +67,9 @@ class SquareGrad(MultitaskExplainerMixin, AttributionExplainer):
     def __init__(
         self,
         model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizerBase,
         batch_size: int = 4,
-        granularity: Granularity = Granularity.WORD,
+        granularity: TextGranularity = TextGranularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         device: torch.device | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
@@ -82,12 +82,12 @@ class SquareGrad(MultitaskExplainerMixin, AttributionExplainer):
 
         Args:
             model (PreTrainedModel): model to explain
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
-            granularity (Granularity, optional): The level of granularity for the explanation.
+            granularity (TextGranularity, optional): The level of granularity for the explanation.
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to Granularity.WORD.
-                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+                Defaults to TextGranularity.WORD.
+                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
             granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
                 Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
                 Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.

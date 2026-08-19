@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 30  # minutes
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     strategy:
+      max-parallel: 1
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
@@ -61,6 +62,8 @@ jobs:
             AutoModelForCausalLM,
             AutoModelForMaskedLM,
             AutoTokenizer,
+            AutoModelForImageClassification,
+            AutoImageProcessor
         )
 
         # List all of the hf-internal-testing model IDs that your tests need:
@@ -70,17 +73,25 @@ jobs:
             "hf-internal-testing/tiny-random-LlamaForCausalLM",
             "hf-internal-testing/tiny-random-roberta",
             "hf-internal-testing/tiny-random-t5",
+            "hf-internal-testing/tiny-random-MistralForCausalLM",
             "textattack/bert-base-uncased-imdb",
         ]
 
-        # We will call .from_pretrained(...) once per model_id, 
-        # and also download its tokenizer.  Because HF_HUB_TOKEN 
-        # is set in the environment, these calls are authenticated 
+        image_model_ids = [
+            "hf-internal-testing/tiny-random-vit",
+            "hf-internal-testing/tiny-random-BeitForImageClassification",
+            "hf-internal-testing/tiny-random-ViTForImageClassification",
+            "akahana/vit-base-cats-vs-dogs",
+            ]
+
+        # We will call .from_pretrained(...) once per model_id,
+        # and also download its tokenizer.  Because HF_HUB_TOKEN
+        # is set in the environment, these calls are authenticated
         # and will not exhaust the low unauthenticated rate limit.
-        for m in set(model_ids):  
-            # Sequence classification or masked-LM vs causal-LM 
-            # is determined by your conftest/test code. 
-            # We can try all possible AutoModel types here, but 
+        for m in set(model_ids):
+            # Sequence classification or masked-LM vs causal-LM
+            # is determined by your conftest/test code.
+            # We can try all possible AutoModel types here, but
             # since your conftest already splits them out, we just do:
             try:
                 AutoModelForSequenceClassification.from_pretrained(m)
@@ -96,7 +107,19 @@ jobs:
             # In any case, also grab the tokenizer:
             AutoTokenizer.from_pretrained(m)
             print(f"✔ cached {m}")
-        print("All models cached successfully.")
+        print("All text models cached successfully.")
+
+        for m in set(image_model_ids):
+            try:
+                AutoModelForImageClassification.from_pretrained(m)
+            except Exception as ee:
+                print(f"‐‐ failed to load model {m}: {ee}")
+                exit(1)
+            # In any case, also grab the image processor:
+            AutoImageProcessor.from_pretrained(m)
+            print(f"✔ cached {m}")
+        print("All image models cached successfully.")
+        print("All models cached successfully")
         EOF
 
     - name: Check memory before fast tests

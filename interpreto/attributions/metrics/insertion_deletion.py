@@ -39,7 +39,7 @@ from typing import Any
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from transformers import BatchEncoding, PreTrainedTokenizer
+from transformers import BatchEncoding, PreTrainedTokenizerBase
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.base import AttributionOutput, setup_token_ids
@@ -50,12 +50,12 @@ from interpreto.attributions.perturbations.insertion_deletion_perturbation impor
 )
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.model_wrapping.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.model_wrapping.generation_inference_wrapper import GenerationInferenceWrapper
 from interpreto.model_wrapping.inference_wrapper import (
     InferenceModes,
     InferenceWrapper,
 )
+from interpreto.model_wrapping.text_classification_inference_wrapper import TextClassificationInferenceWrapper
+from interpreto.model_wrapping.text_generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.typing import SingleAttribution
 
 
@@ -74,7 +74,7 @@ class InsertionDeletionBase:
     def __init__(
         self,
         model: Any,
-        tokenizer: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizerBase,
         batch_size: int = 4,
         device: torch.device | None = None,
         n_perturbations: int = 100,
@@ -85,7 +85,7 @@ class InsertionDeletionBase:
 
         Args:
             model (PreTrainedModel): model used to generate explanations
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the inference of the metric
             device (torch.device): device on which the attribution method will be run
             n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
@@ -260,14 +260,14 @@ class InsertionDeletionBase:
         Returns:
             GranularityAggregationStrategy: The granularity aggregation strategy.
         """
-        # Granularity
+        # TextGranularity
         grans = [a.granularity for a in attributions_outputs]
         if not all(g == grans[0] for g in grans):
             raise ValueError("All attributions must have the same granularity.")
         self.granularity = grans[0]
         self.perturbator.granularity = grans[0]
 
-        # Granularity Aggregation Strategy
+        # TextGranularity Aggregation Strategy
         gas = [a.granularity_aggregation_strategy for a in attributions_outputs]
         if not all(g == gas[0] for g in gas):
             raise ValueError("All attributions must have the same granularity aggregation strategy.")
@@ -345,8 +345,8 @@ class ClassificationInsertionDeletionBase(InsertionDeletionBase):
     The perturbations are computed for each sample-explanation pair.
     """
 
-    _associated_inference_wrapper = ClassificationInferenceWrapper
-    inference_wrapper: ClassificationInferenceWrapper
+    _associated_inference_wrapper = TextClassificationInferenceWrapper
+    inference_wrapper: TextClassificationInferenceWrapper
 
     def perturbation_generator(
         self, attributions_outputs: Iterable[AttributionOutput]
@@ -397,8 +397,8 @@ class GenerationInsertionDeletionBase(InsertionDeletionBase):
     pert 3 input: "A BC DEF GHIJ KLMNOP", pert 3 target "KLMNOP"
     """
 
-    _associated_inference_wrapper = GenerationInferenceWrapper
-    inference_wrapper: GenerationInferenceWrapper
+    _associated_inference_wrapper = TextGenerationInferenceWrapper
+    inference_wrapper: TextGenerationInferenceWrapper
 
     def perturbation_generator(
         self, attributions_outputs: Iterable[AttributionOutput]
@@ -515,9 +515,9 @@ class Insertion(MultitaskMetricMixin, InsertionDeletionBase):
 
     Args:
         model (PreTrainedModel): model used to generate explanations
-        tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+        tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
-        granularity (Granularity): granularity level of the perturbations (token, word, sentence, etc.)
+        granularity (TextGranularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run
         n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
             steps from which the AUC will be computed).
@@ -575,9 +575,9 @@ class Deletion(MultitaskMetricMixin, InsertionDeletionBase):
 
     Args:
         model (PreTrainedModel): model used to generate explanations
-        tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+        tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
-        granularity (Granularity): granularity level of the perturbations (token, word, sentence, etc.)
+        granularity (TextGranularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run
         n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
             steps from which the AUC will be computed).

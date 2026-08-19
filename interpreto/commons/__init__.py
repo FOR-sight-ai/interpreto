@@ -23,6 +23,19 @@
 # SOFTWARE.
 
 from .distances import DistanceFunctions
-from .granularity import Granularity, GranularityAggregationStrategy
+from .granularity import (
+    Granularity,
+    GranularityAggregationStrategy,
+    GranularityResizeStrategy,
+    ImageGranularity,
+    TextGranularity,
+)
 
-__all__ = ["DistanceFunctions", "Granularity", "GranularityAggregationStrategy"]
+__all__ = [
+    "Granularity",
+    "DistanceFunctions",
+    "TextGranularity",
+    "GranularityAggregationStrategy",
+    "GranularityResizeStrategy",
+    "ImageGranularity",
+]

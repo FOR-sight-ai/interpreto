@@ -32,7 +32,7 @@ from collections.abc import Callable
 from typing import Any
 
 import torch
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerBase
 
 from interpreto.attributions.aggregations.base import OcclusionAggregator
 from interpreto.attributions.base import (
@@ -41,7 +41,7 @@ from interpreto.attributions.base import (
     setup_token_ids,
 )
 from interpreto.attributions.perturbations import OcclusionPerturbator
-from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -58,20 +58,20 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
     [Paper](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53)
 
     Examples:
-        >>> from interpreto import Granularity, Occlusion
+        >>> from interpreto import TextGranularity, Occlusion
         >>> from interpreto.attributions import InferenceModes
         >>> method = Occlusion(model, tokenizer, batch_size=4,
         >>>                    inference_mode=InferenceModes.SOFTMAX,
-        >>>                    granularity=Granularity.WORD)
+        >>>                    granularity=TextGranularity.WORD)
         >>> explanations = method(text)
     """
 
     def __init__(
         self,
         model: Any,
-        tokenizer: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizerBase,
         batch_size: int = 4,
-        granularity: Granularity = Granularity.WORD,
+        granularity: TextGranularity = TextGranularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
@@ -81,12 +81,12 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
 
         Args:
             model (PreTrainedModel): model to explain
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
-            granularity (Granularity, optional): The level of granularity for the explanation.
+            granularity (TextGranularity, optional): The level of granularity for the explanation.
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to Granularity.WORD.
-                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+                Defaults to TextGranularity.WORD.
+                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
             granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
                 Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
                 Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.

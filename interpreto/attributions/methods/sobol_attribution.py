@@ -32,7 +32,7 @@ from collections.abc import Callable
 from enum import Enum
 
 import torch
-from transformers import PreTrainedModel, PreTrainedTokenizer
+from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
 from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin, setup_token_ids
@@ -40,7 +40,7 @@ from interpreto.attributions.perturbations.sobol_perturbation import (
     SequenceSamplers,
     SobolTokenPerturbator,
 )
-from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 
 
 class Sobol(MultitaskExplainerMixin, AttributionExplainer):
@@ -57,12 +57,12 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
     [Paper](https://arxiv.org/abs/2111.04138)
 
     Examples:
-        >>> from interpreto import Granularity, Sobol
+        >>> from interpreto import TextGranularity, Sobol
         >>> from interpreto.attributions import InferenceModes
         >>> method = Sobol(model, tokenizer, batch_size=4,
         >>>                inference_mode=InferenceModes.LOGITS,
         >>>                n_token_perturbations=8,
-        >>>                granularity=Granularity.WORD,
+        >>>                granularity=TextGranularity.WORD,
         >>>                sobol_indices_order=Sobol.sobol_indices_orders.FIRST_ORDER,
         >>>                sampler=Sobol.samplers.SOBOL))
         >>> explanations = method(text)
@@ -74,9 +74,9 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
     def __init__(
         self,
         model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizerBase,
         batch_size: int = 4,
-        granularity: Granularity = Granularity.WORD,
+        granularity: TextGranularity = TextGranularity.WORD,
         granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         n_token_perturbations: int = 32,
@@ -89,12 +89,12 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
 
         Args:
             model (PreTrainedModel): model to explain
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             batch_size (int): batch size for the attribution method
-            granularity (Granularity, optional): The level of granularity for the explanation.
+            granularity (TextGranularity, optional): The level of granularity for the explanation.
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to Granularity.WORD.
-                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
+                Defaults to TextGranularity.WORD.
+                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
             granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
                 Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
                 Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.

@@ -35,7 +35,7 @@ from transformers import (
 )
 
 from interpreto import ModelWithSplitPoints as MWSP
-from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
+from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.model_with_split_points import ActivationGranularity, InitializationError
 
 AG = MWSP.activation_granularities
@@ -308,8 +308,8 @@ def activation_selection_and_reintegration(model, tokenizer, split_point, senten
     # Define expected shapes for the different granularity levels
     batch, seq_len = tokens["input_ids"].shape
     hidden = mwsp._model.config.hidden_size
-    total_token_len = sum(len(idx) for idx in Granularity.TOKEN.get_indices(tokens, tokenizer))
-    total_word_len = sum(len(idx) for idx in Granularity.WORD.get_indices(tokens, tokenizer))
+    total_token_len = sum(len(idx) for idx in TextGranularity.TOKEN.get_indices(tokens, tokenizer))
+    total_word_len = sum(len(idx) for idx in TextGranularity.WORD.get_indices(tokens, tokenizer))
 
     assert activations.shape == (batch, seq_len, hidden), (
         f"Activations shape mismatch: got {activations.shape}, expected {(batch, seq_len, hidden)}"
@@ -459,8 +459,8 @@ def get_activation_and_gradient(model, tokenizer, split_point, sentences):
     # Define expected shapes for the different granularity levels
     batch, seq_len = tokens["input_ids"].shape
     hidden = mwsp._model.config.hidden_size
-    total_token_len = sum(len(idx) for idx in Granularity.TOKEN.get_indices(tokens, tokenizer))
-    total_word_len = sum(len(idx) for idx in Granularity.WORD.get_indices(tokens, tokenizer))
+    total_token_len = sum(len(idx) for idx in TextGranularity.TOKEN.get_indices(tokens, tokenizer))
+    total_word_len = sum(len(idx) for idx in TextGranularity.WORD.get_indices(tokens, tokenizer))
 
     granularities_expected_shapes = {
         # ActivationGranularity.ALL_TOKENS: cannot be tested as the output shape depends on the batch size

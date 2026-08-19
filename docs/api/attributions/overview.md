@@ -16,7 +16,7 @@ The API have two steps:
 **Step 1:** Explainer instantiation: `Method` is a generic name for an attribution method from the list of available methods (below). It inherits from the `AttributionExplainer` base class. Its initialization takes the general parameters explained here (and parameters that are specific to each method, explained in their own documentation):
 
 - `model` (`PreTrainedModel`): Hugging Face model to explain,
-- `tokenizer` (`PreTrainedTokenizer`): Hugging Face tokenizer associated with the model,
+- `tokenizer` (`PreTrainedTokenizerBase`): Hugging Face tokenizer associated with the model,
 - `batch_size` (`int`): batch size for the attribution method,
 - `granularity` (`Granularity`): granularity level of the explanation. It can be either one of `ALL_TOKENS` (includes all sentence tokens, even special tokens), `TOKEN`, `WORD`, or `SENTENCE`.
 - `inference_mode` (`Callable[[torch.Tensor], torch.Tensor], optional`): The mode used for inference. It can be either one of `LOGITS`, `SOFTMAX`, or `LOG_SOFTMAX`. Use `InferenceModes` to choose the appropriate mode. Default `inference_mode` is `LOGITS`.
@@ -90,7 +90,7 @@ Instantiate the AttributionExplainer class with the perturbator and aggregator.
 AttributionExplainer is the class that instantiates any attribution method based on whether or not it uses gradients (with the boolean argument `use_gradient`), its perturbation type and its aggregation type. It takes the custom parameters (`perturbator`, `aggregator`, `use_gradient`) and the classic parameters for explanation:
 
 - `model` (`PreTrainedModel`): Hugging Face model to explain,
-- `tokenizer` (`PreTrainedTokenizer`): Hugging Face tokenizer associated with the model,
+- `tokenizer` (`PreTrainedTokenizerBase`): Hugging Face tokenizer associated with the model,
 - `batch_size` (`int`): batch size for the attribution method,
 - `perturbator` (`BasePerturbator | None = None`): Instance used to generate input perturbations. If None, the perturbator returns only the original input,
 - `aggregator` (`Aggregator | None = None`): Instance used to aggregate computed attribution scores. If None, the aggregator returns the original scores,

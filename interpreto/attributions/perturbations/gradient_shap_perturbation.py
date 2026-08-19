@@ -28,6 +28,7 @@ from __future__ import annotations
 import torch
 
 from interpreto.attributions.perturbations.linear_interpolation_perturbation import (
+    LinearInterpolationImagePerturbator,
     LinearInterpolationPerturbator,
 )
 from interpreto.typing import TensorBaseline
@@ -78,3 +79,44 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
         Generates random interpolation coefficients (alphas) for GradientSHAP.
         """
         return torch.rand(self.n_perturbations, 1, 1, device=device)
+
+
+class GradientShapImagePerturbator(LinearInterpolationImagePerturbator):
+    """
+    Image-side analog of `GradientShapPerturbator`.
+
+    Like `LinearInterpolationImagePerturbator`, but introduces randomness in
+    both the interpolation coefficients (random alphas, not evenly spaced) and
+    the baseline (Gaussian noise added per draw), to approximate the
+    expectation over multiple noisy baselines and paths in pixel space.
+    """
+
+    __slots__ = ("std",)
+
+    def __init__(
+        self,
+        baseline: TensorBaseline = None,
+        n_perturbations: int = 10,
+        std: float = 0.1,
+    ) -> None:
+        """
+        Args:
+            baseline (TensorBaseline, optional): reference pixel values (torch.Tensor, int, float, or None).
+            n_perturbations (int): number of random samples for interpolation.
+            std (float): standard deviation of the Gaussian noise added to the baseline.
+        """
+        super().__init__(baseline=baseline, n_perturbations=n_perturbations)
+        self.std = std
+
+    def _generate_baseline(self, pixel_values: torch.Tensor) -> torch.Tensor:
+        """Replicate the baseline per perturbation and add Gaussian noise, shape (p, 3, H, W)."""
+        baseline = self.adjust_baseline(self.baseline, pixel_values)
+        baseline = baseline.to(pixel_values.device)
+
+        baseline: Float[torch.Tensor, "p,3,H,W"] = baseline.unsqueeze(0).repeat(self.n_perturbations, 1, 1, 1)
+        baseline += torch.randn_like(baseline) * self.std
+        return baseline
+
+    def _generate_alphas(self, shape: torch.Size, device: torch.device) -> torch.Tensor:
+        """Random interpolation coefficients in [0, 1), shape (p, 1, 1, 1)."""
+        return torch.rand(self.n_perturbations, 1, 1, 1, device=device)

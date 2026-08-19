@@ -32,17 +32,17 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerBase
 
-from interpreto.attributions.perturbations.base import IdsPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.attributions.perturbations.base import ImageMaskPerturbator, TextMaskPerturbator
+from interpreto.commons.granularity import ImageGranularity, TextGranularity
 
 
-class ShapTokenPerturbator(IdsPerturbator):
+class ShapTokenPerturbator(TextMaskPerturbator):
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
+        tokenizer: PreTrainedTokenizerBase | None = None,
+        granularity: TextGranularity = TextGranularity.TOKEN,
         replace_token_id: int = 0,
         n_perturbations: int = 1000,
         device: torch.device | None = None,
@@ -51,7 +51,7 @@ class ShapTokenPerturbator(IdsPerturbator):
         Initialize the perturbator.
 
         Args:
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
+            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
             inputs_embedder (torch.nn.Module | None): optional inputs embedder
             replace_token_id (int): the token id to use for replacing the masked tokens
             n_perturbations (int): the number of perturbations to generate
@@ -113,6 +113,81 @@ class ShapTokenPerturbator(IdsPerturbator):
         k: Float[Tensor, f"{p}"] = torch.multinomial(probability_to_select_k_elements, p, replacement=True)
 
         # Generate a random binary mask for each perturbation
+        rand_values: Float[Tensor, f"{p} {l}"] = torch.rand(p, l, dtype=torch.float)
+        thresholds: Float[Tensor, f"{p}"] = torch.stack(
+            [torch.kthvalue(rand_values[i], int(k[i]) + 1, dim=0).values for i in range(p)]
+        )
+        mask: Float[Tensor, "{p} {l}"] = (rand_values < thresholds.unsqueeze(1)).float()
+
+        return mask
+
+
+class ShapImagePerturbator(ImageMaskPerturbator):
+    """
+    Perturbator sampling masks according to the Shapley kernel, used by KernelShap.
+    """
+
+    __slots__ = ("device",)
+
+    def __init__(
+        self,
+        granularity: ImageGranularity = ImageGranularity.PATCH,
+        replace_value: float = 0.0,
+        n_perturbations: int = 1000,
+        patch_size: int | None = None,
+        device: torch.device | None = None,
+    ):
+        """
+        Args:
+            granularity (ImageGranularity): unit over which masks are defined.
+            replace_value (float): baseline written into masked positions.
+            n_perturbations (int): number of perturbations to generate.
+            patch_size (int): patch side length (reconciled by the explainer).
+            device (torch.device): device on which the perturbator runs.
+        """
+        super().__init__(
+            granularity=granularity,
+            n_perturbations=n_perturbations,
+            replace_value=replace_value,
+            patch_size=patch_size,
+        )
+        self.device = device  # type: ignore
+
+    @jaxtyped(typechecker=beartype)
+    def get_mask(self, mask_dim: int) -> Float[Tensor, "p {mask_dim}"]:
+        """
+        Sample binary masks weighted by the Shapley kernel.
+
+        See `ShapTokenPerturbator.get_mask` for the full derivation; the sampling
+        is modality-agnostic and operates only on the number of units `mask_dim`.
+
+        Args:
+            mask_dim (int): number of granularity units `g`.
+
+        Returns:
+            torch.Tensor: shape `(n_perturbations, g)`, clamped to `(2**g, g)`
+                when `n_perturbations` exceeds the number of distinct masks.
+        """
+        p, l = self.n_perturbations, mask_dim
+
+        # cannot draw more distinct masks than 2**l
+        # For images l < 20 is very unlikely
+        if l < 20 and p > 2**l:
+            p = 2**l
+
+        if l == 1:
+            return (torch.rand(p, l, dtype=torch.float) < 0.5).float()
+
+        # number of selected units k per perturbation, weighted by the Shapley kernel
+        possible_k: Float[Tensor, f"{l - 1}"] = torch.arange(1, l, dtype=torch.float)
+        # Change from the text implementation: follows the actual value of the KernelSHAP
+        probability_to_select_k_elements: Float[Tensor, f"{l - 1}"] = (l - 1) / (possible_k * (l - possible_k))
+        probability_to_select_k_elements: Float[Tensor, f"{l}"] = torch.cat(
+            [torch.zeros(1), probability_to_select_k_elements]
+        )
+        k: Float[Tensor, f"{p}"] = torch.multinomial(probability_to_select_k_elements, p, replacement=True)
+
+        # random binary mask with exactly k ones per perturbation, all equally likely
         rand_values: Float[Tensor, f"{p} {l}"] = torch.rand(p, l, dtype=torch.float)
         thresholds: Float[Tensor, f"{p}"] = torch.stack(
             [torch.kthvalue(rand_values[i], int(k[i]) + 1, dim=0).values for i in range(p)]

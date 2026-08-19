@@ -32,7 +32,7 @@ from interpreto.attributions.perturbations.sobol_perturbation import (
     SequenceSamplers,
     SobolTokenPerturbator,
 )
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import TextGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -40,12 +40,12 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 @pytest.mark.parametrize(
     "granularity, order, sampler, n_token_perturbations",
     [
-        (Granularity.TOKEN, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL, 2),
-        (Granularity.TOKEN, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON, 5),
-        (Granularity.TOKEN, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube, 50),
-        (Granularity.WORD, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL, 50),
-        (Granularity.WORD, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON, 5),
-        (Granularity.WORD, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube, 10),
+        (TextGranularity.TOKEN, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL, 2),
+        (TextGranularity.TOKEN, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON, 5),
+        (TextGranularity.TOKEN, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube, 50),
+        (TextGranularity.WORD, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL, 50),
+        (TextGranularity.WORD, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON, 5),
+        (TextGranularity.WORD, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube, 10),
     ],
 )
 def test_sobol_attribution_init_and_mask(
