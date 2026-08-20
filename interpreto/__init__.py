@@ -51,6 +51,7 @@ from .visualizations import (
     AttributionVisualization,
     plot_attributions,
     plot_concepts,
+    plot_lens,
 )
 
 
@@ -85,4 +86,5 @@ __all__ = [
     "AttributionVisualization",
     "plot_attributions",
     "plot_concepts",
+    "plot_lens",
 ]

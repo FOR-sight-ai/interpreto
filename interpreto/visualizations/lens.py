@@ -22,20 +22,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-Lens visualization helpers.
-"""
+"""Lens visualization helpers."""
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from typing import Literal
 
-from transformers.tokenization_utils import PreTrainedTokenizer
-from transformers.tokenization_utils_base import BatchEncoding
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+import torch
+from transformers import BatchEncoding, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 from interpreto.typing import LabelNames, LensResults
+
+from .commons import _build_html_header, _save_html
 
 try:
     from IPython.display import HTML, display
@@ -46,12 +46,12 @@ except ImportError:  # pragma: no cover - optional notebook dependency
 LensTask = Literal["language_model", "sequence_classification"]
 
 _LENS_SHARED_STYLES = [
-    ".lens-shell { font-family: 'Avenir Next', 'Segoe UI', sans-serif; color: #24313f; }",
-    ".lens-layer { margin: 0 0 1rem 0; border: 1px solid #d8dee9; border-radius: 18px; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); box-shadow: 0 14px 40px rgba(30, 42, 56, 0.08); }",
-    ".lens-layer summary { cursor: pointer; list-style: none; padding: 0.95rem 1.1rem; font-weight: 700; background: linear-gradient(90deg, #e8f2ff 0%, #f9fbff 100%); border-bottom: 1px solid #e2e8f0; }",
+    ".lens-shell { color: #24313f; }",
+    ".lens-layer { margin: 0 0 1rem 0; border: 1px solid #d8dee9; border-radius: 0.5rem; background: #ffffff; }",
+    ".lens-layer summary { cursor: pointer; list-style: none; padding: 0.75rem 0.9rem; font-weight: 700; background: #f5f7fa; border-bottom: 1px solid #e2e8f0; }",
     ".lens-layer summary::-webkit-details-marker { display: none; }",
-    ".lens-layer-body { padding: 1rem 1.1rem 1.15rem 1.1rem; }",
-    ".lens-sample-card { margin: 0 0 1rem 0; padding: 0.95rem; border-radius: 16px; background: #fffdfb; border: 1px solid #eef2f7; }",
+    ".lens-layer-body { padding: 0.9rem; }",
+    ".lens-sample-card { margin: 0 0 0.9rem 0; padding: 0.85rem; border-radius: 0.4rem; border: 1px solid #eef2f7; }",
 ]
 
 _LANGUAGE_MODEL_STYLES = [
@@ -63,13 +63,13 @@ _LANGUAGE_MODEL_STYLES = [
     ".lens-sample-text { color: #627386; font-size: 0.92rem; }",
     ".lens-token-stream { display: flex; flex-wrap: wrap; gap: 0.15rem; align-items: flex-start; line-height: 1.85; }",
     ".lens-token { position: relative; display: inline-flex; align-items: center; border-radius: 999px; padding: 0.1rem 0.48rem; margin: 0.04rem 0; border: 1px solid rgba(72, 102, 132, 0.12); background: #ffffff; white-space: pre; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; z-index: 0; }",
-    ".lens-token:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(34, 56, 78, 0.15); background: #fffaf2; z-index: 12; }",
+    ".lens-token:hover, .lens-token:focus { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(34, 56, 78, 0.15); background: #fffaf2; z-index: 12; outline: none; }",
+    ".lens-token:focus-visible { outline: 2px solid #23567f; outline-offset: 2px; }",
     ".lens-token-label { white-space: pre; }",
-    ".lens-token-confidence { width: 0.5rem; height: 0.5rem; border-radius: 999px; margin-left: 0.4rem; flex: 0 0 auto; }",
-    ".lens-tooltip { display: none; position: absolute; left: 0; top: calc(100% + 0.45rem); z-index: 20; min-width: 18rem; max-width: min(28rem, 80vw); padding: 0.75rem 0.85rem; border-radius: 14px; background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(110, 130, 150, 0.25); box-shadow: 0 18px 48px rgba(28, 42, 56, 0.18); }",
-    ".lens-token:hover .lens-tooltip { display: block; }",
-    ".lens-tooltip-title { font-weight: 700; margin-bottom: 0.45rem; color: #24313f; }",
-    ".lens-tooltip-list { margin: 0; padding: 0 0.2rem 0 0; list-style: none; max-height: 12rem; overflow-y: auto; scrollbar-width: thin; }",
+    ".lens-tooltip { display: none; position: absolute; left: 0; top: calc(100% + 0.45rem); z-index: 20; min-width: 18rem; max-width: min(28rem, 80vw); padding: 0.75rem 0.85rem; border-radius: 14px; background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(110, 130, 150, 0.25); box-shadow: 0 18px 48px rgba(28, 42, 56, 0.18); white-space: normal; }",
+    ".lens-token:hover .lens-tooltip, .lens-token:focus .lens-tooltip { display: block; }",
+    ".lens-tooltip-title { display: block; font-weight: 700; margin-bottom: 0.45rem; color: #24313f; }",
+    ".lens-tooltip-list { display: block; margin: 0; padding: 0 0.2rem 0 0; max-height: 12rem; overflow-y: auto; scrollbar-width: thin; }",
     ".lens-tooltip-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.75rem; align-items: start; padding: 0.18rem 0; }",
     ".lens-tooltip-token { font-weight: 700; white-space: pre-wrap; word-break: break-word; }",
     ".lens-tooltip-score { color: #546577; font-variant-numeric: tabular-nums; }",
@@ -88,10 +88,6 @@ _SEQUENCE_CLASSIFICATION_STYLES = [
 ]
 
 
-def _build_style_block(extra_styles: list[str]) -> str:
-    return "<style>" + "".join(_LENS_SHARED_STYLES + extra_styles) + "</style>"
-
-
 def _escape_html(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
@@ -107,12 +103,18 @@ def _format_score(score: float) -> str:
     return f"{score_value:.2e}"
 
 
-def _format_token_for_display(token: str) -> str:
-    cleaned = str(token)
-    cleaned = cleaned.replace("Ġ", " ")
-    cleaned = cleaned.replace("▁", " ")
-    cleaned = cleaned.replace("</w>", "")
-    return cleaned if cleaned != "" else str(token)
+def _decode_token_for_display(
+    tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
+    token_id: int,
+) -> str:
+    decoded = tokenizer.decode(
+        [token_id],
+        skip_special_tokens=False,
+        clean_up_tokenization_spaces=False,
+    )
+    if isinstance(decoded, str) and decoded and "\ufffd" not in decoded:
+        return decoded
+    return f"[token {token_id}]"
 
 
 def _score_to_color(score: float) -> str:
@@ -121,6 +123,58 @@ def _score_to_color(score: float) -> str:
     green = int(91 + (105 * bounded_score))
     blue = int(181 - (76 * bounded_score))
     return f"rgb({red}, {green}, {blue})"
+
+
+def _validate_lens_plot_inputs(
+    results: LensResults,
+    model_inputs: BatchEncoding,
+    task: LensTask,
+) -> None:
+    if task not in {"language_model", "sequence_classification"}:
+        raise ValueError(f"Unsupported lens task: {task}.")
+    if not isinstance(model_inputs, BatchEncoding):
+        raise TypeError("`model_inputs` must be a tensor-backed BatchEncoding.")
+    if not isinstance(results, Mapping):
+        raise TypeError("`results` must be a mapping of split points to lens outputs.")
+    if not results:
+        raise ValueError("`results` must contain at least one split-point output.")
+
+    input_ids = model_inputs.get("input_ids")
+    if not isinstance(input_ids, torch.Tensor):
+        raise TypeError("`model_inputs['input_ids']` must be a tensor.")
+    if input_ids.ndim != 2 or 0 in input_ids.shape:
+        raise ValueError("`model_inputs['input_ids']` must have a nonempty 2D shape.")
+    attention_mask = model_inputs.get("attention_mask")
+    if attention_mask is not None:
+        if not isinstance(attention_mask, torch.Tensor):
+            raise TypeError("`model_inputs['attention_mask']` must be a tensor.")
+        if attention_mask.shape != input_ids.shape:
+            raise ValueError("`attention_mask` must have the same shape as `input_ids`.")
+
+    expected_ndim = 3 if task == "language_model" else 2
+    for split_point, split_results in results.items():
+        if not isinstance(split_point, str):
+            raise TypeError("Lens result keys must be split-point strings.")
+        if not isinstance(split_results, Mapping):
+            raise TypeError(f"Lens output for `{split_point}` must be a mapping.")
+        top_indices = split_results.get("top_indices")
+        top_scores = split_results.get("top_scores")
+        if not isinstance(top_indices, torch.Tensor) or not isinstance(top_scores, torch.Tensor):
+            raise TypeError(f"Lens output for `{split_point}` must contain tensor top-k values.")
+        if top_indices.shape != top_scores.shape:
+            raise ValueError(f"Top-k indices and scores for `{split_point}` must have matching shapes.")
+        if top_indices.ndim != expected_ndim or top_indices.shape[-1] == 0:
+            raise ValueError(f"Lens output for `{split_point}` must be a nonempty {expected_ndim}D tensor pair.")
+        if top_indices.shape[0] != input_ids.shape[0]:
+            raise ValueError(f"Lens output for `{split_point}` does not match the input batch size.")
+        if task == "language_model" and top_indices.shape[1] != input_ids.shape[1]:
+            raise ValueError(f"Lens output for `{split_point}` does not match the input sequence length.")
+        if top_indices.is_floating_point() or top_indices.is_complex() or top_indices.dtype == torch.bool:
+            raise TypeError(f"Top-k indices for `{split_point}` must use an integer tensor dtype.")
+        if not top_scores.is_floating_point():
+            raise TypeError(f"Top-k scores for `{split_point}` must use a floating-point tensor dtype.")
+        if not torch.isfinite(top_scores).all() or torch.any((top_scores < 0) | (top_scores > 1)):
+            raise ValueError(f"Top-k scores for `{split_point}` must be finite values between zero and one.")
 
 
 def _get_visible_token_indices(model_inputs: BatchEncoding) -> list[list[int]]:
@@ -140,7 +194,10 @@ def _decode_sample_text(
 ) -> str:
     visible_indices = _get_visible_token_indices(model_inputs)[sample_index]
     token_ids = model_inputs["input_ids"][sample_index, visible_indices].detach().cpu().tolist()
-    return tokenizer.decode(token_ids, skip_special_tokens=True)
+    decoded = tokenizer.decode(token_ids, skip_special_tokens=True)
+    if not isinstance(decoded, str):
+        raise TypeError("The tokenizer must decode one token sequence to a string.")
+    return decoded
 
 
 def _resolve_label_name(index: int, label_names: LabelNames | None) -> str:
@@ -161,22 +218,22 @@ def _render_language_model_html(
     model_inputs: BatchEncoding,
     tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
 ) -> str:
-    raw_tokens = [
-        tokenizer.convert_ids_to_tokens(input_ids.detach().cpu().tolist()) for input_ids in model_inputs["input_ids"]
-    ]
     visible_token_indices = _get_visible_token_indices(model_inputs)
 
     sections: list[str] = [
         "<div class='lens-shell'>",
-        _build_style_block(_LANGUAGE_MODEL_STYLES),
     ]
 
     for split_point, split_results in results.items():
         sections.append("<details class='lens-layer' open>")
         sections.append(f"<summary>{_escape_html(split_point)}</summary>")
         sections.append("<div class='lens-layer-body'>")
-        sections.append("<p class='lens-layer-subtitle'>Hover a token to see what this layer currently predicts.</p>")
-        for sample_index, sample_tokens in enumerate(raw_tokens):
+        sections.append(
+            "<p class='lens-layer-subtitle'>"
+            "Hover or focus a token to inspect vocabulary scores decoded from that position."
+            "</p>"
+        )
+        for sample_index in range(model_inputs["input_ids"].shape[0]):
             sample_text = _escape_html(_decode_sample_text(model_inputs, tokenizer, sample_index))
             sections.append("<div class='lens-sample-card'>")
             sections.append(
@@ -188,29 +245,26 @@ def _render_language_model_html(
             sections.append("<div class='lens-token-stream'>")
 
             for token_index in visible_token_indices[sample_index]:
-                token = sample_tokens[token_index]
+                token_id = int(model_inputs["input_ids"][sample_index, token_index])
                 top_indices = split_results["top_indices"][sample_index, token_index]
-                top_tokens = tokenizer.convert_ids_to_tokens(top_indices.tolist())
                 top_scores = split_results["top_scores"][sample_index, token_index].tolist()
-                token_label = _escape_html(_format_token_for_display(token))
-                confidence_color = _score_to_color(top_scores[0])
+                token_label = _escape_html(_decode_token_for_display(tokenizer, token_id))
                 tooltip_rows = []
-                for predicted_token, score in zip(top_tokens, top_scores, strict=False):
-                    display_token = _escape_html(_format_token_for_display(str(predicted_token)))
+                for predicted_token_id, score in zip(top_indices.tolist(), top_scores, strict=True):
+                    display_token = _escape_html(_decode_token_for_display(tokenizer, predicted_token_id))
                     tooltip_rows.append(
-                        "<li class='lens-tooltip-item'>"
-                        f"<span class='lens-tooltip-token' style='color: {_score_to_color(score)};'>{display_token}</span>"
+                        "<span class='lens-tooltip-item'>"
+                        f"<span class='lens-tooltip-token'>{display_token}</span>"
                         f"<span class='lens-tooltip-score'>{_format_score(score)}</span>"
-                        "</li>"
+                        "</span>"
                     )
 
                 sections.append(
-                    "<span class='lens-token'>"
+                    "<span class='lens-token' tabindex='0'>"
                     f"<span class='lens-token-label'>{token_label}</span>"
-                    f"<span class='lens-token-confidence' style='background: {confidence_color};'></span>"
-                    "<span class='lens-tooltip'>"
-                    "<div class='lens-tooltip-title'>Top-k predictions</div>"
-                    "<ul class='lens-tooltip-list'>" + "".join(tooltip_rows) + "</ul></span></span>"
+                    "<span class='lens-tooltip' role='tooltip'>"
+                    "<span class='lens-tooltip-title'>Top vocabulary scores</span>"
+                    "<span class='lens-tooltip-list'>" + "".join(tooltip_rows) + "</span></span></span>"
                 )
 
             sections.append("</div></div>")
@@ -229,7 +283,6 @@ def _render_sequence_classification_html(
 ) -> str:
     sections: list[str] = [
         "<div class='lens-shell'>",
-        _build_style_block(_SEQUENCE_CLASSIFICATION_STYLES),
     ]
 
     for split_point, split_results in results.items():
@@ -248,7 +301,7 @@ def _render_sequence_classification_html(
                 f"<div class='lens-top-choice'>Current top class: {top_label} ({_format_score(top_score)})</div>"
             )
 
-            for label, score in zip(decoded_labels, split_results["top_scores"][sample_index].tolist(), strict=False):
+            for label, score in zip(decoded_labels, split_results["top_scores"][sample_index].tolist(), strict=True):
                 fill_color = _score_to_color(score)
                 sections.append(
                     "<div class='lens-prediction-row'>"
@@ -284,39 +337,50 @@ def _render_lens_results_html(
     raise ValueError(f"Unsupported lens task: {task}.")
 
 
-def display_lens_results(
+def plot_lens(
     results: LensResults,
     model_inputs: BatchEncoding,
+    *,
     tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
     task: LensTask,
     label_names: LabelNames | None = None,
+    custom_css: str = "",
+    save_path: str | os.PathLike[str] | None = None,
 ) -> None:
-    """
-    Display lens outputs in a notebook.
+    """Display lens outputs and optionally save them as HTML.
 
     Args:
-        results (dict[str, LensTopKOutput]): Output returned by `LogitLens.explain()` or
-            `TunedLens.explain()`.
+        results (LensResults): Output returned by `LogitLens.explain()` or `TunedLens.explain()`.
         model_inputs (BatchEncoding): Tokenized inputs corresponding to `results`.
         tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast): Tokenizer used to decode
             tokens for display.
-        task (Literal["language_model", "sequence_classification"]): Lens task used to select
-            the appropriate renderer.
-        label_names (Mapping[int | str, str] | list[str] | tuple[str, ...] | None): Optional
-            display names for sequence-classification labels. If `None`, raw label ids are shown.
+        task (LensTask): Lens task used to select the appropriate renderer.
+        label_names (LabelNames | None): Optional display names for sequence-classification labels.
+            If `None`, raw label ids are shown.
+        custom_css (str): Additional CSS appended to the visualization styles.
+        save_path (str | os.PathLike[str] | None): Optional path for the rendered HTML.
+
+    Returns:
+        None: This function displays HTML when IPython is available and saves it when requested.
 
     Examples:
         >>> results = lens.explain(batch_encoding)
-        >>> display_lens_results(results, batch_encoding, tokenizer=tokenizer, task=lens.task)
+        >>> plot_lens(results, batch_encoding, tokenizer=tokenizer, task=lens.task)
     """
-    if HTML is None or display is None:
-        return
-
-    html = _render_lens_results_html(
+    _validate_lens_plot_inputs(results, model_inputs, task)
+    body = _render_lens_results_html(
         results,
         model_inputs,
         tokenizer=tokenizer,
         task=task,
         label_names=label_names,
     )
-    display(HTML(html))
+    task_styles = _LANGUAGE_MODEL_STYLES if task == "language_model" else _SEQUENCE_CLASSIFICATION_STYLES
+    lens_css = "\n".join(_LENS_SHARED_STYLES + task_styles)
+    if custom_css:
+        lens_css += f"\n{custom_css}"
+    html = _build_html_header(lens_css, include_js=False) + body + "\n</body></html>\n"
+    if save_path is not None:
+        _save_html(html, save_path)
+    if HTML is not None and display is not None:
+        display(HTML(html))

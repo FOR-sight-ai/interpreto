@@ -22,13 +22,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-Tuned Lens implementation built on top of `ModelWithSplitPoints`.
-"""
+"""Tuned Lens implementation."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import math
+from collections.abc import Mapping
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Literal
 
@@ -42,72 +42,60 @@ from interpreto.concepts.splitters.model_with_split_points import ModelWithSplit
 from ._lens_base import BaseLens, LensInputs, PoolingStrategy
 
 InitializationMode = Literal["default", "xavier", "logit_lens"]
+_CHECKPOINT_FORMAT_VERSION = 1
 
 
 class TunedLens(BaseLens):
     """Code: [:octicons-mark-github-24: `lens/tuned_lens.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/lens/tuned_lens.py)
 
-    Learn one affine translator per split point before applying the model prediction head.
+    Learn an affine translator before applying the model prediction head.
 
-    `TunedLens` follows the method introduced by
-    [Belrose et al., 2023](https://arxiv.org/abs/2303.08112).
-    The original work focuses on autoregressive language models.
-    Interpreto extends the same idea to sequence classification by aligning translated hidden states
-    with the frozen classifier distribution.
-    See the `ModelWithSplitPoints` documentation for split-point selection and activation extraction.
-    Raw text inputs are tokenized internally by the lens methods with the wrapped tokenizer.
-    The wrapped tokenizer should already expose a pad token or an eos token, since the lens methods
-    do not resize model embeddings to introduce new special tokens.
+    The translator follows the Tuned Lens method introduced by
+    [Belrose et al., 2023](https://arxiv.org/abs/2303.08112). For a standard tuned lens,
+    configure `ModelWithSplitPoints` at a transformer block output so the captured tensor is
+    a residual-stream state. Other compatible activations can be projected, but do not have the
+    same interpretation.
 
-    For sequence classification, the projection contract matches `LogitLens`:
-    - a model-specific pooler or transform may be resolved before a vector head
-    - a sequence-aware classification head may consume the 3D hidden states directly
-    - a bare vector head requires an explicit `pooling_strategy`
+    Automatic projection is limited to model layouts whose final normalization and output head
+    are represented by reusable modules. Explicit projection paths can be supplied for other
+    layouts when those modules reproduce the model's actual output path.
 
     Args:
-        model_with_split_points (ModelWithSplitPoints): Wrapped model used to extract split activations.
-        split_point (str | None): Split point receiving a learned translator.
-            If `None`, the split point registered on `model_with_split_points` is used.
+        model_with_split_points (ModelWithSplitPoints): Wrapped model containing the split point to translate.
         head_name (str | None): Optional path to the prediction head.
-        pre_head_name (str | None): Optional path to a module applied before the head.
-        pooling_strategy (Literal["cls", "mean", "last"] | None): Optional pooling used for
-            sequence classification when the classification head expects one vector per sample.
-            Pooling is only applied when it is explicitly requested for bare vector heads.
-        initialization_mode (Literal["default", "xavier", "logit_lens"]): Initialization applied
-            to each translator.
-            - `default` keeps the current `torch.nn.Linear` initialization.
-            - `xavier` uses Xavier uniform initialization with zero bias.
-            - `logit_lens` initializes each translator as the identity map, which starts tuning
-              from the plain logit-lens projection.
-        top_k (int): Number of labels or tokens returned per prediction.
-        device (torch.device | str | None): Device used by the learned translators.
+        pre_head_name (str | None): Optional path to a module applied before the prediction head.
+        pooling_strategy (PoolingStrategy | None): Optional token pooling for a simple
+            sequence-classification head.
+        initialization_mode (InitializationMode): Translator initialization. ``"logit_lens"`` starts from the
+            identity map, ``"xavier"`` uses Xavier uniform weights, and ``"default"`` keeps
+            the PyTorch linear-layer initialization.
+        top_k (int): Number of token or class scores returned per prediction.
+        device (torch.device | str | None): Device used by the learned translator.
 
     Examples:
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer
         >>> from interpreto import ModelWithSplitPoints, TunedLens
-        >>> model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
-        >>> tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
-        >>> if tokenizer.pad_token is None:
-        ...     tokenizer.pad_token = tokenizer.eos_token
-        >>> model_with_split_points = ModelWithSplitPoints(
+        >>> model_id = "hf-internal-testing/tiny-random-gpt2"
+        >>> model = AutoModelForCausalLM.from_pretrained(model_id)
+        >>> tokenizer = AutoTokenizer.from_pretrained(model_id)
+        >>> tokenizer.pad_token = tokenizer.eos_token
+        >>> wrapped_model = ModelWithSplitPoints(
         ...     model,
         ...     tokenizer=tokenizer,
-        ...     split_point="transformer.h.1.mlp",
+        ...     split_point="transformer.h.1",
         ... )
-        >>> lens = TunedLens(model_with_split_points, top_k=3, initialization_mode="logit_lens")
+        >>> lens = TunedLens(wrapped_model, top_k=3)
         >>> _ = lens.fit(["Interpreto helps.", "Interpreto is practical."], epochs=1)
-        >>> explanations = lens.explain("Interpreto is practical.")
+        >>> results = lens.explain("Interpreto is practical.")
 
     Raises:
-        ValueError: If the split points are invalid or if the checkpoint metadata is incompatible.
-        NotImplementedError: If the wrapped model is a token classification model.
-        RuntimeError: If the resolved projection contains meta tensors.
+        ValueError: If ``initialization_mode`` is invalid.
+
     """
 
     def __init__(
         self,
         model_with_split_points: ModelWithSplitPoints,
-        split_point: str | None = None,
         head_name: str | None = None,
         pre_head_name: str | None = None,
         pooling_strategy: PoolingStrategy | None = None,
@@ -115,6 +103,8 @@ class TunedLens(BaseLens):
         top_k: int = 5,
         device: torch.device | str | None = None,
     ) -> None:
+        if initialization_mode not in {"default", "xavier", "logit_lens"}:
+            raise ValueError("`initialization_mode` must be `'default'`, `'xavier'`, or `'logit_lens'`.")
         super().__init__(
             model_with_split_points=model_with_split_points,
             head_name=head_name,
@@ -124,236 +114,313 @@ class TunedLens(BaseLens):
             device=device,
         )
 
-        if initialization_mode not in {"default", "xavier", "logit_lens"}:
-            raise ValueError("`initialization_mode` should be one of `'default'`, `'xavier'`, or `'logit_lens'`.")
-
-        self.translated_split_points = self._normalize_split_points(split_point)
-        self.hidden_size = self._get_hidden_size()
         self.initialization_mode = initialization_mode
-        self.translators = {
-            split_point: self._build_translator().to(self.device) for split_point in self.translated_split_points
-        }
-
-    def _build_translator(self) -> nn.Linear:
-        translator = nn.Linear(self.hidden_size, self.hidden_size, bias=True)
-        self._initialize_translator(translator)
-        return translator
-
-    def _initialize_translator(self, translator: nn.Linear) -> None:
-        if self.initialization_mode == "default":
-            return
-
-        if self.initialization_mode == "xavier":
-            nn.init.xavier_uniform_(translator.weight)
-            if translator.bias is not None:
-                nn.init.zeros_(translator.bias)
-            return
-
-        nn.init.eye_(translator.weight)
-        if translator.bias is not None:
-            nn.init.zeros_(translator.bias)
+        self.hidden_size = self._get_hidden_size()
+        self.translator = nn.Linear(self.hidden_size, self.hidden_size, bias=True).to(self.device)
+        self._initialize_translator()
+        self.translator.eval()
 
     def _get_hidden_size(self) -> int:
-        for attribute_name in ["hidden_size", "n_embd", "d_model", "word_embed_proj_dim"]:
-            hidden_size = getattr(self.model.config, attribute_name, None)
-            if isinstance(hidden_size, int):
-                return hidden_size
+        with self._model_in_evaluation_mode():
+            latent_shape = self.model_with_split_points.get_latent_shape()
+        if len(latent_shape) == 0:
+            raise ValueError("The split activation has no hidden dimension.")
+        hidden_size = latent_shape[-1]
+        if isinstance(hidden_size, bool) or not isinstance(hidden_size, Integral) or hidden_size < 1:
+            raise ValueError(f"Invalid split hidden dimension: {hidden_size}.")
+        return int(hidden_size)
 
-        modules = [self.model_head]
-        if self.model_pre_head is not None:
-            modules.append(self.model_pre_head)
+    def _initialize_translator(self) -> None:
+        if self.initialization_mode == "default":
+            return
+        if self.initialization_mode == "xavier":
+            nn.init.xavier_uniform_(self.translator.weight)
+        else:
+            nn.init.eye_(self.translator.weight)
+        nn.init.zeros_(self.translator.bias)
 
-        for module in modules:
-            if hasattr(module, "in_features") and isinstance(module.in_features, int):
-                return module.in_features
-
-        raise ValueError(
-            "Could not determine the hidden size required by the tuned lens translators. "
-            "Please use a model exposing a standard transformer hidden size."
-        )
-
-    def _transform_activations(self, split_point: str, hidden_states: torch.Tensor) -> torch.Tensor:
-        if split_point not in self.translators:
+    def _transform_activation(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        if hidden_states.shape[-1] != self.hidden_size:
             raise ValueError(
-                f"Split point `{split_point}` does not have a tuned translator. "
-                f"Available split points: {', '.join(self.translators)}."
+                f"The split activation width changed: expected {self.hidden_size}, got {hidden_states.shape[-1]}."
             )
+        translator_input = hidden_states.to(
+            device=self.translator.weight.device,
+            dtype=self.translator.weight.dtype,
+        )
+        return self.translator(translator_input)
 
-        translator = self.translators[split_point]
-        return translator(hidden_states.to(self.device)).to(self.model_device)
-
-    def _iter_translator_parameters(self, split_points: list[str]) -> Iterator[nn.Parameter]:
-        for split_point in split_points:
-            yield from self.translators[split_point].parameters()
+    def _prepare_loss_logits(
+        self,
+        projected_logits: torch.Tensor,
+        target_logits: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if projected_logits.shape != target_logits.shape:
+            raise ValueError(
+                "Lens logits must have the same shape as final model logits. "
+                f"Got {tuple(projected_logits.shape)} and {tuple(target_logits.shape)}."
+            )
+        projected_logits = self._upcast_for_scores(projected_logits)
+        target_logits = target_logits.detach().to(
+            device=projected_logits.device,
+            dtype=projected_logits.dtype,
+        )
+        return projected_logits, target_logits
 
     def _language_model_loss(
         self,
         projected_logits: torch.Tensor,
         target_logits: torch.Tensor,
         model_inputs: BatchEncoding,
-    ) -> torch.Tensor:
-        target_probabilities = F.softmax(target_logits, dim=-1)
-        log_probabilities = F.log_softmax(projected_logits, dim=-1)
-        token_losses = F.kl_div(log_probabilities, target_probabilities, reduction="none").sum(dim=-1)
-        attention_mask = self._get_attention_mask(model_inputs, projected_logits)
-        valid_losses = token_losses.masked_select(attention_mask.bool())
-        return valid_losses.mean()
+    ) -> tuple[torch.Tensor, int]:
+        projected_logits, target_logits = self._prepare_loss_logits(projected_logits, target_logits)
+        token_losses = (
+            F.kl_div(
+                F.log_softmax(projected_logits, dim=-1),
+                F.softmax(target_logits, dim=-1),
+                reduction="none",
+            )
+            .sum(dim=-1)
+            .clamp_min(0.0)
+        )
+        valid_mask = self._get_attention_mask(model_inputs, projected_logits).bool()
+        nb_evaluated_elements = int(valid_mask.sum().detach().cpu())
+        if nb_evaluated_elements == 0:
+            raise ValueError("Tuned Lens fitting requires at least one attended token.")
+        return self._masked_mean(token_losses, valid_mask), nb_evaluated_elements
 
     def _sequence_classification_loss(
-        self, projected_logits: torch.Tensor, target_logits: torch.Tensor
-    ) -> torch.Tensor:
-        return F.kl_div(
+        self,
+        projected_logits: torch.Tensor,
+        target_logits: torch.Tensor,
+    ) -> tuple[torch.Tensor, int]:
+        projected_logits, target_logits = self._prepare_loss_logits(projected_logits, target_logits)
+        loss = F.kl_div(
             F.log_softmax(projected_logits, dim=-1),
             F.softmax(target_logits, dim=-1),
             reduction="batchmean",
-        )
+        ).clamp_min(0.0)
+        return loss, projected_logits.shape[0]
 
     def _compute_loss(
         self,
         projected_logits: torch.Tensor,
         target_logits: torch.Tensor,
         model_inputs: BatchEncoding,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, int]:
         if self.task == "language_model":
             return self._language_model_loss(projected_logits, target_logits, model_inputs)
         return self._sequence_classification_loss(projected_logits, target_logits)
 
     def _freeze_projection_parameters(self) -> list[tuple[nn.Parameter, bool]]:
-        projection_modules = [self.model_head]
+        modules = [self.model_head]
         if self.model_pre_head is not None:
-            projection_modules.append(self.model_pre_head)
+            modules.append(self.model_pre_head)
 
-        parameters_state: list[tuple[nn.Parameter, bool]] = []
-        for module in projection_modules:
+        parameter_states = []
+        seen_parameter_ids: set[int] = set()
+        for module in modules:
             for parameter in module.parameters():
-                parameters_state.append((parameter, parameter.requires_grad))
+                if id(parameter) in seen_parameter_ids:
+                    continue
+                seen_parameter_ids.add(id(parameter))
+                parameter_states.append((parameter, parameter.requires_grad))
                 parameter.requires_grad_(False)
-        return parameters_state
+        return parameter_states
 
-    def _restore_projection_parameters(self, parameters_state: list[tuple[nn.Parameter, bool]]) -> None:
-        for parameter, requires_grad in parameters_state:
+    @staticmethod
+    def _restore_projection_parameters(parameter_states: list[tuple[nn.Parameter, bool]]) -> None:
+        for parameter, requires_grad in parameter_states:
             parameter.requires_grad_(requires_grad)
+
+    @staticmethod
+    def _validate_real(
+        value: float,
+        name: str,
+        minimum: float,
+        strict: bool,
+    ) -> float:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise TypeError(f"`{name}` must be a real number.")
+        normalized = float(value)
+        invalid_bound = normalized <= minimum if strict else normalized < minimum
+        if not math.isfinite(normalized) or invalid_bound:
+            qualifier = "greater than" if strict else "greater than or equal to"
+            raise ValueError(f"`{name}` must be finite and {qualifier} {minimum}.")
+        return normalized
 
     def fit(
         self,
         inputs: LensInputs,
-        split_point: str | None = None,
         epochs: int = 1,
         learning_rate: float = 1e-3,
         weight_decay: float = 0.0,
         batch_size: int | None = None,
     ) -> dict[str, Any]:
-        """
-        Fit translators on raw inputs.
+        """Fit the translator to the final model distribution.
 
         Args:
-            inputs (str | list[str] | BatchEncoding): Training inputs.
-            split_point (str | None): Optional split point to validate against the translated split point.
-            epochs (int): Number of training epochs.
-            learning_rate (float): Optimizer learning rate.
-            weight_decay (float): Optimizer weight decay.
-            batch_size (int | None): Batch size used during tuning.
-                If `None`, reuse `model_with_split_points.batch_size`.
+            inputs (LensInputs): Raw text or tensor-backed tokenized training inputs.
+            epochs (int): Number of passes over the inputs.
+            learning_rate (float): AdamW learning rate.
+            weight_decay (float): AdamW weight decay.
+            batch_size (int | None): Optional fit batch size. The wrapped model batch size is used when omitted.
 
         Returns:
-            dict[str, Any]: Training history containing the mean loss per epoch and the fitted split points.
+            dict[str, Any]: Loss history and fit metadata.
+
+        Raises:
+            RuntimeError: If final model logits cannot be captured.
         """
-        if epochs < 1:
-            raise ValueError("`epochs` must be a strictly positive integer.")
+        self._validate_bound_split_point()
+        self._validate_positive_integer(epochs, "epochs")
+        learning_rate = self._validate_real(learning_rate, "learning_rate", 0.0, strict=True)
+        weight_decay = self._validate_real(weight_decay, "weight_decay", 0.0, strict=False)
+        if batch_size is None:
+            fit_batch_size = self.model_with_split_points.batch_size
+        else:
+            self._validate_positive_integer(batch_size, "batch_size")
+            fit_batch_size = int(batch_size)
+        self._validate_positive_integer(fit_batch_size, "model_with_split_points.batch_size")
+        self._get_input_size(inputs)
 
-        selected_split_points = self._normalize_split_points(split_point)
-        unknown_split_points = [
-            split_point for split_point in selected_split_points if split_point not in self.translators
-        ]
-        if unknown_split_points:
-            raise ValueError(
-                "The following split points do not have translators: " + ", ".join(unknown_split_points) + "."
-            )
-
-        fit_batch_size = batch_size or self.model_with_split_points.batch_size
         optimizer = torch.optim.AdamW(
-            self._iter_translator_parameters(selected_split_points),
+            self.translator.parameters(),
             lr=learning_rate,
             weight_decay=weight_decay,
         )
-        history = {
+        history: dict[str, Any] = {
             "loss": [],
-            "split_point": selected_split_points[0],
-            "epochs": epochs,
+            "split_point": self.split_point,
+            "epochs": int(epochs),
         }
-
-        parameters_state = self._freeze_projection_parameters()
+        parameter_states = self._freeze_projection_parameters()
         try:
-            for translator in self.translators.values():
-                translator.train()
+            with self._model_in_evaluation_mode():
+                self.translator.train()
+                for _ in range(int(epochs)):
+                    weighted_epoch_loss = 0.0
+                    nb_evaluated_elements = 0
+                    for _, _, batch_inputs in self._iter_input_batches(inputs, fit_batch_size):
+                        with torch.no_grad():
+                            activation, target_logits = self._capture_projection_input(
+                                batch_inputs,
+                                include_reference_logits=True,
+                            )
+                        if target_logits is None:  # pragma: no cover - guarded by capture
+                            raise RuntimeError("Failed to capture final model logits during fitting.")
 
-            for _ in range(epochs):
-                epoch_loss = 0.0
-                nb_batches = 0
-                for batch_inputs in self._iter_batches(inputs, fit_batch_size):
-                    model_inputs = self._prepare_inputs(batch_inputs)
-                    projection_inputs, target_logits = self._capture_projection_inputs(
-                        model_inputs,
-                        selected_split_points,
-                        differentiable=False,
-                        include_reference_logits=True,
-                    )
-                    if target_logits is None:
-                        raise RuntimeError(
-                            "Failed to capture the reference logits required by the tuned lens fit path."
+                        optimizer.zero_grad(set_to_none=True)
+                        loss, batch_weight = self._compute_loss(
+                            self._project_activation(activation),
+                            target_logits,
+                            batch_inputs,
                         )
+                        loss.backward()
+                        optimizer.step()
+                        weighted_epoch_loss += float(loss.detach().cpu()) * batch_weight
+                        nb_evaluated_elements += batch_weight
 
-                    optimizer.zero_grad()
-                    total_loss: torch.Tensor | None = None
-                    for _, projected_logits in self._iter_projected_logits(
-                        projection_inputs,
-                        selected_split_points,
-                    ):
-                        split_loss = self._compute_loss(projected_logits, target_logits, model_inputs)
-                        total_loss = split_loss if total_loss is None else total_loss + split_loss
-
-                    if total_loss is None:
-                        raise RuntimeError("No split point was selected for tuning.")
-
-                    total_loss = total_loss / len(selected_split_points)
-                    total_loss.backward()
-                    optimizer.step()
-
-                    epoch_loss += float(total_loss.detach().cpu())
-                    nb_batches += 1
-
-                history["loss"].append(epoch_loss / max(nb_batches, 1))
+                    history["loss"].append(weighted_epoch_loss / nb_evaluated_elements)
         finally:
-            self._restore_projection_parameters(parameters_state)
-            for translator in self.translators.values():
-                translator.eval()
-
+            optimizer.zero_grad(set_to_none=True)
+            self.translator.eval()
+            self._restore_projection_parameters(parameter_states)
         return history
 
+    @staticmethod
+    def _get_model_name_or_path(model: nn.Module) -> str | None:
+        model_name_or_path = getattr(model.config, "_name_or_path", None)
+        if model_name_or_path in {None, ""}:
+            return None
+        return str(model_name_or_path)
+
     def save(self, path: str | Path) -> None:
-        """
-        Save the tuned translators and their configuration.
+        """Save the translator and its declared model and projection contract.
 
         Args:
-            path (str | pathlib.Path): Checkpoint path.
+            path (str | Path): Checkpoint path.
+
+        Returns:
+            None: This method saves the checkpoint to disk.
         """
+        self._validate_bound_split_point()
         checkpoint_path = Path(path)
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-
         checkpoint = {
+            "format_version": _CHECKPOINT_FORMAT_VERSION,
             "metadata": {
-                "split_point": self.translated_split_points[0],
+                "split_point": self.split_point,
                 "head_name": self.head_name,
                 "pre_head_name": self.pre_head_name,
                 "pooling_strategy": self.pooling_strategy,
                 "initialization_mode": self.initialization_mode,
                 "top_k": self.top_k,
+                "hidden_size": self.hidden_size,
+                "task": self.task,
+                "model_class": type(self.model).__name__,
+                "model_name_or_path": self._get_model_name_or_path(self.model),
             },
-            "translators": {
-                split_point: translator.state_dict() for split_point, translator in self.translators.items()
-            },
+            "translator": {name: tensor.detach().cpu() for name, tensor in self.translator.state_dict().items()},
         }
         torch.save(checkpoint, checkpoint_path)
+
+    @staticmethod
+    def _validate_checkpoint(checkpoint: Any) -> tuple[dict[str, Any], dict[str, torch.Tensor]]:
+        if not isinstance(checkpoint, Mapping):
+            raise ValueError("A Tuned Lens checkpoint must be a mapping.")
+        version = checkpoint.get("format_version")
+        if isinstance(version, bool) or version != _CHECKPOINT_FORMAT_VERSION:
+            raise ValueError(
+                f"Unsupported Tuned Lens checkpoint format: expected {_CHECKPOINT_FORMAT_VERSION}, got {version}."
+            )
+        metadata = checkpoint.get("metadata")
+        translator = checkpoint.get("translator")
+        if not isinstance(metadata, Mapping) or not isinstance(translator, Mapping):
+            raise ValueError("A Tuned Lens checkpoint must contain `metadata` and `translator` mappings.")
+
+        required_metadata = {
+            "split_point",
+            "head_name",
+            "pre_head_name",
+            "pooling_strategy",
+            "initialization_mode",
+            "top_k",
+            "hidden_size",
+            "task",
+            "model_class",
+            "model_name_or_path",
+        }
+        if not required_metadata.issubset(metadata):
+            missing = sorted(required_metadata - set(metadata))
+            raise ValueError(f"Tuned Lens checkpoint metadata is missing: {', '.join(missing)}.")
+        if not isinstance(metadata["split_point"], str) or not isinstance(metadata["head_name"], str):
+            raise ValueError("Checkpoint `split_point` and `head_name` values must be strings.")
+        if metadata["pre_head_name"] is not None and not isinstance(metadata["pre_head_name"], str):
+            raise ValueError("Checkpoint `pre_head_name` must be a string or `None`.")
+        if metadata["pooling_strategy"] not in {None, "cls", "mean", "last"}:
+            raise ValueError("Checkpoint `pooling_strategy` is invalid.")
+        if metadata["initialization_mode"] not in {"default", "xavier", "logit_lens"}:
+            raise ValueError("Checkpoint `initialization_mode` is invalid.")
+        if isinstance(metadata["top_k"], bool) or not isinstance(metadata["top_k"], Integral) or metadata["top_k"] < 1:
+            raise ValueError("Checkpoint `top_k` must be a strictly positive integer.")
+        if (
+            isinstance(metadata["hidden_size"], bool)
+            or not isinstance(metadata["hidden_size"], Integral)
+            or metadata["hidden_size"] < 1
+        ):
+            raise ValueError("Checkpoint `hidden_size` must be a strictly positive integer.")
+        if metadata["task"] not in {"language_model", "sequence_classification"}:
+            raise ValueError("Checkpoint `task` is invalid.")
+        if not isinstance(metadata["model_class"], str):
+            raise ValueError("Checkpoint `model_class` must be a string.")
+        if metadata["model_name_or_path"] is not None and not isinstance(metadata["model_name_or_path"], str):
+            raise ValueError("Checkpoint `model_name_or_path` must be a string or `None`.")
+        if set(translator) != {"weight", "bias"} or not all(
+            isinstance(tensor, torch.Tensor) for tensor in translator.values()
+        ):
+            raise ValueError("The checkpoint translator must contain tensor `weight` and `bias` entries.")
+        return dict(metadata), dict(translator)
 
     @classmethod
     def from_checkpoint(
@@ -362,42 +429,47 @@ class TunedLens(BaseLens):
         path: str | Path,
         device: torch.device | str | None = None,
     ) -> TunedLens:
-        """
-        Load a tuned lens from a checkpoint.
+        """Restore a tuned lens from a versioned tensor-only checkpoint.
 
         Args:
-            model_with_split_points (ModelWithSplitPoints): Wrapped model used for inference.
-            path (str | pathlib.Path): Checkpoint path.
-            device (torch.device | str | None): Device used by the learned translators.
+            model_with_split_points (ModelWithSplitPoints): Wrapped model used for restored inference.
+            path (str | Path): Checkpoint path.
+            device (torch.device | str | None): Device used by the restored translator.
 
         Returns:
-            TunedLens: Restored tuned lens.
+            TunedLens: The restored tuned lens.
+
+        Raises:
+            ValueError: If the checkpoint schema or model contract is incompatible.
         """
-        checkpoint = torch.load(Path(path), map_location="cpu")
-        metadata = checkpoint["metadata"]
-        split_point = metadata.get("split_point")
-        if split_point is None:
-            saved_split_points = metadata["split_points"]
-            split_point = saved_split_points[0] if isinstance(saved_split_points, list) else saved_split_points
+        checkpoint = torch.load(Path(path), map_location="cpu", weights_only=True)
+        metadata, translator_state = cls._validate_checkpoint(checkpoint)
+
+        if metadata["split_point"] != model_with_split_points.split_point:
+            raise ValueError(
+                "The checkpoint split point does not match ModelWithSplitPoints: "
+                f"{metadata['split_point']} != {model_with_split_points.split_point}."
+            )
+        if metadata["model_class"] != type(model_with_split_points._model).__name__:
+            raise ValueError("The checkpoint was created for a different model class.")
+        current_model_name_or_path = cls._get_model_name_or_path(model_with_split_points._model)
+        if metadata["model_name_or_path"] != current_model_name_or_path:
+            raise ValueError("The checkpoint was created for a different declared model identity.")
+
         lens = cls(
             model_with_split_points=model_with_split_points,
-            split_point=split_point,
             head_name=metadata["head_name"],
             pre_head_name=metadata["pre_head_name"],
             pooling_strategy=metadata["pooling_strategy"],
-            initialization_mode=metadata.get("initialization_mode", "logit_lens"),
+            initialization_mode=metadata["initialization_mode"],
             top_k=metadata["top_k"],
             device=device,
         )
-
-        missing_split_points = [
-            split_point for split_point in lens.translated_split_points if split_point not in checkpoint["translators"]
-        ]
-        if missing_split_points:
-            raise ValueError("Missing translator states for split points: " + ", ".join(missing_split_points) + ".")
-
-        for split_point in lens.translated_split_points:
-            lens.translators[split_point].load_state_dict(checkpoint["translators"][split_point])
-            lens.translators[split_point].eval()
-
+        if metadata["task"] != lens.task or metadata["hidden_size"] != lens.hidden_size:
+            raise ValueError("The checkpoint task or hidden size is incompatible with the wrapped model.")
+        try:
+            lens.translator.load_state_dict(translator_state, strict=True)
+        except RuntimeError as error:
+            raise ValueError("The checkpoint translator state is incompatible with this split point.") from error
+        lens.translator.eval()
         return lens

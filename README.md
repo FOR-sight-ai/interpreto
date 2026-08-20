@@ -27,10 +27,11 @@ Checkout the tutorials to get started:
 - [Attributions walkthrough](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_walkthrough.ipynb) (both classification and generation)
 - [Classification concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/classification_concept_tutorial.ipynb)
 - [Generation concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/generation_concept_tutorial.ipynb)
+- [Logit Lens and Tuned Lens](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/lens_notebook.ipynb)
 
 ## 📦 What's Included
 
-Interpreto 🪄 provides a modular framework encompassing Attribution Methods, Concept-Based Methods, and Evaluation Metrics.
+Interpreto 🪄 provides a modular framework encompassing Attribution Methods, Lens Methods, Concept-Based Methods, and Evaluation Metrics.
 
 ### 🔥 Attribution Methods
 
@@ -54,6 +55,13 @@ They all work seamlessly for both classification (`...ForSequenceClassification`
 - [`SmoothGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/smooth_grad/) — [Smilkov et al., 2017](https://arxiv.org/abs/1706.03825)
 - [`SquareGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/square_grad/) — [Hooker et al., 2019](https://arxiv.org/abs/1806.10758)
 - [`VarGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/var_grad/) — [Richter et al., 2020](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
+
+### 🔍 Lens Methods
+
+- [`LogitLens`](https://for-sight-ai.github.io/interpreto/api/lens/methods/logit_lens/) — [nostalgebraist, 2020](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens)
+- [`TunedLens`](https://for-sight-ai.github.io/interpreto/api/lens/methods/tuned_lens/) — [Belrose et al., 2023](https://arxiv.org/abs/2303.08112)
+
+Both methods use `ModelWithSplitPoints` to select the representation being decoded.
 
 ### 💡 Concept-Based Methods or Mechanistic Interpretability
 
