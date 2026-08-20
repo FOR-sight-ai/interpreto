@@ -26,28 +26,16 @@ def _load_js_files() -> str:
     return js_content
 
 
-def _build_html_header(custom_css: str) -> str:
+def _build_html_header(custom_css: str, *, include_js: bool = True) -> str:
     """Build the HTML header with JS and CSS content."""
-    # Load the JS and CSS files
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    js_content = _load_js_files()
-
     css_file_path = os.path.join(current_dir, "css", "visualization.css")
     with open(css_file_path, encoding="utf-8") as file:
         css = file.read()
 
     style_block = css if not custom_css else f"{css}\n{custom_css}"
-    return (
-        "<head>"
-        "<style>\n"
-        f"{style_block}\n"
-        "</style>"
-        "<script>\n"
-        f"{js_content}\n"
-        "</script>"
-        "</head>"
-        '<body class="body-visualization">'
-    )
+    script_block = f"<script>\n{_load_js_files()}\n</script>" if include_js else ""
+    return f'<head><style>\n{style_block}\n</style>{script_block}</head><body class="body-visualization">'
 
 
 def _generate_distinct_colors(n: int) -> list[str]:
