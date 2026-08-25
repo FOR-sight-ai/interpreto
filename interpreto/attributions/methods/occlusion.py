@@ -29,19 +29,14 @@ Occlusion attribution method
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 import torch
 from transformers import PreTrainedTokenizerBase
+from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.aggregations.base import OcclusionAggregator
-from interpreto.attributions.base import (
-    AttributionExplainer,
-    MultitaskExplainerMixin,
-    setup_token_ids,
-)
-from interpreto.attributions.perturbations import OcclusionPerturbator
-from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
+from interpreto.attributions.base_merged import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.attributions.perturbations.occlusion_perturbation_merged import OcclusionPerturbator
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
@@ -60,7 +55,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
     Examples:
         >>> from interpreto import TextGranularity, Occlusion
         >>> from interpreto.attributions import InferenceModes
-        >>> method = Occlusion(model, tokenizer, batch_size=4,
+        >>> method = Occlusion(model, processor, batch_size=4,
         >>>                    inference_mode=InferenceModes.SOFTMAX,
         >>>                    granularity=TextGranularity.WORD)
         >>> explanations = method(text)
@@ -68,49 +63,67 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: Any,
-        tokenizer: PreTrainedTokenizerBase,
-        batch_size: int = 4,
-        granularity: TextGranularity = TextGranularity.WORD,
-        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        model: PreTrainedModel,
+        processor: PreTrainedTokenizerBase | BaseImageProcessor,
+        granularity: Granularity | None = None,
+        combination_strategy: GranularityCombinationStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
+        batch_size: int = 4,
+        replace_value: int | float | None = None,
     ):
         """
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain
-            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
-            batch_size (int): batch size for the attribution method
-            granularity (TextGranularity, optional): The level of granularity for the explanation.
-                Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to TextGranularity.WORD.
-                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
-            granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
-                Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
-                Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
-            inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
-                It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
-            device (torch.device): device on which the attribution method will be run
+            model (PreTrainedModel): model to explain.
+            processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
+                processor associated with the model.
+            granularity (Granularity | None): the level of granularity for the explanation.
+                Defaults to the modality's `default_tensor_granularity`: `WORD` for text,
+                `PIXEL` for images.
+            combination_strategy (GranularityCombinationStrategy | None): how per-token or
+                per-pixel gradients are combined into granularity scores. Defaults to the
+                modality's `default_combination_strategy`.
+            inference_mode (Callable[[torch.Tensor], torch.Tensor]): the mode used for inference.
+                It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to
+                choose the appropriate mode.
+            device (torch.device): device on which the attribution method will be run.
+            batch_size (int): batch size for the attribution method.
+            replace_value: the id of the token used for masking in text methods, the value of the pixel
+            used for masking in image methods
         """
-        replace_token_id = setup_token_ids(model, tokenizer)
+        if granularity is None:
+            granularity = self.default_mask_granularity
+        if combination_strategy is None:
+            combination_strategy = self.default_combination_strategy
 
-        perturbator = OcclusionPerturbator(
-            tokenizer=tokenizer,
+        replace_value = self._setup_replace_value(model, processor, replace_value)
+        # create the perturbator dynamically by inheriting from both the method and modality specific classes
+        perturbator_class = type(
+            "ModalitySpecific" + self.__class__.__name__,  # name
+            (
+                OcclusionPerturbator,
+                self.base_mask_perturbator_class,
+            ),  # parent classes
+            {"__slots__": ()},
+        )
+        # n_perturbations is no longer passed: OcclusionPerturbator.__init__ pins it to -1.
+        perturbator = perturbator_class(
+            processor=processor,
             granularity=granularity,
-            replace_token_id=replace_token_id,
+            replace_value=replace_value,
         )
 
         super().__init__(
             model=model,
-            tokenizer=tokenizer,
+            processor=processor,
             batch_size=batch_size,
-            device=device,
             perturbator=perturbator,
             aggregator=OcclusionAggregator(),
+            device=device,
             granularity=granularity,
-            granularity_aggregation_strategy=granularity_aggregation_strategy,
+            combination_strategy=combination_strategy,
             inference_mode=inference_mode,
             use_gradient=False,
         )

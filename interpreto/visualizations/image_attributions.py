@@ -40,7 +40,7 @@ import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
-from interpreto.attributions.base import ImageAttributionOutput
+from interpreto.attributions.base_merged import ImageAttributionOutput
 
 
 def _denormalize(attribution_output: ImageAttributionOutput, range_tolerance: float = 1e-3) -> np.ndarray:

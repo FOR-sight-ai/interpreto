@@ -32,7 +32,7 @@ from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 from transformers.image_processing_utils import BatchFeature
 
-from interpreto.attributions.base import ImageClassificationAttributionExplainer
+from interpreto.attributions.base_merged import ImageClassificationAttributionExplainer
 from interpreto.commons.granularity import ImageGranularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -35,10 +35,12 @@ from torch import Tensor
 from transformers import PreTrainedTokenizerBase
 
 from interpreto.attributions.perturbations.base import (
-    ImageGranularity,
     ImageMaskPerturbator,
-    TextGranularity,
     TextMaskPerturbator,
+)
+from interpreto.commons.granularity import (
+    ImageGranularity,
+    TextGranularity,
 )
 
 

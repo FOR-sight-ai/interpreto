@@ -28,95 +28,43 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.base import ImageTensorPerturbator, TextTensorPerturbator
+from .base_merged import TensorPerturbator
 
 
-class GaussianNoisePerturbator(TextTensorPerturbator):
+class GaussianNoisePerturbator(TensorPerturbator):
     """
-    Perturbator adding gaussian noise to the input tensor
+    Modality-agnostic Gaussian noise Perturbator.
+
+    It is combined with a modality base at runtime by the explainer, which is what decides
+    whether the tensor is `(1, l, d)` embeddings or `(1, 3, H, W)` pixel values.
     """
 
-    __slots__ = ("n_perturbations", "std")
+    __slots__ = ("std",)
 
-    def __init__(
-        self,
-        inputs_embedder: torch.nn.Module,
-        n_perturbations: int = 10,
-        *,
-        std: float = 0.1,
-    ) -> None:
-        """Instantiate the perturbator.
-
-        Args:
-            inputs_embedder (torch.nn.Module): Embedder used to obtain input embeddings from input IDs.
-            n_perturbations (int): Number of noisy samples to generate.
-            std (float): Standard deviation of the Gaussian noise.
+    def __init__(self, *, std: float = 0.1, **kwargs):
         """
-
-        super().__init__(inputs_embedder)
-        self.n_perturbations = n_perturbations
+        Args:
+            std: standard deviation of the Gaussian noise, in the units of the tensor being
+                perturbed — embedding units on the text side, normalized pixel units on the
+                image side.
+        """
+        super().__init__(**kwargs)
         self.std = std
 
     @jaxtyped(typechecker=beartype)
-    def perturb_tensor(self, inputs_embeds: Float[torch.Tensor, "1 l d"]) -> tuple[Float[torch.Tensor, "p l d"], None]:
+    def perturb_tensor(self, inputs: Float[torch.Tensor, "1 *rest"]) -> tuple[Float[torch.Tensor, "p *rest"], None]:
         """
-        Apply Gaussian noise perturbations on ``inputs_embeds``.
+        Add independent Gaussian noise to every entry of `inputs`.
 
         Args:
-            inputs_embeds (torch.Tensor):
-                Embeddings of the input tokens.
-                Shape: (1, l, d)
+            inputs: shape `(1, l, d)` for text embeddings, `(1, 3, H, W)` for pixel values.
+
         Returns:
-            perturbed_embeds (torch.Tensor):
-                Perturbed embeddings.
-                Shape: (p, l, d)
-            mask (None):
-                placeholder
+            perturbed: shape `(p, *rest)`, one independently noised copy per perturbation.
+            mask: None — granularity units are recovered from the gradients afterwards, so there
+                is no mask to report.
         """
-        # repeat
-        perturbed_embeds: Float[torch.Tensor, "p l d"] = inputs_embeds.repeat(self.n_perturbations, 1, 1)
-
-        # add noise
-        perturbed_embeds += torch.randn_like(perturbed_embeds) * self.std
-
-        return perturbed_embeds, None
-
-
-class GaussianNoiseImagePerturbator(ImageTensorPerturbator):
-    """
-    Image-side analog of `GaussianNoisePerturbator`.
-
-    Adds independent Gaussian noise to every (channel, row, col) entry of
-    `pixel_values`. Used by SmoothGrad-style methods on ViT.
-    """
-
-    __slots__ = ("n_perturbations", "std")
-
-    def __init__(
-        self,
-        n_perturbations: int = 10,
-        *,
-        std: float = 0.1,
-    ) -> None:
-        """
-        Args:
-            n_perturbations: Number of noisy samples to generate.
-            std: Standard deviation of the Gaussian noise applied per pixel-channel.
-        """
-        self.n_perturbations = n_perturbations
-        self.std = std
-
-    @jaxtyped(typechecker=beartype)
-    def perturb_tensor(
-        self, pixel_values: Float[torch.Tensor, "1 3 H W"]
-    ) -> tuple[Float[torch.Tensor, "p 3 H W"], None]:
-        """
-        Args:
-            pixel_values: Shape (1, 3, H, W).
-        Returns:
-            perturbed_embeds: Shape (p, 3, H, W), one independently noised copy per perturbation.
-            mask: None — granularity is applied post-hoc by the aggregator.
-        """
-        perturbed_embeds: Float[torch.Tensor, "p 3 H W"] = pixel_values.repeat(self.n_perturbations, 1, 1, 1)
-        perturbed_embeds += torch.randn_like(perturbed_embeds) * self.std
-        return perturbed_embeds, None
+        # Repeat along the perturbation axis only, whatever the rank of the trailing dimensions.
+        perturbed: Float[torch.Tensor, "p *rest"] = inputs.repeat(self.n_perturbations, *(1,) * (inputs.ndim - 1))
+        perturbed += torch.randn_like(perturbed) * self.std
+        return perturbed, None
