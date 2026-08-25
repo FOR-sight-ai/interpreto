@@ -32,6 +32,7 @@ import itertools
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, MutableMapping, Sequence
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -39,12 +40,11 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from PIL.Image import Image as PILImage
-from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerBase
+from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizer
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.base import ModelTask
-from interpreto.attributions.perturbations.base_merged import (
+from interpreto.attributions.perturbations.base import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
     MaskPerturbator,
@@ -54,7 +54,6 @@ from interpreto.attributions.perturbations.base_merged import (
     TextTensorPerturbator,
 )
 from interpreto.commons import (
-    Granularity,
     GranularityAggregationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
@@ -69,7 +68,7 @@ from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs
 
 
 def setup_token_ids(
-    model: PreTrainedModel, tokenizer: PreTrainedTokenizer, require_mask_token: bool = True
+    model: PreTrainedModel, tokenizer: PreTrainedTokenizer | BaseImageProcessor, require_mask_token: bool = True
 ) -> int | None:
     """
     Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
@@ -77,8 +76,8 @@ def setup_token_ids(
     Returns the mask token ID.
     """
 
-    if not isinstance(tokenizer, PreTrainedTokenizerBase):
-        raise TypeError(f"setup_token_ids expects a PreTrainedTokenizerBase, got {type(tokenizer)}")
+    if isinstance(tokenizer, BaseImageProcessor):
+        return None
 
     resize_token_embeddings = False
 
@@ -154,10 +153,13 @@ def setup_token_ids(
     return int(replace_token_id)
 
 
-# TODO: move the ModelTask definition back into this file once the merge is validated and
-# base.py is deleted. It is imported from base.py for now so that the merged and legacy
-# outputs carry the *same* enum members: Enum equality is identity-based, so a duplicate
-# definition here would make every merged/legacy model_task comparison fail spuriously.
+class ModelTask(Enum):
+    """
+    Enum to represent the model task type.
+    """
+
+    CLASSIFICATION = "classification"
+    GENERATION = "generation"
 
 
 def clone_tensor_mapping(tm: TensorMapping, detach: bool = False) -> TensorMapping:
@@ -251,20 +253,17 @@ class AttributionExplainer(ABC):
     base_tensor_perturbator_class: type[TensorPerturbator]
     base_mask_perturbator_class: type[MaskPerturbator]
     _model_task: ModelTask
-    default_mask_granularity: Granularity
-    default_tensor_granularity: Granularity
-    default_combination_strategy: GranularityCombinationStrategy
 
     def __init__(
         self,
         model: PreTrainedModel,
-        processor: PreTrainedTokenizer,
+        tokenizer: PreTrainedTokenizer,
         batch_size: int = 4,
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
         granularity: TextGranularity = TextGranularity.DEFAULT,
-        combination_strategy: GranularityCombinationStrategy = GranularityAggregationStrategy.MEAN,
+        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,  # TODO: add to all classes
         use_gradient: bool = False,
         input_x_gradient: bool = True,
@@ -274,7 +273,7 @@ class AttributionExplainer(ABC):
 
         Args:
             model (PreTrainedModel): The model to be explained.
-            processor (PreTrainedTokenizer): The tokenizer associated with the model.
+            tokenizer (PreTrainedTokenizer): The tokenizer associated with the model.
             batch_size (int): The batch size used for model inference.
             perturbator (Perturbator, optional): Instance used to generate input perturbations.
                 If None, the perturbator returns only the original input.
@@ -286,12 +285,10 @@ class AttributionExplainer(ABC):
                 Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
                 Defaults to TextGranularity.DEFAULT (ALL_TOKENS)
                 To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
-            combination_strategy (GranularityCombinationStrategy, optional): The method used to aggregate scores at the specified granularity,
+            granularity_aggregation_strategy (GranularityAggregationStrategy, optional): The method used to aggregate scores at the specified granularity,
                 for gradient-based methods. Thus, it is ignored for perturbation based methods.
                 Defaults to GranularityAggregationStrategy.MEAN.
                 Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
-                Named generically because the image path passes a `GranularityResizeStrategy`
-                through the same parameter; both are `GranularityCombinationStrategy` members.
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             use_gradient (bool, optional): If True, computes gradients instead of inference for targeted explanations.
@@ -299,8 +296,8 @@ class AttributionExplainer(ABC):
                 with their gradients before reducing them. Defaults to ``True``.
         """
         # set pad and mask tokens
-        setup_token_ids(model, processor, require_mask_token=False)
-        self.tokenizer = processor
+        setup_token_ids(model, tokenizer, require_mask_token=False)
+        self.tokenizer = tokenizer
 
         self.inference_wrapper = self._associated_inference_wrapper(
             model,
@@ -313,80 +310,7 @@ class AttributionExplainer(ABC):
         self.perturbator = perturbator
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
-        self.granularity_aggregation_strategy = combination_strategy
-
-    def _setup_replace_value(
-        self,
-        model: PreTrainedModel,
-        processor: PreTrainedTokenizer | BaseImageProcessor,
-        replace_value: int | float | None = None,
-    ) -> int | float:
-        """
-        Returns the value written into masked positions. Text modalities call `setup_token_ids`,
-        image modalities return either the given value or 0.0.
-
-        Args:
-            model (PreTrainedModel): the model being explained. Mutated by `setup_token_ids`
-                when the vocabulary has to grow.
-            processor (PreTrainedTokenizer | BaseImageProcessor): the model's tokenizer.
-            replace_value (int | float | None): must be None.
-
-        Returns:
-            int | float: the replacement token id.
-
-        Raises:
-            ValueError: if `replace_value` is supplied.
-        """
-        if replace_value is not None:
-            raise ValueError(
-                "replace_value is not supported for text models. The masked-token replacement is "
-                "derived from the tokenizer, which guarantees the id exists in the vocabulary "
-                "(adding a '[REPLACE]' token and resizing the model embeddings if needed). "
-                "Remove the argument to use that derived value."
-            )
-        return setup_token_ids(model, processor)  # type: ignore[return-value]
-
-    def _image_only_kwargs(
-        self,
-        *,
-        preprocess: bool = True,
-        image_mean: Sequence[float] | float | torch.Tensor | None = None,
-        image_std: Sequence[float] | float | torch.Tensor | None = None,
-    ) -> dict[str, Any]:
-        """
-        Pack the image-only constructor arguments for `super().__init__`.
-
-        Text explainers take none of them, so this returns an empty dict.
-        `ImageClassificationAttributionExplainer` overrides it.
-
-        Raises:
-            ValueError: if any of the three is set to something other than its default.
-        """
-        # TODO evaluate how brittle this exception is since it relies on the fact that the
-        # current default values will stay this way. If the default values are changed, this
-        # raises.
-        if not preprocess or image_mean is not None or image_std is not None:
-            raise ValueError(
-                "preprocessing attributes are useful only for Vision models. preprocess should be "
-                "True, image_mean None and image_std None for other models. Currently you have "
-                f"preprocess = {preprocess}, image_mean = {image_mean}, image_std = {image_std}."
-            )
-        return {}
-
-    def _text_only_kwargs(self, model: PreTrainedModel) -> dict[str, Any]:
-        """
-        Pack the text-only constructor arguments for a `TensorPerturbator`.
-
-        Text modalities perturb the token embeddings, so they need the module that produces them.
-        `ImageClassificationAttributionExplainer` overrides it.
-
-        Args:
-            model (PreTrainedModel): the model being explained.
-
-        Returns:
-            dict[str, Any]: the `inputs_embedder` keyword.
-        """
-        return {"inputs_embedder": model.get_input_embeddings()}
+        self.granularity_aggregation_strategy = granularity_aggregation_strategy
 
     @property
     def device(self) -> torch.device:
@@ -652,9 +576,6 @@ class TextClassificationAttributionExplainer(AttributionExplainer):
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
     _model_task = ModelTask.CLASSIFICATION
-    default_mask_granularity = TextGranularity.WORD
-    default_tensor_granularity = TextGranularity.WORD
-    default_combination_strategy = GranularityAggregationStrategy.MEAN
 
     def process_targets(
         self, targets: ClassificationTarget, expected_length: int | None = None
@@ -787,9 +708,6 @@ class TextGenerationAttributionExplainer(AttributionExplainer):
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
     _model_task = ModelTask.GENERATION
-    default_mask_granularity = TextGranularity.WORD
-    default_tensor_granularity = TextGranularity.WORD
-    default_combination_strategy = GranularityAggregationStrategy.MEAN
 
     def normalize_target_ids_with_leading_space(self, target: torch.Tensor) -> torch.Tensor:
         """Ensure target text starts with a space and return retokenized target ids."""
@@ -1020,21 +938,18 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
     _associated_inference_wrapper = ImageClassificationInferenceWrapper
     base_tensor_perturbator_class = ImageTensorPerturbator
     base_mask_perturbator_class = ImageMaskPerturbator
-    default_mask_granularity = ImageGranularity.PATCH
-    default_tensor_granularity = ImageGranularity.PIXEL
-    default_combination_strategy = GranularityResizeStrategy.BILINEAR
     _model_task = ModelTask.CLASSIFICATION
 
     def __init__(
         self,
         model: PreTrainedModel,
-        processor: BaseImageProcessor,
+        image_processor: BaseImageProcessor,
         granularity: ImageGranularity,
         batch_size: int = 4,
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
-        combination_strategy: GranularityCombinationStrategy = GranularityResizeStrategy.BILINEAR,
+        resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         use_gradient: bool = False,
         input_x_gradient: bool = True,
@@ -1043,9 +958,8 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         image_std: Sequence[float] | float | torch.Tensor | None = None,
     ) -> None:
         """
-        Args mirror `AttributionExplainer.__init__`, with `granularity` typed as
-        `ImageGranularity` and `combination_strategy` carrying a `GranularityResizeStrategy`
-        rather than a `GranularityAggregationStrategy`. See parent for shared semantics.
+        Args mirror `AttributionExplainer.__init__` with `tokenizer` -> `image_processor`
+        and `granularity` typed as `ImageGranularity`. See parent for shared semantics.
 
         Additional image-only args:
             preprocess (bool): Whether interpreto runs `image_processor` on the input.
@@ -1090,7 +1004,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 "pixels is intractable. Use PATCH."
             )
 
-        self.image_processor = processor
+        self.image_processor = image_processor
         self.preprocess = preprocess
         self.image_mean, self.image_std = self._resolve_normalization_stats(image_mean, image_std)
 
@@ -1105,7 +1019,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         self.perturbator = perturbator or ImageTensorPerturbator()
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
-        self.resize_strategy = combination_strategy
+        self.resize_strategy = resize_strategy
         # patch_size is sourced from the model config; required by ImageGranularity.PATCH
         self.patch_size = int(getattr(model.config, "patch_size", 16))
         # The explainer is the single source of truth for patch_size (it owns model.config).
@@ -1119,54 +1033,6 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         if isinstance(self.perturbator, ImageMaskPerturbator):
             self.perturbator.patch_size = self.patch_size
             self.perturbator.granularity_combination_strategy = self.resize_strategy
-
-    def _setup_replace_value(
-        self,
-        model: PreTrainedModel,
-        processor: PreTrainedTokenizer | BaseImageProcessor,
-        replace_value: int | float | None = None,
-    ) -> int | float:
-        """
-        Returns the pixel baseline written into masked positions.
-
-        Args:
-            model (PreTrainedModel): unused, kept for signature compatibility.
-            processor (BaseImageProcessor): unused, kept for signature compatibility.
-            replace_value (int | float | None): user-supplied baseline, or None for the default.
-
-        Returns:
-            int | float: `replace_value`, or 0.0 — the per-channel mean after standard ViT
-                normalization, i.e. a neutral grey.
-        """
-        if replace_value is not None:
-            return replace_value
-        return 0.0
-
-    def _image_only_kwargs(
-        self,
-        *,
-        preprocess: bool = True,
-        image_mean: Sequence[float] | float | torch.Tensor | None = None,
-        image_std: Sequence[float] | float | torch.Tensor | None = None,
-    ) -> dict[str, Any]:
-        """
-        Pack the image-only constructor arguments for `super().__init__`.
-
-        Their consistency is checked by `_resolve_normalization_stats`, not here.
-        """
-        return {"preprocess": preprocess, "image_mean": image_mean, "image_std": image_std}
-
-    def _text_only_kwargs(self, model: PreTrainedModel) -> dict[str, Any]:
-        """
-        Image side so we need no inputs_embedder.
-
-        Args:
-            model (PreTrainedModel): unused, kept for signature compatibility.
-
-        Returns:
-            dict[str, Any]: an empty dict.
-        """
-        return {}
 
     def _resolve_normalization_stats(
         self,
@@ -1535,7 +1401,7 @@ class MultitaskExplainerMixin(AttributionExplainer):
             return super().__new__(cls)  # type: ignore
         if model.__class__.__name__.endswith("ForSequenceClassification"):
             t = FactoryGeneratedMeta(
-                "TextClassification" + cls.__name__, (cls, TextClassificationAttributionExplainer), {}
+                "Classification" + cls.__name__, (cls, TextClassificationAttributionExplainer), {}
             )
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
@@ -1543,7 +1409,7 @@ class MultitaskExplainerMixin(AttributionExplainer):
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         if model.__class__.__name__.endswith("ForImageClassification"):
             t = FactoryGeneratedMeta(
-                "ImageClassification" + cls.__name__, (cls, ImageClassificationAttributionExplainer), {}
+                "Classification" + cls.__name__, (cls, ImageClassificationAttributionExplainer), {}
             )
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         raise NotImplementedError(

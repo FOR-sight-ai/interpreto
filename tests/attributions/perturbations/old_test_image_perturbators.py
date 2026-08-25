@@ -31,18 +31,22 @@ from PIL import Image
 from transformers import AutoImageProcessor
 from transformers.image_processing_utils import BatchFeature
 
-from interpreto.attributions.perturbations.base_merged import (
+from interpreto.attributions.perturbations import (
+    GaussianNoiseImagePerturbator,
+    GradientShapImagePerturbator,
+    LinearInterpolationImagePerturbator,
+    OcclusionImagePerturbator,
+    RandomMaskedImagePerturbator,
+    ShapImagePerturbator,
+    SobolImagePerturbator,
+)
+from interpreto.attributions.perturbations.base import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
-from interpreto.attributions.perturbations.gaussian_noise_perturbation_merged import GaussianNoisePerturbator
-from interpreto.attributions.perturbations.occlusion_perturbation_merged import (
-    OcclusionPerturbator,
-)
-
-# from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
+from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 
 IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
@@ -54,26 +58,17 @@ SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
 
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
-
-def _image_variant(method_class: type, modality_base: type) -> type:
-    """
-    Combine a method perturbator with an image modality base, as the explainer does at
-    construction time. The method class alone leaves `perturb` abstract.
-    """
-    return type("Image" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
-
-
 image_embedding_perturbators = [
-    _image_variant(GaussianNoisePerturbator, ImageTensorPerturbator),
-    #     LinearInterpolationImagePerturbator,
-    #     GradientShapImagePerturbator,
+    GaussianNoiseImagePerturbator,
+    LinearInterpolationImagePerturbator,
+    GradientShapImagePerturbator,
 ]
 
 image_mask_perturbators = [
-    _image_variant(OcclusionPerturbator, ImageMaskPerturbator),
-    # RandomMaskedImagePerturbator,
-    # ShapImagePerturbator,
-    # SobolImagePerturbator,
+    OcclusionImagePerturbator,
+    RandomMaskedImagePerturbator,
+    ShapImagePerturbator,
+    SobolImagePerturbator,
 ]
 
 
@@ -163,7 +158,7 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if isinstance(perturbator, OcclusionPerturbator):
+        if isinstance(perturbator, OcclusionImagePerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
             k = perturbator.n_token_perturbations
@@ -267,7 +262,7 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if isinstance(perturbator, OcclusionPerturbator):
+        if isinstance(perturbator, OcclusionImagePerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
             k = perturbator.n_token_perturbations
@@ -288,73 +283,96 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
         )
 
 
-# def test_linear_interpolation_image_perturbation_adjust_baseline():
-#     inputs = torch.randn(1, 3, 8, 8)
+def test_linear_interpolation_image_perturbation_adjust_baseline():
+    inputs = torch.randn(1, 3, 8, 8)
 
-#     # Test with None baseline
-#     baseline = LinearInterpolationImagePerturbator.adjust_baseline(None, inputs)
-#     assert torch.all(baseline.abs() < 1e-5)
-#     assert baseline.shape == inputs.shape[1:]
+    # Test with None baseline
+    baseline = LinearInterpolationImagePerturbator.adjust_baseline(None, inputs)
+    assert torch.all(baseline.abs() < 1e-5), (
+        "adjust_baseline with baseline=None must return a baseline near zero (the 1e-6 nudge used to avoid NaN gradients)"
+    )
+    assert baseline.shape == inputs.shape[1:], (
+        f"adjust_baseline must return a baseline shaped like inputs.shape[1:]. Expected {tuple(inputs.shape[1:])}, "
+        f"got {tuple(baseline.shape)}"
+    )
 
-#     # Test with float baseline
-#     baseline = LinearInterpolationImagePerturbator.adjust_baseline(0.5, inputs)
-#     assert torch.all(baseline == 0.5)
-#     assert baseline.shape == inputs.shape[1:]
+    # Test with float baseline
+    baseline = LinearInterpolationImagePerturbator.adjust_baseline(0.5, inputs)
+    assert torch.all(baseline == 0.5), (
+        "adjust_baseline with a single float as input must return a tensor filled with only this float's value"
+    )
+    assert baseline.shape == inputs.shape[1:], (
+        f"adjust_baseline must return a baseline shaped like inputs.shape[1:]. Expected {tuple(inputs.shape[1:])}, "
+        f"got {tuple(baseline.shape)}"
+    )
 
-#     # Test with tensor baseline
-#     baseline_tensor = torch.randn(3, 8, 8)
-#     baseline = LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
-#     assert torch.all(baseline == baseline_tensor)
-#     assert baseline.shape == inputs.shape[1:]
-
-
-# def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
-#     inputs = torch.randn(1, 3, 8, 8)
-
-#     # Test with invalid baseline type
-#     with pytest.raises(TypeError, match="Type-check error"):
-#         LinearInterpolationImagePerturbator.adjust_baseline("invalid", inputs)  # type: ignore
-
-#     # Test with mismatched tensor shape
-#     baseline_tensor = torch.randn(2, 8, 8)
-#     with pytest.raises(ValueError, match="does not match expected shape"):
-#         LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
-
-#     # Test with mismatched tensor dtype
-#     baseline_tensor = torch.randn(3, 8, 8, dtype=torch.float64)
-#     with pytest.raises(ValueError, match="does not match expected dtype"):
-#         LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
+    # Test with tensor baseline
+    baseline_tensor = torch.randn(3, 8, 8)
+    baseline = LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
+    assert torch.all(baseline == baseline_tensor), (
+        "adjust_baseline with a tensor baseline already shaped like inputs.shape[1:] must return it unchanged"
+    )
+    assert baseline.shape == inputs.shape[1:], (
+        f"adjust_baseline must return a baseline shaped like inputs.shape[1:]. Expected {tuple(inputs.shape[1:])}, "
+        f"got {tuple(baseline.shape)}"
+    )
 
 
-# @pytest.mark.parametrize(
-#     "sampler",
-#     [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
-# )
-# def test_image_sobol_masks(sampler):
-#     k = 10
-#     perturbator = SobolImagePerturbator(
-#         n_token_perturbations=k,
-#         sampler=sampler,
-#     )
+def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
+    inputs = torch.randn(1, 3, 8, 8)
 
-#     for l in range(2, 20, 3):
-#         mask = perturbator.get_mask(l)
-#         assert mask.shape == ((l + 2) * k, l)
-#         A = mask[:k]
-#         B = mask[k : 2 * k]
-#         C = mask[2 * k :].view(l, k, l)
+    # Test with invalid baseline type
+    with pytest.raises(TypeError, match="Type-check error"):
+        LinearInterpolationImagePerturbator.adjust_baseline("invalid", inputs)  # type: ignore
 
-#         # verify token-wise mask compared to the initial mask
-#         for i in range(l):
-#             assert torch.all(torch.isclose(C[i, :, i], B[:, i], atol=1e-5))
-#             if i != 0:
-#                 assert torch.all(torch.isclose(C[i, :, :i], A[:, :i], atol=1e-5))
-#             if i != l - 1:
-#                 assert torch.all(torch.isclose(C[i, :, i + 1 :], A[:, i + 1 :], atol=1e-5))
+    # Test with mismatched tensor shape
+    baseline_tensor = torch.randn(2, 8, 8)
+    with pytest.raises(ValueError, match="does not match expected shape"):
+        LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
+
+    # Test with mismatched tensor dtype
+    baseline_tensor = torch.randn(3, 8, 8, dtype=torch.float64)
+    with pytest.raises(ValueError, match="does not match expected dtype"):
+        LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
+
+
+@pytest.mark.parametrize(
+    "sampler",
+    [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
+)
+def test_image_sobol_masks(sampler):
+    k = 10
+    perturbator = SobolImagePerturbator(
+        n_token_perturbations=k,
+        sampler=sampler,
+    )
+
+    for l in range(2, 20, 3):
+        mask = perturbator.get_mask(l)
+        assert mask.shape == ((l + 2) * k, l), (
+            f"Sobol mask must have shape ((l + 2) * k, l). Expected {((l + 2) * k, l)}, got {tuple(mask.shape)}"
+        )
+        A = mask[:k]
+        B = mask[k : 2 * k]
+        C = mask[2 * k :].view(l, k, l)
+
+        # verify token-wise mask compared to the initial mask
+        for i in range(l):
+            assert torch.all(torch.isclose(C[i, :, i], B[:, i], atol=1e-5)), (
+                "each C_i's i-th column must equal B's i-th column (C_i is A with column i swapped for B's column i)"
+            )
+            if i != 0:
+                assert torch.all(torch.isclose(C[i, :, :i], A[:, :i], atol=1e-5)), (
+                    "each C_i's columns before i must equal A's corresponding columns (only column i is swapped for B)"
+                )
+            if i != l - 1:
+                assert torch.all(torch.isclose(C[i, :, i + 1 :], A[:, i + 1 :], atol=1e-5)), (
+                    "each C_i's columns after i must equal A's corresponding columns (only column i is swapped for B)"
+                )
 
 
 def test_image_occlusion_masks():
-    perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)()
+    perturbator = OcclusionImagePerturbator()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)), (
