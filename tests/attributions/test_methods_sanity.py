@@ -34,7 +34,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, Batc
 from transformers.modeling_outputs import CausalLMOutput
 
 from interpreto.attributions.methods.occlusion_merge import Occlusion
-from interpreto.attributions.methods.smoothgrad_merged import SmoothGrad
+from interpreto.attributions.methods.smoothgrad import SmoothGrad
 from interpreto.commons.granularity import TextGranularity
 
 MODEL_ID = "bhadresh-savani/distilbert-base-uncased-emotion"

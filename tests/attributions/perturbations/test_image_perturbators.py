@@ -31,14 +31,14 @@ from PIL import Image
 from transformers import AutoImageProcessor
 from transformers.image_processing_utils import BatchFeature
 
-from interpreto.attributions.perturbations.base_merged import (
+from interpreto.attributions.perturbations.base import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
-from interpreto.attributions.perturbations.gaussian_noise_perturbation_merged import GaussianNoisePerturbator
-from interpreto.attributions.perturbations.occlusion_perturbation_merged import (
+from interpreto.attributions.perturbations.gaussian_noise_perturbation import GaussianNoisePerturbator
+from interpreto.attributions.perturbations.occlusion_perturbation import (
     OcclusionPerturbator,
 )
 

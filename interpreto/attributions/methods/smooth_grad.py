@@ -35,8 +35,8 @@ from transformers import PreTrainedModel, PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor
 
 from interpreto.attributions.aggregations import MeanAggregator
-from interpreto.attributions.base_merged import AttributionExplainer, MultitaskExplainerMixin
-from interpreto.attributions.perturbations.gaussian_noise_perturbation_merged import GaussianNoisePerturbator
+from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.attributions.perturbations.gaussian_noise_perturbation import GaussianNoisePerturbator
 from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 

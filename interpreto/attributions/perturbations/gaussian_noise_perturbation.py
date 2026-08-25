@@ -28,7 +28,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
-from .base_merged import TensorPerturbator
+from .base import TensorPerturbator
 
 
 class GaussianNoisePerturbator(TensorPerturbator):

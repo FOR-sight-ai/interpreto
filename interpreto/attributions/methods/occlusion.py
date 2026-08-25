@@ -35,8 +35,8 @@ from transformers import PreTrainedTokenizerBase
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.aggregations.base import OcclusionAggregator
-from interpreto.attributions.base_merged import AttributionExplainer, MultitaskExplainerMixin
-from interpreto.attributions.perturbations.occlusion_perturbation_merged import OcclusionPerturbator
+from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.attributions.perturbations.occlusion_perturbation import OcclusionPerturbator
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 

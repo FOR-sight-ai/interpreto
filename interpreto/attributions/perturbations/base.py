@@ -206,7 +206,7 @@ class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
             granularity_combination_strategy: how a `(p, g)` mask is expanded to input resolution.
             patch_size: side length of a patch on the image side. Accepted here so the user can
                 eventually choose it, but the image explainer currently overwrites it with
-                `model.config.patch_size` at construction — see `base_merged.py:1103-1105`.
+                `model.config.patch_size` at construction — see `base.py:1103-1105`.
         """
         super().__init__(**kwargs)
         self.replace_value = replace_value

@@ -29,7 +29,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 
 # attributions/perturbations/occlusion_perturbation.py
-from .base_merged import MaskPerturbator
+from .base import MaskPerturbator
 
 
 class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make the type checker unhappy

@@ -43,8 +43,7 @@ from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.base import ModelTask
-from interpreto.attributions.perturbations.base_merged import (
+from interpreto.attributions.perturbations.base import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
     MaskPerturbator,
@@ -154,10 +153,13 @@ def setup_token_ids(
     return int(replace_token_id)
 
 
-# TODO: move the ModelTask definition back into this file once the merge is validated and
-# base.py is deleted. It is imported from base.py for now so that the merged and legacy
-# outputs carry the *same* enum members: Enum equality is identity-based, so a duplicate
-# definition here would make every merged/legacy model_task comparison fail spuriously.
+class ModelTask(Enum):
+    """
+    Enum to represent the model task type.
+    """
+
+    CLASSIFICATION = "classification"
+    GENERATION = "generation"
 
 
 def clone_tensor_mapping(tm: TensorMapping, detach: bool = False) -> TensorMapping:
@@ -345,33 +347,6 @@ class AttributionExplainer(ABC):
                 "Remove the argument to use that derived value."
             )
         return setup_token_ids(model, processor)  # type: ignore[return-value]
-
-    def _image_only_kwargs(
-        self,
-        *,
-        preprocess: bool = True,
-        image_mean: Sequence[float] | float | torch.Tensor | None = None,
-        image_std: Sequence[float] | float | torch.Tensor | None = None,
-    ) -> dict[str, Any]:
-        """
-        Pack the image-only constructor arguments for `super().__init__`.
-
-        Text explainers take none of them, so this returns an empty dict.
-        `ImageClassificationAttributionExplainer` overrides it.
-
-        Raises:
-            ValueError: if any of the three is set to something other than its default.
-        """
-        # TODO evaluate how brittle this exception is since it relies on the fact that the
-        # current default values will stay this way. If the default values are changed, this
-        # raises.
-        if not preprocess or image_mean is not None or image_std is not None:
-            raise ValueError(
-                "preprocessing attributes are useful only for Vision models. preprocess should be "
-                "True, image_mean None and image_std None for other models. Currently you have "
-                f"preprocess = {preprocess}, image_mean = {image_mean}, image_std = {image_std}."
-            )
-        return {}
 
     def _text_only_kwargs(self, model: PreTrainedModel) -> dict[str, Any]:
         """

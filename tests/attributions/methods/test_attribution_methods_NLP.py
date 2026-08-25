@@ -36,9 +36,9 @@ from transformers import (
     BatchEncoding,
 )
 
-from interpreto.attributions.base_merged import AttributionOutput
+from interpreto.attributions.base import AttributionOutput
 from interpreto.attributions.methods.occlusion_merge import Occlusion
-from interpreto.attributions.methods.smoothgrad_merged import SmoothGrad
+from interpreto.attributions.methods.smoothgrad import SmoothGrad
 from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
