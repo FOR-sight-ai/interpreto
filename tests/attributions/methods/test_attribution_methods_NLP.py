@@ -38,7 +38,7 @@ from transformers import (
 
 from interpreto.attributions.base import AttributionOutput
 from interpreto.attributions.methods.occlusion import Occlusion
-from interpreto.attributions.methods.smoothgrad import SmoothGrad
+from interpreto.attributions.methods.smooth_grad import SmoothGrad
 from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 from interpreto.typing import IncompatibilityError
