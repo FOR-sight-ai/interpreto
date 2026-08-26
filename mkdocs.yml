@@ -50,6 +50,7 @@ nav:
         - Optimization Methods: api/concepts/concept_spaces/optim.md
         - SAEs (Sparse AutoEncoders): api/concepts/concept_spaces/sae.md
       - Interpretations:
+        - Base Classes & Utilities: api/concepts/interpretations/base.md
         - TopKInputs: api/concepts/interpretations/topk_inputs.md
         - LLM Labels: api/concepts/interpretations/llm_labels.md
         - Concept Attributions: api/concepts/interpretations/concept_attributions.md

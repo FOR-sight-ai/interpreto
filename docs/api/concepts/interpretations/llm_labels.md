@@ -26,9 +26,3 @@ based on the top-k activating inputs. This provides a human-readable summary of 
       inherited_members: true
       members:
         - generate
-
-::: interpreto.concepts.interpretations.extract_ngrams
-    handler: python
-    options:
-      show_root_heading: true
-      show_source: true
