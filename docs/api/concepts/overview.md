@@ -2,7 +2,7 @@
 
 ## Tutorials
 
-- [Concept Explanations Examples](../../notebooks/concept_examples.ipynb)
+- [Concept Explanations Examples](../../notebooks/classification_concept_tutorial.ipynb)
 
 ## Common API
 
@@ -163,7 +163,7 @@ results = explainer.explain(inputs)
 > **Note:** Only perturbation-based methods (Occlusion, Lime, KernelShap, Sobol) are supported.
 > Gradient-based methods are not compatible with the input-to-concept pipeline.
 
-For classification models, use [`SplitterForClassification`](./splitter_for_classification.md)
+For classification models, use [`SplitterForClassification`](./splitters/splitter_for_classification.md)
 instead of `ModelWithSplitPoints` for a simpler setup.
 
 More details in the [Concept Attributions documentation](./interpretations/concept_attributions.md).

@@ -161,7 +161,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         encoding step using the `concept_model` to convert activations to latent concepts.
 
     Attributes:
-        splitter (BaseSplitter): The model to apply the explanation on.
+        splitter (interpreto.concepts.splitters.BaseSplitter): The model to apply the explanation on.
             The split point is determined by the model's `split_point` attribute.
         concept_model (ConceptModelProtocol): The model used to extract concepts from the activations of
             `splitter`. The only assumption for classes inheriting from this class is that
@@ -181,7 +181,7 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """Initializes the concept explainer with a given splitted model.
 
         Args:
-            splitter (BaseSplitter): The model to apply the explanation on.
+            splitter (interpreto.concepts.splitters.BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
             concept_model (ConceptModelProtocol): The model used to extract concepts from
                 the activations of `splitter`.
@@ -298,7 +298,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
     Attributes:
         splitter (ModelWithSplitPoints): The model to apply the explanation on.
             The split point is determined by the model's `split_point` attribute.
-        concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from the
+        concept_model (BaseDictionaryLearning): The model used to extract concepts from the
             activations of  `splitter`. The only assumption for classes inheriting from this class is
             that the `concept_model` can encode activations into concepts with `activations_to_concepts`.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
@@ -316,9 +316,9 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         """Initializes the concept explainer with a given splitted model.
 
         Args:
-            splitter (BaseSplitter): The model to apply the explanation on.
+            splitter (interpreto.concepts.splitters.BaseSplitter): The model to apply the explanation on.
                 Its `split_point` attribute determines where activations are extracted.
-            concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from
+            concept_model (BaseDictionaryLearning): The model used to extract concepts from
                 the activations of `splitter`.
         """
         self.concept_model: BaseDictionaryLearning

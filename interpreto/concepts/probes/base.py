@@ -25,13 +25,13 @@
 """
 Base class for torch-based probe models.
 
-This module defines [Probe][interpreto.concepts.probes.base.Probe], the abstract base
+This module defines [Probe][interpreto.concepts.probes.Probe], the abstract base
 for all probe models in the package. It provides:
 
 - A `fitted` flag persisted as a buffer (survives `state_dict` round-trips).
-- A [load_state_dict][interpreto.concepts.probes.base.Probe.load_state_dict] override that
+- A [load_state_dict][interpreto.concepts.probes.Probe.load_state_dict] override that
   handles dynamically-sized buffers and parameters created during
-  [fit][interpreto.concepts.probes.base.Probe.fit]. Thus allowing saving and loading probes.
+  [fit][interpreto.concepts.probes.Probe.fit]. Thus allowing saving and loading probes.
 - The [assert_fitted][interpreto.concepts.probes.base.assert_fitted] decorator to guard methods
   that require a fitted model.
 
@@ -85,12 +85,12 @@ class Probe(nn.Module, ABC):
     """
     Abstract base for all torch-based probe models.
 
-    Satisfies [ConceptModelProtocol][interpreto.typing.ConceptModelProtocol] structurally
+    Satisfies `ConceptModelProtocol` structurally
     (no inheritance from `Protocol` needed at runtime).
 
     Subclasses must implement:
-        - [fit][interpreto.concepts.probes.base.Probe.fit] — learn probe parameters from activations and labels.
-        - [encode][interpreto.concepts.probes.base.Probe.encode] — map activations to concept scores.
+        - [fit][interpreto.concepts.probes.Probe.fit] — learn probe parameters from activations and labels.
+        - [encode][interpreto.concepts.probes.Probe.encode] — map activations to concept scores.
 
     Attributes:
         nb_concepts (int): Number of concepts the probe was fitted on. Set by subclasses.
@@ -152,7 +152,7 @@ class Probe(nn.Module, ABC):
         """Load a state dict, handling dynamically-sized buffers/parameters.
 
         Probes register buffers with shape `(0,)` at `__init__` time. After
-        [fit][interpreto.concepts.probes.base.Probe.fit], these become their real shapes
+        [fit][interpreto.concepts.probes.Probe.fit], these become their real shapes
         (e.g. `(c, d)`). When loading a fitted state dict into a fresh probe, the standard
         `nn.Module.load_state_dict` would raise a size-mismatch error.
 
@@ -185,11 +185,11 @@ class Probe(nn.Module, ABC):
 
 
 class ProbeExplainer(ConceptEncoderExplainer[Probe]):
-    """Concept explainer backed by a [Probe][interpreto.concepts.probes.base.Probe].
+    """Concept explainer backed by a `Probe`.
 
     Integrates any pre-instantiated torch probe into the concept explainer
     pipeline, connecting it to a
-    [BaseSplitter][interpreto.concepts.splitters.base_splitter.BaseSplitter]
+    `BaseSplitter`
     for activation extraction.
 
     The probe is provided already instantiated (unfitted or pre-fitted).
@@ -197,8 +197,8 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
     delegates to the probe's own `fit` method.
 
     Args:
-        splitter (BaseSplitter): Wrapped transformer model.
-        concept_model (Probe): An instantiated torch probe.
+        splitter (interpreto.concepts.splitters.BaseSplitter): Wrapped transformer model.
+        concept_model (interpreto.concepts.probes.Probe): An instantiated torch probe.
         split_point (str | None): Layer name to extract activations from.
 
     Example::
