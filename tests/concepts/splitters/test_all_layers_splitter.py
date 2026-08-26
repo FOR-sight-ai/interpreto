@@ -67,7 +67,7 @@ def _assert_activations_and_head(model, tokenizer, layer_path=None):
 
     if layer_path is not None:
         assert splitter.layer_split_points == [
-            f"{layer_path}.{index}" for index in range(len(model.get_submodule(layer_path)))
+            f"model.{layer_path}.{index}" for index in range(len(model.get_submodule(layer_path)))
         ]
     assert len(activations) == len(splitter.layer_split_points) + 1
     assert all(activation.ndim == 3 and activation.shape == activations[0].shape for activation in activations)
@@ -77,13 +77,14 @@ def _assert_activations_and_head(model, tokenizer, layer_path=None):
     torch.testing.assert_close(splitter.apply_head(activations[-1]), expected_logits)
 
 
-def test_all_layers_splitter_fast(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer):
-    """BERT and GPT-2 expose every block and project the final output faithfully."""
-    for model, tokenizer, layer_path in (
-        (bert_model, bert_tokenizer, "bert.encoder.layer"),
-        (gpt2_model, gpt2_tokenizer, "transformer.h"),
-    ):
-        _assert_activations_and_head(model, tokenizer, layer_path)
+def test_all_layers_splitter_bert_fast(bert_model, bert_tokenizer):
+    """BERT exposes every block and projects the final output faithfully."""
+    _assert_activations_and_head(bert_model, bert_tokenizer, "bert.encoder.layer")
+
+
+def test_all_layers_splitter_gpt2_fast(gpt2_model, gpt2_tokenizer):
+    """GPT-2 exposes every block and projects the final output faithfully."""
+    _assert_activations_and_head(gpt2_model, gpt2_tokenizer, "transformer.h")
 
 
 @pytest.mark.slow

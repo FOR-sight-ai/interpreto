@@ -69,7 +69,7 @@ class AllLayersSplitter(LanguageModel):
         **kwargs: Additional arguments passed to NNsight's ``LanguageModel``.
 
     Attributes:
-        layer_split_points (list[str]): Dotted paths of the transformer blocks
+        split_points (list[str]): Dotted paths of the transformer blocks
             whose outputs are extracted, in model order.
 
     Example:
@@ -77,7 +77,7 @@ class AllLayersSplitter(LanguageModel):
         >>> from interpreto import AllLayersSplitter
         >>> splitter = AllLayersSplitter("gpt2")
         >>> activations = splitter.get_activations("Interpreto is useful.")
-        >>> len(activations) == len(splitter.layer_split_points) + 1
+        >>> len(activations) == len(splitter.split_points) + 1
         True
     """
 
@@ -101,6 +101,9 @@ class AllLayersSplitter(LanguageModel):
             **kwargs,
         )
 
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+
         module_lists = [
             (name, module)
             for name, module in self._model.named_modules()
@@ -110,7 +113,20 @@ class AllLayersSplitter(LanguageModel):
             raise ValueError("Could not find a non-empty ModuleList containing the model's transformer blocks.")
 
         layer_name, layers = max(module_lists, key=lambda item: len(item[1]))
-        self.layer_split_points = [f"{layer_name}.{index}" for index in range(len(layers))]
+        self.split_points = [f"model.{layer_name}.{index}" for index in range(len(layers))]
+
+    def _prepare_input(
+        self,
+        *inputs: Any,
+        inputs_embeds: torch.Tensor | None = None,
+        **kwargs: Any,
+    ) -> tuple[tuple[Any, ...], dict[str, Any], int]:
+        """Let NNsight create an invocation from activation inputs."""
+        if inputs_embeds is None:
+            return super()._prepare_input(*inputs, **kwargs)
+        if inputs:
+            raise ValueError("`inputs_embeds` cannot be combined with positional inputs.")
+        return (), {"inputs_embeds": inputs_embeds, **kwargs}, inputs_embeds.shape[0]
 
     @staticmethod
     def _hidden_state(value: Any, layer_name: str) -> torch.Tensor:
@@ -131,24 +147,24 @@ class AllLayersSplitter(LanguageModel):
 
         Returns:
             list[torch.Tensor]: Input to the first transformer block followed by
-                every transformer block output in ``layer_split_points`` order.
+                every transformer block output in ``split_points`` order.
                 Each tensor has shape ``(1, sequence_length, model_width)``.
         """
         with torch.no_grad():
             with self.trace(inputs) as tracer:
                 cached = tracer.cache(
-                    modules=self.layer_split_points,
+                    modules=self.split_points,
                     include_inputs=True,
                     include_output=True,
                 )
 
         # extract first activation as the first layer input
-        first_layer = self.layer_split_points[0]
+        first_layer = self.split_points[0]
         activations = [self._hidden_state(cached[first_layer].input, f"{first_layer}.input")]
 
         # extract following activations as the layers outputs
         activations.extend(
-            self._hidden_state(cached[layer_name].output, layer_name) for layer_name in self.layer_split_points
+            self._hidden_state(cached[layer_name].output, layer_name) for layer_name in self.split_points
         )
         return activations
 
@@ -169,8 +185,8 @@ class AllLayersSplitter(LanguageModel):
             torch.Tensor: Logits returned by the wrapped model, including the
                 singleton batch dimension.
         """
-        last_layer = self.get(self.layer_split_points[-1])
         with self.trace(inputs_embeds=activations):
+            last_layer = self.get(self.split_points[-1].removeprefix("model."))
             last_layer.skip(activations)
             logits = self.output.logits.save()
         return logits
