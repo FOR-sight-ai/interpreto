@@ -1237,10 +1237,8 @@ class ConSim:
                     The response of the LLM on the prompts should be compared to the model predictions.
 
         Raises:
-            ValueError
-                If the model predictions and the user-llm predictions have different lengths.
-            Warnings
-                If the user-llm response is empty or the format is not respected.
+            ValueError: If the model predictions and the user-llm predictions have different lengths.
+            UserWarning: If the user-llm response is empty or the format is not respected; the method returns None.
         """
         local_importances: torch.Tensor | None = None
         if concept_explainer is not None:
