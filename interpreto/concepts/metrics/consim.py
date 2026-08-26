@@ -181,9 +181,6 @@ class ConSim:
         classes: list[str] | None
             The names of classes of the dataset.
 
-        split_point: str
-            Where to split the model to explain.
-
     Attributes:
         classes: list[str] | None
             The names of classes of the dataset.

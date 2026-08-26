@@ -199,7 +199,6 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
     Args:
         splitter (interpreto.concepts.splitters.BaseSplitter): Wrapped transformer model.
         concept_model (interpreto.concepts.probes.Probe): An instantiated torch probe.
-        split_point (str | None): Layer name to extract activations from.
 
     Example::
 

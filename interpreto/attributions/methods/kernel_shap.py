@@ -95,9 +95,6 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             n_perturbations (int): the number of perturbations to generate
-            distance_function (DistancesFromMaskProtocol): distance function used to compute weights of perturbed samples in the linear model training.
-            similarity_kernel (SimilarityKernelProtocol): similarity kernel used to compute weights of perturbed samples in the linear model training.
-            kernel_width (float | Callable): kernel width used in the `similarity_kernel`
             device (torch.device): device on which the attribution method will be run
         """
         replace_token_id = setup_token_ids(model, tokenizer)
