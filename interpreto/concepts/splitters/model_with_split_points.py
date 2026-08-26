@@ -708,7 +708,7 @@ class ModelWithSplitPoints(BaseSplitter):
         Optionally include the model predictions in the returned tuple.
 
         Args:
-            inputs list[str] | torch.Tensor | BatchEncoding:
+            inputs (list[str] | torch.Tensor | BatchEncoding):
                 Inputs to the model forward pass before or after tokenization.
                 In the case of a `torch.Tensor`, we assume a batch dimension and token ids.
 
