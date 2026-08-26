@@ -108,7 +108,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
             ),  # parent classes
             {"__slots__": ()},
         )
-        # n_perturbations is no longer passed: OcclusionPerturbator.__init__ pins it to -1.
+
         perturbator = perturbator_class(
             processor=processor,
             granularity=granularity,

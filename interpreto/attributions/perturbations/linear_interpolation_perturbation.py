@@ -147,8 +147,6 @@ class LinearInterpolationImagePerturbator(ImageTensorPerturbator):
     that it operates in raw pixel space (no `inputs_embedder` indirection).
     """
 
-    __slots__ = ("n_perturbations", "baseline")
-
     def __init__(
         self,
         baseline: TensorBaseline = None,

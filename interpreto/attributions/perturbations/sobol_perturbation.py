@@ -117,8 +117,6 @@ class SobolImagePerturbator(ImageMaskPerturbator):
     Perturbator producing Sobol (quasi-Monte-Carlo) masks for Sobol attribution.
     """
 
-    __slots__ = ("n_token_perturbations", "sampler_class")
-
     def __init__(
         self,
         granularity: ImageGranularity = ImageGranularity.PATCH,

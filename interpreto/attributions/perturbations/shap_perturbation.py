@@ -127,8 +127,6 @@ class ShapImagePerturbator(ImageMaskPerturbator):
     Perturbator sampling masks according to the Shapley kernel, used by KernelShap.
     """
 
-    __slots__ = ("device",)
-
     def __init__(
         self,
         granularity: ImageGranularity = ImageGranularity.PATCH,

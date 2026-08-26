@@ -103,8 +103,6 @@ class RandomMaskedImagePerturbator(ImageMaskPerturbator):
     Perturbator masking a random subset of granularity units, used by LIME.
     """
 
-    __slots__ = ("perturb_probability",)
-
     def __init__(
         self,
         granularity: ImageGranularity = ImageGranularity.PATCH,

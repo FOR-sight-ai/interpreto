@@ -54,12 +54,6 @@ class Perturbator(ABC):
 
     # Only what every perturbator has, whatever the modality and whatever the strategy.
     # Every other field is declared by the subclass that introduces it.
-    __slots__ = (
-        "processor",
-        "granularity",
-        "n_perturbations",
-    )
-
     def __init__(
         self,
         *,
@@ -95,8 +89,6 @@ class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
     By default, it only convert input IDs to embeddings using the model's input embedder.
     """
 
-    __slots__ = ("inputs_embedder",)
-
     def __init__(self, *, inputs_embedder: torch.nn.Module | None = None, **kwargs):
         """
         Args:
@@ -115,8 +107,6 @@ class TextTensorPerturbator(TensorPerturbator):
     """
     Text specific class that inherits from TensorPerturbator.
     """
-
-    __slots__ = ()
 
     def __init__(self, *, inputs_embedder: torch.nn.Module, **kwargs):
         """
@@ -186,12 +176,6 @@ class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
     the patch grid that defines the units on the image side.
     """
 
-    __slots__ = (
-        "replace_value",
-        "granularity_combination_strategy",
-        "patch_size",
-    )
-
     def __init__(
         self,
         *,
@@ -225,8 +209,6 @@ class TextMaskPerturbator(MaskPerturbator):
 
     This class is combined with a method perturbator at runtime.
     """
-
-    __slots__ = ()
 
     @jaxtyped(typechecker=beartype)
     @staticmethod
@@ -339,8 +321,6 @@ class ImageTensorPerturbator(TensorPerturbator):
     This class is combined with a method perturbator at runtime.
     """
 
-    __slots__ = ()
-
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         if "pixel_values" not in model_inputs:
             raise ValueError("model_inputs should contain 'pixel_values'")
@@ -384,8 +364,6 @@ class ImageMaskPerturbator(MaskPerturbator):
 
     This class is combined with a method perturbator at runtime.
     """
-
-    __slots__ = ()
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod

@@ -91,8 +91,6 @@ class GradientShapImagePerturbator(LinearInterpolationImagePerturbator):
     expectation over multiple noisy baselines and paths in pixel space.
     """
 
-    __slots__ = ("std",)
-
     def __init__(
         self,
         baseline: TensorBaseline = None,

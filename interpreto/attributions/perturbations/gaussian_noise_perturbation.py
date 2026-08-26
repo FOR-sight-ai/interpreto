@@ -39,8 +39,6 @@ class GaussianNoisePerturbator(TensorPerturbator):
     whether the tensor is `(1, l, d)` embeddings or `(1, 3, H, W)` pixel values.
     """
 
-    __slots__ = ("std",)
-
     def __init__(self, *, std: float = 0.1, **kwargs):
         """
         Args:

@@ -40,8 +40,6 @@ class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make t
     modality base at runtime by the `Occlusion` explainer, so `__slots__` must stay empty.
     """
 
-    __slots__ = ()
-
     def __init__(self, **kwargs):
         # n_perturbations is not a free parameter for occlusion: get_mask always emits exactly
         # g + 1 rows, so the count is only known at mask time. -1 marks it as determined there.
