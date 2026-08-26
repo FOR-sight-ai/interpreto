@@ -98,6 +98,9 @@ codecov:
 	$(PYTHON) -m pytest -n auto --cov interpreto --cov-report html
 
 #* Docs
+build-docs serve-docs deploy-docs: export DISABLE_MKDOCS_2_WARNING := true
+build-docs serve-docs deploy-docs: export NO_MKDOCS_2_WARNING := 1
+
 .PHONY: build-docs
 build-docs:
 	make uv-activate && mkdocs build

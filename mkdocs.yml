@@ -101,6 +101,10 @@ plugins:
               - "!^get_content_height$"
               - "!^compose_add_child$"
 
+validation:
+  links:
+    anchors: ignore
+
 # hooks: TODO create files to automate the generation of method tables
 #   - docs/generate_attribution_explainers_overview_table.py
 #   - docs/generate_concept_explainers_overview_table.py
