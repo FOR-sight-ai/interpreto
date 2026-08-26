@@ -55,7 +55,7 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 
 from interpreto.attributions.methods.occlusion import Occlusion
 from interpreto.attributions.methods.smooth_grad import SmoothGrad
-from interpreto.visualizations.image_attributions_merge import plot_image_attribution
+from interpreto.visualizations.image_attributions import plot_image_attribution
 
 plt.switch_backend("Agg")  # headless: render into a buffer, never open a window.
 

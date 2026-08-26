@@ -39,7 +39,7 @@ from interpreto.attributions.methods.smooth_grad import SmoothGrad
 from interpreto.attributions.perturbations.gaussian_noise_perturbation import GaussianNoisePerturbator
 from interpreto.attributions.perturbations.occlusion_perturbation import OcclusionPerturbator
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
-from interpreto.visualizations.image_attributions_merge import plot_image_attribution
+from interpreto.visualizations.image_attributions import plot_image_attribution
 
 plt.switch_backend("Agg")  # headless: render into a buffer, never open a window.
 
