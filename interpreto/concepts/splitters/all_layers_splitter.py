@@ -48,7 +48,7 @@ class AllLayersSplitter(LanguageModel):
     :class:`torch.nn.ModuleList` in the model. Activations are returned in model
     order: the input to the first block followed by the output of every block.
     A model with ``L`` transformer blocks therefore returns ``L + 1`` tensors
-    of shape ``(sequence_length, model_width)``.
+    of shape ``(1, sequence_length, model_width)``.
 
     This splitter is intended for methods that compare representations across
     model depths, such as Logit Lens and Tuned Lens. It does not implement the
@@ -72,17 +72,10 @@ class AllLayersSplitter(LanguageModel):
         layer_split_points (list[str]): Dotted paths of the transformer blocks
             whose outputs are extracted, in model order.
 
-    Note:
-        Resolving the final normalization and model head is intentionally left
-        to the lens implementation. A shared projection resolver is the next
-        step before adapting Logit Lens to this splitter.
-
     Example:
         >>> from transformers import AutoModelForCausalLM
         >>> from interpreto import AllLayersSplitter
-        >>> 
         >>> splitter = AllLayersSplitter("gpt2")
-        >>> 
         >>> activations = splitter.get_activations("Interpreto is useful.")
         >>> len(activations) == len(splitter.layer_split_points) + 1
         True
@@ -121,20 +114,14 @@ class AllLayersSplitter(LanguageModel):
 
     @staticmethod
     def _hidden_state(value: Any, layer_name: str) -> torch.Tensor:
-        """Extract one sample's hidden state from a block input or output."""
-        hidden_state = None
+        """Extract a batched hidden state from a block input or output."""
         if isinstance(value, torch.Tensor) and value.ndim == 3:
-            hidden_state = value
+            return value
         if isinstance(value, tuple):
             for candidate in value:
                 if isinstance(candidate, torch.Tensor) and candidate.ndim == 3:
-                    hidden_state = candidate
-                    break
-        if hidden_state is None:
-            raise RuntimeError(f"Could not extract a 3D hidden state at `{layer_name}`.")
-        if hidden_state.shape[0] != 1:
-            raise RuntimeError(f"Expected one input at `{layer_name}`, got a batch of {hidden_state.shape[0]}.")
-        return hidden_state.squeeze(0)
+                    return candidate
+        raise RuntimeError(f"Could not extract a 3D hidden state at `{layer_name}`.")
 
     def get_activations(self, inputs: str) -> list[torch.Tensor]:
         """Extract the residual stream for one text input.
@@ -145,7 +132,7 @@ class AllLayersSplitter(LanguageModel):
         Returns:
             list[torch.Tensor]: Input to the first transformer block followed by
                 every transformer block output in ``layer_split_points`` order.
-                Each tensor has shape ``(sequence_length, model_width)``.
+                Each tensor has shape ``(1, sequence_length, model_width)``.
         """
         with torch.no_grad():
             with self.trace(inputs) as tracer:
@@ -161,7 +148,29 @@ class AllLayersSplitter(LanguageModel):
 
         # extract following activations as the layers outputs
         activations.extend(
-            self._hidden_state(cached[layer_name].output, layer_name)
-            for layer_name in self.layer_split_points
+            self._hidden_state(cached[layer_name].output, layer_name) for layer_name in self.layer_split_points
         )
         return activations
+
+    def apply_head(self, activations: torch.Tensor) -> torch.Tensor:
+        """Apply the wrapped model's prediction head to residual activations.
+
+        The final transformer block is skipped and ``activations`` are used as
+        its output. The wrapped model then executes its own downstream
+        normalization, pooling, and prediction head. This avoids
+        architecture-specific head names and preserves functional operations
+        implemented in model ``forward`` methods.
+
+        Args:
+            activations (torch.Tensor): Residual activations with shape
+                ``(1, sequence_length, model_width)``.
+
+        Returns:
+            torch.Tensor: Logits returned by the wrapped model, including the
+                singleton batch dimension.
+        """
+        last_layer = self.get(self.layer_split_points[-1])
+        with self.trace(inputs_embeds=activations):
+            last_layer.skip(activations)
+            logits = self.output.logits.save()
+        return logits

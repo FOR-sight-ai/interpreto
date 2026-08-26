@@ -22,20 +22,74 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from interpreto import AllLayersSplitter
+import pytest
+import torch
+from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
+
+from interpreto.concepts.splitters import AllLayersSplitter
+
+SLOW_MODEL_CASES = [
+    pytest.param(
+        model_name,
+        AutoModelForSequenceClassification,
+        id=model_name.rsplit("/", 1)[-1],
+    )
+    for model_name in [
+        "hf-internal-testing/tiny-random-distilbert",
+        "hf-internal-testing/tiny-random-ElectraModel",
+        "hf-internal-testing/tiny-random-roberta",
+        "hf-internal-testing/tiny-xlm-roberta",
+    ]
+] + [
+    pytest.param(
+        model_name,
+        AutoModelForCausalLM,
+        id=model_name.rsplit("/", 1)[-1],
+    )
+    for model_name in [
+        "hf-internal-testing/tiny-random-gpt_neo",
+        "hf-internal-testing/tiny-random-gptj",
+        "hf-internal-testing/tiny-random-CodeGenForCausalLM",
+        "hf-internal-testing/tiny-random-FalconModel",
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+        "hf-internal-testing/tiny-random-MistralForCausalLM",
+        "hf-internal-testing/tiny-random-Starcoder2ForCausalLM",
+    ]
+]
 
 
-def test_extracts_every_bert_and_gpt2_layer(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer):
-    """BERT and GPT-2 expose the input stream and every block output in order."""
+def _assert_activations_and_head(model, tokenizer, layer_path=None):
+    """Check all-layer extraction and faithful execution of the model tail."""
+    text = "Interpreto is useful."
+    model.eval()
+    splitter = AllLayersSplitter(model, tokenizer=tokenizer)
+    activations = splitter.get_activations(text)
+
+    if layer_path is not None:
+        assert splitter.layer_split_points == [
+            f"{layer_path}.{index}" for index in range(len(model.get_submodule(layer_path)))
+        ]
+    assert len(activations) == len(splitter.layer_split_points) + 1
+    assert all(activation.ndim == 3 and activation.shape == activations[0].shape for activation in activations)
+
+    with torch.no_grad():
+        expected_logits = model(**tokenizer(text, return_tensors="pt")).logits
+    torch.testing.assert_close(splitter.apply_head(activations[-1]), expected_logits)
+
+
+def test_all_layers_splitter_fast(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer):
+    """BERT and GPT-2 expose every block and project the final output faithfully."""
     for model, tokenizer, layer_path in (
         (bert_model, bert_tokenizer, "bert.encoder.layer"),
         (gpt2_model, gpt2_tokenizer, "transformer.h"),
     ):
-        splitter = AllLayersSplitter(model, tokenizer=tokenizer)
-        activations = splitter.get_activations("Interpreto is useful.")
+        _assert_activations_and_head(model, tokenizer, layer_path)
 
-        assert splitter.layer_split_points == [
-            f"{layer_path}.{index}" for index in range(len(model.get_submodule(layer_path)))
-        ]
-        assert len(activations) == len(splitter.layer_split_points) + 1
-        assert all(activation.ndim == 2 and activation.shape == activations[0].shape for activation in activations)
+
+@pytest.mark.slow
+@pytest.mark.parametrize(("model_name", "automodel"), SLOW_MODEL_CASES)
+def test_all_layers_splitter_slow(model_name, automodel):
+    """All-layer extraction supports common classification and generation models."""
+    model = automodel.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    _assert_activations_and_head(model, tokenizer)
