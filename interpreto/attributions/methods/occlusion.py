@@ -106,7 +106,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
                 OcclusionPerturbator,
                 self.base_mask_perturbator_class,
             ),  # parent classes
-            {"__slots__": ()},
+            {},
         )
 
         perturbator = perturbator_class(

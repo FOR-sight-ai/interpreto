@@ -36,8 +36,8 @@ class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make t
     """
     Modality-agnostic occlusion mask: one reference plus one perturbation per granularity unit.
 
-    Carries no fields and no `__init__` — both come from `Perturbator`. It is combined with a
-    modality base at runtime by the `Occlusion` explainer, so `__slots__` must stay empty.
+    Carries no fields of its own. It is combined with a modality base at runtime by the
+    `Occlusion` explainer.
     """
 
     def __init__(self, **kwargs):

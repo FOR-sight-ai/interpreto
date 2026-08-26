@@ -38,7 +38,6 @@ from transformers.image_processing_utils import BaseImageProcessor
 
 from interpreto.commons.granularity import (
     Granularity,
-    GranularityCombinationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
 )
@@ -60,15 +59,7 @@ class Perturbator(ABC):
         processor: PreTrainedTokenizer | BaseImageProcessor | None = None,
         granularity: Granularity | None = None,
         n_perturbations: int = 1,
-        **kwargs,
     ):
-        # End of the cooperative chain: every class below has taken its own arguments out of
-        # kwargs, so whatever is left was never claimed by anyone.
-        if kwargs:
-            raise ValueError(
-                f"Unexpected arguments: {sorted(kwargs)}. Either too many arguments were given, "
-                "or one of them is misspelled."
-            )
         self.processor = processor
         self.granularity = granularity
         self.n_perturbations = n_perturbations
@@ -86,17 +77,9 @@ class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
     Specific class for perturbators working on input embeddings
     All perturbators working on input embeddings only should inherit from this class
 
-    By default, it only convert input IDs to embeddings using the model's input embedder.
+    Carries no fields of its own: how the input tensor is obtained is modality-specific and is
+    introduced by the subclass that needs it.
     """
-
-    def __init__(self, *, inputs_embedder: torch.nn.Module | None = None, **kwargs):
-        """
-        Args:
-            inputs_embedder: module converting input IDs to embeddings. Optional: the image
-                side works directly on `pixel_values` and has no need for an embedder.
-        """
-        super().__init__(**kwargs)
-        self.inputs_embedder = None if inputs_embedder is None else deepcopy(inputs_embedder).cpu()
 
     @abstractmethod
     def perturb_tensor(self):  # renaming of `perturb_embeds`
@@ -108,13 +91,16 @@ class TextTensorPerturbator(TensorPerturbator):
     Text specific class that inherits from TensorPerturbator.
     """
 
-    def __init__(self, *, inputs_embedder: torch.nn.Module, **kwargs):
+    def __init__(self, *, inputs_embedder: torch.nn.Module | None = None, **kwargs):
         """
         Args:
-            inputs_embedder: Model's module to convert input IDs to embeddings. Optional on
-                `TensorPerturbator` but mandatory here: `perturb` cannot embed anything without it.
+            inputs_embedder: Model's module to convert input IDs to embeddings. Text-only: the
+                image side works directly on `pixel_values`. Accepted here so the perturbator can
+                be built standalone, but the explainer owns the model and overwrites it at
+                construction, the same way it overwrites `ImageMaskPerturbator.patch_size`.
         """
-        super().__init__(inputs_embedder=inputs_embedder, **kwargs)
+        super().__init__(**kwargs)
+        self.inputs_embedder = None if inputs_embedder is None else deepcopy(inputs_embedder).cpu()
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         # very input_ids are present
@@ -171,31 +157,22 @@ class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
     Perturbator that hides granularity units by overwriting them with a baseline, rather than
     editing the input tensor directly.
 
-    Owns the fields that only make sense for Mask based methods:
-    the baseline written into masked units, the strategy used for the expansion, and
-    the patch grid that defines the units on the image side.
+    Owns the only field that Mask based methods share whatever the modality: the baseline
+    written into masked units (a token id on the text side, a pixel value on the image side).
     """
 
     def __init__(
         self,
         *,
         replace_value: int | float = 0.0,
-        granularity_combination_strategy: GranularityCombinationStrategy = GranularityResizeStrategy.NEAREST,
-        patch_size: int | None = None,
         **kwargs,
     ):
         """
         Args:
             replace_value: baseline written into masked units.
-            granularity_combination_strategy: how a `(p, g)` mask is expanded to input resolution.
-            patch_size: side length of a patch on the image side. Accepted here so the user can
-                eventually choose it, but the image explainer currently overwrites it with
-                `model.config.patch_size` at construction — see `base.py:1103-1105`.
         """
         super().__init__(**kwargs)
         self.replace_value = replace_value
-        self.granularity_combination_strategy = granularity_combination_strategy
-        self.patch_size = patch_size
 
     @abstractmethod
     def get_mask(self):
@@ -364,6 +341,26 @@ class ImageMaskPerturbator(MaskPerturbator):
 
     This class is combined with a method perturbator at runtime.
     """
+
+    def __init__(
+        self,
+        *,
+        granularity_combination_strategy: GranularityResizeStrategy = GranularityResizeStrategy.NEAREST,
+        patch_size: int | None = None,
+        **kwargs,
+    ):
+        """
+        Args:
+            granularity_combination_strategy: how a `(p, g)` mask is expanded to pixel resolution
+                in `perturb`. Image-only: the text side expands through an association matrix
+                instead, so it has no use for an interpolation mode.
+            patch_size: side length of a patch. Accepted here so the user can eventually choose
+                it, but the image explainer currently overwrites it with `model.config.patch_size`
+                at construction — see `attributions/base.py:1072`.
+        """
+        super().__init__(**kwargs)
+        self.granularity_combination_strategy = granularity_combination_strategy
+        self.patch_size = patch_size
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod

@@ -31,6 +31,7 @@ from __future__ import annotations
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, MutableMapping
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -322,6 +323,15 @@ class AttributionExplainer(ABC):
         self.granularity = granularity
         self.granularity_aggregation_strategy = combination_strategy
 
+        # The explainer is the single source of truth for the embedding module (it owns the
+        # model), so it pushes the authoritative one down, overriding the perturbator's default.
+        # Same reconcile as `ImageClassificationAttributionExplainer.__init__` does for
+        # `patch_size` and `granularity_combination_strategy`.
+        # The copy is frozen on CPU: `TextTensorPerturbator.perturb` embeds there, and the
+        # perturbator must not follow later mutations of the model's embedding matrix.
+        if isinstance(self.perturbator, TextTensorPerturbator):
+            self.perturbator.inputs_embedder = deepcopy(model.get_input_embeddings()).cpu()
+
     def _setup_replace_value(
         self,
         model: PreTrainedModel,
@@ -352,21 +362,6 @@ class AttributionExplainer(ABC):
                 "Remove the argument to use that derived value."
             )
         return setup_token_ids(model, processor)  # type: ignore[return-value]
-
-    def _text_only_kwargs(self, model: PreTrainedModel) -> dict[str, Any]:
-        """
-        Pack the text-only constructor arguments for a `TensorPerturbator`.
-
-        Text modalities perturb the token embeddings, so they need the module that produces them.
-        `ImageClassificationAttributionExplainer` overrides it.
-
-        Args:
-            model (PreTrainedModel): the model being explained.
-
-        Returns:
-            dict[str, Any]: the `inputs_embedder` keyword.
-        """
-        return {"inputs_embedder": model.get_input_embeddings()}
 
     @property
     def device(self) -> torch.device:
@@ -1068,6 +1063,8 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         # NOTE: this is the "version (a)" reconcile. If the isinstance wart or the
         # silently-overwritten default become a problem, switch to "version (b)" (perturbator
         # stops storing patch_size; explainer passes it into perturb() at call time).
+
+        # Might be moved into a more general Granularity argument/object later
         if isinstance(self.perturbator, ImageMaskPerturbator):
             self.perturbator.patch_size = self.patch_size
             self.perturbator.granularity_combination_strategy = self.resize_strategy
@@ -1090,21 +1087,9 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             int | float: `replace_value`, or 0.0 — the per-channel mean after standard ViT
                 normalization, i.e. a neutral grey.
         """
-        if replace_value is not None:
+        if replace_value:
             return replace_value
         return 0.0
-
-    def _text_only_kwargs(self, model: PreTrainedModel) -> dict[str, Any]:
-        """
-        Image side so we need no inputs_embedder.
-
-        Args:
-            model (PreTrainedModel): unused, kept for signature compatibility.
-
-        Returns:
-            dict[str, Any]: an empty dict.
-        """
-        return {}
 
     def _resolve_normalization_stats(self) -> tuple[torch.Tensor, torch.Tensor]:
         """

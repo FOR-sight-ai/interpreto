@@ -107,20 +107,17 @@ class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
         if combination_strategy is None:
             combination_strategy = self.default_combination_strategy
 
-        text_only_kwargs = self._text_only_kwargs(model)
-
         # create the perturbator dynamically by inheriting from both the method and modality specific classes
         perturbator_class = type(
             "ModalitySpecific" + self.__class__.__name__,  # name
             (GaussianNoisePerturbator, self.base_tensor_perturbator_class),  # parent classes
-            {"__slots__": ()},
+            {},
         )
         perturbator = perturbator_class(
             processor=processor,
             granularity=granularity,
             n_perturbations=n_perturbations,
             std=noise_std,
-            **text_only_kwargs,
         )
 
         super().__init__(
