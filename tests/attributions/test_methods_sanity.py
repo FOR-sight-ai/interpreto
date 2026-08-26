@@ -33,7 +33,7 @@ from torch import nn
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, BatchEncoding, PreTrainedTokenizerBase
 from transformers.modeling_outputs import CausalLMOutput
 
-from interpreto.attributions.methods.occlusion_merge import Occlusion
+from interpreto.attributions.methods.occlusion import Occlusion
 from interpreto.attributions.methods.smoothgrad import SmoothGrad
 from interpreto.commons.granularity import TextGranularity
 
