@@ -68,7 +68,7 @@ nav:
 
 plugins:
   - search
-  - mknotebooks:
+  - mkdocs-jupyter:
       execute: false
   - autorefs
   - section-index
