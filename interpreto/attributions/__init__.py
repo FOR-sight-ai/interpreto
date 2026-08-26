@@ -25,16 +25,6 @@
 from .base import InferenceModes
 from .methods import (
     GradientShap,
-    ImageGradientShap,
-    ImageIntegratedGradients,
-    ImageKernelShap,
-    ImageLime,
-    ImageOcclusion,
-    ImageSaliency,
-    ImageSmoothGrad,
-    ImageSobol,
-    ImageSquareGrad,
-    ImageVarGrad,
     IntegratedGradients,
     KernelShap,
     Lime,
@@ -48,16 +38,6 @@ from .methods import (
 
 __all__ = [
     "GradientShap",
-    "ImageGradientShap",
-    "ImageIntegratedGradients",
-    "ImageKernelShap",
-    "ImageLime",
-    "ImageOcclusion",
-    "ImageSaliency",
-    "ImageSmoothGrad",
-    "ImageSobol",
-    "ImageSquareGrad",
-    "ImageVarGrad",
     "IntegratedGradients",
     "KernelShap",
     "Lime",
