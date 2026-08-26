@@ -103,18 +103,18 @@ build-docs serve-docs deploy-docs: export NO_MKDOCS_2_WARNING := 1
 
 .PHONY: build-docs
 build-docs:
-	make uv-activate && mkdocs build
+	uv run --extra docs mkdocs build
 
 .PHONY: serve-docs
 serve-docs:
-	make uv-activate && mkdocs serve
+	uv run --extra docs mkdocs serve
 
 .PHONY: deploy-docs
 deploy-docs:
-	make uv-activate && mkdocs gh-deploy
+	uv run --extra docs mkdocs gh-deploy
 
 .PHONY: docs
-docs: build-docs serve-docs
+docs: serve-docs
 
 #* Cleaning
 .PHONY: pycache-remove
