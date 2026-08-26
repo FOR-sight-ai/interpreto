@@ -22,16 +22,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .all_layers_splitter import AllLayersSplitter
-from .base_splitter import BaseSplitter
-from .model_with_split_points import ModelWithSplitPoints
-from .splitter_for_classification import SplitterForClassification
-from .splitter_for_generation import SplitterForGeneration
+from interpreto import AllLayersSplitter
 
-__all__ = [
-    "AllLayersSplitter",
-    "BaseSplitter",
-    "ModelWithSplitPoints",
-    "SplitterForClassification",
-    "SplitterForGeneration",
-]
+
+def test_extracts_every_bert_and_gpt2_layer(bert_model, bert_tokenizer, gpt2_model, gpt2_tokenizer):
+    """BERT and GPT-2 expose the input stream and every block output in order."""
+    for model, tokenizer, layer_path in (
+        (bert_model, bert_tokenizer, "bert.encoder.layer"),
+        (gpt2_model, gpt2_tokenizer, "transformer.h"),
+    ):
+        splitter = AllLayersSplitter(model, tokenizer=tokenizer)
+        activations = splitter.get_activations("Interpreto is useful.")
+
+        assert splitter.layer_split_points == [
+            f"{layer_path}.{index}" for index in range(len(model.get_submodule(layer_path)))
+        ]
+        assert len(activations) == len(splitter.layer_split_points) + 1
+        assert all(activation.ndim == 2 and activation.shape == activations[0].shape for activation in activations)
