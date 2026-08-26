@@ -66,10 +66,10 @@ def _assert_activations_and_head(model, tokenizer, layer_path=None):
     activations = splitter.get_activations(text)
 
     if layer_path is not None:
-        assert splitter.layer_split_points == [
+        assert splitter.split_points == [
             f"model.{layer_path}.{index}" for index in range(len(model.get_submodule(layer_path)))
         ]
-    assert len(activations) == len(splitter.layer_split_points) + 1
+    assert len(activations) == len(splitter.split_points) + 1
     assert all(activation.ndim == 3 and activation.shape == activations[0].shape for activation in activations)
 
     with torch.no_grad():
