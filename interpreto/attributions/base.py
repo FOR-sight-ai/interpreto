@@ -32,6 +32,7 @@ import itertools
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
 import numpy as np
@@ -55,6 +56,7 @@ from interpreto.attributions.perturbations.base import (
 from interpreto.commons import (
     Granularity,
     GranularityAggregationStrategy,
+    GranularityCombinationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
     TextGranularity,
@@ -249,7 +251,7 @@ class AttributionExplainer(ABC):
     Subclasses must implement the abstract method 'explain'.
     """
 
-    _associated_inference_wrapper: InferenceWrapper
+    _associated_inference_wrapper: type[InferenceWrapper]
     base_tensor_perturbator_class: type[TensorPerturbator]
     base_mask_perturbator_class: type[MaskPerturbator]
     _model_task: ModelTask
@@ -260,12 +262,12 @@ class AttributionExplainer(ABC):
     def __init__(
         self,
         model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizerBase,
+        processor: PreTrainedTokenizerBase | BaseImageProcessor,
         batch_size: int = 4,
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
-        granularity: TextGranularity = TextGranularity.DEFAULT,
+        granularity: Granularity = TextGranularity.DEFAULT,
         combination_strategy: GranularityCombinationStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,  # TODO: add to all classes
         use_gradient: bool = False,
@@ -276,7 +278,8 @@ class AttributionExplainer(ABC):
 
         Args:
             model (PreTrainedModel): The model to be explained.
-            tokenizer (PreTrainedTokenizerBase): The tokenizer associated with the model.
+            processor (PreTrainedTokenizerBase | BaseImageProcessor): The tokenizer or image processor
+                associated with the model.
             batch_size (int): The batch size used for model inference.
             perturbator (Perturbator, optional): Instance used to generate input perturbations.
                 If None, the perturbator returns only the original input.
@@ -284,16 +287,18 @@ class AttributionExplainer(ABC):
                 If None, the aggregator returns the original scores.
             device (torch.device, optional): The device on which computations are performed.
                 If None, defaults to the device of the model.
-            granularity (TextGranularity, optional): The level of granularity for the explanation.
-                Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to TextGranularity.DEFAULT (ALL_TOKENS)
+            granularity (Granularity, optional): The level of granularity for the explanation.
+                Modality-specific: subclasses narrow it to `TextGranularity` or `ImageGranularity`.
+                Defaults to TextGranularity.DEFAULT (ALL_TOKENS).
                 To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
-            combination_strategy (GranularityCombinationStrategy, optional): The method used to aggregate scores at the specified granularity,
-                for gradient-based methods. Thus, it is ignored for perturbation based methods.
+            combination_strategy (GranularityCombinationStrategy, optional): The method used to combine
+                scores at the specified granularity, for gradient-based methods. Thus, it is ignored
+                for perturbation based methods.
                 Defaults to GranularityAggregationStrategy.MEAN.
                 Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
-                Named generically because the image path passes a `GranularityResizeStrategy`
-                through the same parameter; both are `GranularityCombinationStrategy` members.
+                Named generically because the text path passes a `GranularityAggregationStrategy` and
+                the image path a `GranularityResizeStrategy` through the same parameter; both are
+                `GranularityCombinationStrategy` members.
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             use_gradient (bool, optional): If True, computes gradients instead of inference for targeted explanations.
@@ -1039,7 +1044,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
                 "pixels is intractable. Use PATCH."
             )
 
-        self.image_processor = image_processor
+        self.image_processor = processor
 
         self.inference_wrapper = self._associated_inference_wrapper(
             model,

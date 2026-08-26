@@ -26,6 +26,7 @@ from .distances import DistanceFunctions
 from .granularity import (
     Granularity,
     GranularityAggregationStrategy,
+    GranularityCombinationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
     TextGranularity,
@@ -37,5 +38,6 @@ __all__ = [
     "TextGranularity",
     "GranularityAggregationStrategy",
     "GranularityResizeStrategy",
+    "GranularityCombinationStrategy",
     "ImageGranularity",
 ]
