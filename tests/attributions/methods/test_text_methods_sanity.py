@@ -33,8 +33,18 @@ from torch import nn
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 from transformers.modeling_outputs import CausalLMOutput
 
-from interpreto.attributions.methods.occlusion import Occlusion
-from interpreto.attributions.methods.smooth_grad import SmoothGrad
+from interpreto import (
+    GradientShap,
+    IntegratedGradients,
+    KernelShap,
+    Lime,
+    Occlusion,
+    Saliency,
+    SmoothGrad,
+    Sobol,
+    SquareGrad,
+    VarGrad,
+)
 from interpreto.commons.granularity import TextGranularity
 
 MODEL_ID = "bhadresh-savani/distilbert-base-uncased-emotion"
@@ -43,16 +53,16 @@ SEED = 0
 
 
 ATTRIBUTION_METHODS = [
-    # GradientShap,
-    # IntegratedGradients,
-    # KernelShap,
-    # Lime,
+    GradientShap,
+    IntegratedGradients,
+    KernelShap,
+    Lime,
     Occlusion,
-    # Saliency,
+    Saliency,
     SmoothGrad,
-    # Sobol,
-    # SquareGrad,
-    # VarGrad,
+    Sobol,
+    SquareGrad,
+    VarGrad,
 ]
 
 # ==================================================================================================

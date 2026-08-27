@@ -359,6 +359,11 @@ class ImageMaskPerturbator(MaskPerturbator):
                 at construction — see `attributions/base.py:1072`.
         """
         super().__init__(**kwargs)
+        if self.granularity is ImageGranularity.PIXEL:
+            raise ValueError(
+                "granularity=PIXEL is invalid for a mask perturbator: masking single pixels is intractable. Use PATCH."
+            )
+        self.granularity = ImageGranularity.PATCH
         self.granularity_combination_strategy = granularity_combination_strategy
         self.patch_size = patch_size
 
@@ -399,28 +404,27 @@ class ImageMaskPerturbator(MaskPerturbator):
         l = h * w
 
         # PATCH is set directly by the explainer by reading model.config.
-        if self.granularity == ImageGranularity.PATCH and self.patch_size is None:
+        if self.patch_size is None:
             raise ValueError(
                 "patch_size is None. It must be set "
                 "from the model config. Normally the explainer does this at construction. "
                 "If using the perturbator standalone, pass patch_size explicitly."
             )
 
-        # granularity grid dims: PIXEL is per-pixel (identity resize), PATCH is the patch grid
-        if self.granularity == ImageGranularity.PIXEL:
-            gh, gw = h, w
-        else:  # PATCH — patch_size guaranteed non-None by the guard above
-            gh, gw = h // self.patch_size, w // self.patch_size
+        gh, gw = h // self.patch_size, w // self.patch_size
 
         # granularity-wise mask from the subclass: (p, g) with g = gh * gw
+
         gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(gh * gw)
         p = gran_mask.shape[0]
 
         # expand to pixel space by resizing the (gh, gw) grid up to (h, w): (p, l)
-        # NEAREST (the default) replicates each unit over its pixels and is bit-identical to the
-        # old `gran_mask @ association_matrix`; output_size is computed here at the call site.
+        # TODO: For now, we have chosen to fix the resize of the mask to the NEAREST
+        # strategy to keep clarity and simplify the API. This will need to be changed
+        # in the future if we want to implement methods such as RISE that require soft
+        # masks and would thus require a BILINEAR upsampling strategy rather than NEAREST
         grid: Float[torch.Tensor, "p gh gw"] = gran_mask.reshape(p, gh, gw)
-        real_mask: Float[torch.Tensor, "p l"] = self.granularity_combination_strategy.resize(
+        real_mask: Float[torch.Tensor, "p l"] = GranularityResizeStrategy.NEAREST.resize(
             grid,
             output_size=(h, w),
         ).reshape(p, l)

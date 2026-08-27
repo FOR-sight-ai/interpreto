@@ -33,7 +33,6 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     default_kernel_width_fn,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.attributions.perturbations.random_perturbation import RandomMaskedTokenPerturbator
 from interpreto.commons.granularity import TextGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

@@ -31,7 +31,6 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     LinearRegressionAggregator,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
 from interpreto.commons.granularity import TextGranularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

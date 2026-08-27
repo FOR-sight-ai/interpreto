@@ -30,7 +30,6 @@ from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregat
 from interpreto.attributions.base import AttributionOutput
 from interpreto.attributions.perturbations.sobol_perturbation import (
     SequenceSamplers,
-    SobolTokenPerturbator,
 )
 from interpreto.commons.granularity import TextGranularity
 

@@ -53,8 +53,18 @@ import torch
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 
-from interpreto.attributions.methods.occlusion import Occlusion
-from interpreto.attributions.methods.smooth_grad import SmoothGrad
+from interpreto.attributions import (
+    GradientShap,
+    IntegratedGradients,
+    KernelShap,
+    Lime,
+    Occlusion,
+    Saliency,
+    SmoothGrad,
+    Sobol,
+    SquareGrad,
+    VarGrad,
+)
 from interpreto.visualizations.image_attributions import plot_image_attribution
 
 plt.switch_backend("Agg")  # headless: render into a buffer, never open a window.
@@ -78,16 +88,16 @@ SANITY_CASES = [
 
 # All ten methods, constructed uniformly with default parameters (Sobol/LIME included).
 SANITY_METHODS = [
-    # ImageGradientShap,
-    # ImageIntegratedGradients,
-    # ImageKernelShap,
+    GradientShap,
+    IntegratedGradients,
+    KernelShap,
     Occlusion,
-    # ImageSaliency,
+    Saliency,
     SmoothGrad,
-    # ImageSobol,
-    # ImageSquareGrad,
-    # ImageVarGrad,
-    # ImageLime,
+    Sobol,
+    SquareGrad,
+    VarGrad,
+    Lime,
 ]
 
 

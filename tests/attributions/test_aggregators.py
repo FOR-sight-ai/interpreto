@@ -41,7 +41,8 @@ from interpreto.attributions.aggregations import (
     VarianceAggregator,
 )
 from interpreto.attributions.aggregations.linear_regression_aggregation import Kernels
-from interpreto.attributions.perturbations.shap_perturbation import ShapTokenPerturbator
+from interpreto.attributions.perturbations.base import TextMaskPerturbator
+from interpreto.attributions.perturbations.shap_perturbation import ShapPerturbator
 
 AGGREGATOR_CLASSES = [
     MeanAggregator,
@@ -125,7 +126,10 @@ def test_shap_aggregator_issue_68():
     p = 100
     l = 2
 
-    perturbator = ShapTokenPerturbator(n_perturbations=p)
+    # ShapPerturbator only implements get_mask; perturb stays abstract until it is mixed with a
+    # modality base, which is what the explainer does at construction.
+    perturbator_class = type("ModalitySpecificShap", (ShapPerturbator, TextMaskPerturbator), {})
+    perturbator = perturbator_class(n_perturbations=p)
 
     aggregator = LinearRegressionAggregator(
         distance_function=None,  # Kernel SHAP does not use distance function
