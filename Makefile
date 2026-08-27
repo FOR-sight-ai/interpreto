@@ -8,7 +8,6 @@ help:
 	@echo "uv-download     : downloads and installs the uv package manager"
 	@echo "install         : installs required dependencies"
 	@echo "install-dev     : installs the dev dependencies for the project"
-	@echo "update-deps     : updates the dependencies and writes them to requirements.txt"
 	@echo "fix-style       : run checks on files and potentially modifies them."
 	@echo "check-style     : run checks on files without modifying them."
 	@echo "lint            : run linting on all files"
@@ -50,16 +49,10 @@ install:
 
 .PHONY: install-dev
 install-dev:
-	make uv-activate && make update-deps && uv pip install -r requirements-dev.txt && pre-commit install && pre-commit autoupdate && uv pip install -e .
-
-.PHONY: update-deps
-update-deps:
-	uv pip compile pyproject.toml -o requirements.txt
-	uv pip compile --all-extras pyproject.toml -o requirements-dev.txt
-
-.PHONY: install-ci
-install-ci:
-	make uv-activate && make update-deps && uv pip install -r requirements-dev.txt
+	if [ ! -f .venv/bin/python ]; then uv venv; fi && \
+		source .venv/bin/activate && \
+		uv pip install -e ".[docs,lint,notebook]" && \
+		pre-commit install
 
 #* Linting
 .PHONY: fix-style
