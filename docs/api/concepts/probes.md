@@ -66,7 +66,7 @@ model = ModelWithSplitPoints(
 activations, _ = model.get_activations(
     texts,
     activation_granularity=model.activation_granularities.SAMPLE,
-    aggregation_strategy=model.aggregation_strategies.MEAN, # MAX and LAST are also often compared in the literature
+    aggregation_strategy=model.aggregation_strategies.MEAN,  # MAX and LAST are also often compared in the literature
 )
 
 probe = CosineCentroidProbe()
