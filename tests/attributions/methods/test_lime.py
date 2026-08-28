@@ -78,7 +78,7 @@ def test_lime_attribution_init_and_mask(
     if replace_id is None:
         assert "[REPLACE]" in bert_tokenizer.get_vocab()
         replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
-    assert perturbator.replace_token_id == (replace_id if isinstance(replace_id, int) else replace_id[0])
+    assert perturbator.replace_value == (replace_id if isinstance(replace_id, int) else replace_id[0])
 
     # 3) check the aggregator
     assert isinstance(explainer.aggregator, LinearRegressionAggregator)
