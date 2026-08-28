@@ -166,7 +166,7 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
         if isinstance(perturbator, OcclusionPerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
-            k = perturbator.n_token_perturbations
+            k = perturbator.n_input_perturbations
             real_p = (g + 2) * k
         else:
             real_p = perturbator.n_perturbations
@@ -270,7 +270,7 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
         if isinstance(perturbator, OcclusionPerturbator):
             real_p = g + 1
         elif isinstance(perturbator, SobolImagePerturbator):
-            k = perturbator.n_token_perturbations
+            k = perturbator.n_input_perturbations
             real_p = (g + 2) * k
         else:
             real_p = perturbator.n_perturbations
@@ -348,7 +348,7 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 # def test_image_sobol_masks(sampler):
 #     k = 10
 #     perturbator = SobolImagePerturbator(
-#         n_token_perturbations=k,
+#         n_input_perturbations=k,
 #         sampler=sampler,
 #     )
 

@@ -133,7 +133,7 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         if isinstance(perturbator, OcclusionPerturbator):
             real_p = l + 1
         elif isinstance(perturbator, SobolTokenPerturbator):
-            k = perturbator.n_token_perturbations
+            k = perturbator.n_input_perturbations
             real_p = (l + 2) * k
         else:
             real_p = p
@@ -275,7 +275,7 @@ def test_basic_mask_based_methods():
 # def test_sobol_masks(sampler):
 #     k = 10
 #     perturbator = SobolTokenPerturbator(
-#         n_token_perturbations=k,
+#         n_input_perturbations=k,
 #         sampler=sampler,
 #     )
 

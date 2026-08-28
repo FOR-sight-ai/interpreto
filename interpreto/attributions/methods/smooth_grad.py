@@ -37,10 +37,12 @@ from transformers.image_processing_utils import BaseImageProcessor
 from interpreto.attributions.aggregations import MeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import GaussianNoisePerturbator
+from interpreto.commons import general_bad_argument
 from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
+@general_bad_argument
 class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
     """
     SmoothGrad is an enhanced version of gradient-based interpretability methods, such as saliency maps.

@@ -40,13 +40,6 @@ class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make t
     `Occlusion` explainer.
     """
 
-    def __init__(self, **kwargs):
-        # n_perturbations is not a free parameter for occlusion: get_mask always emits exactly
-        # g + 1 rows, so the count is only known at mask time. -1 marks it as determined there.
-        # Claiming the keyword here also means a caller passing it gets a TypeError rather than
-        # a silently ignored value.
-        super().__init__(n_perturbations=-1, **kwargs)
-
     @jaxtyped(typechecker=beartype)
     def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p g"]:
         """Return a mask performing single-token occlusions.

@@ -299,7 +299,7 @@ def test_vision_attribution_methods_fast(
 
 
 # Sobol carries its own machinery (quasi-MC SequenceSampler + variance-based aggregation),
-# so it gets its own test rather than a FAST_METHOD_SPECS row: it takes `n_token_perturbations`
+# so it gets its own test rather than a FAST_METHOD_SPECS row: it takes `n_input_perturbations`
 # (not `n_perturbations`) and two extra knobs, the indices `order` and the `sampler`, both worth
 # sweeping. Kept to a small representative set: both orders, all three samplers.
 SOBOL_SPECS = [
@@ -311,11 +311,11 @@ SOBOL_SPECS = [
 
 @pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
 @pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
-@pytest.mark.parametrize("n_token_perturbations, order, sampler", SOBOL_SPECS)
+@pytest.mark.parametrize("n_input_perturbations, order, sampler", SOBOL_SPECS)
 def test_image_sobol(
     request,
     model_and_processor,
-    n_token_perturbations,
+    n_input_perturbations,
     order,
     sampler,
     resize_strategy,
@@ -327,7 +327,7 @@ def test_image_sobol(
     explainer = Sobol(
         model,
         processor,
-        n_token_perturbations=n_token_perturbations,
+        n_input_perturbations=n_input_perturbations,
         sobol_indices_order=order,
         sampler=sampler,
         combination_strategy=resize_strategy,
@@ -354,16 +354,16 @@ def test_image_sobol(
     )
     #
     # The Sobol perturbator builds ((g + 2) * k, g) masks, where g = gh * gw is the number of
-    # patches and k = n_token_perturbations. Derive g from the processed pixel grid and the
+    # patches and k = n_input_perturbations. Derive g from the processed pixel grid and the
     # reconciled patch_size, then check the mask directly (mirrors the text-side Sobol test).
     _, _, height, width = explainer.process_model_inputs(inputs)[0]["pixel_values"].shape
     patch_size = explainer.perturbator.patch_size
     seq_len = (height // patch_size) * (width // patch_size)
     mask = explainer.perturbator.get_mask(seq_len)
     assert isinstance(mask, torch.Tensor), "get_mask must return a torch.Tensor"
-    assert mask.shape == ((seq_len + 2) * n_token_perturbations, seq_len), (
-        "Sobol mask must have shape ((seq_len + 2) * n_token_perturbations, seq_len). Expected "
-        f"{((seq_len + 2) * n_token_perturbations, seq_len)}, got {tuple(mask.shape)}"
+    assert mask.shape == ((seq_len + 2) * n_input_perturbations, seq_len), (
+        "Sobol mask must have shape ((seq_len + 2) * n_input_perturbations, seq_len). Expected "
+        f"{((seq_len + 2) * n_input_perturbations, seq_len)}, got {tuple(mask.shape)}"
     )
     assert mask.dtype == torch.float32, "Sobol mask.dtype must be torch.float32"
 

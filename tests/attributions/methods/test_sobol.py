@@ -35,7 +35,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 @pytest.mark.parametrize(
-    "granularity, order, sampler, n_token_perturbations",
+    "granularity, order, sampler, n_input_perturbations",
     [
         (TextGranularity.TOKEN, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL, 2),
         (TextGranularity.TOKEN, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON, 5),
@@ -46,7 +46,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     ],
 )
 def test_sobol_attribution_init_and_mask(
-    bert_model, bert_tokenizer, granularity, order, sampler, n_token_perturbations
+    bert_model, bert_tokenizer, granularity, order, sampler, n_input_perturbations
 ):
     batch_size = 2
 
@@ -56,7 +56,7 @@ def test_sobol_attribution_init_and_mask(
         batch_size=batch_size,
         device=DEVICE,
         granularity=granularity,
-        n_token_perturbations=n_token_perturbations,
+        n_input_perturbations=n_input_perturbations,
         sobol_indices_order=order,
         sampler=sampler,
     )
@@ -76,7 +76,7 @@ def test_sobol_attribution_init_and_mask(
     seq_len = 8
     mask = explainer.perturbator.get_mask(seq_len)
     assert isinstance(mask, torch.Tensor)
-    assert mask.shape == ((seq_len + 2) * n_token_perturbations, seq_len)
+    assert mask.shape == ((seq_len + 2) * n_input_perturbations, seq_len)
     assert mask.dtype == torch.float32
 
     # 4) check explanations TODO add this to the main test

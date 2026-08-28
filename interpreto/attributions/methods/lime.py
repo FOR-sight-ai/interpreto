@@ -43,9 +43,10 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import RandomMaskedPerturbator
-from interpreto.commons import Granularity, GranularityCombinationStrategy
+from interpreto.commons import Granularity, GranularityCombinationStrategy, general_bad_argument
 
 
+@general_bad_argument
 class Lime(MultitaskExplainerMixin, AttributionExplainer):
     """
     Local Interpretable Model-agnostic Explanations (LIME) is a perturbation‑based approach that explains individual predictions by

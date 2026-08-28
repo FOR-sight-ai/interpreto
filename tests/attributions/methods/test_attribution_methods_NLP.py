@@ -88,7 +88,7 @@ attribution_method_kwargs = {
         "inference_mode": InferenceModes.LOG_SOFTMAX,
     },
     Lime: {"n_perturbations": 3},
-    Sobol: {"n_token_perturbations": 3},
+    Sobol: {"n_input_perturbations": 3},
 }
 
 

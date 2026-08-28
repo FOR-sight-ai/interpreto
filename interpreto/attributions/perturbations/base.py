@@ -34,6 +34,7 @@ from copy import deepcopy
 import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
+from transformers import PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor
 
 from interpreto.commons.granularity import (
@@ -53,12 +54,17 @@ class Perturbator(ABC):
 
     # Only what every perturbator has, whatever the modality and whatever the strategy.
     # Every other field is declared by the subclass that introduces it.
+    # n_perturbations default to -1 because some Perturbators can only know the number
+    # of perturbations at runtime (Occlusion and Sobol that both depend on g the granularity
+    # dim). If the Perturbator needs n_perturbations then the value should be a default on
+    # the perturbator
+
     def __init__(
         self,
         *,
-        processor: PreTrainedTokenizer | BaseImageProcessor | None = None,
+        processor: PreTrainedTokenizerBase | BaseImageProcessor | None = None,
         granularity: Granularity | None = None,
-        n_perturbations: int = 1,
+        n_perturbations: int = -1,
     ):
         self.processor = processor
         self.granularity = granularity
@@ -100,7 +106,6 @@ class TextTensorPerturbator(TensorPerturbator):
                 construction, the same way it overwrites `ImageMaskPerturbator.patch_size`.
         """
         super().__init__(**kwargs)
-        self.inputs_embedder = None if inputs_embedder is None else deepcopy(inputs_embedder).cpu()
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         # very input_ids are present
@@ -364,8 +369,6 @@ class ImageMaskPerturbator(MaskPerturbator):
                 "granularity=PIXEL is invalid for a mask perturbator: masking single pixels is intractable. Use PATCH."
             )
         self.granularity = ImageGranularity.PATCH
-        self.granularity_combination_strategy = granularity_combination_strategy
-        self.patch_size = patch_size
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod

@@ -37,10 +37,12 @@ from transformers.image_processing_utils import BaseImageProcessor
 from interpreto.attributions.aggregations import TrapezoidalMeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import LinearInterpolationPerturbator
+from interpreto.commons import general_bad_argument
 from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
+@general_bad_argument
 class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
     """
     Integrated Gradients (IG) is a gradient-based interpretability method that attributes

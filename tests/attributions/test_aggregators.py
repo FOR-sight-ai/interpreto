@@ -107,7 +107,7 @@ def test_aggregator_shapes_sobol():
 
     expected_shape = (t, l)
 
-    agg = SobolAggregator(n_token_perturbations=2)
+    agg = SobolAggregator(n_input_perturbations=2)
     result = agg(x, mask)
 
     assert result.shape == expected_shape, (

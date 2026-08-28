@@ -73,7 +73,7 @@
 # attribution_methods_to_test = [IntegratedGradients, Sobol]
 # attribution_method_args = {
 #     IntegratedGradients: {"n_perturbations": 3, "baseline": 0.0},
-#     Sobol: {"n_token_perturbations": 3},
+#     Sobol: {"n_input_perturbations": 3},
 # }
 
 

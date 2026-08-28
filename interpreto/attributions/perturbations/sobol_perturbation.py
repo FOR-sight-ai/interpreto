@@ -58,21 +58,21 @@ class SobolPerturbator(MaskPerturbator):
     def __init__(
         self,
         *,
-        n_token_perturbations: int = 16,
+        n_input_perturbations: int = 16,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,
         is_binarized: bool = True,
         **kwargs,
     ):
         """
         Args:
-            n_token_perturbations (int): Monte-Carlo samples per granularity unit.
+            n_input_perturbations (int): Monte-Carlo samples per granularity unit.
             sampler (SequenceSamplers): Sobol sequence sampler, either `SOBOL`, `HALTON` or `LatinHypercube`.
             is_binarized (bool): whether the quasi-Monte-Carlo design is thresholded into a binary
                 mask. Tokens are discrete so the text side requires it; images blend continuously.
         """
         # total p = (g + 2) * k is determined at mask time, not up front.
-        super().__init__(n_perturbations=-1, **kwargs)
-        self.n_token_perturbations = n_token_perturbations
+        super().__init__(**kwargs)
+        self.n_input_perturbations = n_input_perturbations
         self.sampler_class = sampler.value
         self.is_binarized = is_binarized
 
@@ -87,7 +87,7 @@ class SobolPerturbator(MaskPerturbator):
         Returns:
             torch.Tensor: shape `((g + 2) * k, g)`.
         """
-        l, k = mask_dim, self.n_token_perturbations
+        l, k = mask_dim, self.n_input_perturbations
         p = (l + 2) * k
 
         # two independent random matrices A & B

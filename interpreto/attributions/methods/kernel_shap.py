@@ -40,10 +40,12 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import ShapPerturbator
+from interpreto.commons import general_bad_argument
 from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
+@general_bad_argument
 class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
     """
     KernelSHAP is a model‑agnostic Shapley value estimator that interprets predictions
