@@ -57,7 +57,7 @@ def test_lime_attribution_init_and_mask(
 
     explainer = Lime(
         model=bert_model,
-        tokenizer=bert_tokenizer,
+        processor=bert_tokenizer,
         batch_size=batch_size,
         granularity=granularity,
         n_perturbations=n_perturbations,

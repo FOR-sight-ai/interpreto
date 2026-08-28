@@ -54,7 +54,7 @@ def test_sobol_attribution_init_and_mask(
 
     explainer = Sobol(
         model=bert_model,
-        tokenizer=bert_tokenizer,
+        processor=bert_tokenizer,
         batch_size=batch_size,
         device=DEVICE,
         granularity=granularity,

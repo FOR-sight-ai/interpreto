@@ -324,7 +324,7 @@ def test_image_sobol(
 ):
     model, processor = model_and_processor
     inputs = request.getfixturevalue(input_fixture)
-    explainer = ImageSobol(
+    explainer = Sobol(
         model,
         processor,
         n_token_perturbations=n_token_perturbations,
@@ -345,7 +345,7 @@ def test_image_sobol(
     _assert_explains_and_plots(
         explainer,
         processor,
-        SobolImagePerturbator,
+        SobolPerturbator,
         SobolAggregator,
         inputs,
         targets,
@@ -396,7 +396,7 @@ def test_image_lime(
 ):
     model, processor = model_and_processor
     inputs = request.getfixturevalue(input_fixture)
-    explainer = ImageLime(
+    explainer = Lime(
         model,
         processor,
         n_perturbations=n_perturbations,
@@ -437,7 +437,7 @@ def test_image_lime(
     _assert_explains_and_plots(
         explainer,
         processor,
-        RandomMaskedImagePerturbator,
+        RandomMaskedPerturbator,
         LinearRegressionAggregator,
         inputs,
         targets,

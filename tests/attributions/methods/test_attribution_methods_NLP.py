@@ -295,7 +295,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
 
 @pytest.mark.parametrize("method_class", [Lime, VarGrad])
 def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sentences):
-    explainer = method_class(model=bert_model, tokenizer=bert_tokenizer, batch_size=3, device=DEVICE)
+    explainer = method_class(model=bert_model, processor=bert_tokenizer, batch_size=3, device=DEVICE)
 
     attr_output = explainer.explain(sentences)
 

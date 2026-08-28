@@ -50,7 +50,7 @@ def test_kernel_shap_init_and_mask(bert_model, bert_tokenizer, granularity, n_pe
     # 2) init explainer
     explainer = KernelShap(
         model=bert_model,
-        tokenizer=bert_tokenizer,
+        processor=bert_tokenizer,
         batch_size=batch_size,
         granularity=granularity,
         n_perturbations=n_perturbations,
