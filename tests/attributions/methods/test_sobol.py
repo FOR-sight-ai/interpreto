@@ -28,9 +28,7 @@ import torch
 from interpreto.attributions import Sobol
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
 from interpreto.attributions.base import AttributionOutput
-from interpreto.attributions.perturbations.sobol_perturbation import (
-    SequenceSamplers,
-)
+from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers, SobolPerturbator
 from interpreto.commons.granularity import TextGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -64,7 +62,7 @@ def test_sobol_attribution_init_and_mask(
     )
 
     # 2) check the perturbator stored our enums correctly
-    assert isinstance(explainer.perturbator, SobolTokenPerturbator)
+    assert isinstance(explainer.perturbator, SobolPerturbator)
     assert isinstance(explainer.aggregator, SobolAggregator)
     assert explainer.perturbator.sampler_class == sampler.value
     assert explainer.aggregator.sobol_indices_order == order.value

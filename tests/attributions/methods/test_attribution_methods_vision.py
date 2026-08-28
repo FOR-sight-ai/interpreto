@@ -330,7 +330,7 @@ def test_image_sobol(
         n_token_perturbations=n_token_perturbations,
         sobol_indices_order=order,
         sampler=sampler,
-        resize_strategy=resize_strategy,
+        combination_strategy=resize_strategy,
     )
     #
     # The two Sobol-specific knobs must land on the right objects (stored as their `.value`).
@@ -403,7 +403,7 @@ def test_image_lime(
         perturb_probability=perturb_probability,
         distance_function=distance_function,
         kernel_width=kernel_width,
-        resize_strategy=resize_strategy,
+        combination_strategy=resize_strategy,
     )
     #
     # The LIME-specific knobs must land on the right objects.
