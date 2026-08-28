@@ -4,7 +4,7 @@ icon: material/text-short
 
 # Concept Explanation Metrics
 
-As described in the [Concept Explainers](../overview/) page, concept-based explanations are obtain by applying several steps:
+As described in the [Concept Explainers](../overview.md) page, concept-based explanations are obtain by applying several steps:
 
 - Defining the concept-space, usually through dictionary learning.
 
@@ -78,18 +78,18 @@ Several properties of the concept-space are desirable:
 Concept-space faithfulness is often measured via the reconstruction error of the latent activations when projected back and forth in the concept space.
 Either in the latent space or in the logits space. The distance used to compare activations has a big impact on what is measured.
 
-In `interpreto` you can use the [ReconstructionError](../reconstruction_metrics/#custom) to define a custom metric by specifying a `reconstruction_space` and a `distance_function`.
-Or you can use the [MSE](../reconstruction_metrics/#mse) or [FID](../reconstruction_metrics/#fid) metrics.
+In `interpreto` you can use the [ReconstructionError](reconstruction_metrics.md#custom) to define a custom metric by specifying a `reconstruction_space` and a `distance_function`.
+Or you can use the [MSE](reconstruction_metrics.md#mse) or [FID](reconstruction_metrics.md#fid) metrics.
 
 ### Concept-space complexity
 
 The concept-space complexity is often measured via the sparsity of its activations.
 
-In `interpreto` you can use: [Sparsity](../sparsity_metrics/#sparsity) and [SparsityRatio](../sparsity_metrics/#sparsity-ratio).
+In `interpreto` you can use: [Sparsity](sparsity_metrics.md#sparsity) and [SparsityRatio](sparsity_metrics.md#sparsity-ratio).
 
 ### Concept-space stability
 
 The concept-space should stay the same across different training regimes.
 *i.e.* with different seeds, different data splits...
 
-In `interpreto` you can use: [Stability](../stability_metrics/#stability) to compare concept-model dictionaries.
+In `interpreto` you can use: [Stability](dictionary_metrics.md#stability) to compare concept-model dictionaries.

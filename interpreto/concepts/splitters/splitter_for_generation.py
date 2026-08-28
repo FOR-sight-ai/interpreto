@@ -81,7 +81,7 @@ class SplitterForGeneration(BaseSplitter):
         config (PretrainedConfig | None): Model configuration.
         batch_size (int): Batch size for batched operations.
         device_map (torch.device | str | None): Device on which to load the model.
-        **kwargs: Additional keyword arguments forwarded to NNsight.
+        **kwargs (dict[str, Any]): Additional keyword arguments forwarded to ``BaseSplitter.__init__`` and used for NNsight model loading.
 
     Example:
         ```python
@@ -260,7 +260,7 @@ class SplitterForGeneration(BaseSplitter):
                 If False, returns a list of sample-wise activations.
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional kwargs for the model forward pass.
-            **kwargs: Unused, kept for API compatibility.
+            **kwargs (dict[str, Any]): Unused, kept for API compatibility.
 
         Returns:
             activations (list[LatentActivations] | LatentActivations):

@@ -2,7 +2,7 @@
 
 ## Tutorials
 
-- [Concept Explanations Examples](../../notebooks/concept_examples.ipynb)
+- [Concept Explanations Examples](../../notebooks/classification_concept_tutorial.ipynb)
 
 ## Common API
 
@@ -16,11 +16,7 @@ from interpreto.concepts.interpretations import TopKInputs
 
 # 1. Load and split your model
 model_with_split_points = ModelWithSplitPoints(
-    "your_model_id",
-    split_point="your_split_point",
-    automodel="your_automodel",
-    nb_concepts=50,
-    device_map="cuda"
+    "your_model_id", split_point="your_split_point", automodel="your_automodel", nb_concepts=50, device_map="cuda"
 )
 
 # 2. Compute the model activations on the split_point
@@ -163,7 +159,7 @@ results = explainer.explain(inputs)
 > **Note:** Only perturbation-based methods (Occlusion, Lime, KernelShap, Sobol) are supported.
 > Gradient-based methods are not compatible with the input-to-concept pipeline.
 
-For classification models, use [`SplitterForClassification`](./splitter_for_classification.md)
+For classification models, use [`SplitterForClassification`](./splitters/splitter_for_classification.md)
 instead of `ModelWithSplitPoints` for a simpler setup.
 
 More details in the [Concept Attributions documentation](./interpretations/concept_attributions.md).

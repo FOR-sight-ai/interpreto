@@ -45,7 +45,9 @@ from nltk.tokenize import word_tokenize
 from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
-from interpreto.concepts.splitters.splitter_for_classification import SplitterForClassification
+from interpreto.concepts.splitters.splitter_for_classification import (
+    SplitterForClassification,
+)
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -351,6 +353,7 @@ class BaseConceptInterpretationMethod(ABC):
                 inputs,
                 activation_granularity=self.activation_granularity,
                 aggregation_strategy=self.aggregation_strategy,
+                forward_kwargs={"truncation": True},
             )
             return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
@@ -384,6 +387,7 @@ class BaseConceptInterpretationMethod(ABC):
             latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 input_ids,
                 activation_granularity=ActivationGranularity.ALL_TOKENS,
+                forward_kwargs={"truncation": True},
             )
         else:
             # we need to add the CLS token and maybe the EOS token to the ids
@@ -411,6 +415,7 @@ class BaseConceptInterpretationMethod(ABC):
             latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 repeated_template_ids,
                 activation_granularity=self.activation_granularity,
+                forward_kwargs={"truncation": True},
             )
 
         # compute the vocabulary's concepts activations
@@ -534,7 +539,10 @@ class BaseConceptInterpretationMethod(ABC):
                 # ----------------------------------------------------------------------------------
                 # Case 2: use_unique_words >= 1
                 # first list unique words/ngrams from the inputs and compute the activations from them
-                if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
+                if self.activation_granularity not in [
+                    ActivationGranularity.CLS_TOKEN,
+                    ActivationGranularity.SAMPLE,
+                ]:
                     raise ValueError(
                         f"`use_unique_words` requires `activation_granularity=CLS_TOKEN`, "
                         f"got `{self.activation_granularity}`. "
@@ -542,7 +550,10 @@ class BaseConceptInterpretationMethod(ABC):
                         "to represent each ngram as a single unit."
                     )
                 granular_inputs: list[str] = extract_ngrams(
-                    inputs=inputs, n=self.use_unique_words, return_counts=False, **self.unique_words_kwargs
+                    inputs=inputs,
+                    n=self.use_unique_words,
+                    return_counts=False,
+                    **self.unique_words_kwargs,
                 )  # type: ignore  (sure list[str] with return_counts=False)
                 if latent_activations is not None and concepts_activations is not None:
                     warnings.warn(

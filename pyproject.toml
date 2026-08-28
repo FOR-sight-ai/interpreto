@@ -71,7 +71,6 @@ dependencies = [
   "nnsight>=0.7.0,<0.8.0",
   "jaxtyping<=0.2.36",
   "beartype",
-  "mknotebooks",
   "pymdown-extensions",
   "bitsandbytes>=0.48.1",
   "scipy",
@@ -93,13 +92,14 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = [
-  "mkdocs>=1.6.1",
+  "mkdocs>=1.6.1,<2",
   "mkdocs-material>=9.5.34",
   "mkdocs-autorefs>=1.1.0",
   "mkdocs-section-index>=0.3.9",
   "mkdocstrings>=0.25.2",
   "mkdocstrings-python>=1.10.9",
-  "mknotebooks>=0.8.0",
+  "mkdocs-jupyter>=0.26.3",
+  "ruff",
   "docstr-coverage>=2.3.2",
 ]
 lint = [
@@ -109,7 +109,8 @@ lint = [
   "pytest>=7.2.0",
   "pytest-cov>=4.0.0",
   "pytest-xdist>=3.5.0",
-  "ruff>=0.2.0",
+  # Review this pin intentionally before 2027-01-01.
+  "ruff==0.16.4",
   "virtualenv>=20.26.6",
   "networkx>=3.0.0",
   "numpy>=2.2.0",
@@ -184,6 +185,7 @@ packages = ["interpreto"]
 
 
 [tool.ruff]
+required-version = "==0.16.4"
 target-version = "py310"
 exclude = [
   ".git",
@@ -222,6 +224,7 @@ ignore = [
   "F821",    # undefined name
   "PLR2004", # unnamed numerical constants used
   "PLR0913", # too many arguments
+  "PLR0917", # too many positional arguments; existing public APIs preserve positional compatibility
   "PLR0915", # too many statements
   "UP037",   # invalid type annotation (incompatible with single dimension jaxtyping)
   "W191",    # indentation contains tabs (handled by format)

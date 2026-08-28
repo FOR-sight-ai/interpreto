@@ -8,7 +8,6 @@ help:
 	@echo "uv-download     : downloads and installs the uv package manager"
 	@echo "install         : installs required dependencies"
 	@echo "install-dev     : installs the dev dependencies for the project"
-	@echo "update-deps     : updates the dependencies and writes them to requirements.txt"
 	@echo "fix-style       : run checks on files and potentially modifies them."
 	@echo "check-style     : run checks on files without modifying them."
 	@echo "lint            : run linting on all files"
@@ -50,16 +49,10 @@ install:
 
 .PHONY: install-dev
 install-dev:
-	make uv-activate && make update-deps && uv pip install -r requirements-dev.txt && pre-commit install && pre-commit autoupdate && uv pip install -e .
-
-.PHONY: update-deps
-update-deps:
-	uv pip compile pyproject.toml -o requirements.txt
-	uv pip compile --all-extras pyproject.toml -o requirements-dev.txt
-
-.PHONY: install-ci
-install-ci:
-	make uv-activate && make update-deps && uv pip install -r requirements-dev.txt
+	if [ ! -f .venv/bin/python ]; then uv venv; fi && \
+		source .venv/bin/activate && \
+		uv pip install -e ".[docs,lint,notebook]" && \
+		pre-commit install
 
 #* Linting
 .PHONY: fix-style
@@ -98,20 +91,23 @@ codecov:
 	$(PYTHON) -m pytest -n auto --cov interpreto --cov-report html
 
 #* Docs
+build-docs serve-docs deploy-docs: export DISABLE_MKDOCS_2_WARNING := true
+build-docs serve-docs deploy-docs: export NO_MKDOCS_2_WARNING := 1
+
 .PHONY: build-docs
 build-docs:
-	make uv-activate && mkdocs build
+	uv run --extra docs mkdocs build
 
 .PHONY: serve-docs
 serve-docs:
-	make uv-activate && mkdocs serve
+	uv run --extra docs mkdocs serve
 
 .PHONY: deploy-docs
 deploy-docs:
-	make uv-activate && mkdocs gh-deploy
+	uv run --extra docs mkdocs gh-deploy
 
 .PHONY: docs
-docs: build-docs serve-docs
+docs: serve-docs
 
 #* Cleaning
 .PHONY: pycache-remove

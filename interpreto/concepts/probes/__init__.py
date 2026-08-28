@@ -27,7 +27,7 @@ Probe models for concept-based interpretability.
 
 This package provides lightweight torch-based probe models that map latent
 activations to concept scores. All probes follow the
-[ConceptModelProtocol][interpreto.typing.ConceptModelProtocol] interface (structurally) and
+`ConceptModelProtocol` interface (structurally) and
 support `state_dict` serialization for reproducibility.
 
 Probe families:
