@@ -31,6 +31,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     LinearRegressionAggregator,
 )
 from interpreto.attributions.base import AttributionOutput
+from interpreto.attributions.perturbations import ShapPerturbator
 from interpreto.commons.granularity import TextGranularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,7 +59,7 @@ def test_kernel_shap_init_and_mask(bert_model, bert_tokenizer, granularity, n_pe
     )
 
     # 4) perturbator is ShapTokenPerturbator with correct params
-    assert isinstance(explainer.perturbator, ShapTokenPerturbator)
+    assert isinstance(explainer.perturbator, ShapPerturbator)
     pert = explainer.perturbator
     assert pert.n_perturbations == n_perturbations
     assert pert.granularity == granularity

@@ -33,6 +33,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     default_kernel_width_fn,
 )
 from interpreto.attributions.base import AttributionOutput
+from interpreto.attributions.perturbations import RandomMaskedPerturbator
 from interpreto.commons.granularity import TextGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -68,7 +69,7 @@ def test_lime_attribution_init_and_mask(
     )
 
     # 2) check the perturbator stored our params correctly
-    assert isinstance(explainer.perturbator, RandomMaskedTokenPerturbator)
+    assert isinstance(explainer.perturbator, RandomMaskedPerturbator)
     perturbator = explainer.perturbator
     assert perturbator.n_perturbations == n_perturbations
     assert pytest.approx(perturbator.perturb_probability, rel=1e-6) == perturb_probability

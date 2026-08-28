@@ -70,7 +70,7 @@ def test_sobol_attribution_init_and_mask(
     if expected_replace_id is None:
         assert "[REPLACE]" in bert_tokenizer.get_vocab()
         expected_replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
-    assert explainer.perturbator.replace_token_id == expected_replace_id
+    assert explainer.perturbator.replace_value == expected_replace_id
 
     # 3) get_mask returns a float32 tensor of shape (n_perturbations, seq_len)   # TODO: put this in a common perturbator test
     seq_len = 8
