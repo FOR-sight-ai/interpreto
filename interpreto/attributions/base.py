@@ -70,13 +70,9 @@ from interpreto.model_wrapping.text_generation_inference_wrapper import TextGene
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
-def setup_token_ids(
-    model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase, require_mask_token: bool = True
-) -> int | None:
+def setup_token_ids(model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase) -> None:
     """
-    Setup the tokenizer and the model with the appropriate token IDs, for padding and masking.
-
-    Returns the mask token ID.
+    Setup the tokenizer and the model with the appropriate token IDs, for padding.
     """
 
     if not isinstance(tokenizer, PreTrainedTokenizerBase):
@@ -131,10 +127,22 @@ def setup_token_ids(
     if generation_config is not None:
         generation_config.pad_token_id = resolved_pad_token_id
 
-    if not require_mask_token:
-        return 0
-    # -------------
-    # mask_token_id
+    if resize_token_embeddings:
+        model.resize_token_embeddings(len(tokenizer))
+
+
+def setup_mask_token_id(model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase) -> int:
+    """
+    Setup the tokenizer and the model with the appropriate token ID for masking.
+
+    Returns the mask token ID.
+    """
+
+    if not isinstance(tokenizer, PreTrainedTokenizerBase):
+        raise TypeError(f"setup_mask_token_id expects a PreTrainedTokenizerBase, got {type(tokenizer)}")
+
+    resize_token_embeddings = False
+
     mask_token_id = getattr(tokenizer, "mask_token_id", None)
     if mask_token_id is not None:
         # use existing mask_token_id for replacement
@@ -307,7 +315,7 @@ class AttributionExplainer(ABC):
                 with their gradients before reducing them. Defaults to ``True``.
         """
         # set pad and mask tokens
-        setup_token_ids(model, processor, require_mask_token=False)
+        setup_token_ids(model, processor)
         self.tokenizer = processor
 
         self.inference_wrapper = self._associated_inference_wrapper(
@@ -343,7 +351,7 @@ class AttributionExplainer(ABC):
         image modalities return either the given value or 0.0.
 
         Args:
-            model (PreTrainedModel): the model being explained. Mutated by `setup_token_ids`
+            model (PreTrainedModel): the model being explained. Mutated by `setup_mask_token_id`
                 when the vocabulary has to grow.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): the model's tokenizer.
             replace_value (int | float | None): must be None.
@@ -361,7 +369,7 @@ class AttributionExplainer(ABC):
                 "(adding a '[REPLACE]' token and resizing the model embeddings if needed). "
                 "Remove the argument to use that derived value."
             )
-        return setup_token_ids(model, processor)  # type: ignore[return-value]
+        return setup_mask_token_id(model, processor)  # type: ignore[arg-type]
 
     @property
     def device(self) -> torch.device:
