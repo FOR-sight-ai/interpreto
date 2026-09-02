@@ -106,7 +106,7 @@ def test_process_targets(bert_model, bert_tokenizer):
 
 def test_process_inputs_to_explain_and_targets(bert_model, bert_tokenizer):
     explainer = TextClassificationAttributionExplainer(
-        bert_model, tokenizer=bert_tokenizer, batch_size=2, device=DEVICE
+        bert_model, processor=bert_tokenizer, batch_size=2, device=DEVICE
     )
     explainer.inference_wrapper = lambda *args, **kwargs: [torch.tensor([[1]]), torch.tensor([[0]])]  # type: ignore
 

@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-Base classes for perturbations used in attribution methods
+Base merged classes for perturbations used in attribution methods
 """
 # TODO : remake all the docstrings of this file to fit with new method signatures
 
@@ -35,8 +35,13 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 from transformers import PreTrainedTokenizerBase
+from transformers.image_processing_utils import BaseImageProcessor
 
-from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity, TextGranularity
+from interpreto.commons.granularity import (
+    Granularity,
+    GranularityResizeStrategy,
+    ImageGranularity,
+)
 from interpreto.typing import TensorMapping
 
 
@@ -44,6 +49,26 @@ class Perturbator(ABC):
     """
     Abstract Base class for perturbators.
     """
+
+    # TODO: docstring — see todo/2026-07-30-to-do.md
+
+    # Only what every perturbator has, whatever the modality and whatever the strategy.
+    # Every other field is declared by the subclass that introduces it.
+    # n_perturbations default to -1 because some Perturbators can only know the number
+    # of perturbations at runtime (Occlusion and Sobol that both depend on g the granularity
+    # dim). If the Perturbator needs n_perturbations then the value should be a default on
+    # the perturbator
+
+    def __init__(
+        self,
+        *,
+        processor: PreTrainedTokenizerBase | BaseImageProcessor | None = None,
+        granularity: Granularity | None = None,
+        n_perturbations: int = -1,
+    ):
+        self.processor = processor
+        self.granularity = granularity
+        self.n_perturbations = n_perturbations
 
     @abstractmethod
     def perturb(self, inputs):
@@ -55,7 +80,11 @@ class Perturbator(ABC):
 
 class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
     """
-    method overriden in subclasses that perturb the tensor (instead of masking it) representing the input
+    Specific class for perturbators working on input embeddings
+    All perturbators working on input embeddings only should inherit from this class
+
+    Carries no fields of its own: how the input tensor is obtained is modality-specific and is
+    introduced by the subclass that needs it.
     """
 
     @abstractmethod
@@ -65,23 +94,8 @@ class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
 
 class TextTensorPerturbator(TensorPerturbator):
     """
-    Specific class for perturbators working on input embeddings
-    All perturbators working on input embeddings only should inherit from this class
-
-    By default, it only convert input IDs to embeddings using the model's input embedder.
+    Text specific class that inherits from TensorPerturbator.
     """
-
-    __slots__ = ("inputs_embedder",)
-
-    def __init__(self, inputs_embedder: torch.nn.Module):
-        """
-        Create a perturbator.
-
-        Args:
-            inputs_embedder: Model's module to convert input IDs to embeddings.
-        """
-        # Embedders is optional
-        self.inputs_embedder = deepcopy(inputs_embedder).cpu()
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         # very input_ids are present
@@ -134,6 +148,27 @@ class TextTensorPerturbator(TensorPerturbator):
 
 
 class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
+    """
+    Perturbator that hides granularity units by overwriting them with a baseline, rather than
+    editing the input tensor directly.
+
+    Owns the only field that Mask based methods share whatever the modality: the baseline
+    written into masked units (a token id on the text side, a pixel value on the image side).
+    """
+
+    def __init__(
+        self,
+        *,
+        replace_value: int | float = 0.0,
+        **kwargs,
+    ):
+        """
+        Args:
+            replace_value: baseline written into masked units.
+        """
+        super().__init__(**kwargs)
+        self.replace_value = replace_value
+
     @abstractmethod
     def get_mask(self):
         pass
@@ -143,28 +178,9 @@ class TextMaskPerturbator(MaskPerturbator):
     """
     Base class for perturbations consisting in applying masks on token (or groups of tokens)
     All perturbators working on input IDs by applying a mask should inherit from this class
+
+    This class is combined with a method perturbator at runtime.
     """
-
-    __slots__ = ("tokenizer", "n_perturbations", "replace_token_id", "granularity")
-
-    def __init__(
-        self,
-        tokenizer: PreTrainedTokenizerBase | None,
-        replace_token_id: int,
-        n_perturbations: int = 1,
-        granularity: TextGranularity = TextGranularity.TOKEN,
-    ):
-        self.tokenizer = tokenizer
-
-        # number of perturbations made by the "perturb" method
-        self.n_perturbations = n_perturbations
-
-        # token id used to replace the masked tokens
-        self.replace_token_id = replace_token_id
-
-        # granularity level of the perturbation (token masking, word masking...)
-        # in most commons cases, this should be set to TextGranularity.TOKEN
-        self.granularity = granularity
 
     @jaxtyped(typechecker=beartype)
     @staticmethod
@@ -236,7 +252,7 @@ class TextMaskPerturbator(MaskPerturbator):
         # compute association matrix between the granularity level and ALL_TOKENS
         association_matrix: Int[torch.Tensor, "g l"] = self.granularity.get_association_matrix(
             model_inputs,  # type: ignore
-            self.tokenizer,
+            self.processor,
         )[0].float()
 
         # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)
@@ -249,7 +265,7 @@ class TextMaskPerturbator(MaskPerturbator):
             self.apply_mask(
                 inputs=model_inputs["input_ids"].T,
                 mask=real_mask,
-                mask_value=torch.Tensor([self.replace_token_id]),
+                mask_value=torch.Tensor([self.replace_value]),
             )
             .squeeze(-1)
             .to(torch.int)
@@ -268,16 +284,13 @@ class ImageTensorPerturbator(TensorPerturbator):
     """
     Image-side analog of `TextTensorPerturbator`.
 
-    Operates directly on `pixel_values` of shape `(1, 3, H, W)`. Despite the
-    "Embeddings" name (kept for naming symmetry with the text side), this
-    works in raw pixel space — there is no IDs-to-embeddings indirection like
-    `inputs_embedder` on the text side, because `pixel_values` is already a
-    float tensor straight from the image processor.
+    Operates directly on `pixel_values` of shape `(1, 3, H, W)`.
 
     Subclasses override `perturb_tensor` to produce a `(p, 3, H, W)` batch.
-    The returned mask is `None`; granularity is applied post-hoc by the
-    aggregator via `granularity_score_aggregation(..., aggregate_inputs=True)`.
+
     Used by gradient-style methods (Saliency, SmoothGrad, IntegratedGradient).
+
+    This class is combined with a method perturbator at runtime.
     """
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
@@ -316,70 +329,24 @@ class ImageMaskPerturbator(MaskPerturbator):
     Masking-based perturbator: each perturbation hides a subset of granularity
     units by overwriting their pixel positions with a
     constant `replace_value` baseline. This is the basis for perturbation
-    methods (Occlusion, LIME, KernelShap, Sobol), mirroring the role of
-    `TextMaskPerturbator` for the text side.
+    methods (Occlusion, LIME, KernelShap, Sobol).
 
-    Flow (mirrors `TextMaskPerturbator.perturb`):
-      1. Build the `(g, l)` association matrix from the granularity, where
-         `g` = number of granularity units and `l = H*W` pixel positions.
-      2. Ask the subclass for a granularity-wise mask `gran_mask (p, g)` via
-         `get_mask`. `1` = masked (replaced), `0` = kept — same convention as text.
-      3. Expand to pixel space: `real_mask = gran_mask @ assoc -> (p, l)`.
-      4. Overwrite masked pixel positions with `replace_value`, broadcasting
-         across the 3 channels, and reshape back to `(p, 3, H, W)`.
-      5. Return `(perturbed_inputs, gran_mask)`. The aggregator consumes
-         `gran_mask`; `granularity_score_aggregation(..., aggregate_inputs=False)`
-         then returns scores unchanged because granularity is already encoded
-         in the masks.
+    perturb uses an interpolation strategy rather than an association matrix
+    which was deemed more natural for images.
 
-    Differences from `TextMaskPerturbator`:
-      - Replacement is a per-position float baseline (`replace_value`) applied
-        across all 3 channels, not an integer `replace_token_id`.
-        TODO: extend `replace_value` to support a per-channel `(3,)` tensor and
-        a full `(1, 3, H, W)` baseline image (e.g. blurred input), captum-style.
-        Kept scalar for the MVP.
-      - `pixel_values` is spatially flattened to `(1, 3, l)` to apply the mask,
-        then reshaped, instead of operating on a 1D token axis.
+    This class is combined with a method perturbator at runtime.
     """
 
-    __slots__ = ("granularity", "n_perturbations", "replace_value", "patch_size", "granularity_combination_strategy")
-
-    def __init__(
-        self,
-        granularity: ImageGranularity = ImageGranularity.PATCH,
-        n_perturbations: int = 1,
-        replace_value: float = 0.0,
-        patch_size: int | None = None,
-        granularity_combination_strategy: GranularityResizeStrategy = GranularityResizeStrategy.NEAREST,
-    ):
+    def __init__(self, **kwargs):
         """
-        Args:
-            granularity (ImageGranularity): unit over which masks are defined
-                (PATCH or PIXEL). PATCH is the default and the cheap choice
-                (`g = num_patches` instead of `g = H*W`).
-            n_perturbations (int): number of perturbations produced by `perturb`.
-            replace_value (float): baseline value written into masked pixel
-                positions across all channels. `0.0` is the per-channel mean
-                after standard ViT normalization (a neutral "grey" baseline).
-            patch_size (int | None): patch side length, used to expand the
-                granularity-wise mask to pixel space for PATCH granularity (ignored
-                for PIXEL). Defaults to `None`, NOT a number: the explainer is the
-                source of truth and overwrites it from `model.config.patch_size` at
-                construction. Leaving it `None` makes a PATCH perturb that never went
-                through that reconcile fail loudly rather than silently mask with a
-                wrong patch size.
-            granularity_combination_strategy (GranularityResizeStrategy): how the
-                granularity-wise mask `(p, g)` is resized up to pixel space `(p, H*W)`.
-                Defaults to NEAREST, which replicates each unit's value over its pixels
-                and keeps a binary mask binary (bit-identical to the old
-                `gran_mask @ association_matrix`). Continuous-mask methods may pass
-                BILINEAR/BICUBIC for soft masks.
+        No other arguments because the Image specific arguments are setup by the AttributionExplainer
         """
-        self.granularity = granularity
-        self.n_perturbations = n_perturbations
-        self.replace_value = replace_value
-        self.patch_size = patch_size
-        self.granularity_combination_strategy = granularity_combination_strategy
+        super().__init__(**kwargs)
+        if self.granularity is ImageGranularity.PIXEL:
+            raise ValueError(
+                "granularity=PIXEL is invalid for a mask perturbator: masking single pixels is intractable. Use PATCH."
+            )
+        self.granularity = ImageGranularity.PATCH
 
     @jaxtyped(typechecker=beartype)
     @abstractmethod
@@ -417,30 +384,28 @@ class ImageMaskPerturbator(MaskPerturbator):
         _, c, h, w = pixel_values.shape
         l = h * w
 
-        # PATCH needs a real patch_size; it should have been set by the explainer.
-        # Fail loudly instead of falling back to a wrong default. (PIXEL ignores it.)
-        if self.granularity == ImageGranularity.PATCH and self.patch_size is None:
+        # PATCH is set directly by the explainer by reading model.config.
+        if self.patch_size is None:
             raise ValueError(
                 "patch_size is None. It must be set "
-                "from the model config — normally the explainer does this at construction. "
+                "from the model config. Normally the explainer does this at construction. "
                 "If using the perturbator standalone, pass patch_size explicitly."
             )
 
-        # granularity grid dims: PIXEL is per-pixel (identity resize), PATCH is the patch grid
-        if self.granularity == ImageGranularity.PIXEL:
-            gh, gw = h, w
-        else:  # PATCH — patch_size guaranteed non-None by the guard above
-            gh, gw = h // self.patch_size, w // self.patch_size
+        gh, gw = h // self.patch_size, w // self.patch_size
 
         # granularity-wise mask from the subclass: (p, g) with g = gh * gw
+
         gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(gh * gw)
         p = gran_mask.shape[0]
 
         # expand to pixel space by resizing the (gh, gw) grid up to (h, w): (p, l)
-        # NEAREST (the default) replicates each unit over its pixels and is bit-identical to the
-        # old `gran_mask @ association_matrix`; output_size is computed here at the call site.
+        # TODO: For now, we have chosen to fix the resize of the mask to the NEAREST
+        # strategy to keep clarity and simplify the API. This will need to be changed
+        # in the future if we want to implement methods such as RISE that require soft
+        # masks and would thus require a BILINEAR upsampling strategy rather than NEAREST
         grid: Float[torch.Tensor, "p gh gw"] = gran_mask.reshape(p, gh, gw)
-        real_mask: Float[torch.Tensor, "p l"] = self.granularity_combination_strategy.resize(
+        real_mask: Float[torch.Tensor, "p l"] = GranularityResizeStrategy.NEAREST.resize(
             grid,
             output_size=(h, w),
         ).reshape(p, l)

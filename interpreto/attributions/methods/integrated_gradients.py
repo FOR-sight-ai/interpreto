@@ -32,14 +32,17 @@ from collections.abc import Callable
 
 import torch
 from transformers import PreTrainedModel, PreTrainedTokenizerBase
+from transformers.image_processing_utils import BaseImageProcessor
 
 from interpreto.attributions.aggregations import TrapezoidalMeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import LinearInterpolationPerturbator
-from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
+from interpreto.commons import general_bad_argument
+from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
+@general_bad_argument
 class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
     """
     Integrated Gradients (IG) is a gradient-based interpretability method that attributes
@@ -56,20 +59,20 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
 
     Examples:
         >>> from interpreto import IntegratedGradients
-        >>> method = IntegratedGradients(model=model, tokenizer=tokenizer,
+        >>> method = IntegratedGradients(model=model, processor=processor,
         >>>                              batch_size=4, n_perturbations=50)
-        >>> explanations = method.explain(model_inputs=text)
+        >>> explanations = method.explain(model_inputs=inputs)
     """
 
     def __init__(
         self,
         model: PreTrainedModel,
-        tokenizer: PreTrainedTokenizerBase,
-        batch_size: int = 4,
-        granularity: TextGranularity = TextGranularity.WORD,
-        granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
-        device: torch.device | None = None,
+        processor: PreTrainedTokenizerBase | BaseImageProcessor,
+        granularity: Granularity | None = None,
+        combination_strategy: GranularityCombinationStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
+        device: torch.device | None = None,
+        batch_size: int = 4,
         input_x_gradient: bool = True,
         n_perturbations: int = 10,
         baseline: torch.Tensor | float | None = None,
@@ -78,36 +81,54 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain
-            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
-            batch_size (int): batch size for the attribution method
-            granularity (TextGranularity, optional): The level of granularity for the explanation.
-                Options are: `ALL_TOKENS`, `TOKEN`, `WORD`, or `SENTENCE`.
-                Defaults to TextGranularity.WORD.
-                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
-            granularity_aggregation_strategy (GranularityAggregationStrategy): how to aggregate token-level attributions into granularity scores.
-                Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
-                Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
-            device (torch.device): device on which the attribution method will be run
-            inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
-                It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
-            input_x_gradient (bool, optional): If True, multiplies the input embeddings with
-                their gradients before aggregation. Defaults to ``True``.
+            model (PreTrainedModel): model to explain.
+            processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
+                processor associated with the model.
+            granularity (Granularity | None): the level of granularity for the explanation.
+                Defaults to the modality's `default_tensor_granularity`: `WORD` for text,
+                `PIXEL` for images.
+            combination_strategy (GranularityCombinationStrategy | None): how per-token or
+                per-pixel gradients are combined into granularity scores. Defaults to the
+                modality's `default_combination_strategy`.
+            inference_mode (Callable[[torch.Tensor], torch.Tensor]): the mode used for inference.
+                It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to
+                choose the appropriate mode.
+            device (torch.device): device on which the attribution method will be run.
+            batch_size (int): batch size for the attribution method.
+            input_x_gradient (bool): if True, multiplies the input tensor with its gradients
+                before aggregation.
             n_perturbations (int): the number of interpolations to generate
-            baseline (torch.Tensor | float | None): the baseline to use for the interpolations
+            baseline (torch.Tensor | float | None): the baseline to use for the interpolations.
+                A tensor baseline must match the shape of the tensor being interpolated, so it is
+                modality-dependent: `(l, d)` on the text side, `(3, H, W)` on the image side.
         """
-        perturbator = LinearInterpolationPerturbator(
-            inputs_embedder=model.get_input_embeddings(), baseline=baseline, n_perturbations=n_perturbations
+        if granularity is None:
+            granularity = self.default_tensor_granularity
+        if combination_strategy is None:
+            combination_strategy = self.default_combination_strategy
+
+        # create the perturbator dynamically by inheriting from both the method and modality specific classes
+        perturbator_class = type(
+            "ModalitySpecific" + self.__class__.__name__,  # name
+            (LinearInterpolationPerturbator, self.base_tensor_perturbator_class),  # parent classes
+            {},
         )
+        perturbator = perturbator_class(
+            processor=processor,
+            granularity=granularity,
+            n_perturbations=n_perturbations,
+            baseline=baseline,
+        )
+
         super().__init__(
             model=model,
-            tokenizer=tokenizer,
+            processor=processor,
             batch_size=batch_size,
-            device=device,
             perturbator=perturbator,
             aggregator=TrapezoidalMeanAggregator(),
+            device=device,
             granularity=granularity,
-            granularity_aggregation_strategy=granularity_aggregation_strategy,
+            combination_strategy=combination_strategy,
             inference_mode=inference_mode,
             use_gradient=True,
             input_x_gradient=input_x_gradient,

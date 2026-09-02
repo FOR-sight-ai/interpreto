@@ -27,46 +27,25 @@ from __future__ import annotations
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from transformers import PreTrainedTokenizerBase
 
-from interpreto.attributions.perturbations.base import ImageMaskPerturbator, TextMaskPerturbator
-from interpreto.commons.granularity import ImageGranularity, TextGranularity
+# attributions/perturbations/occlusion_perturbation.py
+from .base import MaskPerturbator
 
 
-class OcclusionPerturbator(TextMaskPerturbator):
+class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make the type checker unhappy
     """
-    Basic class for occlusion perturbations
+    Modality-agnostic occlusion mask: one reference plus one perturbation per granularity unit.
+
+    Carries no fields of its own. It is combined with a modality base at runtime by the
+    `Occlusion` explainer.
     """
-
-    __slots__ = ()
-
-    def __init__(
-        self,
-        tokenizer: PreTrainedTokenizerBase | None = None,
-        granularity: TextGranularity = TextGranularity.TOKEN,
-        replace_token_id: int = 0,
-    ) -> None:
-        """Instantiate the perturbator.
-
-        Args:
-            tokenizer (PreTrainedTokenizerBase | None): Hugging Face tokenizer associated with the model.
-            granularity (TextGranularity): Level at which occlusion should be applied.
-            replace_token_id (int): Token used to replace occluded elements.
-        """
-
-        super().__init__(
-            tokenizer=tokenizer,
-            replace_token_id=replace_token_id,
-            n_perturbations=-1,
-            granularity=granularity,
-        )
 
     @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p l"]:
+    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p g"]:
         """Return a mask performing single-token occlusions.
 
         Args:
-            mask_dim (int): Length of the input sequence.
+            mask_dim (int): Length of the granularity depedent input sequence.
 
         Returns:
             torch.Tensor: Tensor of shape ``(mask_dim + 1, mask_dim)`` where the
@@ -74,56 +53,8 @@ class OcclusionPerturbator(TextMaskPerturbator):
                 identity matrix.
         """
 
-        l = mask_dim
-        p = l + 1
-        mask: Float[torch.Tensor, "{p} {l}"] = torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)
-        assert mask.shape[0] == p
-        return mask
-
-
-class OcclusionImagePerturbator(ImageMaskPerturbator):
-    """
-    Occlusion perturbator: one reference (nothing masked) plus one perturbation
-    per granularity unit, each masking exactly that single unit.
-    """
-
-    __slots__ = ()
-
-    def __init__(
-        self,
-        granularity: ImageGranularity = ImageGranularity.PATCH,
-        replace_value: float = 0.0,
-        patch_size: int | None = None,
-    ) -> None:
-        """
-        Args:
-            granularity (ImageGranularity): unit over which occlusion is applied.
-            replace_value (float): baseline written into the occluded unit.
-            patch_size (int): patch side length (reconciled by the explainer).
-        """
-        # n_perturbations is determined by g at mask time (l + 1), not up front.
-        super().__init__(
-            granularity=granularity,
-            n_perturbations=-1,
-            replace_value=replace_value,
-            patch_size=patch_size,
-        )
-
-    @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p l"]:
-        """
-        Return single-unit occlusion masks.
-
-        Args:
-            mask_dim (int): number of granularity units `g`.
-
-        Returns:
-            torch.Tensor: shape `(g + 1, g)`. Row 0 is all-zeros (reference,
-                nothing masked); the remaining `g` rows form the identity, each
-                masking exactly one unit.
-        """
-        l = mask_dim
-        p = l + 1
-        mask: Float[torch.Tensor, "{p} {l}"] = torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)
+        g = mask_dim
+        p = g + 1
+        mask: Float[torch.Tensor, "{p} {g}"] = torch.cat([torch.zeros(1, g), torch.eye(g)], dim=0)
         assert mask.shape[0] == p
         return mask

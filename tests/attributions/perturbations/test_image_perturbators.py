@@ -32,13 +32,13 @@ from transformers import AutoImageProcessor
 from transformers.image_processing_utils import BatchFeature
 
 from interpreto.attributions.perturbations import (
-    GaussianNoiseImagePerturbator,
-    GradientShapImagePerturbator,
-    LinearInterpolationImagePerturbator,
-    OcclusionImagePerturbator,
-    RandomMaskedImagePerturbator,
-    ShapImagePerturbator,
-    SobolImagePerturbator,
+    GaussianNoisePerturbator,
+    GradientShapPerturbator,
+    LinearInterpolationPerturbator,
+    OcclusionPerturbator,
+    RandomMaskedPerturbator,
+    ShapPerturbator,
+    SobolPerturbator,
 )
 from interpreto.attributions.perturbations.base import (
     ImageMaskPerturbator,
@@ -47,6 +47,7 @@ from interpreto.attributions.perturbations.base import (
     TextTensorPerturbator,
 )
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
+from interpreto.commons import GranularityResizeStrategy
 
 IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
@@ -58,18 +59,44 @@ SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
 
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
+
+def _image_variant(method_class: type, modality_base: type) -> type:
+    """
+    Combine a method perturbator with an image modality base, as the explainer does at
+    construction time. The method class alone leaves `perturb` abstract.
+    """
+    return type("Image" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
+
+
 image_embedding_perturbators = [
-    GaussianNoiseImagePerturbator,
-    LinearInterpolationImagePerturbator,
-    GradientShapImagePerturbator,
+    _image_variant(GaussianNoisePerturbator, ImageTensorPerturbator),
+    _image_variant(LinearInterpolationPerturbator, ImageTensorPerturbator),
+    _image_variant(GradientShapPerturbator, ImageTensorPerturbator),
 ]
 
 image_mask_perturbators = [
-    OcclusionImagePerturbator,
-    RandomMaskedImagePerturbator,
-    ShapImagePerturbator,
-    SobolImagePerturbator,
+    _image_variant(OcclusionPerturbator, ImageMaskPerturbator),
+    _image_variant(RandomMaskedPerturbator, ImageMaskPerturbator),
+    _image_variant(ShapPerturbator, ImageMaskPerturbator),
+    _image_variant(SobolPerturbator, ImageMaskPerturbator),
 ]
+
+
+def _setup_attribution_explainer_values(
+    perturbator,
+    model=None,
+    patch_size: int | None = None,
+    resize_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
+):
+    """
+    Sets values for the Perturbators that should be set by the AttributionExplainer in the normal
+    functioning of the library
+    """
+    if isinstance(perturbator, ImageMaskPerturbator):
+        if patch_size is None:
+            patch_size = int(getattr(model.config, "patch_size", 2))
+        perturbator.patch_size = patch_size
+        perturbator.granularity_combination_strategy = resize_strategy
 
 
 @pytest.fixture(scope="module")
@@ -96,7 +123,7 @@ def test_image_embedding_perturbator(perturbator_class, model_name, images):
 
     p = 10
     perturbator = perturbator_class(n_perturbations=p)
-
+    _setup_attribution_explainer_values(perturbator, model=model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
     for img in images:
@@ -139,8 +166,9 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
     patch_size = 2
     p = 15
 
-    perturbator = perturbator_class(patch_size=patch_size)
+    perturbator = perturbator_class()
     perturbator.n_perturbations = p
+    _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
 
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
@@ -158,10 +186,10 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if isinstance(perturbator, OcclusionImagePerturbator):
+        if isinstance(perturbator, OcclusionPerturbator):
             real_p = g + 1
-        elif isinstance(perturbator, SobolImagePerturbator):
-            k = perturbator.n_token_perturbations
+        elif isinstance(perturbator, SobolPerturbator):
+            k = perturbator.n_input_perturbations
             real_p = (g + 2) * k
         else:
             real_p = perturbator.n_perturbations
@@ -199,7 +227,7 @@ def test_slow_image_embedding_perturbator(perturbator_class, model_name, images)
 
     p = 10
     perturbator = perturbator_class(n_perturbations=p)
-
+    _setup_attribution_explainer_values(perturbator, model=model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
     for img in images:
@@ -243,8 +271,9 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
     patch_size = 16
     p = 15
 
-    perturbator = perturbator_class(patch_size=patch_size)
+    perturbator = perturbator_class()
     perturbator.n_perturbations = p
+    _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
 
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
@@ -262,10 +291,10 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
         _, _, h, w = processed_image["pixel_values"].shape
         g = (h // patch_size) * (w // patch_size)
-        if isinstance(perturbator, OcclusionImagePerturbator):
+        if isinstance(perturbator, OcclusionPerturbator):
             real_p = g + 1
-        elif isinstance(perturbator, SobolImagePerturbator):
-            k = perturbator.n_token_perturbations
+        elif isinstance(perturbator, SobolPerturbator):
+            k = perturbator.n_input_perturbations
             real_p = (g + 2) * k
         else:
             real_p = perturbator.n_perturbations
@@ -287,7 +316,7 @@ def test_linear_interpolation_image_perturbation_adjust_baseline():
     inputs = torch.randn(1, 3, 8, 8)
 
     # Test with None baseline
-    baseline = LinearInterpolationImagePerturbator.adjust_baseline(None, inputs)
+    baseline = LinearInterpolationPerturbator.adjust_baseline(None, inputs)
     assert torch.all(baseline.abs() < 1e-5), (
         "adjust_baseline with baseline=None must return a baseline near zero (the 1e-6 nudge used to avoid NaN gradients)"
     )
@@ -297,7 +326,7 @@ def test_linear_interpolation_image_perturbation_adjust_baseline():
     )
 
     # Test with float baseline
-    baseline = LinearInterpolationImagePerturbator.adjust_baseline(0.5, inputs)
+    baseline = LinearInterpolationPerturbator.adjust_baseline(0.5, inputs)
     assert torch.all(baseline == 0.5), (
         "adjust_baseline with a single float as input must return a tensor filled with only this float's value"
     )
@@ -308,7 +337,7 @@ def test_linear_interpolation_image_perturbation_adjust_baseline():
 
     # Test with tensor baseline
     baseline_tensor = torch.randn(3, 8, 8)
-    baseline = LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
+    baseline = LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
     assert torch.all(baseline == baseline_tensor), (
         "adjust_baseline with a tensor baseline already shaped like inputs.shape[1:] must return it unchanged"
     )
@@ -323,17 +352,17 @@ def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
 
     # Test with invalid baseline type
     with pytest.raises(TypeError, match="Type-check error"):
-        LinearInterpolationImagePerturbator.adjust_baseline("invalid", inputs)  # type: ignore
+        LinearInterpolationPerturbator.adjust_baseline("invalid", inputs)  # type: ignore
 
     # Test with mismatched tensor shape
     baseline_tensor = torch.randn(2, 8, 8)
     with pytest.raises(ValueError, match="does not match expected shape"):
-        LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
+        LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
 
     # Test with mismatched tensor dtype
     baseline_tensor = torch.randn(3, 8, 8, dtype=torch.float64)
     with pytest.raises(ValueError, match="does not match expected dtype"):
-        LinearInterpolationImagePerturbator.adjust_baseline(baseline_tensor, inputs)
+        LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
 
 
 @pytest.mark.parametrize(
@@ -342,11 +371,14 @@ def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
 )
 def test_image_sobol_masks(sampler):
     k = 10
-    perturbator = SobolImagePerturbator(
-        n_token_perturbations=k,
+    image_sobol_perturbator = _image_variant(SobolPerturbator, ImageTensorPerturbator)
+    perturbator = image_sobol_perturbator(
+        n_input_perturbations=k,
         sampler=sampler,
     )
 
+    perturbator.patch_size = 4
+    perturbator.granularity_combination_strategy = GranularityResizeStrategy.BILINEAR
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert mask.shape == ((l + 2) * k, l), (
@@ -372,7 +404,11 @@ def test_image_sobol_masks(sampler):
 
 
 def test_image_occlusion_masks():
-    perturbator = OcclusionImagePerturbator()
+    perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)()
+
+    perturbator.patch_size = 4
+    perturbator.granularity_combination_strategy = GranularityResizeStrategy.BILINEAR
+
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)), (

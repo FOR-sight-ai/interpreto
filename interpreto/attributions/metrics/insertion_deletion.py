@@ -42,7 +42,7 @@ from jaxtyping import Float, jaxtyped
 from transformers import BatchEncoding, PreTrainedTokenizerBase
 from transformers.modeling_utils import PreTrainedModel
 
-from interpreto.attributions.base import AttributionOutput, setup_token_ids
+from interpreto.attributions.base import AttributionOutput, setup_mask_token_id, setup_token_ids
 from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
     DeletionPerturbator,
     InsertionDeletionPerturbator,
@@ -96,7 +96,8 @@ class InsertionDeletionBase:
                 low scores in long sequences.
         """
         self.tokenizer = tokenizer
-        replace_token_id = setup_token_ids(model, self.tokenizer)
+        setup_token_ids(model, self.tokenizer)
+        replace_token_id = setup_mask_token_id(model, self.tokenizer)
 
         # perturbator
         self.perturbator = self._perturbator_class(

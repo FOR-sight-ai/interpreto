@@ -61,14 +61,6 @@ class InsertionDeletionPerturbator:
         replace_token_id (int): Token used to replace deleted elements.
     """
 
-    __slots__ = (
-        "tokenizer",
-        "n_perturbations",
-        "replace_token_id",
-        "granularity",
-        "max_percentage_perturbed",
-    )
-
     granularity: TextGranularity
 
     def __init__(

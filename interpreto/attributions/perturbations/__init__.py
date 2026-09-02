@@ -31,14 +31,14 @@ from .base import (
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
-from .gaussian_noise_perturbation import GaussianNoiseImagePerturbator, GaussianNoisePerturbator
-from .gradient_shap_perturbation import GradientShapImagePerturbator, GradientShapPerturbator
+from .gaussian_noise_perturbation import GaussianNoisePerturbator
+from .gradient_shap_perturbation import GradientShapPerturbator
 from .insertion_deletion_perturbation import DeletionPerturbator, InsertionPerturbator
-from .linear_interpolation_perturbation import LinearInterpolationImagePerturbator, LinearInterpolationPerturbator
-from .occlusion_perturbation import OcclusionImagePerturbator, OcclusionPerturbator
-from .random_perturbation import RandomMaskedImagePerturbator, RandomMaskedTokenPerturbator
-from .shap_perturbation import ShapImagePerturbator, ShapTokenPerturbator
-from .sobol_perturbation import SobolImagePerturbator, SobolTokenPerturbator
+from .linear_interpolation_perturbation import LinearInterpolationPerturbator
+from .occlusion_perturbation import OcclusionPerturbator
+from .random_perturbation import RandomMaskedPerturbator
+from .shap_perturbation import ShapPerturbator
+from .sobol_perturbation import SobolPerturbator
 
 __all__ = [
     "MaskPerturbator",
@@ -48,20 +48,13 @@ __all__ = [
     "TextTensorPerturbator",
     "ImageMaskPerturbator",
     "ImageTensorPerturbator",
-    "GaussianNoiseImagePerturbator",
     "GaussianNoisePerturbator",
-    "GradientShapImagePerturbator",
     "GradientShapPerturbator",
     "InsertionPerturbator",
     "DeletionPerturbator",
-    "LinearInterpolationImagePerturbator",
     "LinearInterpolationPerturbator",
-    "OcclusionImagePerturbator",
     "OcclusionPerturbator",
-    "RandomMaskedImagePerturbator",
-    "RandomMaskedTokenPerturbator",
-    "ShapImagePerturbator",
-    "ShapTokenPerturbator",
-    "SobolImagePerturbator",
-    "SobolTokenPerturbator",
+    "RandomMaskedPerturbator",
+    "ShapPerturbator",
+    "SobolPerturbator",
 ]

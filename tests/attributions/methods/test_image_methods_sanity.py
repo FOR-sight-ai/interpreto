@@ -54,18 +54,18 @@ from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 
 from interpreto.attributions import (
-    ImageGradientShap,
-    ImageIntegratedGradients,
-    ImageKernelShap,
-    ImageLime,
-    ImageOcclusion,
-    ImageSaliency,
-    ImageSmoothGrad,
-    ImageSobol,
-    ImageSquareGrad,
-    ImageVarGrad,
+    GradientShap,
+    IntegratedGradients,
+    KernelShap,
+    Lime,
+    Occlusion,
+    Saliency,
+    SmoothGrad,
+    Sobol,
+    SquareGrad,
+    VarGrad,
 )
-from interpreto.visualizations import plot_image_attribution
+from interpreto.visualizations.image_attributions import plot_image_attribution
 
 plt.switch_backend("Agg")  # headless: render into a buffer, never open a window.
 
@@ -88,16 +88,16 @@ SANITY_CASES = [
 
 # All ten methods, constructed uniformly with default parameters (Sobol/LIME included).
 SANITY_METHODS = [
-    ImageGradientShap,
-    ImageIntegratedGradients,
-    ImageKernelShap,
-    ImageOcclusion,
-    ImageSaliency,
-    ImageSmoothGrad,
-    ImageSobol,
-    ImageSquareGrad,
-    ImageVarGrad,
-    ImageLime,
+    GradientShap,
+    IntegratedGradients,
+    KernelShap,
+    Occlusion,
+    Saliency,
+    SmoothGrad,
+    Sobol,
+    SquareGrad,
+    VarGrad,
+    Lime,
 ]
 
 
@@ -148,7 +148,7 @@ def test_image_methods_sanity(model_and_processor, raw_image, attribution_method
     explainer = attribution_method(model, processor)
     output = explainer.explain(masked_image, target)
 
-    # Basic smoke checks only — no claim yet about *where* the attribution concentrates.
+    # Basic checks.
     assert len(output) == 1, "explain() on a single masked image must return exactly one AttributionOutput"
     assert torch.isfinite(output[0].attributions).all(), (
         "attribution scores must be finite (no NaN/Inf), regardless of method or masked region"

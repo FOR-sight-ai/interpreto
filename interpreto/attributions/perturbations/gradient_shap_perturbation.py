@@ -26,12 +26,10 @@
 from __future__ import annotations
 
 import torch
+from beartype import beartype
+from jaxtyping import Float, jaxtyped
 
-from interpreto.attributions.perturbations.linear_interpolation_perturbation import (
-    LinearInterpolationImagePerturbator,
-    LinearInterpolationPerturbator,
-)
-from interpreto.typing import TensorBaseline
+from interpreto.attributions.perturbations.linear_interpolation_perturbation import LinearInterpolationPerturbator
 
 
 class GradientShapPerturbator(LinearInterpolationPerturbator):
@@ -40,83 +38,40 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
     and in the baseline, to approximate the expectation over multiple noisy baselines and paths.
     """
 
-    def __init__(
-        self,
-        inputs_embedder: torch.nn.Module,
-        baseline: TensorBaseline = None,
-        n_perturbations: int = 10,
-        std: float = 0.1,
-    ):
+    def __init__(self, *, std: float = 0.1, **kwargs):
         """
-        Initializes the GradientShapPerturbator.
-
         Args:
-            inputs_embedder (torch.nn.Module): Module to transform inputs into embeddings. Defaults to None.
-            baseline (TensorBaseline, optional): The reference embedding (can be a tensor, float, int, or None). Defaults to None.
-            n_perturbations (int, optional): Number of random samples for interpolation. Defaults to 10.
-            std (float, optional): Standard deviation of the Gaussian noise added to the baseline. Defaults to 0.1.
+            std (float, optional): Standard deviation of the Gaussian noise added to the baseline.
+                Defaults to 0.1.
         """
-        super().__init__(inputs_embedder=inputs_embedder, baseline=baseline, n_perturbations=n_perturbations)
+        super().__init__(**kwargs)
         self.std = std
 
-    def _generate_baseline(self, embeddings: torch.Tensor) -> torch.Tensor:
+    @jaxtyped(typechecker=beartype)
+    def _generate_baseline(
+        self, processed_inputs: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 3 H W"]
+    ) -> Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p 3 H W"]:
         """
         Generates multiple noisy baselines for GradientSHAP.
 
         - Replicates the baseline for each interpolation step and batch element.
         - Adds Gaussian noise with standard deviation `std`.
         """
-        baseline = self.adjust_baseline(self.baseline, embeddings)
-        baseline = baseline.to(embeddings.device)
+        baseline = self.adjust_baseline(self.baseline, processed_inputs)
+        baseline = baseline.to(processed_inputs.device)
 
-        baseline = baseline.unsqueeze(0).repeat(self.n_perturbations, 1, 1)  # (p, l, d)
+        baseline: Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p 3 H W"] = baseline.unsqueeze(0).repeat(
+            self.n_perturbations, *(1,) * (processed_inputs.ndim - 1)
+        )
         baseline += torch.randn_like(baseline) * self.std  # noise
 
         return baseline
 
-    def _generate_alphas(self, shape: torch.Size, device: torch.device) -> torch.Tensor:
+    @jaxtyped(typechecker=beartype)
+    def _generate_alphas(
+        self, shape: torch.Size, device: torch.device
+    ) -> Float[torch.Tensor, "p 1 1"] | Float[torch.Tensor, "p 1 1 1"]:
         """
         Generates random interpolation coefficients (alphas) for GradientSHAP.
         """
-        return torch.rand(self.n_perturbations, 1, 1, device=device)
-
-
-class GradientShapImagePerturbator(LinearInterpolationImagePerturbator):
-    """
-    Image-side analog of `GradientShapPerturbator`.
-
-    Like `LinearInterpolationImagePerturbator`, but introduces randomness in
-    both the interpolation coefficients (random alphas, not evenly spaced) and
-    the baseline (Gaussian noise added per draw), to approximate the
-    expectation over multiple noisy baselines and paths in pixel space.
-    """
-
-    __slots__ = ("std",)
-
-    def __init__(
-        self,
-        baseline: TensorBaseline = None,
-        n_perturbations: int = 10,
-        std: float = 0.1,
-    ) -> None:
-        """
-        Args:
-            baseline (TensorBaseline, optional): reference pixel values (torch.Tensor, int, float, or None).
-            n_perturbations (int): number of random samples for interpolation.
-            std (float): standard deviation of the Gaussian noise added to the baseline.
-        """
-        super().__init__(baseline=baseline, n_perturbations=n_perturbations)
-        self.std = std
-
-    def _generate_baseline(self, pixel_values: torch.Tensor) -> torch.Tensor:
-        """Replicate the baseline per perturbation and add Gaussian noise, shape (p, 3, H, W)."""
-        baseline = self.adjust_baseline(self.baseline, pixel_values)
-        baseline = baseline.to(pixel_values.device)
-
-        baseline: Float[torch.Tensor, "p,3,H,W"] = baseline.unsqueeze(0).repeat(self.n_perturbations, 1, 1, 1)
-        baseline += torch.randn_like(baseline) * self.std
-        return baseline
-
-    def _generate_alphas(self, shape: torch.Size, device: torch.device) -> torch.Tensor:
-        """Random interpolation coefficients in [0, 1), shape (p, 1, 1, 1)."""
-        return torch.rand(self.n_perturbations, 1, 1, 1, device=device)
+        return torch.rand(self.n_perturbations, *(1,) * (len(shape) - 1), device=device)

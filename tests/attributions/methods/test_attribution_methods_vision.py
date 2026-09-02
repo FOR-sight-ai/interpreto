@@ -33,24 +33,16 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 from transformers.image_processing_utils import BatchFeature
 
 from interpreto.attributions import (
-    ImageGradientShap,
-    ImageIntegratedGradients,
-    ImageKernelShap,
-    ImageLime,
-    ImageOcclusion,
-    ImageSaliency,
-    ImageSmoothGrad,
-    ImageSobol,
-    ImageSquareGrad,
-    ImageVarGrad,
+    Lime,
+    Occlusion,
+    Saliency,
+    SmoothGrad,
+    Sobol,
 )
 from interpreto.attributions.aggregations.base import (
     Aggregator,
     MeanAggregator,
     OcclusionAggregator,
-    SquaredMeanAggregator,
-    TrapezoidalMeanAggregator,
-    VarianceAggregator,
 )
 from interpreto.attributions.aggregations.linear_regression_aggregation import (
     DistancesFromMask,
@@ -61,14 +53,11 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
 from interpreto.attributions.base import ImageAttributionOutput
 from interpreto.attributions.perturbations import (
-    GaussianNoiseImagePerturbator,
-    GradientShapImagePerturbator,
+    GaussianNoisePerturbator,
     ImageTensorPerturbator,
-    LinearInterpolationImagePerturbator,
-    OcclusionImagePerturbator,
-    RandomMaskedImagePerturbator,
-    ShapImagePerturbator,
-    SobolImagePerturbator,
+    OcclusionPerturbator,
+    RandomMaskedPerturbator,
+    SobolPerturbator,
 )
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
@@ -158,14 +147,9 @@ def model_and_processor():
 
 
 FAST_METHOD_SPECS = [
-    (ImageGradientShap, GradientShapImagePerturbator, MeanAggregator, ImageGranularity.PIXEL),
-    (ImageIntegratedGradients, LinearInterpolationImagePerturbator, TrapezoidalMeanAggregator, ImageGranularity.PIXEL),
-    (ImageKernelShap, ShapImagePerturbator, LinearRegressionAggregator, ImageGranularity.PATCH),
-    (ImageOcclusion, OcclusionImagePerturbator, OcclusionAggregator, ImageGranularity.PATCH),
-    (ImageSaliency, ImageTensorPerturbator, Aggregator, ImageGranularity.PIXEL),
-    (ImageSmoothGrad, GaussianNoiseImagePerturbator, MeanAggregator, ImageGranularity.PIXEL),
-    (ImageSquareGrad, GaussianNoiseImagePerturbator, SquaredMeanAggregator, ImageGranularity.PIXEL),
-    (ImageVarGrad, GaussianNoiseImagePerturbator, VarianceAggregator, ImageGranularity.PIXEL),
+    (Occlusion, OcclusionPerturbator, OcclusionAggregator, ImageGranularity.PATCH),
+    (Saliency, ImageTensorPerturbator, Aggregator, ImageGranularity.PIXEL),
+    (SmoothGrad, GaussianNoisePerturbator, MeanAggregator, ImageGranularity.PIXEL),
 ]
 
 
@@ -288,18 +272,18 @@ def test_vision_attribution_methods_fast(
     model, processor = model_and_processor
     inputs = request.getfixturevalue(input_fixture)
 
-    if attribution_method in (ImageOcclusion, ImageSaliency):
+    if attribution_method in (Occlusion, Saliency):
         explainer = attribution_method(
             model,
             processor,
-            resize_strategy=resize_strategy,
+            combination_strategy=resize_strategy,
         )
     else:
         explainer = attribution_method(
             model,
             processor,
             n_perturbations=5,
-            resize_strategy=resize_strategy,
+            combination_strategy=resize_strategy,
         )
 
     _assert_explains_and_plots(
@@ -315,7 +299,7 @@ def test_vision_attribution_methods_fast(
 
 
 # Sobol carries its own machinery (quasi-MC SequenceSampler + variance-based aggregation),
-# so it gets its own test rather than a FAST_METHOD_SPECS row: it takes `n_token_perturbations`
+# so it gets its own test rather than a FAST_METHOD_SPECS row: it takes `n_input_perturbations`
 # (not `n_perturbations`) and two extra knobs, the indices `order` and the `sampler`, both worth
 # sweeping. Kept to a small representative set: both orders, all three samplers.
 SOBOL_SPECS = [
@@ -327,11 +311,11 @@ SOBOL_SPECS = [
 
 @pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
 @pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
-@pytest.mark.parametrize("n_token_perturbations, order, sampler", SOBOL_SPECS)
+@pytest.mark.parametrize("n_input_perturbations, order, sampler", SOBOL_SPECS)
 def test_image_sobol(
     request,
     model_and_processor,
-    n_token_perturbations,
+    n_input_perturbations,
     order,
     sampler,
     resize_strategy,
@@ -340,16 +324,15 @@ def test_image_sobol(
 ):
     model, processor = model_and_processor
     inputs = request.getfixturevalue(input_fixture)
-
-    explainer = ImageSobol(
+    explainer = Sobol(
         model,
         processor,
-        n_token_perturbations=n_token_perturbations,
+        n_input_perturbations=n_input_perturbations,
         sobol_indices_order=order,
         sampler=sampler,
-        resize_strategy=resize_strategy,
+        combination_strategy=resize_strategy,
     )
-
+    #
     # The two Sobol-specific knobs must land on the right objects (stored as their `.value`).
     assert explainer.perturbator.sampler_class == sampler.value, (
         "explainer.perturbator.sampler_class should be the sampler value passed as input. "
@@ -359,29 +342,28 @@ def test_image_sobol(
         "explainer.aggregator.sobol_indices_order should be the order value passed as input. "
         f"Expected {order.value}, got {explainer.aggregator.sobol_indices_order}"
     )
-
     _assert_explains_and_plots(
         explainer,
         processor,
-        SobolImagePerturbator,
+        SobolPerturbator,
         SobolAggregator,
         inputs,
         targets,
         ImageGranularity.PATCH,
         resize_strategy,
     )
-
+    #
     # The Sobol perturbator builds ((g + 2) * k, g) masks, where g = gh * gw is the number of
-    # patches and k = n_token_perturbations. Derive g from the processed pixel grid and the
+    # patches and k = n_input_perturbations. Derive g from the processed pixel grid and the
     # reconciled patch_size, then check the mask directly (mirrors the text-side Sobol test).
     _, _, height, width = explainer.process_model_inputs(inputs)[0]["pixel_values"].shape
     patch_size = explainer.perturbator.patch_size
     seq_len = (height // patch_size) * (width // patch_size)
     mask = explainer.perturbator.get_mask(seq_len)
     assert isinstance(mask, torch.Tensor), "get_mask must return a torch.Tensor"
-    assert mask.shape == ((seq_len + 2) * n_token_perturbations, seq_len), (
-        "Sobol mask must have shape ((seq_len + 2) * n_token_perturbations, seq_len). Expected "
-        f"{((seq_len + 2) * n_token_perturbations, seq_len)}, got {tuple(mask.shape)}"
+    assert mask.shape == ((seq_len + 2) * n_input_perturbations, seq_len), (
+        "Sobol mask must have shape ((seq_len + 2) * n_input_perturbations, seq_len). Expected "
+        f"{((seq_len + 2) * n_input_perturbations, seq_len)}, got {tuple(mask.shape)}"
     )
     assert mask.dtype == torch.float32, "Sobol mask.dtype must be torch.float32"
 
@@ -414,17 +396,16 @@ def test_image_lime(
 ):
     model, processor = model_and_processor
     inputs = request.getfixturevalue(input_fixture)
-
-    explainer = ImageLime(
+    explainer = Lime(
         model,
         processor,
         n_perturbations=n_perturbations,
         perturb_probability=perturb_probability,
         distance_function=distance_function,
         kernel_width=kernel_width,
-        resize_strategy=resize_strategy,
+        combination_strategy=resize_strategy,
     )
-
+    #
     # The LIME-specific knobs must land on the right objects.
     assert explainer.perturbator.n_perturbations == n_perturbations, (
         "explainer.perturbator.n_perturbations should be the n_perturbations passed as input. "
@@ -453,18 +434,17 @@ def test_image_lime(
             "explainer.aggregator.kernel_width should be the kernel_width passed as input. "
             f"Expected {kernel_width}, got {explainer.aggregator.kernel_width}"
         )
-
     _assert_explains_and_plots(
         explainer,
         processor,
-        RandomMaskedImagePerturbator,
+        RandomMaskedPerturbator,
         LinearRegressionAggregator,
         inputs,
         targets,
         ImageGranularity.PATCH,
         resize_strategy,
     )
-
+    #
     # The LIME perturbator builds (n_perturbations, g) masks, where g = gh * gw is the number of
     # patches. Derive g from the processed pixel grid and the reconciled patch_size, then check
     # the mask directly (mirrors the text-side LIME test).
@@ -504,8 +484,8 @@ SLOW_INPUT_FIXTURES = [
 ]
 
 SLOW_METHOD_SPECS = FAST_METHOD_SPECS + [
-    (ImageSobol, SobolImagePerturbator, SobolAggregator, ImageGranularity.PATCH),
-    (ImageLime, RandomMaskedImagePerturbator, LinearRegressionAggregator, ImageGranularity.PATCH),
+    (Sobol, SobolPerturbator, SobolAggregator, ImageGranularity.PATCH),
+    (Lime, RandomMaskedPerturbator, LinearRegressionAggregator, ImageGranularity.PATCH),
 ]
 
 
@@ -529,7 +509,7 @@ def test_vision_attribution_methods_slow(
     explainer = attribution_method(
         model,
         processor,
-        resize_strategy=GranularityResizeStrategy.BILINEAR,
+        combination_strategy=GranularityResizeStrategy.BILINEAR,
     )
 
     _assert_explains_and_plots(

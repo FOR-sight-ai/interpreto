@@ -32,99 +32,23 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
-from transformers import PreTrainedTokenizerBase
 
-from interpreto.attributions.perturbations.base import (
-    ImageGranularity,
-    ImageMaskPerturbator,
-    TextGranularity,
-    TextMaskPerturbator,
-)
+from interpreto.attributions.perturbations.base import MaskPerturbator
 
 
-class RandomMaskedTokenPerturbator(TextMaskPerturbator):
-    """
-    Perturbator adding random masking to the input tensor
-    """
-
-    def __init__(
-        self,
-        tokenizer: PreTrainedTokenizerBase | None = None,
-        granularity: TextGranularity = TextGranularity.TOKEN,
-        replace_token_id: int = 0,
-        n_perturbations: int = 30,
-        perturb_probability: float = 0.5,
-    ):
-        """
-        Initialize the perturbator.
-
-        Args:
-            tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
-            inputs_embedder (torch.nn.Module | None): optional inputs embedder
-            replace_token_id (int): the token id to use for replacing the masked tokens
-            n_perturbations (int): the number of perturbations to generate
-            perturb_probability (float): probability of perturbation
-        """
-        super().__init__(
-            tokenizer=tokenizer,
-            n_perturbations=n_perturbations,
-            replace_token_id=replace_token_id,
-            granularity=granularity,
-        )
-        self.perturb_probability = perturb_probability
-
-    @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int) -> Float[Tensor, "{self.n_perturbations} {mask_dim}"]:
-        """
-        Method returning a random perturbation mask for a given input sequence.
-
-        Args:
-            mask_dim (int): The length of the sequence. Called 'l' in shapes.
-
-        Returns:
-            masks (torch.Tensor): A tensor of shape (p, l). with p the number of perturbations.
-        """
-        # Simplify typing
-        p, l = self.n_perturbations, mask_dim
-
-        # Generate random numbers between 0 and 1.
-        rands: Float[Tensor, "{p} {l}"] = torch.rand((p, l))
-
-        # Convert random numbers to binary masks.
-        masks: Float[Tensor, "{p} {l}"] = (rands < self.perturb_probability).float()
-
-        return masks
-
-
-class RandomMaskedImagePerturbator(ImageMaskPerturbator):
+class RandomMaskedPerturbator(MaskPerturbator):
     """
     Perturbator masking a random subset of granularity units, used by LIME.
+
+    It is combined with a modality base at runtime by the Lime method.
     """
 
-    __slots__ = ("perturb_probability",)
-
-    def __init__(
-        self,
-        granularity: ImageGranularity = ImageGranularity.PATCH,
-        replace_value: float = 0.0,
-        n_perturbations: int = 30,
-        perturb_probability: float = 0.5,
-        patch_size: int | None = None,
-    ):
+    def __init__(self, *, perturb_probability: float = 0.5, **kwargs):
         """
         Args:
-            granularity (ImageGranularity): unit over which masks are defined.
-            replace_value (float): baseline written into masked positions.
-            n_perturbations (int): number of perturbations to generate.
             perturb_probability (float): probability that a unit is masked.
-            patch_size (int): patch side length (reconciled by the explainer).
         """
-        super().__init__(
-            granularity=granularity,
-            n_perturbations=n_perturbations,
-            replace_value=replace_value,
-            patch_size=patch_size,
-        )
+        super().__init__(**kwargs)
         self.perturb_probability = perturb_probability
 
     @jaxtyped(typechecker=beartype)

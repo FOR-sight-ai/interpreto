@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from collections.abc import MutableMapping
+from copy import deepcopy
 
 import pytest
 import torch
@@ -31,37 +32,56 @@ from interpreto.attributions.perturbations import (
     GradientShapPerturbator,
     LinearInterpolationPerturbator,
     OcclusionPerturbator,
-    RandomMaskedTokenPerturbator,
-    ShapTokenPerturbator,
-    SobolTokenPerturbator,
+    RandomMaskedPerturbator,
+    ShapPerturbator,
+    SobolPerturbator,
 )
-from interpreto.attributions.perturbations.base import TextMaskPerturbator
+from interpreto.attributions.perturbations.base import TextMaskPerturbator, TextTensorPerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import TextGranularity
 
+
+def _text_variant(method_class: type, modality_base: type) -> type:
+    """
+    Combine a method perturbator with a text modality base, as the explainer does at construction
+    time. The method class alone leaves `perturb` abstract.
+    """
+    return type("Text" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
+
+
+def _setup_attribution_explainer_values(perturbator, model):
+    """
+    Sets values for the Perturbators that should be set by the AttributionExplainer in the normal
+    functioning of the library
+    """
+    if isinstance(perturbator, TextTensorPerturbator):
+        perturbator.inputs_embedder = deepcopy(model.get_input_embeddings()).cpu()
+
+
 embeddings_perturbators = [
-    GaussianNoisePerturbator,
-    LinearInterpolationPerturbator,
-    GradientShapPerturbator,
+    _text_variant(GaussianNoisePerturbator, TextTensorPerturbator),
+    _text_variant(LinearInterpolationPerturbator, TextTensorPerturbator),
+    _text_variant(GradientShapPerturbator, TextTensorPerturbator),
 ]
 
 tokens_perturbators = [
-    OcclusionPerturbator,
-    RandomMaskedTokenPerturbator,
-    ShapTokenPerturbator,
-    SobolTokenPerturbator,
+    _text_variant(OcclusionPerturbator, TextMaskPerturbator),
+    _text_variant(RandomMaskedPerturbator, TextMaskPerturbator),
+    _text_variant(ShapPerturbator, TextMaskPerturbator),
+    _text_variant(SobolPerturbator, TextMaskPerturbator),
 ]
 
 
 @pytest.mark.parametrize("perturbator_class", embeddings_perturbators)
 def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_tokenizer):
     """test all perturbators respect the API"""
+    assert issubclass(perturbator_class, TextTensorPerturbator)
     assert not issubclass(perturbator_class, TextMaskPerturbator)
     p = 10
     d = 32
-    inputs_embedder = bert_model.get_input_embeddings()
 
-    perturbator = perturbator_class(inputs_embedder=inputs_embedder, n_perturbations=p)
+    perturbator = perturbator_class(n_perturbations=p)
+    _setup_attribution_explainer_values(perturbator, bert_model)
 
     for sent in sentences:
         elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
@@ -96,20 +116,15 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         bert_model.resize_token_embeddings(len(bert_tokenizer))
     replace_token_id = bert_tokenizer.convert_tokens_to_ids(replace_token)  # type: ignore
 
-    if perturbator_class in [OcclusionPerturbator, SobolTokenPerturbator]:
-        # the number of perturbations depends on the sequence length
-        perturbator = perturbator_class(
-            tokenizer=bert_tokenizer,
-            granularity=TextGranularity.ALL_TOKENS,
-            replace_token_id=replace_token_id,
-        )
-    else:
-        perturbator = perturbator_class(
-            tokenizer=bert_tokenizer,
-            granularity=TextGranularity.ALL_TOKENS,
-            replace_token_id=replace_token_id,
-            n_perturbations=p,
-        )
+    # `n_perturbations` is ignored by Occlusion and Sobol, whose number of perturbations is
+    # dictated by the sequence length instead.
+    perturbator = perturbator_class(
+        processor=bert_tokenizer,
+        granularity=TextGranularity.ALL_TOKENS,
+        replace_value=replace_token_id,
+        n_perturbations=p,
+    )
+    _setup_attribution_explainer_values(perturbator, bert_model)
 
     for sent in sentences:
         elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
@@ -125,8 +140,8 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         assert isinstance(perturbed_inputs["input_ids"], torch.Tensor)
         if isinstance(perturbator, OcclusionPerturbator):
             real_p = l + 1
-        elif isinstance(perturbator, SobolTokenPerturbator):
-            k = perturbator.n_token_perturbations
+        elif isinstance(perturbator, SobolPerturbator):
+            k = perturbator.n_input_perturbations
             real_p = (l + 2) * k
         else:
             real_p = p
@@ -267,8 +282,8 @@ def test_linear_interpolation_perturbation_adjust_baseline_invalid():
 )
 def test_sobol_masks(sampler):
     k = 10
-    perturbator = SobolTokenPerturbator(
-        n_token_perturbations=k,
+    perturbator = _text_variant(SobolPerturbator, TextMaskPerturbator)(
+        n_input_perturbations=k,
         sampler=sampler,
     )
 
@@ -289,7 +304,7 @@ def test_sobol_masks(sampler):
 
 
 def test_occlusion_masks():
-    perturbator = OcclusionPerturbator()
+    perturbator = _text_variant(OcclusionPerturbator, TextMaskPerturbator)()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))
@@ -309,7 +324,7 @@ if __name__ == "__main__":
     bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
 
     test_token_perturbators(
-        SobolTokenPerturbator,
+        _text_variant(SobolPerturbator, TextMaskPerturbator),
         sentences=sentences,
         bert_model=bert_model,
         bert_tokenizer=bert_tokenizer,

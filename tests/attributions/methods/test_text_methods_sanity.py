@@ -30,7 +30,7 @@ import numpy as np
 import pytest
 import torch
 from torch import nn
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, BatchEncoding, PreTrainedTokenizerBase
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, BatchEncoding, PreTrainedTokenizer
 from transformers.modeling_outputs import CausalLMOutput
 
 from interpreto import (
@@ -106,7 +106,7 @@ def test_classification_attribution_methods_detect_emotion_word(emotion_model, m
 
     texts = [text for text, _, _ in EXAMPLES]
 
-    explainer = method_class(model, tokenizer=tokenizer)
+    explainer = method_class(model, processor=tokenizer)
 
     set_seed()
     attribution_outputs = explainer.explain(texts)
@@ -135,7 +135,7 @@ COPY_SHIFT = 2
 SEPARATOR_TOKEN = " "
 
 
-class LetterTokenizer(PreTrainedTokenizerBase):
+class LetterTokenizer(PreTrainedTokenizer):
     """Minimal character tokenizer for this test: 26 capitals plus a separator/mask space token."""
 
     vocab_files_names: dict[str, str] = {}
@@ -342,7 +342,7 @@ def test_generation_attribution_methods_detect_copied_token(shift_copy_model, me
     prompt_token_count = tokenizer(prompt, return_tensors="pt")["input_ids"].shape[-1]
 
     explainer = method_class(
-        model, tokenizer=tokenizer, granularity=TextGranularity.TOKEN, batch_size=1, device=DEVICE
+        model, processor=tokenizer, granularity=TextGranularity.TOKEN, batch_size=1, device=DEVICE
     )
 
     set_seed()

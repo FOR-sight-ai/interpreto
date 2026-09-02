@@ -33,7 +33,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
     default_kernel_width_fn,
 )
 from interpreto.attributions.base import AttributionOutput
-from interpreto.attributions.perturbations.random_perturbation import RandomMaskedTokenPerturbator
+from interpreto.attributions.perturbations import RandomMaskedPerturbator
 from interpreto.commons.granularity import TextGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -58,7 +58,7 @@ def test_lime_attribution_init_and_mask(
 
     explainer = Lime(
         model=bert_model,
-        tokenizer=bert_tokenizer,
+        processor=bert_tokenizer,
         batch_size=batch_size,
         granularity=granularity,
         n_perturbations=n_perturbations,
@@ -69,7 +69,7 @@ def test_lime_attribution_init_and_mask(
     )
 
     # 2) check the perturbator stored our params correctly
-    assert isinstance(explainer.perturbator, RandomMaskedTokenPerturbator)
+    assert isinstance(explainer.perturbator, RandomMaskedPerturbator)
     perturbator = explainer.perturbator
     assert perturbator.n_perturbations == n_perturbations
     assert pytest.approx(perturbator.perturb_probability, rel=1e-6) == perturb_probability
@@ -78,7 +78,7 @@ def test_lime_attribution_init_and_mask(
     if replace_id is None:
         assert "[REPLACE]" in bert_tokenizer.get_vocab()
         replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
-    assert perturbator.replace_token_id == (replace_id if isinstance(replace_id, int) else replace_id[0])
+    assert perturbator.replace_value == (replace_id if isinstance(replace_id, int) else replace_id[0])
 
     # 3) check the aggregator
     assert isinstance(explainer.aggregator, LinearRegressionAggregator)

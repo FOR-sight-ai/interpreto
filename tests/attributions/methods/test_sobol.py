@@ -28,17 +28,14 @@ import torch
 from interpreto.attributions import Sobol
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
 from interpreto.attributions.base import AttributionOutput
-from interpreto.attributions.perturbations.sobol_perturbation import (
-    SequenceSamplers,
-    SobolTokenPerturbator,
-)
+from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers, SobolPerturbator
 from interpreto.commons.granularity import TextGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 @pytest.mark.parametrize(
-    "granularity, order, sampler, n_token_perturbations",
+    "granularity, order, sampler, n_input_perturbations",
     [
         (TextGranularity.TOKEN, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL, 2),
         (TextGranularity.TOKEN, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON, 5),
@@ -49,23 +46,23 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     ],
 )
 def test_sobol_attribution_init_and_mask(
-    bert_model, bert_tokenizer, granularity, order, sampler, n_token_perturbations
+    bert_model, bert_tokenizer, granularity, order, sampler, n_input_perturbations
 ):
     batch_size = 2
 
     explainer = Sobol(
         model=bert_model,
-        tokenizer=bert_tokenizer,
+        processor=bert_tokenizer,
         batch_size=batch_size,
         device=DEVICE,
         granularity=granularity,
-        n_token_perturbations=n_token_perturbations,
+        n_input_perturbations=n_input_perturbations,
         sobol_indices_order=order,
         sampler=sampler,
     )
 
     # 2) check the perturbator stored our enums correctly
-    assert isinstance(explainer.perturbator, SobolTokenPerturbator)
+    assert isinstance(explainer.perturbator, SobolPerturbator)
     assert isinstance(explainer.aggregator, SobolAggregator)
     assert explainer.perturbator.sampler_class == sampler.value
     assert explainer.aggregator.sobol_indices_order == order.value
@@ -73,13 +70,13 @@ def test_sobol_attribution_init_and_mask(
     if expected_replace_id is None:
         assert "[REPLACE]" in bert_tokenizer.get_vocab()
         expected_replace_id = bert_tokenizer.convert_tokens_to_ids("[REPLACE]")
-    assert explainer.perturbator.replace_token_id == expected_replace_id
+    assert explainer.perturbator.replace_value == expected_replace_id
 
     # 3) get_mask returns a float32 tensor of shape (n_perturbations, seq_len)   # TODO: put this in a common perturbator test
     seq_len = 8
     mask = explainer.perturbator.get_mask(seq_len)
     assert isinstance(mask, torch.Tensor)
-    assert mask.shape == ((seq_len + 2) * n_token_perturbations, seq_len)
+    assert mask.shape == ((seq_len + 2) * n_input_perturbations, seq_len)
     assert mask.dtype == torch.float32
 
     # 4) check explanations TODO add this to the main test
