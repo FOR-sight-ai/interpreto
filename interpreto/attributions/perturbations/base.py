@@ -97,16 +97,6 @@ class TextTensorPerturbator(TensorPerturbator):
     Text specific class that inherits from TensorPerturbator.
     """
 
-    def __init__(self, *, inputs_embedder: torch.nn.Module | None = None, **kwargs):
-        """
-        Args:
-            inputs_embedder: Model's module to convert input IDs to embeddings. Text-only: the
-                image side works directly on `pixel_values`. Accepted here so the perturbator can
-                be built standalone, but the explainer owns the model and overwrites it at
-                construction, the same way it overwrites `ImageMaskPerturbator.patch_size`.
-        """
-        super().__init__(**kwargs)
-
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         # very input_ids are present
         if "input_ids" not in model_inputs:
@@ -347,13 +337,7 @@ class ImageMaskPerturbator(MaskPerturbator):
     This class is combined with a method perturbator at runtime.
     """
 
-    def __init__(
-        self,
-        *,
-        granularity_combination_strategy: GranularityResizeStrategy = GranularityResizeStrategy.NEAREST,
-        patch_size: int | None = None,
-        **kwargs,
-    ):
+    def __init__(**kwargs):
         """
         Args:
             granularity_combination_strategy: how a `(p, g)` mask is expanded to pixel resolution
