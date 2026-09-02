@@ -123,7 +123,7 @@ def test_image_embedding_perturbator(perturbator_class, model_name, images):
 
     p = 10
     perturbator = perturbator_class(n_perturbations=p)
-    _setup_attribution_explainer_values(perturbator, model)
+    _setup_attribution_explainer_values(perturbator, model=model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
     for img in images:
@@ -166,9 +166,9 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
     patch_size = 2
     p = 15
 
-    perturbator = perturbator_class(patch_size=patch_size)
+    perturbator = perturbator_class()
     perturbator.n_perturbations = p
-    _setup_attribution_explainer_values(perturbator, model, patch_size=patch_size)
+    _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
 
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
@@ -227,7 +227,7 @@ def test_slow_image_embedding_perturbator(perturbator_class, model_name, images)
 
     p = 10
     perturbator = perturbator_class(n_perturbations=p)
-    _setup_attribution_explainer_values(perturbator, model)
+    _setup_attribution_explainer_values(perturbator, model=model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
     for img in images:
@@ -271,9 +271,9 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
     patch_size = 16
     p = 15
 
-    perturbator = perturbator_class(patch_size=patch_size)
+    perturbator = perturbator_class()
     perturbator.n_perturbations = p
-    _setup_attribution_explainer_values(perturbator, model, patch_size=patch_size)
+    _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
 
     image_processor = AutoImageProcessor.from_pretrained(model_name)
 
@@ -371,12 +371,14 @@ def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
 )
 def test_image_sobol_masks(sampler):
     k = 10
-    perturbator = SobolPerturbator(
+    image_sobol_perturbator = (_image_variant(SobolPerturbator, ImageTensorPerturbator),)
+    perturbator = image_sobol_perturbator(
         n_input_perturbations=k,
         sampler=sampler,
     )
-    _setup_attribution_explainer_values(perturbator, model)
 
+    perturbator.patch_size = 4
+    perturbator.granularity_combination_strategy = GranularityResizeStrategy.BILINEAR
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert mask.shape == ((l + 2) * k, l), (
