@@ -31,13 +31,17 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import torch
-from transformers import PreTrainedTokenizerBase
+from transformers import BaseImageProcessor, PreTrainedTokenizerBase
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.aggregations.base import OcclusionAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.perturbations.occlusion_perturbation import OcclusionPerturbator
-from interpreto.commons import general_bad_argument
+from interpreto.commons import (
+    Granularity,
+    GranularityCombinationStrategy,
+    general_bad_argument,
+)
 from interpreto.model_wrapping.inference_wrapper import InferenceModes
 
 
