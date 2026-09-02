@@ -46,9 +46,8 @@ from interpreto.attributions.perturbations.base import (
     TextMaskPerturbator,
     TextTensorPerturbator,
 )
+from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons import GranularityResizeStrategy
-
-# from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 
 IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",

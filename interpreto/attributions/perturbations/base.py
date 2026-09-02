@@ -337,15 +337,9 @@ class ImageMaskPerturbator(MaskPerturbator):
     This class is combined with a method perturbator at runtime.
     """
 
-    def __init__(**kwargs):
+    def __init__(self, **kwargs):
         """
-        Args:
-            granularity_combination_strategy: how a `(p, g)` mask is expanded to pixel resolution
-                in `perturb`. Image-only: the text side expands through an association matrix
-                instead, so it has no use for an interpolation mode.
-            patch_size: side length of a patch. Accepted here so the user can eventually choose
-                it, but the image explainer currently overwrites it with `model.config.patch_size`
-                at construction — see `attributions/base.py:1072`.
+        No other arguments because the Image specific arguments are setup by the AttributionExplainer
         """
         super().__init__(**kwargs)
         if self.granularity is ImageGranularity.PIXEL:
