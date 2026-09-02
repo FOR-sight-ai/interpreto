@@ -22,17 +22,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from collections.abc import MutableMapping
+from copy import deepcopy
 
 import pytest
 import torch
 
-from interpreto.attributions.perturbations.base import TextMaskPerturbator, TextTensorPerturbator
-from interpreto.attributions.perturbations.gaussian_noise_perturbation import GaussianNoisePerturbator
-from interpreto.attributions.perturbations.occlusion_perturbation import (
+from interpreto.attributions.perturbations import (
+    GaussianNoisePerturbator,
+    GradientShapPerturbator,
+    LinearInterpolationPerturbator,
     OcclusionPerturbator,
+    RandomMaskedPerturbator,
+    ShapPerturbator,
+    SobolPerturbator,
 )
-
-# from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
+from interpreto.attributions.perturbations.base import TextMaskPerturbator, TextTensorPerturbator
+from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import TextGranularity
 
 
@@ -44,17 +49,26 @@ def _text_variant(method_class: type, modality_base: type) -> type:
     return type("Text" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
 
 
+def _setup_attribution_explainer_values(perturbator, model):
+    """
+    Sets values for the Perturbators that should be set by the AttributionExplainer in the normal
+    functioning of the library
+    """
+    if isinstance(perturbator, TextTensorPerturbator):
+        perturbator.inputs_embedder = deepcopy(model.get_input_embeddings()).cpu()
+
+
 embeddings_perturbators = [
     _text_variant(GaussianNoisePerturbator, TextTensorPerturbator),
-    #    LinearInterpolationPerturbator,
-    #    GradientShapPerturbator,
+    _text_variant(LinearInterpolationPerturbator, TextTensorPerturbator),
+    _text_variant(GradientShapPerturbator, TextTensorPerturbator),
 ]
 
 tokens_perturbators = [
     _text_variant(OcclusionPerturbator, TextMaskPerturbator),
-    # RandomMaskedTokenPerturbator,
-    # ShapTokenPerturbator,
-    # SobolTokenPerturbator,
+    _text_variant(RandomMaskedPerturbator, TextMaskPerturbator),
+    _text_variant(ShapPerturbator, TextMaskPerturbator),
+    _text_variant(SobolPerturbator, TextMaskPerturbator),
 ]
 
 
@@ -65,9 +79,9 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
     assert not issubclass(perturbator_class, TextMaskPerturbator)
     p = 10
     d = 32
-    inputs_embedder = bert_model.get_input_embeddings()
 
-    perturbator = perturbator_class(inputs_embedder=inputs_embedder, n_perturbations=p)
+    perturbator = perturbator_class(n_perturbations=p)
+    _setup_attribution_explainer_values(perturbator, bert_model)
 
     for sent in sentences:
         elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
@@ -102,21 +116,15 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         bert_model.resize_token_embeddings(len(bert_tokenizer))
     replace_token_id = bert_tokenizer.convert_tokens_to_ids(replace_token)  # type: ignore
 
-    # if issubclass(perturbator_class, (OcclusionPerturbator, SobolTokenPerturbator)):
-    if issubclass(perturbator_class, OcclusionPerturbator):
-        # the number of perturbations depends on the sequence length
-        perturbator = perturbator_class(
-            processor=bert_tokenizer,
-            granularity=TextGranularity.ALL_TOKENS,
-            replace_value=replace_token_id,
-        )
-    else:
-        perturbator = perturbator_class(
-            processor=bert_tokenizer,
-            granularity=TextGranularity.ALL_TOKENS,
-            replace_value=replace_token_id,
-            n_perturbations=p,
-        )
+    # `n_perturbations` is ignored by Occlusion and Sobol, whose number of perturbations is
+    # dictated by the sequence length instead.
+    perturbator = perturbator_class(
+        processor=bert_tokenizer,
+        granularity=TextGranularity.ALL_TOKENS,
+        replace_value=replace_token_id,
+        n_perturbations=p,
+    )
+    _setup_attribution_explainer_values(perturbator, bert_model)
 
     for sent in sentences:
         elem = bert_tokenizer(sent, return_tensors="pt", return_offsets_mapping=True)
@@ -132,7 +140,7 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
         assert isinstance(perturbed_inputs["input_ids"], torch.Tensor)
         if isinstance(perturbator, OcclusionPerturbator):
             real_p = l + 1
-        elif isinstance(perturbator, SobolTokenPerturbator):
+        elif isinstance(perturbator, SobolPerturbator):
             k = perturbator.n_input_perturbations
             real_p = (l + 2) * k
         else:
@@ -196,42 +204,42 @@ def test_basic_mask_based_methods():
     # )
 
 
-# def test_linear_interpolation_perturbation_adjust_baseline():
-#     inputs = torch.randn(4, 3, 10)
+def test_linear_interpolation_perturbation_adjust_baseline():
+    inputs = torch.randn(4, 3, 10)
 
-#     # Test with None baseline
-#     baseline = LinearInterpolationPerturbator.adjust_baseline(None, inputs)
-#     assert torch.all(baseline.abs() < 1e-5)
-#     assert baseline.shape == inputs.shape[1:]
+    # Test with None baseline
+    baseline = LinearInterpolationPerturbator.adjust_baseline(None, inputs)
+    assert torch.all(baseline.abs() < 1e-5)
+    assert baseline.shape == inputs.shape[1:]
 
-#     # Test with float baseline
-#     baseline = LinearInterpolationPerturbator.adjust_baseline(0.5, inputs)
-#     assert torch.all(baseline == 0.5)
-#     assert baseline.shape == inputs.shape[1:]
+    # Test with float baseline
+    baseline = LinearInterpolationPerturbator.adjust_baseline(0.5, inputs)
+    assert torch.all(baseline == 0.5)
+    assert baseline.shape == inputs.shape[1:]
 
-#     # Test with tensor baseline
-#     baseline_tensor = torch.randn(3, 10)
-#     baseline = LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
-#     assert torch.all(baseline == baseline_tensor)
-#     assert baseline.shape == inputs.shape[1:]
+    # Test with tensor baseline
+    baseline_tensor = torch.randn(3, 10)
+    baseline = LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
+    assert torch.all(baseline == baseline_tensor)
+    assert baseline.shape == inputs.shape[1:]
 
 
-# def test_linear_interpolation_perturbation_adjust_baseline_invalid():
-#     inputs = torch.randn(4, 3, 10)
+def test_linear_interpolation_perturbation_adjust_baseline_invalid():
+    inputs = torch.randn(4, 3, 10)
 
-#     # Test with invalid baseline type
-#     with pytest.raises(TypeError):
-#         LinearInterpolationPerturbator.adjust_baseline("invalid", inputs)  # type: ignore
+    # Test with invalid baseline type
+    with pytest.raises(TypeError):
+        LinearInterpolationPerturbator.adjust_baseline("invalid", inputs)  # type: ignore
 
-#     # Test with mismatched tensor shape
-#     baseline_tensor = torch.randn(2, 10)
-#     with pytest.raises(ValueError):
-#         LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
+    # Test with mismatched tensor shape
+    baseline_tensor = torch.randn(2, 10)
+    with pytest.raises(ValueError):
+        LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
 
-#     # Test with mismatched tensor dtype
-#     baseline_tensor = torch.randn(3, 10, dtype=torch.float64)
-#     with pytest.raises(ValueError):
-#         LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
+    # Test with mismatched tensor dtype
+    baseline_tensor = torch.randn(3, 10, dtype=torch.float64)
+    with pytest.raises(ValueError):
+        LinearInterpolationPerturbator.adjust_baseline(baseline_tensor, inputs)
 
 
 # TODO: adapt following tests to new perturbation API
@@ -268,38 +276,35 @@ def test_basic_mask_based_methods():
 #             assert_mask_pertinence(sentences_embeddings[index], emb.squeeze(0), mask)
 
 
-# @pytest.mark.parametrize(
-#     "sampler",
-#     [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
-# )
-# def test_sobol_masks(sampler):
-#     k = 10
-#     perturbator = SobolTokenPerturbator(
-#         n_input_perturbations=k,
-#         sampler=sampler,
-#     )
+@pytest.mark.parametrize(
+    "sampler",
+    [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
+)
+def test_sobol_masks(sampler):
+    k = 10
+    perturbator = _text_variant(SobolPerturbator, TextMaskPerturbator)(
+        n_input_perturbations=k,
+        sampler=sampler,
+    )
 
-#     for l in range(2, 20, 3):
-#         mask = perturbator.get_mask(l)
-#         assert mask.shape == ((l + 2) * k, l)
-#         A = mask[:k]
-#         B = mask[k : 2 * k]
-#         C = mask[2 * k :].view(l, k, l)
+    for l in range(2, 20, 3):
+        mask = perturbator.get_mask(l)
+        assert mask.shape == ((l + 2) * k, l)
+        A = mask[:k]
+        B = mask[k : 2 * k]
+        C = mask[2 * k :].view(l, k, l)
 
-#         # verify token-wise mask compared to the initial mask
-#         for i in range(l):
-#             assert torch.all(torch.isclose(C[i, :, i], B[:, i], atol=1e-5))
-#             if i != 0:
-#                 assert torch.all(torch.isclose(C[i, :, :i], A[:, :i], atol=1e-5))
-#             if i != l - 1:
-#                 assert torch.all(torch.isclose(C[i, :, i + 1 :], A[:, i + 1 :], atol=1e-5))
+        # verify token-wise mask compared to the initial mask
+        for i in range(l):
+            assert torch.all(torch.isclose(C[i, :, i], B[:, i], atol=1e-5))
+            if i != 0:
+                assert torch.all(torch.isclose(C[i, :, :i], A[:, :i], atol=1e-5))
+            if i != l - 1:
+                assert torch.all(torch.isclose(C[i, :, i + 1 :], A[:, i + 1 :], atol=1e-5))
 
 
 def test_occlusion_masks():
-    # OcclusionPerturbator only carries the method half: `perturb` stays abstract until it is
-    # combined with a modality base, as the explainer does at construction time.
-    occlusion_class = type("TextOcclusionPerturbator", (OcclusionPerturbator, TextMaskPerturbator), {"__slots__": ()})
-    perturbator = occlusion_class()
+    perturbator = _text_variant(OcclusionPerturbator, TextMaskPerturbator)()
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))
@@ -318,9 +323,9 @@ if __name__ == "__main__":
     bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
     bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
 
-    # test_token_perturbators(
-    #     SobolTokenPerturbator,
-    #     sentences=sentences,
-    #     bert_model=bert_model,
-    #     bert_tokenizer=bert_tokenizer,
-    # )
+    test_token_perturbators(
+        _text_variant(SobolPerturbator, TextMaskPerturbator),
+        sentences=sentences,
+        bert_model=bert_model,
+        bert_tokenizer=bert_tokenizer,
+    )
