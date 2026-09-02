@@ -371,7 +371,7 @@ def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
 )
 def test_image_sobol_masks(sampler):
     k = 10
-    image_sobol_perturbator = (_image_variant(SobolPerturbator, ImageTensorPerturbator),)
+    image_sobol_perturbator = _image_variant(SobolPerturbator, ImageTensorPerturbator)
     perturbator = image_sobol_perturbator(
         n_input_perturbations=k,
         sampler=sampler,
@@ -405,7 +405,10 @@ def test_image_sobol_masks(sampler):
 
 def test_image_occlusion_masks():
     perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)()
-    _setup_attribution_explainer_values(perturbator, model)
+
+    perturbator.patch_size = 4
+    perturbator.granularity_combination_strategy = GranularityResizeStrategy.BILINEAR
+
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)), (
