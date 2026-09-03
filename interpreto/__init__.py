@@ -42,11 +42,16 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
-from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .concepts import AllLayersSplitter, ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .lens import (
+    LogitLens,
+    TunedLens,
+)
 from .visualizations import (
     AttributionVisualization,
     plot_attributions,
     plot_concepts,
+    plot_lens,
 )
 
 
@@ -61,11 +66,13 @@ def get_version() -> str:
 
 
 __all__ = [
+    "AllLayersSplitter",
     "GradientShap",
     "Granularity",
     "IntegratedGradients",
     "KernelShap",
     "Lime",
+    "LogitLens",
     "ModelWithSplitPoints",
     "Occlusion",
     "SquareGrad",
@@ -74,9 +81,11 @@ __all__ = [
     "SplitterForClassification",
     "SplitterForGeneration",
     "Sobol",
+    "TunedLens",
     "VarGrad",
     "get_version",
     "AttributionVisualization",
     "plot_attributions",
     "plot_concepts",
+    "plot_lens",
 ]

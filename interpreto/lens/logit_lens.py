@@ -22,16 +22,26 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .all_layers_splitter import AllLayersSplitter
-from .base_splitter import BaseSplitter
-from .model_with_split_points import ModelWithSplitPoints
-from .splitter_for_classification import SplitterForClassification
-from .splitter_for_generation import SplitterForGeneration
+"""Logit Lens implementation."""
 
-__all__ = [
-    "AllLayersSplitter",
-    "BaseSplitter",
-    "ModelWithSplitPoints",
-    "SplitterForClassification",
-    "SplitterForGeneration",
-]
+from ._lens_base import BaseLens
+
+
+class LogitLens(BaseLens):
+    """Project every residual-stream state through the model prediction head.
+
+    The residual states are collected in one model trace and projected together
+    through :class:`~interpreto.concepts.splitters.AllLayersSplitter`.
+
+    Args:
+        splitter (AllLayersSplitter): Model wrapper used to collect and project all layer states.
+        top_k (int): Maximum number of token or class scores returned per prediction.
+
+    Examples:
+        >>> from interpreto import AllLayersSplitter, LogitLens
+        >>> splitter = AllLayersSplitter("hf-internal-testing/tiny-random-gpt2")
+        >>> lens = LogitLens(splitter, top_k=3)
+        >>> results = lens("Interpreto is useful.")
+        >>> list(results) == splitter.activation_names
+        True
+    """

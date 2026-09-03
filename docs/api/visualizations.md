@@ -7,3 +7,13 @@
 ## `plot_concepts`
 
 ::: interpreto.visualizations.plot_concepts
+
+## `plot_lens`
+
+`plot_lens` renders the normalized output of `LogitLens.explain()` or `TunedLens.explain()`. Pass the same text used for
+the explanation and the splitter tokenizer. For sequence classification, `label_names` can map label ids to readable
+names. Like the other Interpreto plotting functions, it accepts `custom_css` and an optional `save_path`.
+
+The displayed values are intermediate softmax scores, not calibrated probabilities. Language-model tooltips show the numerical top-k scores at each position. For classification, bar lengths show the corresponding class scores.
+
+::: interpreto.visualizations.plot_lens

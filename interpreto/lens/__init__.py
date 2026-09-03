@@ -22,16 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .all_layers_splitter import AllLayersSplitter
-from .base_splitter import BaseSplitter
-from .model_with_split_points import ModelWithSplitPoints
-from .splitter_for_classification import SplitterForClassification
-from .splitter_for_generation import SplitterForGeneration
+from .logit_lens import LogitLens
+from .tuned_lens import TunedLens
 
-__all__ = [
-    "AllLayersSplitter",
-    "BaseSplitter",
-    "ModelWithSplitPoints",
-    "SplitterForClassification",
-    "SplitterForGeneration",
-]
+__all__ = ["LogitLens", "TunedLens"]

@@ -19,6 +19,7 @@ nav:
       - Generation Demonstration: notebooks/examples/generation_demonstration.ipynb
       - Probing for Linguistic Properties (Classification): notebooks/examples/classification_probe_tutorial.ipynb
       - Concepts Ngrams interpretation: notebooks/examples/classification_ngram_concept_tutorial.ipynb
+    - Lens Methods: notebooks/lens_notebook.ipynb
   - API Reference:
     - Attribution Explainers:
       - Overview: api/attributions/overview.md
@@ -39,6 +40,7 @@ nav:
     - Concept Explainers:
       - Overview: api/concepts/overview.md
       - Splitters:
+        - AllLayersSplitter: api/concepts/splitters/all_layers_splitter.md
         - ModelWithSplitPoints: api/concepts/splitters/model_with_split_points.md
         - SplitterForClassification: api/concepts/splitters/splitter_for_classification.md
         - SplitterForGeneration: api/concepts/splitters/splitter_for_generation.md
@@ -60,6 +62,11 @@ nav:
         - Reconstruction Metrics: api/concepts/metrics/reconstruction_metrics.md
         - Sparsity: api/concepts/metrics/sparsity_metrics.md
     - Visualizations: api/visualizations.md
+    - Lens:
+      - Overview: api/lens/overview.md
+      - Methods:
+        - Logit Lens: api/lens/methods/logit_lens.md
+        - Tuned Lens: api/lens/methods/tuned_lens.md
   - Roadmap: roadmap.md
   - Contributing: contributing.md
   - About: about.md
