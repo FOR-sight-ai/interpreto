@@ -74,7 +74,9 @@ def _assert_activations_and_head(model, tokenizer, layer_path=None):
 
     with torch.no_grad():
         expected_logits = model(**tokenizer(text, return_tensors="pt")).logits
-    torch.testing.assert_close(splitter.apply_head(activations[-1]), expected_logits)
+    layer_logits = splitter.apply_head(torch.cat(activations))
+    assert layer_logits.shape[0] == len(activations)
+    torch.testing.assert_close(layer_logits[-1:], expected_logits)
 
 
 def test_all_layers_splitter_bert_fast(bert_model, bert_tokenizer):
@@ -85,6 +87,30 @@ def test_all_layers_splitter_bert_fast(bert_model, bert_tokenizer):
 def test_all_layers_splitter_gpt2_fast(gpt2_model, gpt2_tokenizer):
     """GPT-2 exposes every block and projects the final output faithfully."""
     _assert_activations_and_head(gpt2_model, gpt2_tokenizer, "transformer.h")
+
+
+def test_all_layers_splitter_head_preserves_activation_gradients(gpt2_model, gpt2_tokenizer):
+    """The native model tail remains differentiable for Tuned Lens fitting."""
+    splitter = AllLayersSplitter(gpt2_model, tokenizer=gpt2_tokenizer)
+    activation = splitter.get_activations("Interpreto is useful.")[-1].detach().requires_grad_()
+
+    splitter.apply_head(activation).square().mean().backward()
+
+    assert activation.grad is not None
+    assert torch.isfinite(activation.grad).all()
+    assert torch.any(activation.grad != 0)
+
+
+def test_all_layers_splitter_head_skips_transformer_blocks(gpt2_model, gpt2_tokenizer):
+    """Applying the head does not recompute transformer blocks."""
+    splitter = AllLayersSplitter(gpt2_model, tokenizer=gpt2_tokenizer)
+    activations = torch.cat(splitter.get_activations("Interpreto is useful."))
+    block_calls = []
+
+    with gpt2_model.transformer.h[0].attn.register_forward_hook(lambda *_: block_calls.append(None)):
+        splitter.apply_head(activations)
+
+    assert not block_calls
 
 
 @pytest.mark.slow

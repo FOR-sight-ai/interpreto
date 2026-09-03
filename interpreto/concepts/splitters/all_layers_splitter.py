@@ -66,11 +66,10 @@ class AllLayersSplitter(LanguageModel):
             to the model loader.
         device_map (torch.device | str | None): Device map passed to the model
             loader.
-        **kwargs: Additional arguments passed to NNsight's ``LanguageModel``.
+        **kwargs (Any): Additional arguments passed to NNsight's ``LanguageModel``.
 
-    Attributes:
-        split_points (list[str]): Dotted paths of the transformer blocks
-            whose outputs are extracted, in model order.
+    Raises:
+        ValueError: If the model does not contain a non-empty module list.
 
     Example:
         >>> from transformers import AutoModelForCausalLM
@@ -91,7 +90,6 @@ class AllLayersSplitter(LanguageModel):
         device_map: torch.device | str | None = None,
         **kwargs: Any,
     ) -> None:
-        """Initialize the model and discover its transformer blocks."""
         super().__init__(
             model_or_repo_id,
             config=config,
@@ -114,6 +112,12 @@ class AllLayersSplitter(LanguageModel):
 
         layer_name, layers = max(module_lists, key=lambda item: len(item[1]))
         self.split_points = [f"model.{layer_name}.{index}" for index in range(len(layers))]
+        self._block_output_arity: list[int | None] = [None] * len(self.split_points)
+
+    @property
+    def activation_names(self) -> list[str]:
+        """Names of the residual states returned by :meth:`get_activations`."""
+        return [f"{self.split_points[0]}.input", *self.split_points]
 
     def _prepare_input(
         self,
@@ -163,30 +167,39 @@ class AllLayersSplitter(LanguageModel):
         activations = [self._hidden_state(cached[first_layer].input, f"{first_layer}.input")]
 
         # extract following activations as the layers outputs
+        outputs = [cached[layer_name].output for layer_name in self.split_points]
+        # Some Transformers blocks wrap their hidden state in a tuple.
+        self._block_output_arity = [len(output) if isinstance(output, tuple) else None for output in outputs]
         activations.extend(
-            self._hidden_state(cached[layer_name].output, layer_name) for layer_name in self.split_points
+            self._hidden_state(output, layer_name)
+            for output, layer_name in zip(outputs, self.split_points, strict=True)
         )
         return activations
 
     def apply_head(self, activations: torch.Tensor) -> torch.Tensor:
         """Apply the wrapped model's prediction head to residual activations.
 
-        The final transformer block is skipped and ``activations`` are used as
-        its output. The wrapped model then executes its own downstream
+        The transformer blocks are skipped and ``activations`` are used as
+        their output. The wrapped model then executes its own downstream
         normalization, pooling, and prediction head. This avoids
         architecture-specific head names and preserves functional operations
         implemented in model ``forward`` methods.
 
         Args:
             activations (torch.Tensor): Residual activations with shape
-                ``(1, sequence_length, model_width)``.
+                ``(n, sequence_length, model_width)``. The leading dimension
+                may represent several layer boundaries from the same input.
 
         Returns:
-            torch.Tensor: Logits returned by the wrapped model, including the
-                singleton batch dimension.
+            torch.Tensor: Logits returned by the wrapped model for every
+                activation in the leading dimension.
         """
-        with self.trace(inputs_embeds=activations):
-            last_layer = self.get(self.split_points[-1].removeprefix("model."))
-            last_layer.skip(activations)
+        embedding_width = self._model.get_input_embeddings().weight.shape[-1]
+        # The embedding code still validates its input even though every block is skipped.
+        inputs_embeds = activations.new_zeros((*activations.shape[:-1], embedding_width))
+        with self.trace(inputs_embeds=inputs_embeds):
+            for split_point, output_arity in zip(self.split_points, self._block_output_arity, strict=True):
+                replacement = activations if output_arity is None else (activations,) + (None,) * (output_arity - 1)
+                self.get(split_point.removeprefix("model.")).skip(replacement)
             logits = self.output.logits.save()
         return logits

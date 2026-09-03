@@ -42,7 +42,7 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
-from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .concepts import AllLayersSplitter, ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 from .lens import (
     LogitLens,
     TunedLens,
@@ -66,6 +66,7 @@ def get_version() -> str:
 
 
 __all__ = [
+    "AllLayersSplitter",
     "GradientShap",
     "Granularity",
     "IntegratedGradients",

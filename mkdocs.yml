@@ -40,6 +40,7 @@ nav:
     - Concept Explainers:
       - Overview: api/concepts/overview.md
       - Splitters:
+        - AllLayersSplitter: api/concepts/splitters/all_layers_splitter.md
         - ModelWithSplitPoints: api/concepts/splitters/model_with_split_points.md
         - SplitterForClassification: api/concepts/splitters/splitter_for_classification.md
         - SplitterForGeneration: api/concepts/splitters/splitter_for_generation.md

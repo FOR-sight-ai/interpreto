@@ -72,7 +72,7 @@ LabelNames: TypeAlias = Mapping[int | str, str] | list[str] | tuple[str, ...]
 
 
 class LensTopKOutput(TypedDict):
-    """Structured output returned by lens methods for one split point."""
+    """Top predictions returned for one residual-stream state."""
 
     top_indices: torch.Tensor
     top_scores: torch.Tensor
