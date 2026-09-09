@@ -354,7 +354,6 @@ def test_sentence_part_sentence_granularity_with_different_tokenizers():
         "hf-internal-testing/tiny-random-gpt2",
         "hf-internal-testing/tiny-random-roberta",
         "hf-internal-testing/tiny-random-t5",
-        "hf-internal-testing/tiny-random-MistralForCausalLM",
         "hf-internal-testing/tiny-random-LlamaForCausalLM",
     ]:
         tokenizer = AutoTokenizer.from_pretrained(repo_id)

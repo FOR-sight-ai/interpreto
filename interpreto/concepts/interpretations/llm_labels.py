@@ -34,12 +34,12 @@ import torch
 from jaxtyping import Float
 
 from interpreto.commons.granularity import GranularityAggregationStrategy
+from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -112,11 +112,11 @@ class LLMLabels(BaseConceptInterpretationMethod):
 
         activation_granularity (ActivationGranularity):
             The granularity of the activations to use for the interpretation.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         aggregation_strategy (GranularityAggregationStrategy):
             The aggregation strategy to use for the activations.
-            See :method:`interpreto.model_wrapping.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
 
         llm_interface (LLMInterface):
             The LLM interface to use for the interpretation.
@@ -159,16 +159,13 @@ class LLMLabels(BaseConceptInterpretationMethod):
         system_prompt (str | None):
             The system prompt to use for the LLM. If None, a default prompt is used.
 
-        concept_model_device (torch.device | str | None):
-            The device to use for the concept model forward pass.
-            If None, does not change the device.
     """
 
     def __init__(
         self,
         *,
         concept_explainer: ConceptEncoderExplainer,
-        activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
+        activation_granularity: ActivationGranularity | None = None,
         aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         llm_interface: LLMInterface,
         concept_encoding_batch_size: int = 1024,
@@ -180,7 +177,6 @@ class LLMLabels(BaseConceptInterpretationMethod):
         unique_words_kwargs: dict = {},
         k_quantile: int = 5,
         system_prompt: str | None = None,
-        concept_model_device: torch.device | str | None = None,
     ):
         super().__init__(
             concept_explainer=concept_explainer,
@@ -190,7 +186,6 @@ class LLMLabels(BaseConceptInterpretationMethod):
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
-            concept_model_device=concept_model_device,
         )
 
         if k_context > 0 and (
@@ -227,7 +222,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         self,
         concepts_indices: int | list[int] | Literal["all"],
         inputs: list[str] | None = None,
-        latent_activations: dict[str, torch.Tensor] | LatentActivations | None = None,
+        latent_activations: LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
     ) -> Mapping[int, str | None]:
         """
@@ -244,7 +239,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 The inputs to use for the interpretation.
                 Necessary if not `use_vocab`,as examples are extracted from the inputs.
 
-            latent_activations (dict[str, torch.Tensor] | Float[torch.Tensor, "nl d"] | None):
+            latent_activations (Float[torch.Tensor, "nl d"] | None):
                 The latent activations matching the inputs. If not provided,
                 it is computed from the inputs.
 

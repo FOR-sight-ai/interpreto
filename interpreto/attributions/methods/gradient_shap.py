@@ -33,6 +33,7 @@ from transformers.image_processing_utils import BaseImageProcessor
 
 from interpreto.attributions.aggregations import MeanAggregator
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.attributions.perturbations import GradientShapPerturbator
 from interpreto.commons import general_bad_argument
 from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy

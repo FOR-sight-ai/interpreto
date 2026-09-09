@@ -7,9 +7,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 UPSTREAM_REPO_DEFAULT = "https://github.com/KempnerInstitute/overcomplete.git"
 UPSTREAM_REF_DEFAULT = "main"
@@ -38,7 +38,7 @@ class GitInfo:
 
 
 def run(cmd: list[str], cwd: str | None = None) -> str:
-    p = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
     if p.returncode != 0:
         raise RuntimeError(
             f"Command failed ({p.returncode}): {' '.join(cmd)}\n"
@@ -51,19 +51,21 @@ def ensure_repo_root() -> Path:
     return Path(run(["git", "rev-parse", "--show-toplevel"]))
 
 
-def sparse_checkout(repo_url: str, ref: str, upstream_paths: Iterable[str], workdir: str) -> GitInfo:
-    """Checkout only the requested upstream paths into a temporary directory."""
+def fetch_upstream_ref(repo_url: str, ref: str, workdir: str) -> GitInfo:
+    """Fetch the upstream ref and resolve it to a commit without touching vendored files."""
     run(["git", "init"], cwd=workdir)
     run(["git", "remote", "add", "origin", repo_url], cwd=workdir)
     run(["git", "fetch", "--depth", "1", "origin", ref], cwd=workdir)
+    commit = run(["git", "rev-parse", "FETCH_HEAD^{commit}"], cwd=workdir)
+    return GitInfo(repo_url=repo_url, ref=ref, commit=commit)
 
+
+def checkout_sparse_paths(upstream_paths: Iterable[str], workdir: str, commit: str) -> None:
+    """Checkout only the requested upstream paths into a temporary directory."""
     # Non-cone mode supports sparse checkout of individual files.
     run(["git", "sparse-checkout", "init", "--no-cone"], cwd=workdir)
     run(["git", "sparse-checkout", "set", *list(upstream_paths)], cwd=workdir)
-
-    run(["git", "checkout", "FETCH_HEAD"], cwd=workdir)
-    commit = run(["git", "rev-parse", "HEAD"], cwd=workdir)
-    return GitInfo(repo_url=repo_url, ref=ref, commit=commit)
+    run(["git", "checkout", commit], cwd=workdir)
 
 
 def mirror_copy_dir(src: Path, dst: Path) -> None:
@@ -80,6 +82,19 @@ def mirror_copy_file(src: Path, dst: Path) -> None:
     if dst.exists():
         dst.unlink()
     shutil.copy2(src, dst)
+
+
+def read_vendored_commit(repo_root: Path) -> str | None:
+    """Read the upstream commit recorded in the existing VENDORED_FROM file."""
+    path = repo_root / VENDORED_FROM_PATH
+    if not path.exists():
+        return None
+
+    with path.open(encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("commit:"):
+                return line.split(":", 1)[1].strip()
+    return None
 
 
 def write_vendored_from(
@@ -114,11 +129,17 @@ def main() -> int:
     args = ap.parse_args()
 
     repo_root = ensure_repo_root()
+    previous_commit = read_vendored_commit(repo_root)
 
     upstream_paths = [src for src, _ in VENDOR_DIRS] + [src for src, _ in VENDOR_FILES]
 
     with tempfile.TemporaryDirectory() as td:
-        gi = sparse_checkout(args.repo_url, args.ref, upstream_paths, td)
+        gi = fetch_upstream_ref(args.repo_url, args.ref, td)
+        if previous_commit == gi.commit:
+            print(f"Vendored overcomplete is already up to date at {gi.commit}.")
+            return 0
+
+        checkout_sparse_paths(upstream_paths, td, gi.commit)
 
         for src_dir, dst_dir in VENDOR_DIRS:
             src_path = Path(td) / src_dir
@@ -142,4 +163,4 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except Exception as e:
         print(f"ERROR: {e}", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from e

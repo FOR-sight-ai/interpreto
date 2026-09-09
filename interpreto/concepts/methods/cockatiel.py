@@ -42,15 +42,15 @@ class Cockatiel(NMFConcepts):
         Findings of the Association for Computational Linguistics (ACL 2023), pp. 5120–5136, 2023.
 
     Attributes:
-        model_with_split_points (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (ModelWithSplitPoints): The model to apply the explanation on.
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.
         concept_model (overcomplete.optimization.SemiNMF): An [Overcomplete NMF](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/nmf.py) encoder-decoder.
         force_relu (bool): Whether to force the activations to be positive.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
-        has_differentiable_concept_encoder (bool): Whether the `encode_activations` operation is differentiable.
-        has_differentiable_concept_decoder (bool): Whether the `decode_concepts` operation is differentiable.
+        has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
+        has_differentiable_concept_decoder (bool): Whether the `concepts_to_activations` operation is differentiable.
     """
 
     def input_concept_attribution(

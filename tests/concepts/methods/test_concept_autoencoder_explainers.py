@@ -50,7 +50,8 @@ from interpreto.concepts import (
     VanillaSAEConcepts,
 )
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer, SAEExplainer
-from interpreto.model_wrapping.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
+from interpreto.concepts.methods.sklearn_wrappers import SkLearnWrapperExplainer
+from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -73,22 +74,13 @@ ALL_CONCEPT_METHODS = [
 ]
 
 
-def test_cbe_fit_failure_cases(multi_split_model: ModelWithSplitPoints):
-    """Test failure cases in matching the CBE with a ModelWithSplitPoints"""
-
-    # Raise when no split is provided and the model has more than one split
-    with pytest.raises(ValueError, match="If the model has more than one split point"):
-        _ = Cockatiel(multi_split_model, nb_concepts=3)
-
-
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
 def test_overcomplete_cbe(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
     method_class: type[ConceptAutoEncoderExplainer],
 ):
     """Test SAEExplainer and DictionaryLearningExplainer"""
-    split, activations = next(iter(activations_dict.items()))  # dictionary with only one element
     n = activations.shape[0]
     d = activations.shape[1]
     nb_concepts = 3
@@ -107,7 +99,7 @@ def test_overcomplete_cbe(
     elif issubclass(method_class, SAEExplainer):
         cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
         cbe.fit(activations, nb_epochs=1, batch_size=1, device=DEVICE)
-    elif issubclass(method_class, DictionaryLearningExplainer):
+    elif issubclass(method_class, (DictionaryLearningExplainer, SkLearnWrapperExplainer)):
         cbe = method_class(
             splitted_encoder_ml,
             nb_concepts=nb_concepts,
@@ -119,12 +111,9 @@ def test_overcomplete_cbe(
 
     assert hasattr(cbe, "concept_model"), f"Explainer {method_class.__name__} missing attribute 'concept_model'"
     assert hasattr(cbe.concept_model, "nb_concepts"), f"Concept model in {method_class.__name__} missing 'nb_concepts'"
-    assert hasattr(cbe, "model_with_split_points"), (
-        f"Explainer {method_class.__name__} missing 'model_with_split_points'"
-    )
+    assert hasattr(cbe, "splitter"), f"Explainer {method_class.__name__} missing 'splitter'"
     assert cbe.concept_model.fitted, f"Concept model in {method_class.__name__} not fitted"
     assert cbe.is_fitted, f"Explainer {method_class.__name__} reports not fitted"
-    assert cbe.split_point == split, f"Split point mismatch: expected {split}, got {cbe.split_point}"
     assert hasattr(cbe, "has_differentiable_concept_encoder"), (
         f"Explainer {method_class.__name__} missing 'has_differentiable_concept_encoder'"
     )
@@ -132,10 +121,10 @@ def test_overcomplete_cbe(
         f"Explainer {method_class.__name__} missing 'has_differentiable_concept_decoder'"
     )
 
-    concepts = cbe.encode_activations(activations)
-    assert concepts is not None, f"{method_class.__name__}.encode_activations returned None"
-    reconstructed_activations = cbe.decode_concepts(concepts)
-    assert reconstructed_activations is not None, f"{method_class.__name__}.decode_concepts returned None"
+    concepts = cbe.activations_to_concepts(activations)
+    assert concepts is not None, f"{method_class.__name__}.activations_to_concepts returned None"
+    reconstructed_activations = cbe.concepts_to_activations(concepts)
+    assert reconstructed_activations is not None, f"{method_class.__name__}.concepts_to_activations returned None"
     assert reconstructed_activations.shape == (n, d), (
         f"Explainer {method_class.__name__} encode-decode reconstructed activations shape mismatch: ",
         f"got {tuple(reconstructed_activations.shape)}, expected {(n, d)}",
@@ -175,12 +164,11 @@ def test_overcomplete_cbe(
 )
 def test_concept_output_gradient(
     splitted_encoder_ml: ModelWithSplitPoints,
-    activations_dict: dict[str, torch.Tensor],
+    activations: torch.Tensor,
     sentences: list[str],
     method_class: type[ConceptAutoEncoderExplainer],
     granularity: ActivationGranularity,
 ):
-    split, activations = next(iter(activations_dict.items()))
     nb_concepts = 3
 
     if method_class == NeuronsAsConcepts:
@@ -199,7 +187,7 @@ def test_concept_output_gradient(
         cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
         cbe.fit(activations, nb_epochs=1, batch_size=1, device=DEVICE)
         concepts_dim = nb_concepts
-    elif issubclass(method_class, DictionaryLearningExplainer):
+    elif issubclass(method_class, (DictionaryLearningExplainer, SkLearnWrapperExplainer)):
         cbe = method_class(splitted_encoder_ml, nb_concepts=nb_concepts, device=DEVICE)
         cbe.fit(activations)
         concepts_dim = nb_concepts
@@ -257,21 +245,21 @@ if __name__ == "__main__":
     ]
     splitted_encoder_ml: ModelWithSplitPoints = ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForMaskedLM,  # type: ignore
         device_map=DEVICE,
     )
-    activations_dict: dict[str, torch.Tensor] = splitted_encoder_ml.get_activations(
+    activations, _ = splitted_encoder_ml.get_activations(
         sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
-    )  # type: ignore
+    )
     test_overcomplete_cbe(
         splitted_encoder_ml=splitted_encoder_ml,
-        activations_dict=activations_dict,
+        activations=activations,  # type: ignore
         method_class=KMeansConcepts,
     )
     test_concept_output_gradient(
         splitted_encoder_ml=splitted_encoder_ml,
-        activations_dict=activations_dict,
+        activations=activations,  # type: ignore
         sentences=sentences,
         method_class=SemiNMFConcepts,
         granularity=ModelWithSplitPoints.activation_granularities.CLS_TOKEN,

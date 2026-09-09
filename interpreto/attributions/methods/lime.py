@@ -44,6 +44,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import RandomMaskedPerturbator
 from interpreto.commons import Granularity, GranularityCombinationStrategy, general_bad_argument
+from interpreto.concepts.base import ModelForInputsToConcepts
 
 
 @general_bad_argument
@@ -74,7 +75,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
         granularity: Granularity | None = None,
         combination_strategy: GranularityCombinationStrategy | None = None,
@@ -91,7 +92,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain.
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
                 processor associated with the model.
             granularity (Granularity | None): the level of granularity for the explanation.

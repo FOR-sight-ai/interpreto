@@ -26,6 +26,8 @@ from __future__ import annotations
 
 from enum import Enum
 
+import torch
+
 from interpreto.commons.distances import DistanceFunctionProtocol, DistanceFunctions
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.typing import ConceptsActivations, LatentActivations
@@ -70,27 +72,27 @@ class ReconstructionError:
         self.reconstruction_space = reconstruction_space
         self.distance_function = distance_function
 
-    def compute(self, latent_activations: LatentActivations | dict[str, LatentActivations]) -> float:
+    def compute(self, latent_activations: LatentActivations) -> float:
         """Compute the reconstruction error.
 
         Args:
-            latent_activations (LatentActivations | dict[str, LatentActivations]): The latent activations to use for the computation.
+            latent_activations (LatentActivations): The latent activations to use for the computation.
 
         Returns:
             float: The reconstruction error.
         """
-        split_latent_activations: LatentActivations = self.concept_explainer._sanitize_activations(latent_activations)
+        with torch.no_grad():
+            concepts_activations: ConceptsActivations = self.concept_explainer.activations_to_concepts(
+                latent_activations
+            )
+            reconstructed_latent_activations: LatentActivations = self.concept_explainer.concepts_to_activations(
+                concepts_activations
+            )
 
-        concepts_activations: ConceptsActivations = self.concept_explainer.encode_activations(split_latent_activations)
-
-        reconstructed_latent_activations: LatentActivations = self.concept_explainer.decode_concepts(
-            concepts_activations
-        )
-
-        split_latent_activations = split_latent_activations.to(reconstructed_latent_activations.device)
+        latent_activations = latent_activations.to(reconstructed_latent_activations.device)
 
         if self.reconstruction_space is ReconstructionSpaces.LATENT_ACTIVATIONS:
-            return self.distance_function(split_latent_activations, reconstructed_latent_activations).item()
+            return self.distance_function(latent_activations, reconstructed_latent_activations).item()
 
         raise NotImplementedError("Only LATENT_ACTIVATIONS reconstruction space is supported.")
 

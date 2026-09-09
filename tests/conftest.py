@@ -30,7 +30,7 @@ import torch
 from pytest import fixture
 from transformers import AutoModelForCausalLM, AutoModelForMaskedLM, AutoModelForSequenceClassification, AutoTokenizer
 
-from interpreto import ModelWithSplitPoints
+from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
 
 
@@ -44,14 +44,10 @@ def sentences():
 
 
 @fixture(scope="session")
-def multi_split_model() -> ModelWithSplitPoints:
+def multi_splitter() -> ModelWithSplitPoints:
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=[
-            "cls.predictions.transform.LayerNorm",
-            "bert.encoder.layer.1",
-            "bert.encoder.layer.3.attention.self.query",
-        ],
+        split_point="bert.encoder.layer.1",
         automodel=AutoModelForMaskedLM,  # type: ignore
         batch_size=4,
     )
@@ -62,7 +58,7 @@ def splitted_encoder_ml() -> ModelWithSplitPoints:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     return ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForSequenceClassification,  # type: ignore
         batch_size=4,
         device_map=device,
@@ -70,10 +66,11 @@ def splitted_encoder_ml() -> ModelWithSplitPoints:
 
 
 @fixture(scope="session")
-def activations_dict(splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]) -> dict[str, LatentActivations]:
-    return splitted_encoder_ml.get_activations(
+def activations(splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]) -> LatentActivations:
+    latent_activations, _ = splitted_encoder_ml.get_activations(
         sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN
-    )  # type: ignore
+    )
+    return latent_activations
 
 
 @fixture(scope="session")

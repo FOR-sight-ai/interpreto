@@ -45,6 +45,13 @@ from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 
 from interpreto.attributions.aggregations.base import Aggregator
+from interpreto.attributions.inference_wrappers.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
+from interpreto.attributions.inference_wrappers.text_classification_inference_wrapper import TextClassificationInferenceWrapper
+from interpreto.attributions.inference_wrappers.text_generation_inference_wrapper import TextGenerationInferenceWrapper
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes, InferenceWrapper
+from interpreto.attributions.inference_wrappers.inputs_to_concepts_inference_wrapper import (
+    InputsToConceptsInferenceWrapper,
+)
 from interpreto.attributions.perturbations.base import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
@@ -63,14 +70,14 @@ from interpreto.commons import (
     TextGranularity,
 )
 from interpreto.commons.generator_tools import split_iterator
-from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
-from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
-from interpreto.model_wrapping.text_classification_inference_wrapper import TextClassificationInferenceWrapper
-from interpreto.model_wrapping.text_generation_inference_wrapper import TextGenerationInferenceWrapper
+from interpreto.commons.granularity import GranularityAggregationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 from interpreto.typing import ClassificationTarget, GeneratedTarget, ModelInputs, SingleAttribution, TensorMapping
 
 
-def setup_token_ids(model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase) -> None:
+def setup_token_ids(
+    model: PreTrainedModel | ModelForInputsToConcepts, tokenizer: PreTrainedTokenizerBase
+) -> None:
     """
     Setup the tokenizer and the model with the appropriate token IDs, for padding.
     """
@@ -171,6 +178,7 @@ class ModelTask(Enum):
 
     CLASSIFICATION = "classification"
     GENERATION = "generation"
+    CONCEPTS = "concepts"
 
 
 def clone_tensor_mapping(tm: TensorMapping, detach: bool = False) -> TensorMapping:
@@ -270,7 +278,7 @@ class AttributionExplainer(ABC):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
         batch_size: int = 4,
         perturbator: Perturbator | None = None,
@@ -286,7 +294,7 @@ class AttributionExplainer(ABC):
         Initializes the AttributionExplainer.
 
         Args:
-            model (PreTrainedModel): The model to be explained.
+            model (PreTrainedModel | ModelForInputsToConcepts): The model to be explained.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): The tokenizer or image processor
                 associated with the model.
             batch_size (int): The batch size used for model inference.
@@ -319,7 +327,7 @@ class AttributionExplainer(ABC):
         self.tokenizer = processor
 
         self.inference_wrapper = self._associated_inference_wrapper(
-            model,
+            model,  # type: ignore
             gradients=use_gradient,
             input_x_gradient=input_x_gradient,
             batch_size=batch_size,
@@ -1398,13 +1406,100 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         return results
 
 
-class FactoryGeneratedMeta(ABCMeta):
+class InputsToConceptsAttributionsExplainer(AttributionExplainer):
+    """Attribution explainer for input-to-concept models.
+
+    This explainer computes how much each input token contributes to each concept
+    activation. It bridges the attribution framework with the concept framework:
+    once a concept explainer is fitted, its ``inputs_to_concepts`` property returns
+    a model that can be passed to any perturbation-based attribution method.
+
+    The result is a per-token attribution for each concept, revealing which parts
+    of the input are most responsible for activating a given concept.
+
+    Note:
+        Only perturbation-based methods (Lime, KernelShap, Occlusion, Sobol) are
+        supported. Gradient-based methods are incompatible because the
+        ``ModelForInputsToConcepts`` is based on `nnsight` and which make differentiation complex.
+
+    Example:
+        ```python
+        from interpreto import Occlusion, SplitterForClassification
+        from interpreto.concepts import SemiNMFConcepts
+
+        splitter = SplitterForClassification("model_id", device_map="cuda")
+        concept_explainer = SemiNMFConcepts(splitter, nb_concepts=20)
+        concept_explainer.fit(activations)
+
+        explainer = Occlusion(concept_explainer.get_inputs_to_concepts_model(), splitter.tokenizer)
+        results = explainer.explain("Some input text.", targets=torch.arange(5))
+        ```
+    """
+
+    _associated_inference_wrapper = InputsToConceptsInferenceWrapper
+    inference_wrapper: InputsToConceptsInferenceWrapper
+    _model_task = ModelTask.CONCEPTS
+
+    def process_inputs_to_explain_and_targets(  # type: ignore
+        self,
+        model_inputs: ModelInputs,
+        targets: Iterable[int] | None = None,
+    ) -> tuple[list[TensorMapping], list[Int[torch.Tensor, "t"]]]:
+        """
+        Processes the inputs and targets for explanation.
+
+        This method must be implemented by subclasses.
+
+        Args:
+            model_inputs (ModelInputs):
+                The inputs to the model.
+            targets (Optional[Iterable[int]]):
+                The targets to be explained.
+                If None, all concepts are explained.
+
+        Returns:
+            processed_inputs (list[TensorMapping]):
+                The processed inputs.
+            processed_targets (list[Int[torch.Tensor, "t"]]):
+                The processed targets.
+        """
+        sanitized_targets: list[Int[torch.Tensor, "t"]]
+        if targets is None:
+            # explain all concepts
+            input_wise_targets = torch.arange(self.inference_wrapper.model.nb_concepts)  # type: ignore
+            sanitized_targets = [input_wise_targets] * len(model_inputs)  # type: ignore
+        else:
+            # targets are concept indices, shared across all inputs
+            if isinstance(targets, torch.Tensor):
+                input_wise_targets = targets.long()
+            else:
+                input_wise_targets = torch.tensor(list(targets), dtype=torch.long)
+            sanitized_targets = [input_wise_targets] * len(model_inputs)  # type: ignore
+        return model_inputs, sanitized_targets  # type: ignore
+
+    def post_processing(self, contribution: Float[torch.Tensor, "t l"]):
+        """
+        Concepts specific post-processing of the attribution scores.
+
+        No post-processing is required for concept attributions.
+
+        Args:
+            contribution (Float[torch.Tensor, "t l"]): The contribution values.
+
+        Returns:
+            model_task (ModelTask): The model task.
+            contribution (Float[torch.Tensor, "t l"]): The post-processed contribution values.
+        """
+        return contribution
+
+
+class FactoryGeneratedMeta(type):
     """
     Metaclass to distinguish classes generated by the MultitaskExplainerMixin.
     """
 
 
-class MultitaskExplainerMixin(AttributionExplainer):
+class MultitaskExplainerMixin:
     """
     Mixin class to generate the appropriate Explainer based on the model type.
     """
@@ -1423,6 +1518,11 @@ class MultitaskExplainerMixin(AttributionExplainer):
         if model.__class__.__name__.endswith("ForImageClassification"):
             t = FactoryGeneratedMeta(
                 "ImageClassification" + cls.__name__, (cls, ImageClassificationAttributionExplainer), {}
+            )
+            return t.__new__(t, model, *args, **kwargs)  # type: ignore
+        if model.__class__.__name__.endswith("ForInputsToConcepts"):
+            t = FactoryGeneratedMeta(
+                "InputsToConcepts" + cls.__name__, (cls, InputsToConceptsAttributionsExplainer), {}
             )
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         raise NotImplementedError(

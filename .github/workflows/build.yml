@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # minutes
+    timeout-minutes: 10  # minutes
     if: github.actor != 'dependabot[bot]' && github.actor != 'dependabot-preview[bot]'
     strategy:
       max-parallel: 1
@@ -35,6 +35,12 @@ jobs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('pyproject.toml') }}
+
+    - name: Cache Hugging Face models
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/huggingface
+        key: hf-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml', 'pyproject.toml') }}
 
     - name: Recreate virtual environment if cache is invalid
       run: |
@@ -65,6 +71,9 @@ jobs:
             AutoModelForImageClassification,
             AutoImageProcessor
         )
+
+        # A test also needs a real tokenizer
+        AutoTokenizer.from_pretrained("bert-base-uncased")
 
         # List all of the hf-internal-testing model IDs that your tests need:
         model_ids = [
@@ -130,8 +139,6 @@ jobs:
     - name: Run style checks
       run: |
         source .venv/bin/activate
-        make update-deps
-        uv pip install -r requirements-dev.txt
         make lint
 
     - name: Run fast tests

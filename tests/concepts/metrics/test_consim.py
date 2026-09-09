@@ -58,11 +58,9 @@ import pytest
 import torch
 
 from interpreto import ModelWithSplitPoints
+from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.consim import ConSim, PromptTypes
-from interpreto.model_wrapping.llm_interface import LLMInterface, Role
-
-AG = ModelWithSplitPoints.activation_granularities
 
 
 class LLMInterfacePlaceholder(LLMInterface):
@@ -130,7 +128,7 @@ class EmptyResponse(LLMInterface):
         return ""
 
 
-def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints, multi_split_model: ModelWithSplitPoints):
+def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints):
     """
     Test the `__init__` method of the ConSim metric.
     """
@@ -138,17 +136,8 @@ def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints, multi_split_mode
     classes = [str(i) for i in range(int(splitted_encoder_ml._model.num_labels))]  # type: ignore
 
     # when only one split point is available, it should be chosen automatically
-    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
-    assert consim.split_point == splitted_encoder_ml.split_points[0], "consim split_point should match the mwsp"
+    consim = ConSim(splitted_encoder_ml, llm, classes=classes)
     assert consim.user_llm is llm, "consim llm should correspond to the parameter"
-
-    # invalid split point should raise an error
-    with pytest.raises(ValueError):
-        ConSim(splitted_encoder_ml, None, AG.TOKEN, classes, split_point="wrong.point")
-
-    # when multiple split points exist, omitting split_point must fail
-    with pytest.raises(ValueError):
-        ConSim(multi_split_model, None, AG.TOKEN, classes)
 
 
 def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
@@ -156,7 +145,7 @@ def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `_get_predictions` method of the ConSim metric.
     """
     # Initialize the ConSim metric
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN)
+    consim = ConSim(splitted_encoder_ml, user_llm=None)
 
     inputs = ["This is a first sentence", "Another sentence"]
 
@@ -191,7 +180,7 @@ def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplit
     Test the `_extract_interesting_elements` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, user_llm=None, activation_granularity=AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=None, classes=classes)
 
     inputs = [f"sentence {i}" for i in range(6)]
     labels = torch.tensor([0, 1, 0, 1, 0, 1])
@@ -233,7 +222,7 @@ def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `select_examples` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, None, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, None, classes=classes)
 
     # prepare fake methods so we only test the logic of select_examples
     inputs = ["a", "b", "c", "d", "e", "f"]
@@ -633,10 +622,10 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     # creating a dummy explainer that will return a gradient of ones
     class DummyExplainer(ConceptAutoEncoderExplainer):
         fitted = True
-        _split_point = splitted_encoder_ml.split_points[0]
+        _split_point = splitted_encoder_ml.split_point
 
-        def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.model_with_split_points = model_with_split_points
+        def __init__(self, splitter: ModelWithSplitPoints):  # type: ignore
+            self.splitter = splitter
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
             """
@@ -665,7 +654,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     # Test consim with a valid LLM output
 
     llm = LLMInterfacePlaceholder()
-    consim = ConSim(splitted_encoder_ml, llm, AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, llm, classes=classes)
 
     # evaluate the ConSim metric
     score: float | None = consim.evaluate(  # type: ignore
@@ -732,7 +721,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     Test the `evaluate` method of the ConSim metric with OpenAI API.
     """
     # lazy import to avoid importing openai
-    from interpreto.model_wrapping.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
+    from interpreto.commons.llm_interface import (  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
         OpenAILLM,
     )
 
@@ -764,15 +753,15 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
     # -----------------------------------------------------------------
     # Initialize the ConSim metric with the open_ai_llm api as user_llm
     classes = ["not prime", "prime"]
-    consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, activation_granularity=AG.TOKEN, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=open_ai_llm, classes=classes)
 
     # construct a dummy explainer that will arbitrary local importances
     class DummyExplainer(ConceptAutoEncoderExplainer):
         fitted = True
-        _split_point = splitted_encoder_ml.split_points[0]
+        _split_point = splitted_encoder_ml.split_point
 
-        def __init__(self, model_with_split_points: ModelWithSplitPoints):  # type: ignore
-            self.model_with_split_points = model_with_split_points
+        def __init__(self, splitter: ModelWithSplitPoints):  # type: ignore
+            self.splitter = splitter
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
             local_importances = []
@@ -818,28 +807,17 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
 
 
 if __name__ == "__main__":
-    from transformers import AutoModelForMaskedLM, AutoModelForSequenceClassification
+    from transformers import AutoModelForSequenceClassification
 
     mwsp = ModelWithSplitPoints(
         "hf-internal-testing/tiny-random-bert",
-        split_points=["bert.encoder.layer.1.output"],
+        split_point="bert.encoder.layer.1.output",
         automodel=AutoModelForSequenceClassification,  # type: ignore
         batch_size=4,
         device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
 
-    multi_split_model = ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_points=[
-            "bert.encoder.layer.1.output",
-            "bert.encoder.layer.3.attention.self.query",
-        ],
-        automodel=AutoModelForMaskedLM,  # type: ignore
-        batch_size=4,
-        device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    )
-
-    test_consim_init(mwsp, multi_split_model)
+    test_consim_init(mwsp)
     test_consim_get_predictions(mwsp)
     test_consim_extract_interesting_elements(mwsp)
     test_consim_select_examples(mwsp)

@@ -43,7 +43,7 @@ from .commons import (
     ImageGranularity,
     TextGranularity,
 )
-from .model_wrapping import ModelWithSplitPoints
+from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 from .visualizations import (
     AttributionVisualization,
     plot_attributions,
@@ -73,6 +73,8 @@ __all__ = [
     "SquareGrad",
     "Saliency",
     "SmoothGrad",
+    "SplitterForClassification",
+    "SplitterForGeneration",
     "Sobol",
     "VarGrad",
     "get_version",

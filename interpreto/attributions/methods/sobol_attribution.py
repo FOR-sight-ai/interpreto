@@ -42,6 +42,7 @@ from interpreto.attributions.perturbations.base import TextMaskPerturbator
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons import general_bad_argument, sobol_bad_argument
 from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
+from interpreto.concepts.base import ModelForInputsToConcepts
 
 
 @general_bad_argument
@@ -76,7 +77,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
         granularity: Granularity | None = None,
         combination_strategy: GranularityCombinationStrategy | None = None,
@@ -92,7 +93,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain.
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
                 processor associated with the model.
             granularity (Granularity | None): the level of granularity for the explanation.
