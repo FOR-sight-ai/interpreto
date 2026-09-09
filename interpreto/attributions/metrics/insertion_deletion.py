@@ -43,11 +43,12 @@ from transformers import BatchEncoding, PreTrainedTokenizerBase
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.base import AttributionOutput, setup_mask_token_id, setup_token_ids
-from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.attributions.inference_wrappers.generation_inference_wrapper import GenerationInferenceWrapper
 from interpreto.attributions.inference_wrappers.inference_wrapper import (
     InferenceModes,
     InferenceWrapper,
+)
+from interpreto.attributions.inference_wrappers.text_classification_inference_wrapper import (
+    TextClassificationInferenceWrapper,
 )
 from interpreto.attributions.perturbations.insertion_deletion_perturbation import (
     DeletionPerturbator,

@@ -32,7 +32,9 @@ import torch
 from PIL import Image
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 
-from interpreto.model_wrapping.image_classification_inference_wrapper import ImageClassificationInferenceWrapper
+from interpreto.attributions.inference_wrappers.image_classification_inference_wrapper import (
+    ImageClassificationInferenceWrapper,
+)
 from interpreto.typing import IncompatibilityError
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

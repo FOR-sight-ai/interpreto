@@ -27,11 +27,9 @@ import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from interpreto.attributions.base import setup_token_ids
-<<<<<<<< HEAD:tests/attributions/inference_wrappers/test_text_classification_inference_wrapper.py
-from interpreto.model_wrapping.text_classification_inference_wrapper import TextClassificationInferenceWrapper
-========
-from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
->>>>>>>> main:tests/attributions/inference_wrappers/test_classification_inference_wrapper.py
+from interpreto.attributions.inference_wrappers.text_classification_inference_wrapper import (
+    TextClassificationInferenceWrapper,
+)
 from interpreto.typing import IncompatibilityError
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -34,7 +34,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from transformers.modeling_utils import PreTrainedModel
 
-from interpreto.model_wrapping.inference_wrapper import InferenceModes, InferenceWrapper
+from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes, InferenceWrapper
 from interpreto.typing import TensorMapping
 
 

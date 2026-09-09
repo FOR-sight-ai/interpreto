@@ -40,7 +40,7 @@ from interpreto.attributions.inference_wrappers.inference_wrapper import Inferen
 from interpreto.attributions.perturbations import LinearInterpolationPerturbator
 from interpreto.commons import general_bad_argument
 from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
-from interpreto.model_wrapping.inference_wrapper import InferenceModes
+from interpreto.concepts.base import ModelForInputsToConcepts
 
 
 @general_bad_argument
@@ -67,7 +67,7 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
         granularity: Granularity | None = None,
         combination_strategy: GranularityCombinationStrategy | None = None,
@@ -82,7 +82,7 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
         Initialize the attribution method.
 
         Args:
-            model (PreTrainedModel): model to explain.
+            model (PreTrainedModel | ModelForInputsToConcepts): model to explain.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
                 processor associated with the model.
             granularity (Granularity | None): the level of granularity for the explanation.

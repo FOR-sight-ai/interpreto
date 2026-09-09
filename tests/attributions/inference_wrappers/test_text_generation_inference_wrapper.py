@@ -27,11 +27,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from interpreto.attributions.base import setup_token_ids
-<<<<<<<< HEAD:tests/attributions/inference_wrappers/test_text_generation_inference_wrapper.py
-from interpreto.model_wrapping.text_generation_inference_wrapper import TextGenerationInferenceWrapper
-========
-from interpreto.attributions.inference_wrappers.generation_inference_wrapper import GenerationInferenceWrapper
->>>>>>>> main:tests/attributions/inference_wrappers/test_generation_inference_wrapper.py
+from interpreto.attributions.inference_wrappers.text_generation_inference_wrapper import TextGenerationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 GENERATION_MODELS = [
