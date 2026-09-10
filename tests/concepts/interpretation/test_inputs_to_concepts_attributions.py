@@ -68,7 +68,7 @@ attribution_method_kwargs = {
     Occlusion: {},
     KernelShap: {"n_perturbations": 3},
     Lime: {"n_perturbations": 3},
-    Sobol: {"n_token_perturbations": 3},
+    Sobol: {"n_input_perturbations": 3},
 }
 
 # Cycle over repo_id, concept_explainer_class, attribution_explainer_class at least once

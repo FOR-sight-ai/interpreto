@@ -1440,6 +1440,11 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
     _associated_inference_wrapper = InputsToConceptsInferenceWrapper
     inference_wrapper: InputsToConceptsInferenceWrapper
     _model_task = ModelTask.CONCEPTS
+    base_tensor_perturbator_class = TextTensorPerturbator
+    base_mask_perturbator_class = TextMaskPerturbator
+    default_mask_granularity = TextGranularity.WORD
+    default_tensor_granularity = TextGranularity.WORD
+    default_combination_strategy = GranularityAggregationStrategy.MEAN
 
     def process_inputs_to_explain_and_targets(  # type: ignore
         self,

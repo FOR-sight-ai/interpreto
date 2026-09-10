@@ -39,7 +39,7 @@ from interpreto.typing import IncompatibilityError
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-IMAGES_DIR = Path(__file__).parents[1] / "fixtures" / "images"
+IMAGES_DIR = Path(__file__).parents[2] / "fixtures" / "images"
 
 IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
