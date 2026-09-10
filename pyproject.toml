@@ -89,6 +89,7 @@ dependencies = [
   "nvidia-cusparse-cu11>=11.7.4.91; sys_platform=='Linux'",
   "nvidia-nccl-cu11>=2.14.3; sys_platform=='Linux'",
   "nvidia-nvtx-cu11>=11.7.91; sys_platform=='Linux'",
+  "torchvision>=0.27.0",
 ]
 
 [project.optional-dependencies]
@@ -223,6 +224,7 @@ ignore = [
   "PLR2004", # unnamed numerical constants used
   "PLR0913", # too many arguments
   "PLR0915", # too many statements
+  "PLR0917", # too many positional arguments
   "UP037",   # invalid type annotation (incompatible with single dimension jaxtyping)
   "W191",    # indentation contains tabs (handled by format)
 ]

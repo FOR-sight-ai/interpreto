@@ -22,7 +22,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from .bad_arguments_decorator import general_bad_argument, sobol_bad_argument
 from .distances import DistanceFunctions
-from .granularity import Granularity, GranularityAggregationStrategy
+from .granularity import (
+    Granularity,
+    GranularityAggregationStrategy,
+    GranularityCombinationStrategy,
+    GranularityResizeStrategy,
+    ImageGranularity,
+    TextGranularity,
+)
 
-__all__ = ["DistanceFunctions", "Granularity", "GranularityAggregationStrategy"]
+__all__ = [
+    "Granularity",
+    "DistanceFunctions",
+    "TextGranularity",
+    "GranularityAggregationStrategy",
+    "GranularityResizeStrategy",
+    "GranularityCombinationStrategy",
+    "ImageGranularity",
+    "general_bad_argument",
+    "sobol_bad_argument",
+]
