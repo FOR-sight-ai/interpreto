@@ -68,7 +68,7 @@ dependencies = [
   "transformers>=4.22.0",
   "nltk",
   "torch>=2.0",
-  "nnsight>=0.7.0,<0.8.0",
+  "nnsight>=0.8.0rc1,<0.9.0",
   "jaxtyping<=0.2.36",
   "beartype",
   "pymdown-extensions",
