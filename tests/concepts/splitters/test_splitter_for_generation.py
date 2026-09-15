@@ -180,7 +180,7 @@ def test_token_pooling_rejects_unknown_modes(split_gen: SFG, sentences: list[str
 
 def test_get_activation_and_gradient(split_gen: SFG, sentences: list[str]):
     """Activation and concept-output gradient shapes follow the generation splitter contract."""
-    hidden = split_gen._model.config.hidden_size
+    hidden = split_gen.config.hidden_size
     nb_concepts = 2 * hidden
     initial = torch.randn(nb_concepts, hidden)
     decoder_weights = torch.linalg.qr(initial)[0].to(DEVICE)
@@ -212,7 +212,7 @@ def test_get_activation_and_gradient(split_gen: SFG, sentences: list[str]):
 
 def test_get_concept_output_gradients_with_explicit_targets(split_gen: SFG, sentences: list[str]):
     """Explicit generation targets control the first gradient dimension."""
-    hidden = split_gen._model.config.hidden_size
+    hidden = split_gen.config.hidden_size
     identity = torch.eye(hidden).to(DEVICE)
     targets = [0, 1]
 
@@ -227,6 +227,60 @@ def test_get_concept_output_gradients_with_explicit_targets(split_gen: SFG, sent
     assert grads_list[0].ndim == 3, f"Expected gradients with shape (t, g, c), got {grads_list[0].shape}"
     assert grads_list[0].shape[0] == len(targets)
     assert grads_list[0].shape[-1] == hidden
+
+
+def test_concept_output_gradients_are_sample_relative(split_gen: SFG, sentences: list[str]):
+    """Gradient targets and values do not depend on a sample's batch companions."""
+    hidden = split_gen.config.hidden_size
+    identity = torch.eye(hidden, device=DEVICE)
+
+    joint = split_gen._get_concept_output_gradients(
+        sentences,
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=None,
+        concepts_x_gradients=False,
+    )
+    isolated = split_gen._get_concept_output_gradients(
+        sentences[:1],
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=None,
+        concepts_x_gradients=False,
+    )
+
+    for text, gradients in zip(sentences, joint, strict=True):
+        tokenized = split_gen.tokenizer(text)
+        assert gradients.shape[0] == len(tokenized["input_ids"])
+    assert torch.allclose(joint[0], isolated[0], atol=1e-5)
+
+
+def test_concept_output_gradients_identity_reference(split_gen: SFG, sentences: list[str]):
+    """Identity concept gradients match direct split-point activation gradients."""
+    hidden = split_gen.config.hidden_size
+    identity = torch.eye(hidden, device=DEVICE)
+    text = sentences[0]
+    tokenized, tokens_mask = split_gen._tokenize_and_get_mask([text], False)
+
+    with split_gen.trace(tokenized):
+        raw_activations, _ = split_gen._extract_hidden_state(split_gen.split_module.output, split_gen.split_point)
+        reference_full = torch.autograd.grad(
+            split_gen.output.logits[0, 0].max(),
+            raw_activations,
+        )[0].save()
+
+    reference = reference_full[0, tokens_mask[0]]
+    gradients = split_gen._get_concept_output_gradients(
+        [text],
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=[0],
+        concepts_x_gradients=False,
+    )[0]
+
+    assert reference.abs().sum() > 0
+    assert gradients.shape == (1, reference.shape[0], hidden)
+    assert torch.allclose(gradients[0], reference.cpu(), atol=1e-5)
 
 
 def test_batching(split_gen: SFG, huge_text: list[str]):

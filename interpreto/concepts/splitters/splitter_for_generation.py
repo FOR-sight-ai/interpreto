@@ -358,10 +358,7 @@ class SplitterForGeneration(BaseSplitter):
         """
         # Reintegrate decoded activations back into the full sequence and unflatten
         reconstructed = raw_activations.clone()
-        index = 0
-        for i, mask in enumerate(tokens_mask):
-            reconstructed[i, mask] = decoded_activations[index : index + mask.sum()]
-            index += mask.sum()
+        reconstructed[tokens_mask] = decoded_activations
 
         # Put activations back in their tuple
         if isinstance(layer_outputs, tuple):
@@ -391,19 +388,20 @@ class SplitterForGeneration(BaseSplitter):
         encodes them into concept space, decodes back, reintegrates, and computes the
         gradient of the logits with respect to the concept activations.
 
-        For generation, logits have shape ``(n, l, vocab)``; we take the max over vocab
-        to get ``(n, l)`` then sum over samples.
+        For generation, logits have shape ``(1, l, vocab)``; we take the max over
+        vocab to get one score per output position.
 
         Args:
             inputs (list[str]): Raw text inputs.
             activations_to_concepts: Function mapping latent activations to concept space.
             concepts_to_activations: Function mapping concept activations back to latent space.
             targets (list[int] | None): Target token positions for which to compute gradients.
-                If None, gradients are computed for all positions in the (summed) logits.
+                If None, gradients are computed for all positions in each input.
             include_special_tokens (bool): Whether to include special tokens in the activation selection.
             concepts_x_gradients (bool): If True, multiply gradients by concept activations.
             tqdm_bar (bool): Whether to display a progress bar.
-            batch_size (int | None): Override the instance batch size.
+            batch_size (int | None): Accepted for API compatibility; gradients
+                are computed sample-wise.
             forward_kwargs (dict[str, Any]): Additional kwargs for the forward pass.
             **kwargs: Unused, kept for API compatibility.
 
@@ -411,46 +409,29 @@ class SplitterForGeneration(BaseSplitter):
             list[Float[torch.Tensor, "t g c"]]: A list of gradient tensors,
                 one per sample, each of shape ``(n_targets, g_i, n_concepts)``.
         """
-        grad_batch_size = batch_size or self.batch_size
-
-        n_batches = ceil(len(inputs) / grad_batch_size)
-        batch_iter = tqdm(
-            range(0, len(inputs), grad_batch_size),
-            desc="Computing gradients",
-            unit="batch",
-            total=n_batches,
-            disable=not tqdm_bar,
-        )
         sp_module = self.split_module
-
         gradients_list: list[Float[torch.Tensor, "t g c"]] = []
 
-        for start in batch_iter:
-            end = min(start + grad_batch_size, len(inputs))
-            batch_texts = inputs[start:end]
-
-            # extract non-special tokens mask
-            tokens_mask: Bool[torch.Tensor, "n l"]
-            tokenized, tokens_mask = self._tokenize_and_get_mask(batch_texts, include_special_tokens)
+        for text in tqdm(inputs, desc="Computing gradients", unit="sample", disable=not tqdm_bar):
+            tokenized, tokens_mask = self._tokenize_and_get_mask([text], include_special_tokens)
+            current_targets = range(tokenized["input_ids"].shape[1]) if targets is None else targets
 
             # Forward with NNsight tracing + gradient computation
             with self.trace(tokenized, **forward_kwargs):
                 # Get raw activations at split point
                 layer_outputs = sp_module.output
                 raw_activations, tuple_index = self._extract_hidden_state(layer_outputs, self._split_point)
-                b, l, d = raw_activations.shape
-
-                # Flatten and select activations of interest
-                activations: Float[torch.Tensor, "bg d"] = raw_activations.flatten(0, 1)[tokens_mask.flatten()]
+                # Select activations of interest
+                activations: Float[torch.Tensor, "g d"] = raw_activations[0, tokens_mask[0]]
 
                 # Encode activations into concepts
-                concept_activations: Float[torch.Tensor, "bg c"] = activations_to_concepts(
+                concept_activations: Float[torch.Tensor, "g c"] = activations_to_concepts(
                     activations.to(dtype=torch.float32)
                 )
-                del activations
+                concept_activations.requires_grad_(True)
 
-                # Decode concepts back into activations (n, l, d)
-                decoded_activations: Float[torch.Tensor, "bg d"] = concepts_to_activations(concept_activations).to(
+                # Decode concepts back into activations
+                decoded_activations: Float[torch.Tensor, "g d"] = concepts_to_activations(concept_activations).to(
                     device=raw_activations.device,
                     dtype=raw_activations.dtype,
                 )
@@ -464,39 +445,27 @@ class SplitterForGeneration(BaseSplitter):
                     tokens_mask,
                     tuple_index,
                 )
-                del decoded_activations, raw_activations
 
-                # Get logits: (b, l, vocab) -> max over vocab -> (b, l) -> sum over samples -> (l,)
-                logits = self.output.logits.max(dim=-1)[0].sum(dim=0)
+                # Get one score per output position by taking the max over the vocabulary
+                logits = self.output.logits[0].max(dim=-1)[0]
 
-                # Determine targets
-                if targets is None:
-                    current_targets = range(logits.shape[0])
-                else:
-                    current_targets = targets
-
-                # Compute gradients for each target
                 targets_gradients_list = []
-                for t in current_targets:
-                    with logits[t].backward(retain_graph=True):  # type: ignore
-                        concept_grad = concept_activations.grad.clone()  # type: ignore
-                        concept_activations.grad.zero_()  # type: ignore
-                        if concepts_x_gradients:
-                            concept_grad = concept_grad * concept_activations
+                for target_index, t in enumerate(current_targets):
+                    concept_grad = torch.autograd.grad(
+                        outputs=logits[t],
+                        inputs=concept_activations,
+                        retain_graph=target_index < len(current_targets) - 1,
+                    )[0]
+                    if concepts_x_gradients:
+                        concept_grad = concept_grad * concept_activations
                     targets_gradients_list.append(concept_grad)
 
-                targets_gradients: Float[torch.Tensor, "bg t c"] = (
-                    torch.stack(targets_gradients_list, dim=1).detach().cpu().save()  # type: ignore
+                targets_gradients: Float[torch.Tensor, "t g c"] = (
+                    torch.stack(targets_gradients_list).detach().cpu().save()  # type: ignore
                 )
-                del targets_gradients_list, concept_activations, logits
 
-                # Split gradients per sample
-                index = 0
-                for mask in tokens_mask:
-                    gradients_list.append(targets_gradients[index : index + mask.sum()].transpose(0, 1))
-                    index += mask.sum()
-
-                gc.collect()
+            gradients_list.append(targets_gradients)
+            gc.collect()
 
         torch.cuda.empty_cache()  # TODO: see if it should be moved inside the loop
 
