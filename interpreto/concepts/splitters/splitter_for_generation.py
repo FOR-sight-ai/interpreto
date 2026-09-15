@@ -251,9 +251,9 @@ class SplitterForGeneration(BaseSplitter):
         # manage the output tuple and extract the (n, l, d) activations from it
         full_activations, _ = self._extract_hidden_state(outputs, self.split_point)
 
-        # filter out special tokens and expose public activations as float32.
+        # Filter out special tokens and move public activations to CPU.
         granular_activations = [
-            self._pool_activation(acts[mask], token_pooling).detach().to(device="cpu", dtype=torch.float32, copy=True)
+            self._pool_activation(acts[mask], token_pooling).detach().cpu().clone()
             for acts, mask in zip(full_activations, tokens_mask, strict=True)
         ]
 
@@ -425,9 +425,7 @@ class SplitterForGeneration(BaseSplitter):
                 activations: Float[torch.Tensor, "g d"] = raw_activations[0, tokens_mask[0]]
 
                 # Encode activations into concepts
-                concept_activations: Float[torch.Tensor, "g c"] = activations_to_concepts(
-                    activations.to(dtype=torch.float32)
-                )
+                concept_activations: Float[torch.Tensor, "g c"] = activations_to_concepts(activations)
                 concept_activations.requires_grad_(True)
 
                 # Decode concepts back into activations

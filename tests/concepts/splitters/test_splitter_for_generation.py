@@ -85,21 +85,30 @@ def test_get_activations_returns_flattened_tokens_by_default(split_gen: SFG, sen
     assert activations.dtype == torch.float32
 
 
-def test_get_activations_casts_bfloat16_model_outputs_to_float32(sentences: list[str]):
-    """Public activations are float32 even when the generation model runs in bfloat16."""
+def test_bfloat16_model_outputs_preserve_dtype(sentences: list[str]):
+    """Activations and concept gradients preserve the model dtype."""
     splitter = SFG(
         REPO_ID,
         split_point=SPLIT_POINT,
         batch_size=2,
-        device_map="cpu",
+        device_map=DEVICE,
+        dtype=torch.bfloat16,
     )
-    splitter._model.to(torch.bfloat16)
 
     activations, predictions = splitter.get_activations(sentences[:2])
 
     assert predictions is None, f"Expected predictions to be None, got {predictions}"
     assert isinstance(activations, torch.Tensor), f"Expected activations to be a tensor, got {type(activations)}"
-    assert activations.dtype == torch.float32, f"Expected activations to be float32, got {activations.dtype}"
+    assert activations.dtype == torch.bfloat16
+
+    identity = torch.eye(splitter.config.hidden_size, device=DEVICE, dtype=torch.bfloat16)
+    gradients = splitter._get_concept_output_gradients(
+        sentences[:1],
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=[0],
+    )
+    assert gradients[0].dtype == torch.bfloat16
 
 
 @pytest.mark.parametrize("include_all_tokens", [False, True])
