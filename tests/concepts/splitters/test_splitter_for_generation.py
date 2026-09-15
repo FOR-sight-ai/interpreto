@@ -28,6 +28,7 @@ import pytest
 import torch
 
 from interpreto import SplitterForGeneration as SFG
+from interpreto.concepts.splitters import TokenPooling
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REPO_ID = "hf-internal-testing/tiny-random-gpt2"
@@ -135,6 +136,46 @@ def test_flatten_activations_matches_sample_wise_activations(
     assert torch.allclose(flattened_acts, expected_flattened_acts, atol=1e-5), (
         "Flattened activations do not match concatenated sample-wise activations"
     )
+
+
+@pytest.mark.parametrize("pooling", ["mean", "max", "min", "signed_max", "first", "last"])
+def test_token_pooling(split_gen: SFG, sentences: list[str], pooling: TokenPooling):
+    """Token pooling reduces each sample's retained tokens into one vector."""
+    pooled, _ = split_gen.get_activations(sentences, token_pooling=pooling)
+    batch_pooled = split_gen.inputs_to_activations(sentences, token_pooling=pooling)
+    per_sample, _ = split_gen.get_activations(sentences, flatten_activations=False)
+
+    assert pooled.shape == (len(sentences), split_gen.config.hidden_size)
+    assert torch.allclose(pooled, batch_pooled, atol=1e-5)
+    for pooled_acts, sample_acts in zip(pooled, per_sample, strict=True):
+        if pooling == "mean":
+            expected = sample_acts.mean(dim=0)
+        elif pooling == "max":
+            expected = sample_acts.amax(dim=0)
+        elif pooling == "min":
+            expected = sample_acts.amin(dim=0)
+        elif pooling == "signed_max":
+            expected = sample_acts.gather(0, sample_acts.abs().max(dim=0).indices.unsqueeze(0)).squeeze(0)
+        elif pooling == "first":
+            expected = sample_acts[0]
+        else:
+            expected = sample_acts[-1]
+        assert torch.allclose(pooled_acts, expected, atol=1e-5)
+
+
+def test_token_pooling_ignores_padding(split_gen: SFG):
+    """Pooling runs after padding removal."""
+    texts = ["Hi", "Interpreto is the latin for 'to interpret' and much longer"]
+    pooled, _ = split_gen.get_activations(texts, token_pooling="mean")
+    solo, _ = split_gen.get_activations(texts[:1], token_pooling="mean")
+
+    assert torch.allclose(pooled[0], solo[0], atol=1e-5)
+
+
+def test_token_pooling_rejects_unknown_modes(split_gen: SFG, sentences: list[str]):
+    """Unknown pooling modes fail explicitly."""
+    with pytest.raises(ValueError, match="Unknown token_pooling"):
+        split_gen.get_activations(sentences, token_pooling="median")  # type: ignore[arg-type]
 
 
 def test_get_activation_and_gradient(split_gen: SFG, sentences: list[str]):

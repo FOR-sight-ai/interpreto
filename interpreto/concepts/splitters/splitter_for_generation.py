@@ -35,7 +35,8 @@ It supports only two token-selection modes:
 - **tokens** (default): returns only non-special tokens (padding, BOS, EOS, etc. removed).
 - **all_tokens**: returns all token activations including special tokens but not padding.
 
-No word/sentence aggregation is performed — that complexity lives in ``ModelWithSplitPoints``.
+No word/sentence grouping is performed. Retained tokens can optionally be pooled
+into one representation per sample.
 """
 
 from __future__ import annotations
@@ -43,7 +44,7 @@ from __future__ import annotations
 import gc
 from collections.abc import Callable
 from math import ceil
-from typing import Any
+from typing import Any, Literal
 
 import torch
 from jaxtyping import Bool, Float
@@ -58,6 +59,8 @@ from transformers import (
 from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations, TensorMapping
 
+TokenPooling = Literal[None, "mean", "max", "min", "signed_max", "first", "last"]
+
 
 class SplitterForGeneration(BaseSplitter):
     """A BaseSplitter specialization for causal language models (generation).
@@ -67,8 +70,8 @@ class SplitterForGeneration(BaseSplitter):
 
     Compared to ``ModelWithSplitPoints`` this class:
     - Only supports two activation modes: ``include_special_tokens=True/False``.
+    - Can pool retained token activations into one representation per sample.
     - Does not depend on ``interpreto.commons.granularity.Granularity``.
-    - Uses ``tokenizer.all_special_ids`` directly for special-token filtering.
 
     Arguments:
         model_or_repo_id (str | PreTrainedModel): A HuggingFace model ID or a
@@ -134,6 +137,35 @@ class SplitterForGeneration(BaseSplitter):
     # Activation extraction
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _pool_activation(
+        activation: LatentActivations,
+        token_pooling: TokenPooling,
+    ) -> LatentActivations:
+        """Optionally pool one sample's activations over its sequence dimension."""
+        match token_pooling:
+            case None:
+                pooled_activation = activation
+            case "mean":
+                pooled_activation = activation.mean(dim=0, keepdim=True)
+            case "max":
+                pooled_activation = activation.amax(dim=0, keepdim=True)
+            case "min":
+                pooled_activation = activation.amin(dim=0, keepdim=True)
+            case "signed_max":
+                indices = activation.abs().max(dim=0).indices.unsqueeze(0)
+                pooled_activation = activation.gather(0, indices)
+            case "first":
+                pooled_activation = activation[:1]
+            case "last":
+                pooled_activation = activation[-1:]
+            case _:
+                raise ValueError(
+                    f"Unknown token_pooling: {token_pooling!r}. Expected None, 'mean', 'max', 'min', "
+                    "'signed_max', 'first' or 'last'."
+                )
+        return pooled_activation
+
     def _tokenize_and_get_mask(
         self,
         inputs: list[str] | Float[torch.Tensor, "n l"],
@@ -190,6 +222,7 @@ class SplitterForGeneration(BaseSplitter):
         *,
         include_special_tokens: bool = False,
         flatten_activations: bool = True,
+        token_pooling: TokenPooling = None,
         forward_kwargs: dict[str, Any] = {},
     ) -> list[LatentActivations] | LatentActivations:
         """Extract activations from raw inputs.
@@ -200,10 +233,13 @@ class SplitterForGeneration(BaseSplitter):
                 (including special tokens but not padding).  If False (default),
                 filter out special tokens using ``tokenizer.all_special_ids``.
             flatten_activations (bool): Whether to flatten the activations into a single tensor of shape (n*g, d).
+            token_pooling (TokenPooling): Optional pooling applied to the retained
+                tokens of each sample.
             forward_kwargs (dict[str, Any]): Additional keyword arguments passed to the model forward pass.
 
         Returns:
-            list[LatentActivations] | LatentActivations: Sample-wise list of activations or a single flattened tensor.
+            list[LatentActivations] | LatentActivations: Sample-wise activations
+                or a single flattened tensor. Pooled samples contain one row each.
         """
         tokenized, tokens_mask = self._tokenize_and_get_mask(inputs, include_special_tokens)
 
@@ -217,7 +253,7 @@ class SplitterForGeneration(BaseSplitter):
 
         # filter out special tokens and expose public activations as float32.
         granular_activations = [
-            acts[mask].detach().to(device="cpu", dtype=torch.float32, copy=True)
+            self._pool_activation(acts[mask], token_pooling).detach().to(device="cpu", dtype=torch.float32, copy=True)
             for acts, mask in zip(full_activations, tokens_mask, strict=True)
         ]
 
@@ -232,6 +268,7 @@ class SplitterForGeneration(BaseSplitter):
         inputs: list[str],
         include_special_tokens: bool = False,
         flatten_activations: bool = True,
+        token_pooling: TokenPooling = None,
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
         **kwargs,
@@ -249,6 +286,9 @@ class SplitterForGeneration(BaseSplitter):
             flatten_activations (bool): If True (default), flatten the activations.
                 Into a single tensor (n*g, d). Where g varies if all tokens are included or not.
                 If False, returns a list of sample-wise activations.
+            token_pooling (TokenPooling): Optional pooling applied to the retained
+                tokens of each sample. Supported values are ``"mean"``, ``"max"``,
+                ``"min"``, ``"signed_max"``, ``"first"``, and ``"last"``.
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional kwargs for the model forward pass.
             **kwargs (dict[str, Any]): Unused, kept for API compatibility.
@@ -257,6 +297,7 @@ class SplitterForGeneration(BaseSplitter):
             activations (list[LatentActivations] | LatentActivations):
                 list[LatentActivations]: A list of tensors (one per sample, shape ``(l_i, d)``) and
                 LatentActivations: A single tensor (n*g, d) if ``flatten_activations=True``.
+                With token pooling, each sample contributes one row.
             predictions (None): ``None`` (placeholder, no predicted classes for generation models).
         """
         n_batches = ceil(len(inputs) / self.batch_size)
@@ -274,19 +315,15 @@ class SplitterForGeneration(BaseSplitter):
             for start in batch_iter:
                 batch_texts = inputs[start : min(start + self.batch_size, len(inputs))]
 
-                # extract non-special tokens mask
-                tokenized, tokens_mask = self._tokenize_and_get_mask(batch_texts, include_special_tokens)
-
-                # forward till the split point
-                with self.trace(tokenized, **forward_kwargs) as tracer:
-                    batch_outputs = self.split_module.output.save()
-                    tracer.stop()
-
-                batch_acts, _ = self._extract_hidden_state(batch_outputs, self._split_point)
-
-                # filter out special tokens and expose public activations as float32.
-                for acts, mask in zip(batch_acts, tokens_mask, strict=True):
-                    all_activations.append(acts[mask].detach().to(device="cpu", dtype=torch.float32, copy=True))
+                batch_activations = self.inputs_to_activations(
+                    batch_texts,
+                    include_special_tokens=include_special_tokens,
+                    flatten_activations=False,
+                    token_pooling=token_pooling,
+                    forward_kwargs=forward_kwargs,
+                )
+                assert isinstance(batch_activations, list)
+                all_activations.extend(batch_activations)
 
         torch.cuda.empty_cache()
         gc.collect()
