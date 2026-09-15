@@ -47,11 +47,9 @@ from typing import Any
 
 import torch
 from jaxtyping import Bool, Float
+from nnsight import save as nnsight_save
 from tqdm import tqdm
 from transformers import (
-    AutoModel,
-    AutoModelForCausalLM,
-    PretrainedConfig,
     PreTrainedModel,
     PreTrainedTokenizer,
     PreTrainedTokenizerFast,
@@ -77,8 +75,7 @@ class SplitterForGeneration(BaseSplitter):
             pre-loaded CausalLM instance.
         split_point (str | int): The split location inside the model.
         tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): Tokenizer.
-            Required when providing a model instance.
-        config (PretrainedConfig | None): Model configuration.
+            If None, NNsight resolves it automatically when possible.
         batch_size (int): Batch size for batched operations.
         device_map (torch.device | str | None): Device on which to load the model.
         **kwargs (dict[str, Any]): Additional keyword arguments forwarded to ``BaseSplitter.__init__`` and used for NNsight model loading.
@@ -104,9 +101,7 @@ class SplitterForGeneration(BaseSplitter):
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | int,
         *,
-        automodel: type[AutoModel] | None = None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
-        config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
         **kwargs,
@@ -128,16 +123,12 @@ class SplitterForGeneration(BaseSplitter):
         super().__init__(
             model_or_repo_id,
             split_point,
-            config=config,
+            task="text-generation",
             tokenizer=tokenizer,
-            automodel=automodel if automodel is not None else AutoModelForCausalLM,  # type: ignore
             batch_size=batch_size,
             device_map=device_map,
             **kwargs,
         )
-
-        # Ensure a pad token is available
-        self.tokenizer.pad_token = self.tokenizer.eos_token
 
     # ------------------------------------------------------------------
     # Activation extraction
@@ -218,11 +209,11 @@ class SplitterForGeneration(BaseSplitter):
 
         # forward till the split point
         with self.trace(tokenized, **forward_kwargs) as tracer:
-            outputs = getattr(self, self.split_point).save()
+            outputs = self.split_module.output.save()
             tracer.stop()
 
         # manage the output tuple and extract the (n, l, d) activations from it
-        full_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(outputs, self.split_point)
+        full_activations, _ = self._extract_hidden_state(outputs, self.split_point)
 
         # filter out special tokens and expose public activations as float32.
         granular_activations = [
@@ -277,9 +268,6 @@ class SplitterForGeneration(BaseSplitter):
             disable=not tqdm_bar,
         )
 
-        sp_module = self.get(self._split_point)
-        output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
-
         all_activations: list[LatentActivations] = []
 
         with torch.no_grad():
@@ -291,10 +279,10 @@ class SplitterForGeneration(BaseSplitter):
 
                 # forward till the split point
                 with self.trace(tokenized, **forward_kwargs) as tracer:
-                    batch_outputs = getattr(sp_module, output_name).save()
+                    batch_outputs = self.split_module.output.save()
                     tracer.stop()
 
-                batch_acts: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(batch_outputs, self._split_point)
+                batch_acts, _ = self._extract_hidden_state(batch_outputs, self._split_point)
 
                 # filter out special tokens and expose public activations as float32.
                 for acts, mask in zip(batch_acts, tokens_mask, strict=True):
@@ -315,21 +303,21 @@ class SplitterForGeneration(BaseSplitter):
     def _reintegrate_activations(
         self,
         sp_module,
-        module_out_name: str,
         layer_outputs: tuple[torch.Tensor] | torch.Tensor,
-        raw_activations: Float[torch.Tensor, "ng d"],
+        raw_activations: Float[torch.Tensor, "b l d"],
         decoded_activations: Float[torch.Tensor, "ng d"],
         tokens_mask: torch.Tensor,
+        tuple_index: int | None,
     ):
         """Reintegrate activations back into the full sequence.
 
         Args:
             sp_module: The module containing the activations.
-            module_out_name (str): The name of the module output attribute to update.
             layer_outputs (tuple[torch.Tensor] | torch.Tensor): Original layer outputs, potentially tuple.
-            raw_activations (Float[torch.Tensor, "ng d"]): Raw activations before decoding.
+            raw_activations (Float[torch.Tensor, "b l d"]): Raw activations before decoding.
             decoded_activations (Float[torch.Tensor, "ng d"]): Decoded activations to reintegrate.
             tokens_mask (torch.Tensor | None): Mask indicating which positions to keep.
+            tuple_index (int | None): Hidden-state index for tuple outputs.
         """
         # Reintegrate decoded activations back into the full sequence and unflatten
         reconstructed = raw_activations.clone()
@@ -341,12 +329,11 @@ class SplitterForGeneration(BaseSplitter):
         # Put activations back in their tuple
         if isinstance(layer_outputs, tuple):
             layer_outputs = list(layer_outputs)  # type: ignore
-            layer_outputs[self.output_tuple_index] = reconstructed  # type: ignore
-        else:
-            layer_outputs = reconstructed
+            layer_outputs[tuple_index] = reconstructed  # type: ignore[index]
+            reconstructed = tuple(layer_outputs)  # type: ignore[assignment]
 
         # Assign reconstructed activations back to the module output
-        setattr(sp_module, module_out_name, layer_outputs)  # type: ignore
+        sp_module.output = reconstructed  # type: ignore
 
     def _get_concept_output_gradients(
         self,
@@ -397,8 +384,7 @@ class SplitterForGeneration(BaseSplitter):
             total=n_batches,
             disable=not tqdm_bar,
         )
-        sp_module = self.get(self._split_point)
-        module_out_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
+        sp_module = self.split_module
 
         gradients_list: list[Float[torch.Tensor, "t g c"]] = []
 
@@ -413,10 +399,8 @@ class SplitterForGeneration(BaseSplitter):
             # Forward with NNsight tracing + gradient computation
             with self.trace(tokenized, **forward_kwargs):
                 # Get raw activations at split point
-                layer_outputs = getattr(sp_module, module_out_name)
-                raw_activations: Float[torch.Tensor, "b l d"] = self._manage_output_tuple(
-                    layer_outputs, self._split_point
-                )
+                layer_outputs = sp_module.output
+                raw_activations, tuple_index = self._extract_hidden_state(layer_outputs, self._split_point)
                 b, l, d = raw_activations.shape
 
                 # Flatten and select activations of interest
@@ -437,11 +421,11 @@ class SplitterForGeneration(BaseSplitter):
                 # Reintegrate decoded activations back into the full sequence and into the model
                 self._reintegrate_activations(
                     sp_module,
-                    module_out_name,
                     layer_outputs,
                     raw_activations,
                     decoded_activations,
                     tokens_mask,
+                    tuple_index,
                 )
                 del decoded_activations, raw_activations
 
@@ -496,14 +480,7 @@ class SplitterForGeneration(BaseSplitter):
             torch.Size: Shape of the activations at the split point (typically ``(1, l, d)``).
         """
         with self.trace("scan") as tracer:
-            curr_module = self.get(self._split_point)
-            module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
-            module = getattr(curr_module, module_out_name)
-            if isinstance(module, tuple):
-                for candidate in module:
-                    if candidate.dim() == 3:
-                        module = candidate
-                        break
-            shape = module.shape.save()  # type: ignore
+            activations, _ = self._extract_hidden_state(self.split_module.output, self._split_point)
+            shape = nnsight_save(activations.shape)  # type: ignore
             tracer.stop()
         return shape
