@@ -33,9 +33,3 @@ topk_words = topk.interpret(inputs=dataset, concepts_indices="all")
       inherited_members: true
       members:
         - interpret
-
-::: interpreto.concepts.interpretations.extract_ngrams
-    handler: python
-    options:
-      show_root_heading: true
-      show_source: true

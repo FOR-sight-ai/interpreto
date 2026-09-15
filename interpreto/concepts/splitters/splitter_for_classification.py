@@ -95,7 +95,7 @@ class SplitterForClassification(BaseSplitter):
             batch_size (int): Batch size for activation extraction and gradient computation.
             device_map (torch.device | str | None): Device on which to load the model
                 (e.g., ``"cuda"`` or ``"cpu"``).
-            **kwargs: Additional keyword arguments forwarded to ``BaseSplitter``.
+            **kwargs (dict[str, Any]): Additional keyword arguments forwarded to ``BaseSplitter``.
 
         Raises:
             ValueError: If ``model_or_repo_id`` is a PreTrainedModel that is not a
@@ -195,7 +195,7 @@ class SplitterForClassification(BaseSplitter):
             inputs (list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None):
                 Raw model inputs. Can be a list of strings, a tensor of input IDs,
                 a BatchEncoding, or a dictionary of tensors.
-            **kwargs: Additional keyword arguments forwarded to the trace context
+            **kwargs (dict[str, Any]): Additional keyword arguments forwarded to the trace context
                 (e.g., ``truncation=True``).
 
         Returns:
@@ -255,7 +255,7 @@ class SplitterForClassification(BaseSplitter):
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional keyword arguments for
                 the model forward pass (e.g., ``{"truncation": True}``).
-            **kwargs: Unused, kept for API compatibility with ``ModelWithSplitPoints``.
+            **kwargs (dict[str, Any]): Unused, kept for API compatibility with ``ModelWithSplitPoints``.
 
         Returns:
             tuple[LatentActivations, torch.Tensor]: The activations tensor of shape

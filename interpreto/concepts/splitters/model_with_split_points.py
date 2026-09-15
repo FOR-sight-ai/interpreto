@@ -97,7 +97,7 @@ AG = ActivationGranularity
 
 
 class ModelWithSplitPoints(BaseSplitter):
-    """Code: [:octicons-mark-github-24: concepts.splitters/model_with_split_points.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts.splitters/model_with_split_points.py)
+    """Code: [:octicons-mark-github-24: `concepts/splitters/model_with_split_points.py`](https://github.com/FOR-sight-ai/interpreto/blob/main/interpreto/concepts/splitters/model_with_split_points.py)
 
     The `ModelWithSplitPoints` is a wrapper around your HuggingFace model.
     Its goal is to allow you to split your model at specified locations and extract activations.
@@ -708,7 +708,7 @@ class ModelWithSplitPoints(BaseSplitter):
         Optionally include the model predictions in the returned tuple.
 
         Args:
-            inputs list[str] | torch.Tensor | BatchEncoding:
+            inputs (list[str] | torch.Tensor | BatchEncoding):
                 Inputs to the model forward pass before or after tokenization.
                 In the case of a `torch.Tensor`, we assume a batch dimension and token ids.
 

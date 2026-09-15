@@ -94,6 +94,9 @@ class ShapTokenPerturbator(IdsPerturbator):
         # Simplify typing
         p, l = self.n_perturbations, mask_dim
 
+        if l < 1:
+            return torch.zeros((p, l), dtype=torch.float)
+
         # If the requested number of perturbations is greater than the possible number of perturbations
         # we set it to the maximum possible number of perturbations
         # This solves the issue 68, which arise when l = 2 and p at least greater than 30

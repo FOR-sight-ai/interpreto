@@ -517,7 +517,6 @@ class Insertion(MultitaskMetricMixin, InsertionDeletionBase):
         model (PreTrainedModel): model used to generate explanations
         tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
-        granularity (Granularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run
         n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
             steps from which the AUC will be computed).
@@ -577,7 +576,6 @@ class Deletion(MultitaskMetricMixin, InsertionDeletionBase):
         model (PreTrainedModel): model used to generate explanations
         tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
-        granularity (Granularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run
         n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
             steps from which the AUC will be computed).
