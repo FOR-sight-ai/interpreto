@@ -242,13 +242,14 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """Set the device on which the concept model is stored."""
         self.to(device)
 
-    def _normalize_to_concept_model(self, inputs: torch.Tensor) -> torch.Tensor:
+    def _normalize_to_concept_model(self, inputs: torch.Tensor, *, move_device: bool = True) -> torch.Tensor:
         """Move floating inputs to the concept model's dtype and device.
 
         A bit complex because concept models can come from overcomplete.
 
         Models without floating parameters or buffers impose no dtype. Casts
-        remain differentiable, so concept-gradient paths are preserved.
+        remain differentiable, so concept-gradient paths are preserved. Device
+        movement can be disabled for datasets that are transferred in batches.
         """
         target_dtype: torch.dtype | None = None
         if isinstance(self.concept_model, torch.nn.Module):
@@ -258,9 +259,10 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
                     target_dtype = tensor.dtype
                     break
 
+        device = self.device if move_device else inputs.device
         if inputs.is_floating_point() and target_dtype is not None:
-            return inputs.to(device=self.device, dtype=target_dtype)
-        return inputs.to(device=self.device)
+            return inputs.to(device=device, dtype=target_dtype)
+        return inputs.to(device=device)
 
     @abstractmethod
     def fit(self, activations: LatentActivations, *args, **kwargs) -> Any:

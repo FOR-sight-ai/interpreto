@@ -269,7 +269,8 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             device = self.device
         if len(activations.shape) != 2:
             raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
-        dataloader = DataLoader(TensorDataset(activations.detach()), batch_size=batch_size, shuffle=True)
+        activations = self._normalize_to_concept_model(activations.detach(), move_device=False)
+        dataloader = DataLoader(TensorDataset(activations), batch_size=batch_size, shuffle=True)
         optimizer_kwargs.update({"lr": lr})
         optimizer = optimizer_class(self.concept_model.parameters(), **optimizer_kwargs)  # type: ignore
         train_params = {

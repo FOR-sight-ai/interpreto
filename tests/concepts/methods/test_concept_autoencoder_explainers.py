@@ -253,6 +253,26 @@ def test_mixed_precision_encode_decode_preserves_gradients(
     assert torch.isfinite(gradients).all()
 
 
+def test_sae_fit_normalizes_dtype_without_moving_dataset(monkeypatch):
+    """SAE fitting keeps the dataset on its input device for batched transfer."""
+    splitter = SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+    explainer = VanillaSAEConcepts(splitter, nb_concepts=3, device=DEVICE)
+    activations = torch.randn(4, splitter.config.hidden_size, dtype=torch.float64)
+    observed = {}
+
+    def inspect_dataloader(**kwargs):
+        dataset_activations = kwargs["dataloader"].dataset.tensors[0]
+        observed["device"] = dataset_activations.device
+        observed["dtype"] = dataset_activations.dtype
+        return {}
+
+    monkeypatch.setattr("interpreto.concepts.methods.overcomplete.oc_sae.train_sae", inspect_dataloader)
+
+    explainer.fit(activations, nb_epochs=1, batch_size=2)
+
+    assert observed == {"device": activations.device, "dtype": torch.float32}
+
+
 if __name__ == "__main__":
     from transformers import AutoModelForMaskedLM
 
