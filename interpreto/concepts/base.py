@@ -95,14 +95,14 @@ class ModelForInputsToConcepts:
                 f"The split model must be a SplitterForClassification model. Got {splitter.__class__.__name__}."
             )
 
-        self.to(self.concept_explainer.splitter.device)  # type: ignore
-
+        # Lazy NNsight models have meta-device weights until their first trace.
+        # Moving them eagerly would fail, so placement is deferred to the trace.
         self.nb_concepts = concept_explainer.concept_model.nb_concepts
 
         # Expose a minimal config so InferenceWrapper.__init__ and setup_token_ids can work
         self.config = SimpleNamespace(
             pad_token_id=splitter.tokenizer.pad_token_id,
-            vocab_size=getattr(splitter._model.config, "vocab_size", None),
+            vocab_size=getattr(splitter.config, "vocab_size", None),
         )
 
     def eval(self):
@@ -111,7 +111,7 @@ class ModelForInputsToConcepts:
 
     def resize_token_embeddings(self, new_num_tokens: int):
         """No-op: the concept model does not have token embeddings."""
-        self.concept_explainer.splitter._model.resize_token_embeddings(new_num_tokens)
+        self.concept_explainer.splitter.resize_token_embeddings(new_num_tokens)
 
     def __call__(self, **kwargs):
         """Run inputs → activations → concepts and return a BaseModelOutput-like object.
@@ -128,9 +128,12 @@ class ModelForInputsToConcepts:
         Returns:
             torch.device: The device on which the model is loaded.
         """
-        if self.concept_explainer.splitter.device != self.concept_explainer.device:
-            self.concept_explainer.to(self.concept_explainer.splitter.device)  # type: ignore
-        return self.concept_explainer.splitter.device  # type: ignore
+        splitter = self.concept_explainer.splitter
+        if getattr(splitter, "dispatched", True):
+            if splitter.device != self.concept_explainer.device:  # type: ignore
+                self.concept_explainer.to(splitter.device)  # type: ignore
+            return splitter.device  # type: ignore
+        return self.concept_explainer.device
 
     @device.setter
     def device(self, device: torch.device):
@@ -146,10 +149,14 @@ class ModelForInputsToConcepts:
         """
         Move the model to the specified device.
 
+        An undispatched splitter is left in place so its next trace can dispatch
+        the real weights. Only the concept model is moved eagerly.
+
         Args:
             device (torch.device): The device to which the model should be moved.
         """
-        self.concept_explainer.splitter.to(device)  # type: ignore
+        if getattr(self.concept_explainer.splitter, "dispatched", True):
+            self.concept_explainer.splitter.to(device)  # type: ignore
         self.concept_explainer.to(device)  # type: ignore
 
 
