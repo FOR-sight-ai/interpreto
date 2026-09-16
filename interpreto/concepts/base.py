@@ -28,11 +28,12 @@ Bases Classes for Concept-based Explainers
 
 from __future__ import annotations
 
+import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
 from types import SimpleNamespace
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 import torch
 from jaxtyping import Float
@@ -241,6 +242,28 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """Set the device on which the concept model is stored."""
         self.to(device)
 
+    def _normalize_to_concept_model(self, inputs: torch.Tensor, *, move_device: bool = True) -> torch.Tensor:
+        """Move floating inputs to the concept model's dtype and device.
+
+        A bit complex because concept models can come from overcomplete.
+
+        Models without floating parameters or buffers impose no dtype. Casts
+        remain differentiable, so concept-gradient paths are preserved. Device
+        movement can be disabled for datasets that are transferred in batches.
+        """
+        target_dtype: torch.dtype | None = None
+        if isinstance(self.concept_model, torch.nn.Module):
+            concept_model = cast(torch.nn.Module, self.concept_model)
+            for tensor in itertools.chain(concept_model.parameters(), concept_model.buffers()):
+                if tensor.is_floating_point():
+                    target_dtype = tensor.dtype
+                    break
+
+        device = self.device if move_device else inputs.device
+        if inputs.is_floating_point() and target_dtype is not None:
+            return inputs.to(device=device, dtype=target_dtype)
+        return inputs.to(device=device)
+
     @abstractmethod
     def fit(self, activations: LatentActivations, *args, **kwargs) -> Any:
         """Fits `concept_model` on the given activations.
@@ -345,9 +368,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The encoded concept activations.
         """
-        if self.device != activations.device:
-            activations = activations.to(self.device, non_blocking=True)
-        return self.concept_model.encode(activations)  # type: ignore
+        return self.concept_model.encode(self._normalize_to_concept_model(activations))  # type: ignore
 
     @check_fitted
     def concepts_to_activations(self, concepts: ConceptsActivations) -> torch.Tensor:  # LatentActivations
@@ -359,9 +380,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The decoded model activations.
         """
-        if self.device != concepts.device:
-            concepts = concepts.to(self.device, non_blocking=True)
-        return self.concept_model.decode(concepts)  # type: ignore
+        return self.concept_model.decode(self._normalize_to_concept_model(concepts))  # type: ignore
 
     @check_fitted
     def get_dictionary(self) -> torch.Tensor:  # TODO: add this to tests

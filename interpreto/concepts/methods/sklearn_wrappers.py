@@ -115,7 +115,7 @@ class ICAWrapper(SkLearnWrapper):
         self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
     ) -> FastICA | None:
         ica = FastICA(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
-        ica.fit(x.detach().cpu().numpy())
+        ica.fit(x.detach().to(torch.float32).cpu().numpy())
 
         self.mean.data = torch.as_tensor(ica.mean_, dtype=torch.float32, device=self.mean.device)
         self.components.data = torch.as_tensor(ica.components_.T, dtype=torch.float32, device=self.components.device)
@@ -130,13 +130,13 @@ class ICAWrapper(SkLearnWrapper):
     @jaxtyped(typechecker=beartype)
     def encode(self, x: Float[torch.Tensor, "n {self.input_size}"]) -> Float[torch.Tensor, "n {self.nb_concepts}"]:
         self._assert_fitted()
-        x = x.to(self.mean.device)
+        x = x.to(dtype=self.mean.dtype, device=self.mean.device)
         return (x - self.mean) @ self.components
 
     @jaxtyped(typechecker=beartype)
     def decode(self, z: Float[torch.Tensor, "n {self.nb_concepts}"]) -> Float[torch.Tensor, "n {self.input_size}"]:
         self._assert_fitted()
-        z = z.to(self.mixing.device)
+        z = z.to(dtype=self.mixing.dtype, device=self.mixing.device)
         return (z @ self.mixing) + self.mean
 
     def get_dictionary(self):
@@ -168,7 +168,7 @@ class PCAWrapper(SkLearnWrapper):
         self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
     ) -> PCA | None:
         pca = PCA(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
-        pca.fit(x.detach().cpu().numpy())
+        pca.fit(x.detach().to(torch.float32).cpu().numpy())
         self.mean.data = torch.as_tensor(pca.mean_, dtype=torch.float32, device=self.mean.device)
         self.components.data = torch.as_tensor(pca.components_, dtype=torch.float32, device=self.components.device)
         self.fitted = True
@@ -181,13 +181,13 @@ class PCAWrapper(SkLearnWrapper):
     @jaxtyped(typechecker=beartype)
     def encode(self, x: Float[torch.Tensor, "n {self.input_size}"]) -> Float[torch.Tensor, "n {self.nb_concepts}"]:
         self._assert_fitted()
-        x = x.to(self.mean.device)
+        x = x.to(dtype=self.mean.dtype, device=self.mean.device)
         return (x - self.mean) @ self.components.T
 
     @jaxtyped(typechecker=beartype)
     def decode(self, z: Float[torch.Tensor, "n {self.nb_concepts}"]) -> Float[torch.Tensor, "n {self.input_size}"]:
         self._assert_fitted()
-        z = z.to(self.components.device)
+        z = z.to(dtype=self.components.dtype, device=self.components.device)
         return (z @ self.components) + self.mean
 
     def get_dictionary(self):
@@ -228,7 +228,7 @@ class SVDWrapper(SkLearnWrapper):
         self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
     ) -> TruncatedSVD | None:
         svd = TruncatedSVD(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
-        svd.fit(x.detach().cpu().numpy())
+        svd.fit(x.detach().to(torch.float32).cpu().numpy())
 
         self.components.data = torch.as_tensor(svd.components_, dtype=torch.float32, device=self.components.device)
         self.fitted = True
@@ -241,13 +241,13 @@ class SVDWrapper(SkLearnWrapper):
     @jaxtyped(typechecker=beartype)
     def encode(self, x: Float[torch.Tensor, "n {self.input_size}"]) -> Float[torch.Tensor, "n {self.nb_concepts}"]:
         self._assert_fitted()
-        x = x.to(self.components.device)
+        x = x.to(dtype=self.components.dtype, device=self.components.device)
         return x @ self.components.T
 
     @jaxtyped(typechecker=beartype)
     def decode(self, z: Float[torch.Tensor, "n {self.nb_concepts}"]) -> Float[torch.Tensor, "n {self.input_size}"]:
         self._assert_fitted()
-        z = z.to(self.components.device)
+        z = z.to(dtype=self.components.dtype, device=self.components.device)
         return z @ self.components
 
     def get_dictionary(self):
@@ -276,7 +276,7 @@ class KMeansWrapper(SkLearnWrapper):
     @jaxtyped(typechecker=beartype)
     def fit(self, x: Float[torch.Tensor, "n d"], return_sklearn_model: bool = False, **kwargs) -> KMeans | None:
         kmeans = KMeans(n_clusters=self.nb_concepts, random_state=self.random_state, **kwargs)
-        kmeans.fit(x.detach().cpu().numpy())
+        kmeans.fit(x.detach().to(torch.float32).cpu().numpy())
         self.components.data = torch.as_tensor(
             kmeans.cluster_centers_, dtype=torch.float32, device=self.components.device
         )
@@ -290,7 +290,7 @@ class KMeansWrapper(SkLearnWrapper):
     @jaxtyped(typechecker=beartype)
     def encode(self, x: Float[torch.Tensor, "n d"]) -> Float[torch.Tensor, "n {self.nb_concepts}"]:
         self._assert_fitted()
-        x = x.to(self.components.device)
+        x = x.to(dtype=self.components.dtype, device=self.components.device)
 
         # Compute distances to cluster centers
         return torch.cdist(x, self.components, p=2)
@@ -298,7 +298,7 @@ class KMeansWrapper(SkLearnWrapper):
     @jaxtyped(typechecker=beartype)
     def decode(self, z: Float[torch.Tensor, "n {self.nb_concepts}"]) -> Float[torch.Tensor, "n d"]:
         self._assert_fitted()
-        z = z.to(self.components.device)
+        z = z.to(dtype=self.components.dtype, device=self.components.device)
         return z @ self.components
 
     def get_dictionary(self):
