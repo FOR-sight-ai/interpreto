@@ -31,7 +31,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from interpreto import SplitterForClassification
+from interpreto import SplitterForClassification, TextTokensSplitter
 from interpreto.concepts import (
     BatchTopKSAEConcepts,
     Cockatiel,
@@ -271,6 +271,37 @@ def test_sae_fit_normalizes_dtype_without_moving_dataset(monkeypatch):
     explainer.fit(activations, nb_epochs=1, batch_size=2)
 
     assert observed == {"device": activations.device, "dtype": torch.float32}
+
+
+def test_concept_output_gradient_uses_splitter_contract(sentences: list[str]):
+    """Concept gradients delegate shape semantics to the task-specific splitter."""
+    # TODO: use `splitted_encoder_ml` once `ModelWithSplitPoints` is removed
+    splitter = SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+    explainer = NeuronsAsConcepts(splitter)
+
+    gradients = explainer.concept_output_gradient(sentences[:2], targets=[0], normalization=False)
+
+    assert len(gradients) == 2
+    assert all(gradient.shape == (1, 1, splitter.config.hidden_size) for gradient in gradients)
+
+
+def test_generation_concept_output_gradient_uses_splitter_contract(sentences: list[str]):
+    """Generation splitters retain their token-level gradient dimension."""
+    # TODO: could make a fixture for this once `ModelWithSplitPoints` is removed
+    splitter = TextTokensSplitter(
+        "hf-internal-testing/tiny-random-gpt2",
+        split_point=1,
+        task="text-generation",
+        device_map=DEVICE,
+    )
+    explainer = NeuronsAsConcepts(splitter)
+
+    gradients = explainer.concept_output_gradient(sentences[:1], targets=[0], normalization=False)
+
+    assert len(gradients) == 1
+    assert gradients[0].shape[0] == 1
+    assert gradients[0].shape[1] > 1
+    assert gradients[0].shape[2] == splitter.config.hidden_size
 
 
 if __name__ == "__main__":
