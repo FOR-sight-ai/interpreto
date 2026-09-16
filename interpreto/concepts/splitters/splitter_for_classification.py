@@ -38,11 +38,10 @@ from typing import Any
 
 import torch
 from jaxtyping import Float, Int
+from nnsight import save as nnsight_save
 from tqdm import tqdm
 from transformers import (
-    AutoModelForSequenceClassification,
     BatchEncoding,
-    PretrainedConfig,
     PreTrainedModel,
     PreTrainedTokenizer,
     PreTrainedTokenizerFast,
@@ -63,12 +62,14 @@ class SplitterForClassification(BaseSplitter):
     the CLS-token representations fed into that head.
     """
 
+    _HEAD_CANDIDATES = ("classifier", "classification_head", "score")
+
     def __init__(
         self,
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | None = None,
+        *,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
-        config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
         **kwargs,
@@ -91,7 +92,6 @@ class SplitterForClassification(BaseSplitter):
                 Here we use the input of the split_point not its output.
             tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): The tokenizer
                 associated with the model. If None, it is loaded from the model repo.
-            config (PretrainedConfig | None): Model configuration. If None, loaded automatically.
             batch_size (int): Batch size for activation extraction and gradient computation.
             device_map (torch.device | str | None): Device on which to load the model
                 (e.g., ``"cuda"`` or ``"cpu"``).
@@ -119,25 +119,17 @@ class SplitterForClassification(BaseSplitter):
                     "Please provide a model that inherits from `transformers.ForSequenceClassification`."
                 )
 
-        # Pass a placeholder split_point; our overridden setter skips walk_modules validation.
-        # The real split point is resolved after super().__init__() loads the model,
-        # because the split_point setter needs access to self._model.
         super().__init__(
             model_or_repo_id,
             split_point=split_point,
-            config=config,
+            task="text-classification",
             tokenizer=tokenizer,
-            automodel=AutoModelForSequenceClassification,  # type: ignore
             batch_size=batch_size,
             device_map=device_map,
             **kwargs,
         )
 
-    @property
-    def split_point(self) -> str:
-        return self._split_point
-
-    @split_point.setter
+    @BaseSplitter.split_point.setter  # type: ignore[attr-defined]
     def split_point(self, split_point: str | int | None) -> None:
         """Set the split_point corresponding to the classification head name.
 
@@ -145,26 +137,20 @@ class SplitterForClassification(BaseSplitter):
             split_point (str | None): Name of the classification head.
                 If None, the first classification head is used.
         """
-        sub_modules = list(self._model._modules.keys())
         if split_point is None:
-            resolved = None
-            for candidate in ["classifier", "classification_head", "score"]:
-                if candidate in sub_modules:
-                    resolved = candidate
-                    break
-            if resolved is None:
+            prefix = f"{self.path}."
+            modules = {path.removeprefix(prefix) for path, _ in self.named_modules() if path.startswith(prefix)}
+            split_point = next((name for name in self._HEAD_CANDIDATES if name in modules), None)
+            if split_point is None:
                 raise ValueError(
                     "No classification head found in the model. "
                     "Please specify the classification head name using the `split_point` parameter."
                 )
-            self._split_point = resolved
-        else:
-            if split_point not in sub_modules:
-                raise ValueError(
-                    f"The provided classification head name '{split_point}' is not valid. "
-                    f"Existing model modules are: {', '.join(sub_modules)}."
-                )
-            self._split_point = str(split_point)
+
+        if not isinstance(split_point, str):
+            raise ValueError(f"The provided classification head '{split_point}' is not valid.")
+
+        BaseSplitter.split_point.fset(self, split_point)  # type: ignore[attr-defined]
 
     def __extract_cls_token(self, activations: Float[torch.Tensor, "n l d"]) -> Float[torch.Tensor, "n d"]:
         """
@@ -209,7 +195,7 @@ class SplitterForClassification(BaseSplitter):
             raise ValueError("Either inputs or kwargs must be provided.")
 
         with self.trace(inputs, **kwargs) as tracer:
-            activations = getattr(self, self.split_point).input.save()
+            activations = self._split_module.input.save()
             tracer.stop()  # we only needed the CLS token, no need to complete the forward pass
 
         # force two dimensions
@@ -235,7 +221,15 @@ class SplitterForClassification(BaseSplitter):
             Float[torch.Tensor, "n cls"]: Classification logits of shape
                 ``(n_samples, n_classes)``.
         """
-        return getattr(self, self.split_point)(activations).logits
+        if not self.dispatched:
+            self.dispatch()
+
+        classification_head = self._split_module
+        activations = activations.to(next(classification_head.parameters()))
+        try:
+            return classification_head(activations)
+        except IndexError:
+            return classification_head(activations.unsqueeze(1))
 
     def get_activations(
         self,
@@ -263,9 +257,9 @@ class SplitterForClassification(BaseSplitter):
         """
         activations = []
         predictions = []
-        classification_head = getattr(self, self.split_point)
+        classification_head = self._split_module
 
-        self._model.eval()
+        self.eval()
         with torch.no_grad():
             for i in tqdm(range(0, len(inputs), self.batch_size), disable=not tqdm_bar):
                 # extract and prepare a batch of inputs
@@ -333,7 +327,6 @@ class SplitterForClassification(BaseSplitter):
             list[Float[torch.Tensor, "t 1 c"]]: A list of gradient tensors,
                 one per sample, each of shape ``(n_targets, 1, n_concepts)``.
         """
-        classification_head = getattr(self, self.split_point)
         if batch_size is None:
             batch_size = self.batch_size
 
@@ -353,18 +346,14 @@ class SplitterForClassification(BaseSplitter):
                     )
 
             # encode activations to concepts
-            batch_concepts: Float[torch.Tensor, "b c"] = activations_to_concepts(batch_activations.to(self.device))
+            batch_concepts: Float[torch.Tensor, "b c"] = activations_to_concepts(batch_activations)
             del batch_activations
             batch_concepts.requires_grad_(True)
 
             # decode concepts to logits
-            try:
-                logits: Float[torch.Tensor, "b t_all"] = classification_head(concepts_to_activations(batch_concepts))
-            except IndexError:
-                # we might forced two dimensions in `self.inputs_to_activations`
-                logits: Float[torch.Tensor, "b t_all"] = classification_head(
-                    concepts_to_activations(batch_concepts).unsqueeze(dim=1)
-                )
+            logits: Float[torch.Tensor, "b t_all"] = self.activations_to_outputs(
+                concepts_to_activations(batch_concepts)
+            )
 
             # specify which classes to compute gradients for
             if targets is None:
@@ -404,7 +393,7 @@ class SplitterForClassification(BaseSplitter):
         Returns:
             torch.Size: Shape of the activations at the classification head input.
         """
-        with self.trace("scan") as tracer:
-            shape = getattr(self, self.split_point).input.shape.save()
+        with self.trace("Hello world") as tracer:
+            shape = nnsight_save(self._split_module.input.shape)
             tracer.stop()
         return shape
