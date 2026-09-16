@@ -311,20 +311,8 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             The encoded concept activations.
         """
         # SAEs.encode returns both codes (concepts activations) and pre_codes (before relu)
-        _, codes = super().activations_to_concepts(activations.to(self.device))
+        _, codes = super().activations_to_concepts(activations)
         return codes
-
-    @check_fitted
-    def concepts_to_activations(self, concepts: torch.Tensor) -> torch.Tensor:
-        """Decode the given concepts using the `concept_model` decoder.
-
-        Args:
-            concepts (torch.Tensor): The concepts to decode.
-
-        Returns:
-            The decoded concept activations.
-        """
-        return self.concept_model.decode(concepts.to(self.device))  # type: ignore
 
 
 class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDictionaryLearning], Generic[_BODL_co]):
@@ -611,7 +599,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
                     "The activations should be positive. If you want to force the activations to be positive, "
                     "use the `NMFConcepts(..., force_relu=True)`."
                 )
-        return self.concept_model.encode(activations)  # type: ignore
+        return super().activations_to_concepts(activations)
 
 
 class SemiNMFConcepts(DictionaryLearningExplainer[oc_opt.SemiNMF]):

@@ -31,6 +31,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+from interpreto import SplitterForClassification
 from interpreto.concepts import (
     BatchTopKSAEConcepts,
     Cockatiel,
@@ -231,6 +232,25 @@ def test_concept_output_gradient(
             "Gradient shape mismatch: got "
             f"{tuple(grad.shape)}, expected {(1, nb_granularity_elements, concepts_dim)} for sentence '{sentence}'"
         )
+
+
+def test_mixed_precision_encode_decode_preserves_gradients(
+    sentences: list[str],
+):
+    """Concept inputs are cast to model dtype without breaking gradients."""
+    splitter = SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+    activations, _ = splitter.get_activations(sentences)
+    explainer = PCAConcepts(splitter, nb_concepts=3, device=DEVICE)
+    explainer.fit(activations)
+
+    high_precision_activations = activations.to(torch.float64).requires_grad_(True)
+    concepts = explainer.activations_to_concepts(high_precision_activations)
+    decoded = explainer.concepts_to_activations(concepts.to(torch.float64))
+
+    assert concepts.dtype == torch.float32
+    assert decoded.dtype == torch.float32
+    gradients = torch.autograd.grad(decoded.sum(), high_precision_activations)[0]
+    assert torch.isfinite(gradients).all()
 
 
 if __name__ == "__main__":
