@@ -31,6 +31,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+from interpreto import SplitterForClassification
 from interpreto.concepts import (
     CosineCentroidProbe,
     DotProductCentroidProbe,
@@ -169,6 +170,20 @@ def test_torch_probe_explainer_with_tensor_activations(
 
     concepts = explainer.activations_to_concepts(activations)
     assert concepts.shape == (n, nb_concepts)
+
+
+def test_torch_probe_explainer_accepts_low_precision():
+    """Torch probes normalize low-precision activations at their boundaries."""
+    splitter = SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+    activations = torch.randn(12, splitter.config.hidden_size, dtype=torch.bfloat16)
+    labels = (torch.rand(12, 2) > 0.5).float()
+    explainer = ProbeExplainer(splitter, LogisticRegressionProbe())
+
+    explainer.fit(activations, labels)
+    concepts = explainer.activations_to_concepts(activations)
+
+    assert concepts.shape == (12, 2)
+    assert concepts.dtype == torch.float32
 
 
 # ---------------------------------------------------------------------------

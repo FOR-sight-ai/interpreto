@@ -88,6 +88,19 @@ def test_sklearn_wrapper_encode_decode(wrapper_cls):
         )
 
 
+@pytest.mark.parametrize("wrapper_cls", [ICAWrapper, PCAWrapper, KMeansWrapper, SVDWrapper])
+def test_sklearn_wrapper_accepts_low_precision(wrapper_cls):
+    """Sklearn wrappers normalize unsupported low-precision inputs."""
+    data = torch.randn(12, 6, dtype=torch.bfloat16)
+    wrapper = wrapper_cls(nb_concepts=3, input_size=6, random_state=0)
+
+    wrapper.fit(data)
+    encoded = wrapper.encode(data)
+
+    assert encoded.shape == (12, 3)
+    assert encoded.dtype == torch.float32
+
+
 if __name__ == "__main__":
     test_sklearn_wrapper_encode_decode(ICAWrapper)
     test_sklearn_wrapper_encode_decode(PCAWrapper)

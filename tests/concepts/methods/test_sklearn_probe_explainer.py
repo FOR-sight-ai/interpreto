@@ -179,3 +179,15 @@ def test_sklearn_probe_explainer_separation(
     mean_neg = scores[neg_mask, 0].mean()
 
     assert mean_pos > mean_neg, f"{name}: positive mean ({mean_pos:.4f}) should exceed negative mean ({mean_neg:.4f})"
+
+
+def test_sklearn_probe_accepts_low_precision():
+    """Sklearn probes normalize unsupported low-precision activations."""
+    activations = torch.randn(20, 4, dtype=torch.bfloat16)
+    labels = torch.tensor([0, 1] * 10)
+    probe = SklearnProbe(SVC, {"kernel": "linear"})
+
+    probe.fit(activations, labels)
+    scores = probe.encode(activations)
+
+    assert scores.shape == (20, 1)
