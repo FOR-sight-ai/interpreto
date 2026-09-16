@@ -42,6 +42,7 @@ into one representation per sample.
 from __future__ import annotations
 
 import gc
+import warnings
 from collections.abc import Callable
 from math import ceil
 from typing import Any, Literal
@@ -60,9 +61,10 @@ from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations, TensorMapping
 
 TokenPooling = Literal[None, "mean", "max", "min", "signed_max", "first", "last"]
+TextTokensTask = Literal["feature-extraction", "text-generation"]
 
 
-class SplitterForGeneration(BaseSplitter):
+class TextTokensSplitter(BaseSplitter):
     """A BaseSplitter specialization for causal language models (generation).
 
     Wraps a ``ForCausalLM`` model, splits it at a user-specified layer, and
@@ -77,6 +79,9 @@ class SplitterForGeneration(BaseSplitter):
         model_or_repo_id (str | PreTrainedModel): A HuggingFace model ID or a
             pre-loaded CausalLM instance.
         split_point (str | int): The split location inside the model.
+        task (TextTokensTask): NNsight loading task. Either ``"feature-extraction"`` or ``"text-generation"``.
+            Using ``"text-generation"`` corresponds to the old ``SplitterForGeneration`` class.
+            While ``"feature-extraction"`` can extract token-activations for other tasks.
         tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): Tokenizer.
             If None, NNsight resolves it automatically when possible.
         batch_size (int): Batch size for batched operations.
@@ -104,29 +109,16 @@ class SplitterForGeneration(BaseSplitter):
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | int,
         *,
+        task: TextTokensTask | None = None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
         **kwargs,
     ):
-        """Initialize a SplitterForGeneration model wrapper.
-
-        Raises:
-            TypeError: If ``model_or_repo_id`` is a PreTrainedModel that is not a CausalLM.
-        """
-        if isinstance(model_or_repo_id, PreTrainedModel):
-            class_name = model_or_repo_id.__class__.__name__
-            if "ForCausalLM" not in class_name and "LMHeadModel" not in class_name:
-                raise TypeError(
-                    "The provided model is not a causal language model. "
-                    "Please provide a model that inherits from `transformers.*ForCausalLM` "
-                    "or `*LMHeadModel`."
-                )
-
         super().__init__(
             model_or_repo_id,
             split_point,
-            task="text-generation",
+            task=task,
             tokenizer=tokenizer,
             batch_size=batch_size,
             device_map=device_map,
@@ -208,7 +200,7 @@ class SplitterForGeneration(BaseSplitter):
 
             # just filters out padding
             if include_special_tokens:
-                return tokenized, attention_mask  # type: ignore
+                return tokenized, attention_mask.bool()  # type: ignore
 
             # filter out  padding and special tokens
             tokens_mask = attention_mask.bool() & ~tokenized.pop("special_tokens_mask").bool()
@@ -384,6 +376,8 @@ class SplitterForGeneration(BaseSplitter):
     ) -> list[Float[torch.Tensor, "t g c"]]:
         """Compute gradients of model outputs w.r.t. concept activations for generation.
 
+        Only available for ``"text-generation"`` tasks.
+
         For each input, extracts full token-level activations,
         encodes them into concept space, decodes back, reintegrates, and computes the
         gradient of the logits with respect to the concept activations.
@@ -409,6 +403,12 @@ class SplitterForGeneration(BaseSplitter):
             list[Float[torch.Tensor, "t g c"]]: A list of gradient tensors,
                 one per sample, each of shape ``(n_targets, g_i, n_concepts)``.
         """
+        if self.task != "text-generation":
+            raise NotImplementedError(
+                "Concept-to-output gradients are only supported for causal language models "
+                f"(task='text-generation'), got task={self.task!r}."
+            )
+
         sp_module = self.split_module
         gradients_list: list[Float[torch.Tensor, "t g c"]] = []
 
@@ -488,3 +488,39 @@ class SplitterForGeneration(BaseSplitter):
             shape = nnsight_save(activations.shape)  # type: ignore
             tracer.stop()
         return shape
+
+
+class SplitterForGeneration(TextTokensSplitter):
+    def __init__(
+        self,
+        model_or_repo_id: str | PreTrainedModel,
+        split_point: str | int,
+        *,
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
+        batch_size: int = 1,
+        device_map: torch.device | str | None = None,
+        **kwargs,
+    ):
+        warnings.warn(
+            "SplitterForGeneration is deprecated, use TextTokensSplitter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if isinstance(model_or_repo_id, PreTrainedModel):
+            class_name = model_or_repo_id.__class__.__name__
+            if "ForCausalLM" not in class_name and "LMHeadModel" not in class_name:
+                raise TypeError(
+                    "The provided model is not a causal language model. "
+                    "Please provide a model that inherits from `transformers.*ForCausalLM` "
+                    "or `*LMHeadModel`."
+                )
+
+        super().__init__(
+            model_or_repo_id,
+            split_point,
+            task="text-generation",
+            tokenizer=tokenizer,
+            batch_size=batch_size,
+            device_map=device_map,
+            **kwargs,
+        )

@@ -25,12 +25,13 @@
 from .base_splitter import BaseSplitter
 from .model_with_split_points import ModelWithSplitPoints
 from .splitter_for_classification import SplitterForClassification
-from .splitter_for_generation import SplitterForGeneration, TokenPooling
+from .text_tokens_splitter import SplitterForGeneration, TextTokensSplitter, TokenPooling
 
 __all__ = [
     "BaseSplitter",
     "ModelWithSplitPoints",
     "SplitterForClassification",
     "SplitterForGeneration",
+    "TextTokensSplitter",
     "TokenPooling",
 ]
