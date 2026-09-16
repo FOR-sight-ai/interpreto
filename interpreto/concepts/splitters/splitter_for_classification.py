@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import gc
 from collections.abc import Callable
+from functools import cached_property
 from typing import Any
 
 import torch
@@ -187,19 +188,35 @@ class SplitterForClassification(BaseSplitter):
             positions,
         ]
 
+    @cached_property
+    def _standalone_token_template(self) -> tuple[torch.Tensor, int]:
+        """Get the template of special tokens to integrate a standalone token ID."""
+        input_ids = self.tokenizer("a", return_tensors="pt")["input_ids"]
+        token_id = self.tokenizer("a", add_special_tokens=False)["input_ids"][0]
+        position = (input_ids[0] == token_id).nonzero()[0].item()
+        return input_ids, position
+
     def _prepare_batch(
         self,
-        inputs: list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None,
+        inputs: list[str] | Iterable[int] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None,
         kwargs: dict[str, Any],
     ) -> dict[str, torch.Tensor]:
         """Prepare model inputs while retaining the input IDs used for token selection."""
         if inputs is None:
-            if len(kwargs) == 0:
+            if not kwargs:
                 raise ValueError("Either inputs or kwargs must be provided.")
             return dict(kwargs)
+
         if isinstance(inputs, torch.Tensor):
             return {"input_ids": inputs}
-        if isinstance(inputs, list):
+
+        if not isinstance(inputs, list):
+            return dict(inputs)
+
+        if not inputs:
+            raise ValueError("List inputs cannot be empty.")
+
+        if all(isinstance(x, str) for x in inputs):
             return dict(
                 self.tokenizer(
                     inputs,
@@ -208,10 +225,21 @@ class SplitterForClassification(BaseSplitter):
                     truncation=True,
                 )
             )
-        return dict(inputs)
+
+        if all(isinstance(x, int) for x in inputs):
+            # Integrate the provided token IDs into the special tokens template.
+            template, position = self._standalone_token_template
+            input_ids = template.expand(len(inputs), -1).clone()
+            input_ids[:, position] = torch.as_tensor(inputs, dtype=input_ids.dtype)
+
+            return {"input_ids": input_ids}
+
+        raise TypeError("List inputs must contain only strings or only integer token IDs.")
 
     def inputs_to_activations(
-        self, inputs: list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None = None, **kwargs
+        self,
+        inputs: list[str] | Iterable[int] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None = None,
+        **kwargs,
     ) -> Float[torch.Tensor, "n d"]:
         """Compute latent classification representations from raw inputs.
 
@@ -223,9 +251,12 @@ class SplitterForClassification(BaseSplitter):
         which is batched in the ``InputsToConceptsInferenceWrapper``.
 
         Args:
-            inputs (list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None):
-                Raw model inputs. Can be a list of strings, a tensor of input IDs,
-                a BatchEncoding, or a dictionary of tensors.
+            inputs (list[str] | Iterable[int] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None):
+                Raw model inputs. A list of strings is tokenized normally. A list
+                of integers represents standalone token IDs and receives the
+                tokenizer's model-specific special tokens. A tensor is treated
+                as an already-prepared batch of input IDs. BatchEncoding and
+                tensor dictionaries are forwarded unchanged.
             **kwargs (dict[str, Any]): Additional keyword arguments forwarded to the trace context
                 (e.g., ``truncation=True``).
 
@@ -242,7 +273,10 @@ class SplitterForClassification(BaseSplitter):
             activations = self._split_module.input.save()
             tracer.stop()  # we only needed the CLS token, no need to complete the forward pass
 
-        return self._select_classification_representation(activations, prepared.get("input_ids"))
+        return self._select_classification_representation(
+            activations,
+            prepared.get("input_ids"),
+        )
 
     def activations_to_outputs(
         self,
@@ -275,7 +309,7 @@ class SplitterForClassification(BaseSplitter):
 
     def get_activations(
         self,
-        inputs: list[str] | Int[torch.Tensor, "n l"],
+        inputs: list[str] | Iterable[int] | Int[torch.Tensor, "n l"],
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
         **kwargs,
@@ -286,8 +320,9 @@ class SplitterForClassification(BaseSplitter):
         classification head input and the model predictions.
 
         Args:
-            inputs (list[str] | Int[torch.Tensor, "n l"]): Raw text inputs or
-                tokenized input IDs.
+            inputs (list[str] | Iterable[int] | Int[torch.Tensor, "n l"]): Raw text
+                inputs, standalone token IDs, or an already-prepared 2D tensor
+                of token IDs.
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional keyword arguments for
                 the model forward pass (e.g., ``{"truncation": True}``).
@@ -313,7 +348,8 @@ class SplitterForClassification(BaseSplitter):
                     batch_predictions = self.output.logits.argmax(dim=-1).save()  # type: ignore
 
                 batch_activations = self._select_classification_representation(
-                    batch_activations, batch.get("input_ids")
+                    batch_activations,
+                    batch.get("input_ids"),
                 )
 
                 # Materialize outside the trace. This is necessary to avoid memory leaks.

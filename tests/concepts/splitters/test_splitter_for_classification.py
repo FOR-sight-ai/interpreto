@@ -55,9 +55,9 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
     with pytest.raises(ValueError):
         SSC(bert_model, split_point="wrong.module.name", tokenizer=bert_tokenizer)
 
-    # no tokenizer
-    with pytest.raises(ValueError):
-        SSC(bert_model)
+    # tokenizer inferred from the model repository
+    splitter = SSC(bert_model)
+    assert splitter.tokenizer is not None
 
     # correct module name
     splitter = SSC(bert_model, split_point="classifier", tokenizer=bert_tokenizer)
@@ -77,6 +77,38 @@ def test_get_latent_shape(split_seq_cls: SSC):
     shape = split_seq_cls.get_latent_shape()
     expected_shape = (1, split_seq_cls.config.hidden_size)
     assert shape == expected_shape, f"Latent shape mismatch: got {shape}, expected {expected_shape}"
+
+
+@pytest.mark.parametrize(
+    "repo_id",
+    [
+        "hf-internal-testing/tiny-random-bert",
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+        "hf-internal-testing/tiny-random-t5",
+    ],
+)
+def test_standalone_token_ids_use_tokenizer_formatting(repo_id):
+    """Standalone IDs use each tokenizer's special-token and padding policy."""
+    splitter = SSC(repo_id, batch_size=2, device_map=DEVICE)
+    token_ids = [
+        token_id
+        for token, token_id in splitter.tokenizer.get_vocab().items()
+        if token_id not in splitter.tokenizer.all_special_ids
+        and splitter.tokenizer.encode(token, add_special_tokens=False) == [token_id]
+    ][:3]
+
+    prepared = splitter._prepare_batch(token_ids, {})
+    template, token_position = splitter._get_standalone_token_template()
+    assert prepared["input_ids"][:, token_position].tolist() == token_ids
+    for name, value in template.items():
+        if name != "input_ids":
+            assert torch.equal(prepared[name], value.repeat(len(token_ids), 1))
+
+    direct_activations = splitter.inputs_to_activations(token_ids)
+    activations, _ = splitter.get_activations(token_ids)
+    tensor_activations, _ = splitter.get_activations(prepared["input_ids"])
+    assert direct_activations.shape == (len(token_ids), splitter.config.hidden_size)
+    assert activations.shape == tensor_activations.shape == (len(token_ids), splitter.config.hidden_size)
 
 
 @pytest.mark.parametrize("repo_id", REPO_IDS)
