@@ -348,6 +348,10 @@ class BaseConceptInterpretationMethod(ABC):
         """
         Computes the concepts activations for each token of the vocabulary
 
+        Each vocabulary ID is passed as one input. Classification splitters add
+        their tokenizer's model-specific formatting; token splitters process
+        the ID directly.
+
         Returns:
             tuple[list[str], Float[torch.Tensor, "nl cpt"]]:
                 - The list of tokens in the vocabulary
@@ -355,22 +359,14 @@ class BaseConceptInterpretationMethod(ABC):
         """
         # extract and sort the vocabulary
         vocab_dict: dict[str, int] = self.concept_explainer.splitter.tokenizer.get_vocab()
-        inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
-        inputs: list[str] = list(inputs)  # type: ignore
+        inputs, vocab_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
 
-        input_ids: Float[torch.Tensor, "v 1"] = torch.tensor(list(input_ids)).unsqueeze(1)
-        if isinstance(self.concept_explainer.splitter, SplitterForClassification):
-            # we need to add the CLS token and maybe the EOS token to the ids
-            # so that we can get correct CLS activations
-
-            # first step extract the template
-            template_ids = self.concept_explainer.splitter.tokenizer("a", return_tensors="pt")["input_ids"]
-            # repeat the template and replace "a" token ids by the vocabulary ids
-            repeated_template_ids = template_ids.repeat(input_ids.shape[0], 1)  # type: ignore
-            repeated_template_ids[:, 1] = input_ids[:, 0]
-            latent_activations, _ = self.concept_explainer.splitter.get_activations(repeated_template_ids)
+        splitter = self.concept_explainer.splitter
+        if isinstance(splitter, TextTokensSplitter):
+            model_inputs = torch.tensor(vocab_ids).unsqueeze(1)
         else:
-            latent_activations, _ = self.concept_explainer.splitter.get_activations(input_ids)
+            model_inputs = vocab_ids
+        latent_activations, _ = splitter.get_activations(model_inputs)
 
         # compute the vocabulary's concepts activations
         with torch.no_grad():
