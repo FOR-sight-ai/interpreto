@@ -245,6 +245,8 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
     def _normalize_to_concept_model(self, inputs: torch.Tensor) -> torch.Tensor:
         """Move floating inputs to the concept model's dtype and device.
 
+        A bit complex because concept models can come from overcomplete.
+
         Models without floating parameters or buffers impose no dtype. Casts
         remain differentiable, so concept-gradient paths are preserved.
         """
