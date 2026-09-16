@@ -73,9 +73,9 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
 
 
 def test_get_latent_shape(split_seq_cls: SSC):
-    """Shapes returned by ``get_latent_shape`` match activation shapes."""
+    """The latent shape contains one classification representation."""
     shape = split_seq_cls.get_latent_shape()
-    expected_shape = (1, split_seq_cls._model.config.hidden_size)
+    expected_shape = (1, split_seq_cls.config.hidden_size)
     assert shape == expected_shape, f"Latent shape mismatch: got {shape}, expected {expected_shape}"
 
 
@@ -94,7 +94,7 @@ def test_get_activation_and_gradient(repo_id, sentences):
     # -----------------------------------------------------------
     # Define expected shapes for the different granularity levels
     batch = len(sentences)
-    hidden = splitter._model.config.hidden_size
+    hidden = splitter.config.hidden_size
 
     # ----------------------------------------------
     # Define a concept encoder/decoder weight matrix
@@ -125,6 +125,21 @@ def test_get_activation_and_gradient(repo_id, sentences):
         f"Predictions batch mismatch: got {predictions.shape[0]}, "  # type: ignore
         f"expected {expected_activations_shape[0]}"
     )
+
+    assert splitter.get_latent_shape() == torch.Size([1, hidden])
+
+    expected_logits = []
+    with torch.no_grad():
+        for i in range(0, len(sentences), splitter.batch_size):
+            with splitter.trace(sentences[i : i + splitter.batch_size]):
+                batch_logits = splitter.output.logits.save()
+            expected_logits.append(batch_logits)
+    expected_logits = torch.cat(expected_logits)
+
+    replayed_logits = splitter.activations_to_outputs(activations)
+    assert replayed_logits.shape == expected_logits.shape
+    assert torch.allclose(replayed_logits.cpu(), expected_logits.cpu(), atol=1e-5)
+    assert torch.equal(replayed_logits.argmax(dim=-1).cpu(), predictions.cpu())
 
     # -------------
     # Get gradients

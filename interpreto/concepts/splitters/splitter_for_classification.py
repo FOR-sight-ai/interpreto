@@ -267,10 +267,11 @@ class SplitterForClassification(BaseSplitter):
 
         classification_head = self._split_module
         activations = activations.to(next(classification_head.parameters()))
-        try:
-            return classification_head(activations)
-        except IndexError:
-            return classification_head(activations.unsqueeze(1))
+
+        # A singleton sequence works for both composite heads, such as
+        # RoBERTa's, and token-wise linear heads.
+        logits = classification_head(activations.unsqueeze(1))
+        return logits[:, 0] if logits.ndim == 3 else logits
 
     def get_activations(
         self,
@@ -424,14 +425,16 @@ class SplitterForClassification(BaseSplitter):
         return gradients_list
 
     def get_latent_shape(self) -> torch.Size:
-        """Get the shape of the latent activations.
+        """Get the shape of the exposed classification representation.
 
-        Uses a quick trace with a dummy input to determine the classifier input shape.
+        Uses a quick trace with a dummy input to determine the classifier input
+        hidden size. The splitter exposes one representation per sample even
+        when the classification head receives a sequence.
 
         Returns:
-            torch.Size: Shape of the activations at the classification head input.
+            torch.Size: Shape ``(1, hidden_dim)``.
         """
         with self.trace("Hello world") as tracer:
             shape = nnsight_save(self._split_module.input.shape)
             tracer.stop()
-        return shape
+        return torch.Size([1, shape[-1]])
