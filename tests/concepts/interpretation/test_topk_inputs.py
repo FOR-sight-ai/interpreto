@@ -41,7 +41,7 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations import TopKInputs, extract_ngrams
 from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
-AG = TopKInputs.activation_granularities
+AG = ActivationGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
