@@ -27,7 +27,7 @@
 import pytest
 import torch
 
-from interpreto.concepts.splitters import TextTokensSplitter
+from interpreto import TextTokensSplitter
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 GENERATION_REPO_ID = "hf-internal-testing/tiny-random-gpt2"
