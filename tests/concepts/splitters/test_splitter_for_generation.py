@@ -49,8 +49,9 @@ def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_toke
     """Generation splitters can be loaded from repos or causal LM instances only."""
     split_point_module = "transformer.h.1"
 
-    with pytest.raises(ValueError):
-        SFG(gpt2_model, split_point=SPLIT_POINT)
+    with pytest.warns(DeprecationWarning, match="SplitterForGeneration is deprecated"):
+        resolved = SFG(gpt2_model, split_point=SPLIT_POINT)
+    assert resolved.tokenizer is not None
 
     with pytest.raises(TypeError, match="not a causal language model"):
         SFG(bert_model, split_point=SPLIT_POINT, tokenizer=bert_tokenizer)
@@ -67,7 +68,7 @@ def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_toke
 def test_get_latent_shape(split_gen: SFG):
     """``get_latent_shape`` returns the traced split-point hidden-state shape."""
     shape = split_gen.get_latent_shape()
-    expected_hidden = split_gen._model.config.hidden_size
+    expected_hidden = split_gen.config.hidden_size
 
     assert len(shape) == 3, f"Latent shape should be 3D, got {shape}"
     assert shape[0] == 1, f"Latent shape should include the scan batch dimension, got {shape}"
@@ -81,7 +82,7 @@ def test_get_activations_returns_flattened_tokens_by_default(split_gen: SFG, sen
     assert predictions is None, "Generation splitters should not return predicted classes"
     assert isinstance(activations, torch.Tensor), "Flattened activations should be returned as a tensor"
     assert activations.ndim == 2, f"Expected flattened token activations with shape (ng, d), got {activations.shape}"
-    assert activations.shape[-1] == split_gen._model.config.hidden_size
+    assert activations.shape[-1] == split_gen.config.hidden_size
     assert activations.dtype == torch.float32
 
 
@@ -111,20 +112,20 @@ def test_bfloat16_model_outputs_preserve_dtype(sentences: list[str]):
     assert gradients[0].dtype == torch.bfloat16
 
 
-@pytest.mark.parametrize("include_all_tokens", [False, True])
+@pytest.mark.parametrize("include_special_tokens", [False, True])
 def test_flatten_activations_matches_sample_wise_activations(
     split_gen: SFG,
     sentences: list[str],
-    include_all_tokens: bool,
+    include_special_tokens: bool,
 ):
     """Flattened activations should be the concatenation of the sample-wise activations."""
     flattened_acts, flattened_predictions = split_gen.get_activations(
         sentences,
-        include_all_tokens=include_all_tokens,
+        include_special_tokens=include_special_tokens,
     )
     sample_wise_acts, sample_wise_predictions = split_gen.get_activations(
         sentences,
-        include_all_tokens=include_all_tokens,
+        include_special_tokens=include_special_tokens,
         flatten_activations=False,
     )
 

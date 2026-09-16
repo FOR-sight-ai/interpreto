@@ -94,7 +94,7 @@ class BaseSplitter(TransformersModel, ABC):
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | int | None,
         *,
-        task: str,
+        task: str | None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,

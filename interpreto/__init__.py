@@ -42,7 +42,12 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
-from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .concepts import (
+    ModelWithSplitPoints,
+    SplitterForClassification,
+    SplitterForGeneration,
+    TextTokensSplitter,
+)
 from .visualizations import (
     AttributionVisualization,
     plot_attributions,
@@ -73,6 +78,7 @@ __all__ = [
     "SmoothGrad",
     "SplitterForClassification",
     "SplitterForGeneration",
+    "TextTokensSplitter",
     "Sobol",
     "VarGrad",
     "get_version",
