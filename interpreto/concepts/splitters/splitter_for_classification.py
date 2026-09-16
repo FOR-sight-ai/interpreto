@@ -27,7 +27,7 @@ Simplified model splitter for sequence classification models.
 
 ``SplitterForClassification`` wraps a HuggingFace ``ForSequenceClassification``
 model and always splits at the classification head. Activations are the
-CLS-token representations fed into the head.
+representations used by the classification head.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ class SplitterForClassification(BaseSplitter):
     a backbone followed by a single classification head.
 
     The split point is always the classification head, and activations are
-    the CLS-token representations fed into that head.
+    the representations used by that head.
     """
 
     _HEAD_CANDIDATES = ("classifier", "classification_head", "score")
@@ -79,7 +79,7 @@ class SplitterForClassification(BaseSplitter):
         The wrapper loads a sequence classification model and automatically identifies
         its classification head as the split point. This simplifies the concept pipeline
         for classification models by removing the need to manually specify split points and
-        forcing the granularity to be the [CLS] token.
+        exposing one representation per sample.
 
         Args:
             model_or_repo_id (str | PreTrainedModel): A Hugging Face model ID or a pre-loaded
@@ -129,6 +129,13 @@ class SplitterForClassification(BaseSplitter):
             **kwargs,
         )
 
+        # Some heads select one sequence position themselves (e.g. RoBERTa),
+        # while token-wise heads leave that selection to the parent model.
+        head_parameter = next(self._split_module.parameters())
+        sample_input = head_parameter.new_empty(1, 2, self.config.hidden_size)
+        with torch.no_grad():
+            self._head_is_token_wise = self._split_module(sample_input).ndim == 3
+
     @BaseSplitter.split_point.setter  # type: ignore[attr-defined]
     def split_point(self, split_point: str | int | None) -> None:
         """Set the split_point corresponding to the classification head name.
@@ -152,23 +159,61 @@ class SplitterForClassification(BaseSplitter):
 
         BaseSplitter.split_point.fset(self, split_point)  # type: ignore[attr-defined]
 
-    def __extract_cls_token(self, activations: Float[torch.Tensor, "n l d"]) -> Float[torch.Tensor, "n d"]:
-        """
-        Extract the CLS token from the activations.
+    def _select_classification_representation(
+        self,
+        activations: torch.Tensor,
+        input_ids: torch.Tensor | None,
+    ) -> Float[torch.Tensor, "n d"]:
+        """Select the first token, or the last non-padding token for token-wise heads."""
+        # The head already receives one representation per sample.
+        if activations.ndim == 2:
+            return activations
 
-        In some model such as Roberta the token CLS is done in the classification head,
-        and is not part of the model's forward pass.
-        In this case, we need to extract the CLS token from the activations.
-        """
-        padding_side = getattr(self.tokenizer, "padding_side", "right")
-        if padding_side == "right":
+        # Sequence-reducing heads such as RoBERTa classify the first token.
+        if not self._head_is_token_wise:
             return activations[:, 0, :]
-        return activations[:, -1, :]
+
+        # Without padding information, token-wise heads classify the last token.
+        pad_token_id = self.config.pad_token_id
+        if input_ids is None or pad_token_id is None:
+            return activations[:, -1, :]
+
+        # With padding, select each sample's last non-padding token.
+        non_padding = input_ids != pad_token_id
+        token_indices = torch.arange(input_ids.shape[-1], device=input_ids.device)
+        positions = (token_indices * non_padding).argmax(-1).to(activations.device)
+        return activations[
+            torch.arange(activations.shape[0], device=activations.device),
+            positions,
+        ]
+
+    def _prepare_batch(
+        self,
+        inputs: list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None,
+        kwargs: dict[str, Any],
+    ) -> dict[str, torch.Tensor]:
+        """Prepare model inputs while retaining the input IDs used for token selection."""
+        if inputs is None:
+            if len(kwargs) == 0:
+                raise ValueError("Either inputs or kwargs must be provided.")
+            return dict(kwargs)
+        if isinstance(inputs, torch.Tensor):
+            return {"input_ids": inputs}
+        if isinstance(inputs, list):
+            return dict(
+                self.tokenizer(
+                    inputs,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                )
+            )
+        return dict(inputs)
 
     def inputs_to_activations(
         self, inputs: list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None = None, **kwargs
     ) -> Float[torch.Tensor, "n d"]:
-        """Compute latent activations (CLS-token representations) from raw inputs.
+        """Compute latent classification representations from raw inputs.
 
         Runs the model backbone up to the classification head and extracts the
         input representation that would be fed to the classifier.
@@ -185,23 +230,19 @@ class SplitterForClassification(BaseSplitter):
                 (e.g., ``truncation=True``).
 
         Returns:
-            Float[torch.Tensor, "n d"]: The CLS-token activations of shape
+            Float[torch.Tensor, "n d"]: The classification activations of shape
                 ``(n_samples, hidden_dim)``.
 
         Raises:
             ValueError: If both ``inputs`` and ``kwargs`` are empty.
         """
-        if inputs is None and len(kwargs) == 0:
-            raise ValueError("Either inputs or kwargs must be provided.")
+        prepared = self._prepare_batch(inputs, kwargs)
 
-        with self.trace(inputs, **kwargs) as tracer:
+        with self.trace(prepared, **(kwargs if inputs is not None else {})) as tracer:
             activations = self._split_module.input.save()
             tracer.stop()  # we only needed the CLS token, no need to complete the forward pass
 
-        # force two dimensions
-        if activations.ndim == 3:
-            activations = self.__extract_cls_token(activations)
-        return activations
+        return self._select_classification_representation(activations, prepared.get("input_ids"))
 
     def activations_to_outputs(
         self,
@@ -238,7 +279,7 @@ class SplitterForClassification(BaseSplitter):
         forward_kwargs: dict[str, Any] = {},
         **kwargs,
     ) -> tuple[LatentActivations, torch.Tensor]:
-        """Extract CLS-token activations and predictions for a dataset of inputs.
+        """Extract classification activations and predictions for a dataset of inputs.
 
         Iterates over the inputs in batches, extracting the activations at the
         classification head input and the model predictions.
@@ -263,19 +304,16 @@ class SplitterForClassification(BaseSplitter):
         with torch.no_grad():
             for i in tqdm(range(0, len(inputs), self.batch_size), disable=not tqdm_bar):
                 # extract and prepare a batch of inputs
-                end_idx = min(i + self.batch_size, len(inputs))
-                batch = inputs[i:end_idx]
-                if isinstance(batch, torch.Tensor):
-                    batch = {"input_ids": batch}
+                batch = self._prepare_batch(inputs[i : i + self.batch_size], {})
 
                 # get activations and predictions for the batch
                 with self.trace(batch, **forward_kwargs):
                     batch_activations = classification_head.input.save()
                     batch_predictions = self.output.logits.argmax(dim=-1).save()  # type: ignore
 
-                # force two dimensions
-                if batch_activations.ndim == 3:
-                    batch_activations = self.__extract_cls_token(batch_activations)
+                batch_activations = self._select_classification_representation(
+                    batch_activations, batch.get("input_ids")
+                )
 
                 # Materialize outside the trace. This is necessary to avoid memory leaks.
                 activations.append(batch_activations.detach().cpu().clone())
