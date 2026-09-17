@@ -329,7 +329,7 @@ class SplitterForClassification(BaseSplitter):
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional keyword arguments for
                 the model forward pass (e.g., ``{"truncation": True}``).
-            **kwargs (dict[str, Any]): Unused, kept for API compatibility with ``ModelWithSplitPoints``.
+            **kwargs (dict[str, Any]): Unused, kept for consistency with other splitter interfaces.
 
         Returns:
             tuple[LatentActivations, torch.Tensor]: The activations tensor of shape

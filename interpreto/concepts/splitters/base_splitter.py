@@ -25,8 +25,8 @@
 """
 Base class for model splitters.
 
-``BaseSplitter`` is the abstract parent of ``ModelWithSplitPoints``,
-``SplitterForClassification``, and ``SplitterForGeneration``.
+``BaseSplitter`` is the abstract parent of ``SplitterForClassification`` and
+``TextTokensSplitter``.
 It encapsulates the common initialization logic (NNsight wrapping, tokenizer
 validation, split point resolution) and defines the abstract
 interface that concept explainers rely on.
