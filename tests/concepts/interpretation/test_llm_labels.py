@@ -32,9 +32,8 @@ from __future__ import annotations
 
 import pytest
 import torch
-from transformers import AutoModelForMaskedLM
 
-from interpreto import ModelWithSplitPoints
+from interpreto import SplitterForClassification, TextTokensSplitter
 from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.interpretations import LLMLabels
@@ -47,9 +46,24 @@ from interpreto.concepts.interpretations.llm_labels import (
     _sample_random,
     _sample_top,
 )
-from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+@pytest.fixture(scope="module")
+def classification_splitter():
+    return SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+
+
+@pytest.fixture(scope="module")
+def token_splitter():
+    return TextTokensSplitter(
+        "hf-internal-testing/tiny-random-gpt2",
+        split_point=1,
+        task="text-generation",
+        batch_size=8,
+        device_map=DEVICE,
+    )
 
 
 @pytest.fixture
@@ -271,30 +285,20 @@ def test_build_example_prompt():
         )
 
 
-@pytest.fixture
-def splitted_encoder() -> ModelWithSplitPoints:
-    return ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_point="bert.encoder.layer.1.output",
-        automodel=AutoModelForMaskedLM,  # type: ignore
-    )
-
-
 class LLMInterfaceMock(LLMInterface):
     def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
         return "mock answer"
 
 
-def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
+def test_llm_labels_concept_selection(classification_splitter: SplitterForClassification):
     """
     Test that the `interpret` method works as expected
     Fake activations are given to the `NeuronsAsConcepts` explainer
     """
     hidden_size = 32
-    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=classification_splitter)
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
-        activation_granularity=ActivationGranularity.TOKEN,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
         k_examples=2,
@@ -323,77 +327,62 @@ def test_llm_labels_concept_selection(splitted_encoder: ModelWithSplitPoints):
     assert all(isinstance(label, str) for label in labels.values())
 
 
-@pytest.mark.parametrize(
-    "activation_granularity",
-    [
-        ModelWithSplitPoints.activation_granularities.TOKEN,
-        ModelWithSplitPoints.activation_granularities.WORD,
-        ModelWithSplitPoints.activation_granularities.SENTENCE,
-        ModelWithSplitPoints.activation_granularities.SAMPLE,
-    ],
-)
-def test_llm_labels_granularity(splitted_encoder: ModelWithSplitPoints, activation_granularity: ActivationGranularity):
-    concept_explainer = NeuronsAsConcepts(splitted_encoder)
-    interpretation_method = LLMLabels(
+def test_llm_labels_token_and_pooled_modes(
+    classification_splitter: SplitterForClassification,
+    token_splitter: TextTokensSplitter,
+    sentences: list[str],
+):
+    """Token and pooled representations both produce labels."""
+    concept_explainer = NeuronsAsConcepts(token_splitter)
+    token_method = LLMLabels(
         concept_explainer=concept_explainer,
-        activation_granularity=activation_granularity,
         llm_interface=LLMInterfaceMock(),
-        sampling_method=SamplingMethod.TOP,
         k_examples=2,
+        k_context=1,
     )
+    assert token_method.k_context == 1
+    assert len(token_method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)) == 3
 
-    texts = [
-        "This is a test. This is another sentence. And yet another one.",
-        "This is a second test. This is another sentence. And yet another one.",
-    ]
-    activations, _ = splitted_encoder.get_activations(texts, activation_granularity=activation_granularity)
+    with pytest.warns(UserWarning, match="k_context is set to 0"):
+        pooled_method = LLMLabels(
+            concept_explainer=concept_explainer,
+            llm_interface=LLMInterfaceMock(),
+            k_examples=2,
+            k_context=1,
+            token_pooling="mean",
+        )
+    assert pooled_method.k_context == 0
+    assert len(pooled_method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)) == 3
 
-    # just verify that everything works, not the content of the labels
-    labels = interpretation_method.interpret(
-        concepts_indices=[0, 5, 13],
-        inputs=texts,
-        latent_activations=activations,
-    )
-    assert isinstance(labels, dict)
-    assert len(labels) == 3
-    assert 5 in labels
-    assert 0 in labels
-    assert 13 in labels
-    assert all(isinstance(label, str) for label in labels.values())
+    with pytest.warns(UserWarning, match="k_context is set to 0"):
+        classification_method = LLMLabels(
+            concept_explainer=NeuronsAsConcepts(classification_splitter),
+            llm_interface=LLMInterfaceMock(),
+            k_context=1,
+        )
+    assert classification_method.k_context == 0
 
 
-def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
+def test_llm_labels_sources(token_splitter: TextTokensSplitter, sentences: list[str]):
     """
     Test the different sources
     """
-    # generating data with duplicates and different lengths
-    n_tokens = 6
-    k = 3
-    n_samples = k * 5
-    assert k <= n_tokens  # otherwise the test will break
-    joined_tokens_list = [" ".join([f"{i + j}" for j in range(n_tokens)]) for i in range(n_samples)]
-    larger_input = " ".join(["test" for _ in range(2 * n_tokens)])
-    joined_tokens_list.append(larger_input)
-
-    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=token_splitter)
 
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
-        activation_granularity=ActivationGranularity.TOKEN,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
         k_examples=2,
     )
 
     # getting the activations
-    activations, _ = splitted_encoder.get_activations(
-        inputs=joined_tokens_list, activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN
-    )
+    activations, _ = token_splitter.get_activations(sentences)
 
     # From input
     labels = interpretation_method.interpret(
         concepts_indices=[0, 5, 13],
-        inputs=joined_tokens_list,
+        inputs=sentences,
     )
     assert isinstance(labels, dict)
     assert len(labels) == 3
@@ -404,7 +393,7 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
 
     labels = interpretation_method.interpret(
         concepts_indices=[0, 5, 13],
-        inputs=joined_tokens_list,
+        inputs=sentences,
         latent_activations=activations,
     )
     assert isinstance(labels, dict)
@@ -416,7 +405,7 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
 
     labels = interpretation_method.interpret(
         concepts_indices=[0, 5, 13],
-        inputs=joined_tokens_list,
+        inputs=sentences,
         concepts_activations=activations,
     )
     assert isinstance(labels, dict)
@@ -427,18 +416,17 @@ def test_llm_labels_sources(splitted_encoder: ModelWithSplitPoints):
     assert all(isinstance(label, str) for label in labels.values())
 
 
-def test_llm_labels_from_vocabulary(splitted_encoder: ModelWithSplitPoints):
+def test_llm_labels_from_vocabulary(classification_splitter: SplitterForClassification):
     """
     Test that interpretations can be obtained from the vocabulary
     """
     hidden_size = 32
     nb_concepts = 3
 
-    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=classification_splitter)
 
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
-        activation_granularity=ActivationGranularity.TOKEN,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
         k_examples=2,
@@ -450,42 +438,40 @@ def test_llm_labels_from_vocabulary(splitted_encoder: ModelWithSplitPoints):
     assert len(label) == nb_concepts
 
 
-def test_llm_labels_call_from_concept_module(splitted_encoder: ModelWithSplitPoints):
+def test_llm_labels_call_from_concept_module(token_splitter: TextTokensSplitter, sentences: list[str]):
     """
     Test that LLMLabels can be called from the concept module
     """
     hidden_size = 32
     nb_concepts = 3
 
-    concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder)
+    concept_explainer = NeuronsAsConcepts(splitter=token_splitter)
 
     label = LLMLabels(
         concept_explainer=concept_explainer,
-        activation_granularity=ActivationGranularity.TOKEN,
         use_vocab=False,
         sampling_method=SamplingMethod.TOP,
         k_context=0,
         llm_interface=LLMInterfaceMock(),
     ).interpret(
         concepts_indices=torch.randperm(hidden_size)[:nb_concepts].tolist(),
-        inputs=["This is a sentence", "This is another sentence"],
+        inputs=sentences[:2],
     )
 
     assert len(label) == nb_concepts
     # TODO : verify that some methods are called
 
 
-def test_llm_labels_error_raising(splitted_encoder: ModelWithSplitPoints):
+def test_llm_labels_error_raising(classification_splitter: SplitterForClassification):
     """
     Test that the `TopKInputs` class raises an error when needed
     """
 
     concept_explainer = NeuronsAsConcepts(
-        splitter=splitted_encoder,
+        splitter=classification_splitter,
     )
     method = LLMLabels(
         concept_explainer=concept_explainer,
-        activation_granularity=ActivationGranularity.TOKEN,
         use_vocab=False,
         llm_interface=LLMInterfaceMock(),
         sampling_method=SamplingMethod.TOP,
