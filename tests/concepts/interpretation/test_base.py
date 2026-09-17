@@ -27,7 +27,7 @@
 import pytest
 import torch
 
-from interpreto import SplitterForClassification, TextTokensSplitter
+from interpreto import SplitterForClassification
 from interpreto.concepts import NeuronsAsConcepts, TopKInputs
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -36,16 +36,6 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 @pytest.fixture(scope="module")
 def classification_splitter():
     return SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
-
-
-@pytest.fixture(scope="module")
-def text_tokens_splitter():
-    return TextTokensSplitter(
-        "hf-internal-testing/tiny-random-gpt2",
-        split_point=1,
-        task="text-generation",
-        device_map=DEVICE,
-    )
 
 
 def test_examples_follow_classification_splitter(classification_splitter, sentences: list[str]):

@@ -55,17 +55,6 @@ def classification_splitter():
     return SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
 
 
-@pytest.fixture(scope="module")
-def token_splitter():
-    return TextTokensSplitter(
-        "hf-internal-testing/tiny-random-gpt2",
-        split_point=1,
-        task="text-generation",
-        batch_size=8,
-        device_map=DEVICE,
-    )
-
-
 @pytest.fixture
 def concept_activations() -> torch.Tensor:
     return torch.tensor([0.1, 0.5, 0.0, 8.5, 7.2, 0.0, 0.0, 1.4, 0.1, 3.8])
@@ -329,11 +318,11 @@ def test_llm_labels_concept_selection(classification_splitter: SplitterForClassi
 
 def test_llm_labels_token_and_pooled_modes(
     classification_splitter: SplitterForClassification,
-    token_splitter: TextTokensSplitter,
+    text_tokens_splitter: TextTokensSplitter,
     sentences: list[str],
 ):
     """Token and pooled representations both produce labels."""
-    concept_explainer = NeuronsAsConcepts(token_splitter)
+    concept_explainer = NeuronsAsConcepts(text_tokens_splitter)
     token_method = LLMLabels(
         concept_explainer=concept_explainer,
         llm_interface=LLMInterfaceMock(),
@@ -363,11 +352,11 @@ def test_llm_labels_token_and_pooled_modes(
     assert classification_method.k_context == 0
 
 
-def test_llm_labels_sources(token_splitter: TextTokensSplitter, sentences: list[str]):
+def test_llm_labels_sources(text_tokens_splitter: TextTokensSplitter, sentences: list[str]):
     """
     Test the different sources
     """
-    concept_explainer = NeuronsAsConcepts(splitter=token_splitter)
+    concept_explainer = NeuronsAsConcepts(splitter=text_tokens_splitter)
 
     interpretation_method = LLMLabels(
         concept_explainer=concept_explainer,
@@ -377,7 +366,7 @@ def test_llm_labels_sources(token_splitter: TextTokensSplitter, sentences: list[
     )
 
     # getting the activations
-    activations, _ = token_splitter.get_activations(sentences)
+    activations, _ = text_tokens_splitter.get_activations(sentences)
 
     # From input
     labels = interpretation_method.interpret(
@@ -438,14 +427,14 @@ def test_llm_labels_from_vocabulary(classification_splitter: SplitterForClassifi
     assert len(label) == nb_concepts
 
 
-def test_llm_labels_call_from_concept_module(token_splitter: TextTokensSplitter, sentences: list[str]):
+def test_llm_labels_call_from_concept_module(text_tokens_splitter: TextTokensSplitter, sentences: list[str]):
     """
     Test that LLMLabels can be called from the concept module
     """
     hidden_size = 32
     nb_concepts = 3
 
-    concept_explainer = NeuronsAsConcepts(splitter=token_splitter)
+    concept_explainer = NeuronsAsConcepts(splitter=text_tokens_splitter)
 
     label = LLMLabels(
         concept_explainer=concept_explainer,
