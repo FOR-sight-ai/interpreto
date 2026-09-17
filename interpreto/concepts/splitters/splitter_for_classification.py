@@ -33,7 +33,7 @@ representations used by the classification head.
 from __future__ import annotations
 
 import gc
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from functools import cached_property
 from typing import Any
 
@@ -210,8 +210,11 @@ class SplitterForClassification(BaseSplitter):
         if isinstance(inputs, torch.Tensor):
             return {"input_ids": inputs}
 
-        if not isinstance(inputs, list):
+        if isinstance(inputs, (BatchEncoding, dict)):
             return dict(inputs)
+
+        if not isinstance(inputs, list):
+            inputs = list(inputs)
 
         if not inputs:
             raise ValueError("List inputs cannot be empty.")
@@ -332,15 +335,17 @@ class SplitterForClassification(BaseSplitter):
             tuple[LatentActivations, torch.Tensor]: The activations tensor of shape
                 ``(n_samples, hidden_dim)`` and predicted class indices of shape ``(n_samples,)``.
         """
+        prepared_inputs = inputs if isinstance(inputs, (list, torch.Tensor)) else list(inputs)
+
         activations = []
         predictions = []
         classification_head = self._split_module
 
         self.eval()
         with torch.no_grad():
-            for i in tqdm(range(0, len(inputs), self.batch_size), disable=not tqdm_bar):
+            for i in tqdm(range(0, len(prepared_inputs), self.batch_size), disable=not tqdm_bar):
                 # extract and prepare a batch of inputs
-                batch = self._prepare_batch(inputs[i : i + self.batch_size], {})
+                batch = self._prepare_batch(prepared_inputs[i : i + self.batch_size], {})
 
                 # get activations and predictions for the batch
                 with self.trace(batch, **forward_kwargs):

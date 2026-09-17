@@ -360,6 +360,7 @@ class BaseConceptInterpretationMethod(ABC):
         # extract and sort the vocabulary
         vocab_dict: dict[str, int] = self.concept_explainer.splitter.tokenizer.get_vocab()
         inputs, vocab_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
+        inputs = list(inputs)
 
         splitter = self.concept_explainer.splitter
         if isinstance(splitter, TextTokensSplitter):

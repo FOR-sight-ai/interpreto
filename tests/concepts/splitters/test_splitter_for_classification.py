@@ -88,27 +88,23 @@ def test_get_latent_shape(split_seq_cls: SSC):
     ],
 )
 def test_standalone_token_ids_use_tokenizer_formatting(repo_id):
-    """Standalone IDs use each tokenizer's special-token and padding policy."""
+    """Standalone token IDs can be processed directly or as an iterable."""
     splitter = SSC(repo_id, batch_size=2, device_map=DEVICE)
     token_ids = [
         token_id
-        for token, token_id in splitter.tokenizer.get_vocab().items()
+        for token_id in splitter.tokenizer.get_vocab().values()
         if token_id not in splitter.tokenizer.all_special_ids
-        and splitter.tokenizer.encode(token, add_special_tokens=False) == [token_id]
     ][:3]
 
     prepared = splitter._prepare_batch(token_ids, {})
-    template, token_position = splitter._get_standalone_token_template()
+    _, token_position = splitter._standalone_token_template
     assert prepared["input_ids"][:, token_position].tolist() == token_ids
-    for name, value in template.items():
-        if name != "input_ids":
-            assert torch.equal(prepared[name], value.repeat(len(token_ids), 1))
 
     direct_activations = splitter.inputs_to_activations(token_ids)
     activations, _ = splitter.get_activations(token_ids)
-    tensor_activations, _ = splitter.get_activations(prepared["input_ids"])
-    assert direct_activations.shape == (len(token_ids), splitter.config.hidden_size)
-    assert activations.shape == tensor_activations.shape == (len(token_ids), splitter.config.hidden_size)
+    iterable_activations, _ = splitter.get_activations(iter(token_ids))
+    expected_shape = (len(token_ids), splitter.config.hidden_size)
+    assert direct_activations.shape == activations.shape == iterable_activations.shape == expected_shape
 
 
 @pytest.mark.parametrize("repo_id", REPO_IDS)

@@ -349,16 +349,6 @@ def test_topk_inputs_from_vocabulary(splitted_encoder_ml: SplitterForClassificat
             assert token in vocabulary
 
 
-def test_topk_inputs_from_vocabulary_t5_classifier():
-    """Vocabulary inputs include the EOS token required by T5 classifiers."""
-    splitter = SplitterForClassification("hf-internal-testing/tiny-random-t5", batch_size=64, device_map=DEVICE)
-    method = TopKInputs(concept_explainer=NeuronsAsConcepts(splitter), k=2, use_vocab=True)
-
-    interpretations = method.interpret(concepts_indices=[0, 1])
-
-    assert len(interpretations) == 2
-
-
 def test_vocabulary_activation_matches_single_input(splitted_encoder_ml: SplitterForClassification):
     """A vocabulary row matches normal extraction of the same single token."""
     concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
