@@ -29,7 +29,6 @@ from enum import Enum
 from typing import NamedTuple
 
 import torch
-from tqdm import tqdm
 
 from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
@@ -215,8 +214,6 @@ class ConSim:
         >>> # Load a model and wrap it
         >>> splitter = SplitterForClassification(
         ...     "textattack/bert-base-uncased-ag-news",
-        ...     split_point="bert.encoder.layer.10.output",
-        ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
         ...     batch_size=4,
         ... )
         >>>
@@ -267,45 +264,6 @@ class ConSim:
         self.splitter = splitter
         self.user_llm: LLMInterface | None = user_llm
         self.classes: list[str] | None = classes
-
-    def _get_predictions(
-        self, inputs: list[str], batch_size: int = 64, device: torch.device | str | None = None, tqdm_bar: bool = False
-    ) -> torch.Tensor:
-        """
-        Get the predictions of the model on a list of inputs.
-        Called by `select_examples`.
-
-        Arguments:
-            inputs: list[str]
-                The inputs to predict.
-            batch_size: int
-                The batch size to use for the predictions.
-            device: torch.device | str
-                The device to use for the predictions.
-            tqdm_bar: bool
-                Whether to show a tqdm bar.
-
-        Returns:
-            predictions: torch.Tensor
-                The predictions of the model on the inputs.
-        """
-        device = device if device is not None else self.splitter.device
-        all_predictions = []
-        for batch_index in tqdm(
-            range(0, len(inputs), batch_size),
-            desc="Computing predictions",
-            unit="batch",
-            total=len(inputs),
-            disable=not tqdm_bar,
-        ):
-            batch_inputs = inputs[batch_index : batch_index + batch_size]
-            batch_tokens = self.splitter.tokenizer(
-                batch_inputs, return_tensors="pt", padding=True, truncation=True
-            ).to(device)  # type: ignore
-            logits = self.splitter._model(batch_tokens["input_ids"], batch_tokens["attention_mask"]).logits
-            predictions = torch.argmax(logits, dim=-1)
-            all_predictions.append(predictions)
-        return torch.cat(all_predictions)
 
     def _extract_interesting_elements(
         self,
@@ -444,7 +402,6 @@ class ConSim:
         nb_ep_samples: int = 20,
         seed: int = 0,
         batch_size: int = 64,
-        device: torch.device | str | None = None,
     ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
         """
         Select examples for the ConSim metric. It first computes the models' predictions on the inputs.
@@ -471,9 +428,6 @@ class ConSim:
                 The seed to use for the random selection.
             batch_size: int
                 The batch size to use for the predictions.
-            device: torch.device | str | None
-                The device to use for the predictions.
-
         Returns:
             interesting_samples: list[str]
                 The interesting samples.
@@ -482,7 +436,7 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the interesting samples.
         """
-        predictions = self._get_predictions(inputs, batch_size=batch_size, device=device)
+        _, predictions = self.splitter.get_activations(inputs, batch_size=batch_size)
         return self._extract_interesting_elements(
             inputs=inputs,
             labels=labels,
