@@ -28,10 +28,9 @@ Common fixtures for all tests
 
 import torch
 from pytest import fixture
-from transformers import AutoModelForCausalLM, AutoModelForMaskedLM, AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
 
 from interpreto import SplitterForClassification, TextTokensSplitter
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
 
 
@@ -42,16 +41,6 @@ def sentences():
         "Interpreto is magical",
         "Testing interpreto",
     ]
-
-
-@fixture(scope="session")
-def multi_splitter() -> ModelWithSplitPoints:
-    return ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_point="bert.encoder.layer.1",
-        automodel=AutoModelForMaskedLM,  # type: ignore
-        batch_size=4,
-    )
 
 
 @fixture(scope="session")

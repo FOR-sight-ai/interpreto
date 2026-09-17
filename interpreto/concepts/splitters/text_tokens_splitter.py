@@ -70,8 +70,8 @@ class TextTokensSplitter(BaseSplitter):
     Wraps a ``ForCausalLM`` model, splits it at a user-specified layer, and
     provides activation extraction with simple token-level granularity.
 
-    Compared to ``ModelWithSplitPoints`` this class:
-    - Only supports two activation modes: ``include_special_tokens=True/False``.
+    This class:
+    - Supports two token-selection modes: ``include_special_tokens=True/False``.
     - Can pool retained token activations into one representation per sample.
     - Does not depend on ``interpreto.commons.granularity.Granularity``.
 
