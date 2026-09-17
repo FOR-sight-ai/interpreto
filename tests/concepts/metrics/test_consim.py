@@ -40,7 +40,7 @@ The ConSim metric has many methods, most of them will be tested one by one:
     ConSim.evaluate
 
 In the unit tests listed above some configurations will be common:
-- the `ModelWithSplitPoints` will be used around a Bert model,
+- the `SplitterForClassification` will be used around a Bert model,
 - the `ConceptAutoEncoderExplainers` will be a `NeuronAsConcepts` explainer,
 - the `LLMInterface` will be replaced by a place holder predicting the classes specified randomly,
 
@@ -57,10 +57,19 @@ import os
 import pytest
 import torch
 
-from interpreto import ModelWithSplitPoints
+from interpreto import SplitterForClassification
 from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.consim import ConSim, PromptTypes
+
+
+@pytest.fixture(scope="module")
+def splitted_encoder_ml():
+    return SplitterForClassification(
+        "hf-internal-testing/tiny-random-bert",
+        batch_size=2,
+        device_map="cuda" if torch.cuda.is_available() else "cpu",
+    )
 
 
 class LLMInterfacePlaceholder(LLMInterface):
@@ -128,54 +137,19 @@ class EmptyResponse(LLMInterface):
         return ""
 
 
-def test_consim_init(splitted_encoder_ml: ModelWithSplitPoints):
+def test_consim_init(splitted_encoder_ml: SplitterForClassification):
     """
     Test the `__init__` method of the ConSim metric.
     """
     llm = LLMInterfacePlaceholder()
-    classes = [str(i) for i in range(int(splitted_encoder_ml._model.num_labels))]  # type: ignore
+    classes = [str(i) for i in range(int(splitted_encoder_ml.config.num_labels))]  # type: ignore
 
     # when only one split point is available, it should be chosen automatically
     consim = ConSim(splitted_encoder_ml, llm, classes=classes)
     assert consim.user_llm is llm, "consim llm should correspond to the parameter"
 
 
-def test_consim_get_predictions(splitted_encoder_ml: ModelWithSplitPoints):
-    """
-    Test the `_get_predictions` method of the ConSim metric.
-    """
-    # Initialize the ConSim metric
-    consim = ConSim(splitted_encoder_ml, user_llm=None)
-
-    inputs = ["This is a first sentence", "Another sentence"]
-
-    # Compute predictions with nnsight
-    with splitted_encoder_ml.trace(inputs):
-        nnsight_output = (
-            splitted_encoder_ml.nns_output
-            if hasattr(splitted_encoder_ml, "nns_output")
-            else splitted_encoder_ml.output
-        )
-        nnsight_preds = torch.argmax(nnsight_output.logits, dim=-1).save()  # type: ignore
-
-    # Verify nnsight predictions
-    assert isinstance(nnsight_preds, torch.Tensor), "problem in the test, not consim"
-    assert nnsight_preds.shape == (len(inputs),), "problem in the test, not consim"
-
-    # Compute predictions with ConSim
-    consim_preds = consim._get_predictions(inputs)
-
-    # Verify ConSim predictions
-    assert isinstance(consim_preds, torch.Tensor), "consim _get_predictions should return a tensor"
-    assert consim_preds.shape == (len(inputs),), "consim._get_predictions outputs lengths should match the inputs"
-
-    # Check that both predictions are equal
-    assert torch.allclose(nnsight_preds, consim_preds, atol=1e-6), (
-        "consim._get_predictions outputs should match manually computed ones"
-    )
-
-
-def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplitPoints):
+def test_consim_extract_interesting_elements(splitted_encoder_ml: SplitterForClassification):
     """
     Test the `_extract_interesting_elements` method of the ConSim metric.
     """
@@ -217,23 +191,23 @@ def test_consim_extract_interesting_elements(splitted_encoder_ml: ModelWithSplit
         consim._extract_interesting_elements(inputs[:2], labels[:2], predictions[:2], nb_lp_samples=2, nb_ep_samples=2)
 
 
-def test_consim_select_examples(splitted_encoder_ml: ModelWithSplitPoints):
+def test_consim_select_examples(splitted_encoder_ml: SplitterForClassification, monkeypatch):
     """
     Test the `select_examples` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, None, classes=classes)
 
     # prepare fake methods so we only test the logic of select_examples
     inputs = ["a", "b", "c", "d", "e", "f"]
     labels = torch.tensor([0, 1, 0, 1, 0, 1])
     predictions = torch.tensor([0, 0, 0, 1, 1, 1])
 
-    def fake_get_preds(x, **kwargs):
+    def fake_get_activations(x, **kwargs):
         assert x == inputs, "consim did not pass the correct inputs to _get_predictions"
-        return predictions
+        return None, predictions
 
-    consim._get_predictions = fake_get_preds  # type: ignore
+    monkeypatch.setattr(splitted_encoder_ml, "get_activations", fake_get_activations)
+    consim = ConSim(splitted_encoder_ml, None, classes=classes)
 
     # 2 correct and 2 incorrect elements should be returned
     samples, labels, predictions = consim.select_examples(inputs, labels, nb_lp_samples=2, nb_ep_samples=2, seed=0)
@@ -576,7 +550,7 @@ def test_consim_predictions_accuracy():
     )
 
 
-def test_consim_compute_score(splitted_encoder_ml: ModelWithSplitPoints):
+def test_consim_compute_score(splitted_encoder_ml: SplitterForClassification):
     """
     Test the `_compute_score` method of the ConSim metric.
     """
@@ -602,13 +576,13 @@ def test_consim_compute_score(splitted_encoder_ml: ModelWithSplitPoints):
         PromptTypes.U1_upper_bound_concepts_at_ep,
     ],
 )
-def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type: PromptTypes):
+def test_consim_evaluate(splitted_encoder_ml: SplitterForClassification, prompt_type: PromptTypes):
     """
     Test the `evaluate` method of the ConSim metric.
 
     Parameters
     ----------
-    splitted_encoder_ml: ModelWithSplitPoints
+    splitted_encoder_ml: SplitterForClassification
         The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
         Here a Bert model, but this is not used in this test apart from initializing the ConSim metric.
     llm_placeholder: LLMInterface
@@ -624,7 +598,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
         fitted = True
         _split_point = splitted_encoder_ml.split_point
 
-        def __init__(self, splitter: ModelWithSplitPoints):  # type: ignore
+        def __init__(self, splitter: SplitterForClassification):  # type: ignore
             self.splitter = splitter
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
@@ -716,7 +690,7 @@ def test_consim_evaluate(splitted_encoder_ml: ModelWithSplitPoints, prompt_type:
     reason="No OpenAI API key available.",
 )
 @pytest.mark.slow
-def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
+def test_consim_evaluate_with_openai(splitted_encoder_ml: SplitterForClassification):
     """
     Test the `evaluate` method of the ConSim metric with OpenAI API.
     """
@@ -760,7 +734,7 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
         fitted = True
         _split_point = splitted_encoder_ml.split_point
 
-        def __init__(self, splitter: ModelWithSplitPoints):  # type: ignore
+        def __init__(self, splitter: SplitterForClassification):  # type: ignore
             self.splitter = splitter
 
         def concept_output_gradient(self, inputs, *args, **kwargs):
@@ -807,26 +781,22 @@ def test_consim_evaluate_with_openai(splitted_encoder_ml: ModelWithSplitPoints):
 
 
 if __name__ == "__main__":
-    from transformers import AutoModelForSequenceClassification
-
-    mwsp = ModelWithSplitPoints(
+    splitter = SplitterForClassification(
         "hf-internal-testing/tiny-random-bert",
-        split_point="bert.encoder.layer.1.output",
-        automodel=AutoModelForSequenceClassification,  # type: ignore
         batch_size=4,
         device_map=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
 
-    test_consim_init(mwsp)
-    test_consim_get_predictions(mwsp)
-    test_consim_extract_interesting_elements(mwsp)
-    test_consim_select_examples(mwsp)
+    test_consim_init(splitter)
+    test_consim_get_predictions()
+    test_consim_extract_interesting_elements(splitter)
+    test_consim_select_examples(splitter)
     test_consim_quantize_importances()
     test_consim_filter_and_quantize_concepts_importances()
     test_consim_setting_to_prompt(prompt_type=PromptTypes.U1_upper_bound_concepts_at_ep, anonymize_classes=True)
     test_consim_generate_prompt()
     test_consim_extract_predictions_from_response()
     test_consim_predictions_accuracy()
-    test_consim_evaluate(mwsp, prompt_type=PromptTypes.E2_global_concepts_with_lp)
+    test_consim_evaluate(splitter, prompt_type=PromptTypes.E2_global_concepts_with_lp)
     if os.environ.get("OPENAI_API_KEY"):
-        test_consim_evaluate_with_openai(mwsp)
+        test_consim_evaluate_with_openai(splitter)
