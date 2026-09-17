@@ -52,7 +52,6 @@ from interpreto.concepts import (
 )
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer, SAEExplainer
 from interpreto.concepts.methods.sklearn_wrappers import SkLearnWrapperExplainer
-from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -77,7 +76,7 @@ ALL_CONCEPT_METHODS = [
 
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
 def test_overcomplete_cbe(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     method_class: type[ConceptAutoEncoderExplainer],
 ):
@@ -154,21 +153,11 @@ def test_overcomplete_cbe(
 
 
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
-@pytest.mark.parametrize(
-    "granularity",
-    [
-        ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
-        ModelWithSplitPoints.activation_granularities.TOKEN,
-        ModelWithSplitPoints.activation_granularities.WORD,
-        ModelWithSplitPoints.activation_granularities.SENTENCE,
-    ],
-)
 def test_concept_output_gradient(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     sentences: list[str],
     method_class: type[ConceptAutoEncoderExplainer],
-    granularity: ActivationGranularity,
 ):
     nb_concepts = 3
 
@@ -201,7 +190,6 @@ def test_concept_output_gradient(
     gradients = cbe.concept_output_gradient(
         sentences,
         targets=None,
-        activation_granularity=granularity,
         concepts_x_gradients=True,
     )
     assert gradients is not None, f"{method_class.__name__}.concept_output_gradient returned None"
@@ -211,26 +199,11 @@ def test_concept_output_gradient(
     assert len(gradients) == len(sentences), (
         f"Gradients list length mismatch: got {len(gradients)}, expected {len(sentences)}"
     )
-    for grad, sentence in zip(gradients, sentences, strict=True):
+    for grad in gradients:
         assert grad is not None, "A gradient entry is None"
         assert isinstance(grad, torch.Tensor), f"Gradient entry has type {type(grad)} instead of torch.Tensor"
-
-        tokenizer = splitted_encoder_ml.tokenizer
-        tokens = tokenizer(
-            sentence,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            return_offsets_mapping=True,
-        )
-        if granularity == ModelWithSplitPoints.activation_granularities.CLS_TOKEN:
-            nb_granularity_elements = 1
-        else:
-            indices_list = granularity.value.get_indices(tokens, tokenizer)  # type: ignore
-            nb_granularity_elements = len(indices_list[0])
-        assert grad.shape[1:] == (nb_granularity_elements, concepts_dim), (
-            "Gradient shape mismatch: got "
-            f"{tuple(grad.shape)}, expected {(1, nb_granularity_elements, concepts_dim)} for sentence '{sentence}'"
+        assert grad.shape[1:] == (1, concepts_dim), (
+            f"Gradient shape mismatch: got {tuple(grad.shape)}, expected {(1, 1, concepts_dim)}"
         )
 
 
@@ -273,56 +246,43 @@ def test_sae_fit_normalizes_dtype_without_moving_dataset(monkeypatch):
     assert observed == {"device": activations.device, "dtype": torch.float32}
 
 
-def test_concept_output_gradient_uses_splitter_contract(sentences: list[str]):
+def test_concept_output_gradient_uses_splitter_contract(
+    splitted_encoder_ml: SplitterForClassification, sentences: list[str]
+):
     """Concept gradients delegate shape semantics to the task-specific splitter."""
-    # TODO: use `splitted_encoder_ml` once `ModelWithSplitPoints` is removed
-    splitter = SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
-    explainer = NeuronsAsConcepts(splitter)
+    explainer = NeuronsAsConcepts(splitted_encoder_ml)
 
     gradients = explainer.concept_output_gradient(sentences[:2], targets=[0], normalization=False)
 
     assert len(gradients) == 2
-    assert all(gradient.shape == (1, 1, splitter.config.hidden_size) for gradient in gradients)
+    assert all(gradient.shape == (1, 1, splitted_encoder_ml.config.hidden_size) for gradient in gradients)
 
 
-def test_generation_concept_output_gradient_uses_splitter_contract(sentences: list[str]):
+def test_generation_concept_output_gradient_uses_splitter_contract(
+    text_tokens_splitter: TextTokensSplitter, sentences: list[str]
+):
     """Generation splitters retain their token-level gradient dimension."""
-    # TODO: could make a fixture for this once `ModelWithSplitPoints` is removed
-    splitter = TextTokensSplitter(
-        "hf-internal-testing/tiny-random-gpt2",
-        split_point=1,
-        task="text-generation",
-        device_map=DEVICE,
-    )
-    explainer = NeuronsAsConcepts(splitter)
+    explainer = NeuronsAsConcepts(text_tokens_splitter)
 
     gradients = explainer.concept_output_gradient(sentences[:1], targets=[0], normalization=False)
 
     assert len(gradients) == 1
     assert gradients[0].shape[0] == 1
     assert gradients[0].shape[1] > 1
-    assert gradients[0].shape[2] == splitter.config.hidden_size
+    assert gradients[0].shape[2] == text_tokens_splitter.config.hidden_size
 
 
 if __name__ == "__main__":
-    from transformers import AutoModelForMaskedLM
-
-    from interpreto import ModelWithSplitPoints
-
     sentences: list[str] = [
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
         "Interpreto is magical",
         "Testing interpreto",
     ]
-    splitted_encoder_ml: ModelWithSplitPoints = ModelWithSplitPoints(
+    splitted_encoder_ml = SplitterForClassification(
         "hf-internal-testing/tiny-random-bert",
-        split_point="bert.encoder.layer.1.output",
-        automodel=AutoModelForMaskedLM,  # type: ignore
         device_map=DEVICE,
     )
-    activations, _ = splitted_encoder_ml.get_activations(
-        sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
-    )
+    activations, _ = splitted_encoder_ml.get_activations(sentences)
     test_overcomplete_cbe(
         splitted_encoder_ml=splitted_encoder_ml,
         activations=activations,  # type: ignore
@@ -333,5 +293,4 @@ if __name__ == "__main__":
         activations=activations,  # type: ignore
         sentences=sentences,
         method_class=SemiNMFConcepts,
-        granularity=ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
     )

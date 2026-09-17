@@ -37,8 +37,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import RidgeClassifier
 from sklearn.svm import SVC
 
+from interpreto import SplitterForClassification
 from interpreto.concepts.probes.sklearn import SklearnProbe, SklearnProbeExplainer
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 # ---------------------------------------------------------------------------
 # Sklearn classifier configs: (name, sklearn_class, sklearn_kwargs)
@@ -63,7 +63,7 @@ SKLEARN_CONFIGS = [
     ids=[c[0] for c in SKLEARN_CONFIGS],
 )
 def test_sklearn_probe_explainer_fit_and_encode(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     name: str,
     sklearn_class: type,
@@ -102,7 +102,7 @@ def test_sklearn_probe_explainer_fit_and_encode(
     ids=[c[0] for c in SKLEARN_CONFIGS],
 )
 def test_sklearn_probe_explainer_encode_before_fit(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     name: str,
     sklearn_class: type,
@@ -120,7 +120,7 @@ def test_sklearn_probe_explainer_encode_before_fit(
 
 
 def test_sklearn_probe_explainer_with_tensor_activations(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
 ):
     """Fit accepts latent activation tensors returned by get_activations."""
@@ -166,7 +166,7 @@ def test_sklearn_probe_explainer_separation(
     perm = torch.randperm(n)
     X, y = X[perm], y[perm]
 
-    # Fit directly on the SklearnProbe (no need for ModelWithSplitPoints)
+    # Fit directly on the SklearnProbe (no need for a splitter)
     probe = SklearnProbe(sklearn_class, sklearn_kwargs)
     probe.fit(X, y)
 

@@ -48,17 +48,6 @@ def splitted_encoder_ml():
     return SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
 
 
-@pytest.fixture(scope="module")
-def split_gen():
-    return TextTokensSplitter(
-        "hf-internal-testing/tiny-random-gpt2",
-        split_point=1,
-        task="text-generation",
-        batch_size=8,
-        device_map=DEVICE,
-    )
-
-
 @pytest.fixture
 def activations(splitted_encoder_ml: SplitterForClassification, sentences: list[str]):
     return splitted_encoder_ml.get_activations(sentences)[0]
@@ -179,9 +168,9 @@ def test_topk_inputs_sample_level(splitted_encoder_ml: SplitterForClassification
         assert all(text in sentences for text in topk)
 
 
-def test_topk_inputs_token_level(split_gen: TextTokensSplitter, sentences: list[str]):
+def test_topk_inputs_token_level(text_tokens_splitter: TextTokensSplitter, sentences: list[str]):
     """Token splitters interpret retained input tokens."""
-    concept_explainer = NeuronsAsConcepts(splitter=split_gen)
+    concept_explainer = NeuronsAsConcepts(splitter=text_tokens_splitter)
     interpretation_method = TopKInputs(concept_explainer=concept_explainer, k=2)
 
     topk_inputs = interpretation_method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)
@@ -190,10 +179,12 @@ def test_topk_inputs_token_level(split_gen: TextTokensSplitter, sentences: list[
     assert all(len(topk) == 2 for topk in topk_inputs.values())
 
 
-def test_topk_inputs_pooled_generation_matches_precomputed(split_gen: TextTokensSplitter, sentences: list[str]):
+def test_topk_inputs_pooled_generation_matches_precomputed(
+    text_tokens_splitter: TextTokensSplitter, sentences: list[str]
+):
     """Raw inputs and matching precomputed pooled activations produce the same result."""
-    concept_explainer = NeuronsAsConcepts(splitter=split_gen)
-    pooled_activations, _ = split_gen.get_activations(sentences, token_pooling="mean")
+    concept_explainer = NeuronsAsConcepts(splitter=text_tokens_splitter)
+    pooled_activations, _ = text_tokens_splitter.get_activations(sentences, token_pooling="mean")
     method = TopKInputs(concept_explainer=concept_explainer, k=2, token_pooling="mean")
 
     from_inputs = method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)
@@ -205,9 +196,9 @@ def test_topk_inputs_pooled_generation_matches_precomputed(split_gen: TextTokens
     assert all(all(text in sentences for text in topk) for topk in from_inputs.values())
 
 
-def test_topk_inputs_unique_words_requires_pooled_mode(split_gen: TextTokensSplitter, sentences: list[str]):
+def test_topk_inputs_unique_words_requires_pooled_mode(text_tokens_splitter: TextTokensSplitter, sentences: list[str]):
     """Token-level interpretation cannot independently encode words or n-grams."""
-    method = TopKInputs(concept_explainer=NeuronsAsConcepts(split_gen), k=2, use_unique_words=1)
+    method = TopKInputs(concept_explainer=NeuronsAsConcepts(text_tokens_splitter), k=2, use_unique_words=1)
 
     with pytest.raises(ValueError, match="pooled"):
         method.interpret(concepts_indices=[0], inputs=sentences)

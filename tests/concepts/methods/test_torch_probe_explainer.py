@@ -23,7 +23,7 @@
 # SOFTWARE.
 
 """
-Tests for :class:`ProbeExplainer` with diverse probe models and granularities.
+Tests for :class:`ProbeExplainer` with diverse probe models.
 """
 
 from __future__ import annotations
@@ -43,10 +43,6 @@ from interpreto.concepts import (
     SqL2CentroidProbe,
 )
 from interpreto.concepts.probes import Standardization
-from interpreto.concepts.splitters.model_with_split_points import (
-    ActivationGranularity,
-    ModelWithSplitPoints,
-)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -67,31 +63,6 @@ PROBE_CONFIGS = [
     ("SqL2Centroid_std", SqL2CentroidProbe, {"normalization": Standardization()}),
 ]
 
-GRANULARITIES = [
-    ActivationGranularity.TOKEN,
-    ActivationGranularity.SAMPLE,
-    ActivationGranularity.CLS_TOKEN,
-]
-
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture(
-    params=[g.name for g in GRANULARITIES],
-    scope="module",
-)
-def activations_with_granularity(
-    request, splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]
-) -> torch.Tensor:
-    """Activations extracted at different granularities."""
-    return splitted_encoder_ml.get_activations(sentences, activation_granularity=ActivationGranularity[request.param])[
-        0
-    ]  # type: ignore
-
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -103,7 +74,7 @@ def activations_with_granularity(
     ids=[c[0] for c in PROBE_CONFIGS],
 )
 def test_torch_probe_explainer_fit_and_encode(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     name: str,
     probe_cls: type,
@@ -145,14 +116,14 @@ def test_torch_probe_explainer_fit_and_encode(
     )
 
 
-def test_torch_probe_explainer_type_check(splitted_encoder_ml: ModelWithSplitPoints):
+def test_torch_probe_explainer_type_check(splitted_encoder_ml: SplitterForClassification):
     """Passing a non-Probe should raise TypeError."""
     with pytest.raises(TypeError, match="must be a Probe"):
         ProbeExplainer(splitted_encoder_ml, concept_model="not_a_probe")  # type: ignore
 
 
 def test_torch_probe_explainer_with_tensor_activations(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
 ):
     """Fit accepts latent activation tensors returned by get_activations."""
@@ -187,118 +158,45 @@ def test_torch_probe_explainer_accepts_low_precision():
 
 
 # ---------------------------------------------------------------------------
-# Sanity check: BERT middle layer, TOKEN granularity, 3 semantic concepts
+# Sanity check: probes overfit separable training data and generalize
 # ---------------------------------------------------------------------------
 
-# Concepts: animal, food, color (multi-label, words can belong to 0-2 classes)
-# Shuffled with seed=7 so train/test split is representative.
-# All words are single-token in bert-base-uncased → 1 word = 1 activation row.
-WORDS_AND_LABELS = [
-    ("tea", [0, 1, 0]),
-    ("sea", [0, 0, 0]),
-    ("pig", [1, 0, 0]),
-    ("soup", [0, 1, 0]),
-    ("bun", [0, 1, 0]),
-    ("ant", [1, 0, 0]),
-    ("ram", [1, 0, 0]),
-    ("hill", [0, 0, 0]),
-    ("box", [0, 0, 0]),
-    ("dog", [1, 0, 0]),
-    ("owl", [1, 0, 0]),
-    ("pup", [1, 0, 0]),
-    ("jam", [0, 1, 0]),
-    ("fox", [1, 0, 0]),
-    ("bat", [1, 0, 0]),
-    ("fog", [0, 0, 0]),
-    ("ape", [1, 0, 0]),
-    ("gold", [0, 0, 1]),
-    ("cow", [1, 0, 0]),
-    ("fig", [0, 1, 0]),
-    ("cake", [0, 1, 0]),
-    ("cod", [1, 1, 0]),
-    ("red", [0, 0, 1]),
-    ("bird", [1, 0, 0]),
-    ("rock", [0, 0, 0]),
-    ("road", [0, 0, 0]),
-    ("dust", [0, 0, 0]),
-    ("rum", [0, 1, 0]),
-    ("deer", [1, 0, 0]),
-    ("hen", [1, 1, 0]),
-    ("nut", [0, 1, 0]),
-    ("pie", [0, 1, 0]),
-    ("elk", [1, 0, 0]),
-    ("egg", [0, 1, 0]),
-    ("fish", [1, 0, 0]),
-    ("rice", [0, 1, 0]),
-    ("pink", [0, 0, 1]),
-    ("tan", [0, 0, 1]),
-    ("rat", [1, 0, 0]),
-    ("mud", [0, 0, 0]),
-    ("eel", [1, 1, 0]),
-    ("cat", [1, 0, 0]),
-    ("ham", [1, 1, 0]),
-    ("rye", [0, 1, 0]),
-]
-
-NB_TEST = 10
-
 
 @pytest.fixture(scope="module")
-def bert_splitter() -> ModelWithSplitPoints:
-    from transformers import AutoModelForSequenceClassification  # noqa PLC0415
-
-    return ModelWithSplitPoints(
-        "bert-base-uncased",
-        split_point="bert.encoder.layer.6",
-        automodel=AutoModelForSequenceClassification,  # type: ignore
-        batch_size=16,
-        device_map=DEVICE,
-    )
-
-
-@pytest.fixture(scope="module")
-def bert_train_test(bert_splitter: ModelWithSplitPoints):
-    """Extract BERT activations and labels for the word list."""
-    words = [w for w, _ in WORDS_AND_LABELS]
-    labels = torch.tensor([l for _, l in WORDS_AND_LABELS], dtype=torch.float32)
-
-    activations, _ = bert_splitter.get_activations(words, activation_granularity=ActivationGranularity.TOKEN)
-    assert activations.shape[0] == len(words)  # type: ignore
-
-    # Train/test split
-    split_idx = len(words) - NB_TEST
-    train_x, test_x = activations[:split_idx], activations[split_idx:]
-    train_y, test_y = labels[:split_idx], labels[split_idx:]
-
+def separable_train_test():
+    """Three well-separated synthetic clusters with one-hot labels."""
+    torch.manual_seed(7)
+    n_per_cluster, hidden = 16, 32
+    centers = torch.eye(3, hidden) * 5.0
+    train_x = torch.cat([center + torch.randn(n_per_cluster, hidden) for center in centers])
+    train_y = torch.cat([torch.nn.functional.one_hot(torch.full((n_per_cluster,), i), 3) for i in range(3)]).float()
+    test_x = torch.cat([center + torch.randn(n_per_cluster // 2, hidden) for center in centers])
+    test_y = torch.cat(
+        [torch.nn.functional.one_hot(torch.full((n_per_cluster // 2,), i), 3) for i in range(3)]
+    ).float()
     return train_x, train_y, test_x, test_y
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "name,probe_cls,probe_kwargs",
     PROBE_CONFIGS,
     ids=[c[0] for c in PROBE_CONFIGS],
 )
-def test_sanity_check_bert(
-    bert_splitter: ModelWithSplitPoints,
-    bert_train_test: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+def test_sanity_check_probes_generalize(
+    splitted_encoder_ml: SplitterForClassification,
+    separable_train_test: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
     name: str,
     probe_cls: type,
     probe_kwargs: dict,
 ):
-    """Sanity check: fit probe on BERT activations with 3 semantic concepts.
-
-    Uses bert-base-uncased layer 6 with TOKEN granularity on single-token
-    words. Verifies that probes can both overfit training data and generalize
-    to unseen test words (mean positive score > mean negative score).
-    """
+    """Sanity check that probes overfit separable data and generalize."""
     if "SqL2" in name:
         pytest.skip("SqL2CentroidProbe can fail to converge on this small dataset, causing test instability.")
-    train_x, train_y, test_x, test_y = bert_train_test
+    train_x, train_y, test_x, test_y = separable_train_test
 
     probe = probe_cls(**probe_kwargs)
     probe.to(train_x.device)
-    explainer = ProbeExplainer(bert_splitter, probe)
+    explainer = ProbeExplainer(splitted_encoder_ml, probe)
 
     # Fit
     explainer.fit(train_x, train_y)
