@@ -39,8 +39,8 @@ nav:
     - Concept Explainers:
       - Overview: api/concepts/overview.md
       - Splitters:
-        - ModelWithSplitPoints: api/concepts/splitters/model_with_split_points.md
         - SplitterForClassification: api/concepts/splitters/splitter_for_classification.md
+        - TextTokensSplitter: api/concepts/splitters/text_tokens_splitter.md
         - SplitterForGeneration: api/concepts/splitters/splitter_for_generation.md
       - Probes (Supervised): api/concepts/probes.md
       - Concept Spaces (Unsupervised):

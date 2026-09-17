@@ -129,11 +129,9 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
     Examples:
         >>> import datasets
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer
-        >>> from interpreto import BaseSplitter
+        >>> from interpreto import TextTokensSplitter
         >>> from interpreto.concepts import VanillaSAE
         >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> CLS_TOKEN = BaseSplitter.activation_granularities.CLS_TOKEN
-        >>> WORD = BaseSplitter.activation_granularities.WORD
         ...
         >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
         >>> repo_id = "Qwen/Qwen3-0.6B"
@@ -141,24 +139,19 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
         ...
         >>> # 1. Split your model in two parts
-        >>> splitted_model = BaseSplitter(
-        >>>     model, tokenizer=tokenizer, split_point=5,
+        >>> splitted_model = TextTokensSplitter(
+        >>>     model, tokenizer=tokenizer, split_point=5, task="text-generation",
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
-        >>> activations, _ = splitted_model.get_activations(
-        >>>     dataset, activation_granularity=WORD
-        >>> )
+        >>> activations, _ = splitted_model.get_activations(dataset)
         ...
         >>> # 3. Fit a concept model on the dataset
         >>> explainer = VanillaSAE(splitted_model, nb_concepts=100, device="cuda")
         >>> explainer.fit(activations, lr=1e-3, nb_epochs=20, batch_size=1024)
         ...
         >>> # 4. Interpret the concepts
-        >>> interpreter = TopKInputs(
-        >>>     concept_explainer=explainer,
-        >>>     activation_granularity=WORD,
-        >>> )
+        >>> interpreter = TopKInputs(concept_explainer=explainer)
         >>> interpretations = interpreter.interpret(
         >>>     inputs=dataset, latent_activations=activations
         >>> )
@@ -337,11 +330,9 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
     Examples:
         >>> import datasets
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer
-        >>> from interpreto import BaseSplitter
+        >>> from interpreto import TextTokensSplitter
         >>> from interpreto.concepts import ICAConcepts
         >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> CLS_TOKEN = BaseSplitter.activation_granularities.CLS_TOKEN
-        >>> WORD = BaseSplitter.activation_granularities.WORD
         ...
         >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
         >>> repo_id = "Qwen/Qwen3-0.6B"
@@ -349,24 +340,19 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
         ...
         >>> # 1. Split your model in two parts
-        >>> splitted_model = BaseSplitter(
-        >>>     model, tokenizer=tokenizer, split_point=5,
+        >>> splitted_model = TextTokensSplitter(
+        >>>     model, tokenizer=tokenizer, split_point=5, task="text-generation",
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
-        >>> activations, _ = splitted_model.get_activations(
-        >>>     dataset, activation_granularity=WORD
-        >>> )
+        >>> activations, _ = splitted_model.get_activations(dataset)
         ...
         >>> # 3. Fit a concept model on the dataset
         >>> explainer = ICAConcepts(splitted_model, nb_concepts=20)
         >>> explainer.fit(activations)
         ...
         >>> # 4. Interpret the concepts
-        >>> interpreter = TopKInputs(
-        >>>     concept_explainer=explainer,
-        >>>     activation_granularity=WORD,
-        >>> )
+        >>> interpreter = TopKInputs(concept_explainer=explainer)
         >>> interpretations = interpreter.interpret(
         >>>     inputs=dataset, latent_activations=activations
         >>> )
