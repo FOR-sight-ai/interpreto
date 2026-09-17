@@ -23,14 +23,13 @@
 # SOFTWARE.
 
 """
-Simplified model splitter for causal language models (generation).
+Token-level model splitter for causal and encoder text models.
 
-``SplitterForGeneration`` wraps a HuggingFace generation model and splits
-it at a specified layer. Activations are the per-token hidden states at the
-split point, with special tokens optionally filtered out.
+``TextTokensSplitter`` wraps a Hugging Face text model and extracts hidden
+states at a specified layer. Special tokens can optionally be retained, and
+the resulting token representations can be pooled per input.
 
-This class is designed for the concept pipeline on generative models.
-It supports only two token-selection modes:
+It supports two token-selection modes:
 
 - **tokens** (default): returns only non-special tokens (padding, BOS, EOS, etc. removed).
 - **all_tokens**: returns all token activations including special tokens but not padding.
@@ -65,10 +64,10 @@ TextTokensTask = Literal["feature-extraction", "text-generation"]
 
 
 class TextTokensSplitter(BaseSplitter):
-    """A BaseSplitter specialization for causal language models (generation).
+    """A BaseSplitter specialization for token representations from text models.
 
-    Wraps a ``ForCausalLM`` model, splits it at a user-specified layer, and
-    provides activation extraction with simple token-level granularity.
+    Wraps a causal or encoder text model, splits it at a user-specified layer,
+    and provides token-level or pooled activation extraction.
 
     This class:
     - Supports two token-selection modes: ``include_special_tokens=True/False``.
@@ -76,12 +75,12 @@ class TextTokensSplitter(BaseSplitter):
     - Does not depend on ``interpreto.commons.granularity.Granularity``.
 
     Arguments:
-        model_or_repo_id (str | PreTrainedModel): A HuggingFace model ID or a
-            pre-loaded CausalLM instance.
+        model_or_repo_id (str | PreTrainedModel): A Hugging Face model ID or a
+            pre-loaded text model.
         split_point (str | int): The split location inside the model.
         task (TextTokensTask): NNsight loading task. Either ``"feature-extraction"`` or ``"text-generation"``.
-            Using ``"text-generation"`` corresponds to the old ``SplitterForGeneration`` class.
-            While ``"feature-extraction"`` can extract token-activations for other tasks.
+            Use ``"text-generation"`` for causal language models and
+            ``"feature-extraction"`` for encoder models.
         tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): Tokenizer.
             If None, NNsight resolves it automatically when possible.
         batch_size (int): Batch size for batched operations.
@@ -90,13 +89,14 @@ class TextTokensSplitter(BaseSplitter):
 
     Example:
         ```python
-        from interpreto import SplitterForGeneration
+        from interpreto import TextTokensSplitter
 
-        splitter = SplitterForGeneration(
+        splitter = TextTokensSplitter(
             "gpt2",
-            split_point=10,
+            split_point=10,          # layer index
+            task="text-generation",  # task can be automatically inferred by nnsight
             batch_size=8,
-            device_map="auto",
+            device_map="auto",       # let nnsight decide
         )
         activations, _ = splitter.get_activations(
             ["Hello world!", "Interpreto is magic"],

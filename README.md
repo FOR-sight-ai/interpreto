@@ -70,7 +70,7 @@ Interpreto generalizes these methods through four core steps, the two first are 
 
 **1. Split a model in two and obtain a dataset of activations:** (mainly via [`nnsight`](https://github.com/ndif-team/nnsight)):
 
-Choose any layer in any HuggingFace language model with our `ModelWithSplitPoints` based on `nnsight`. Then pass a dataset through it to obtain a dataset of activations.
+Use our `nnsight`-based splitters to extract activations: `SplitterForClassification` for classifiers or `TextTokensSplitter` for token-level and pooled representations from causal or encoder text models.
 
 **2. (supervised) Train probe** with the [`ProbeExplainer`](https://for-sight-ai.github.io/interpreto/api/concepts/probes/)
 
