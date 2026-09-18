@@ -167,9 +167,6 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
 
         t = targeted_logits_chunk.shape[1]
         gradients_list = []
-        # iterate target-by-target — same pattern as text. For text this is mainly
-        # a memory win (d=768/4096); for image (3 channels) the saving is small,
-        # but we keep the structure for parity and so retain_graph timing matches.
         for k in range(t):
             last_target = k == (t - 1)
             # same autograd.grad call as text, just with pixel_values as the leaf

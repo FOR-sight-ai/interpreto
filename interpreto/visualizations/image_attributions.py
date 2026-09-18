@@ -244,21 +244,13 @@ def plot_image_attribution(
     Display attribution heatmap(s) over the underlying image.
 
     The heatmap is the display-ready `(t, H, W)` `attributions_image` map produced
-    by `explain` (the g->l interpolation — NEAREST for gradient methods, the mask
-    strategy for masking methods — is already baked in). It is drawn over the image
-    via `extent`; since it already matches pixel resolution, no imshow-level
-    interpolation is applied — the heatmap's sharpness is fully decided by the
-    method's `granularity_resize` strategy.
+    by `explain`. It is drawn over the image via `extent`.
 
     The underlying image is de-normalized from the output's own `pixel_values`, so it is
     always at the model's input resolution — the same grid `attributions_image` lives on.
 
-    A single output is drawn one panel per target (its one image repeated). An
-    iterable of outputs — e.g. `explain([img_a, img_b, img_c], [...])`, which
-    returns one output per image — is drawn one image per output, with
-    `target_idx` resolved independently against each output's own targets. The
-    two compose: a list of multi-target outputs flattens to one panel per
-    (output, target) pair.
+    A single output is drawn once per target. If there are 3 outputs and 4 targets, this
+    makes 3 * 4 = 12 images shown.
 
     Args:
         attribution_output: One `ImageAttributionOutput`, or an iterable of them
@@ -286,20 +278,16 @@ def plot_image_attribution(
         (fig, axes) — matplotlib Figure and 2D Axes array. Call `plt.show()`
         from a script, or just keep the reference in a notebook.
     """
-    if isinstance(attribution_output, ImageAttributionOutput):
-        outputs = [attribution_output]
-    else:
-        outputs = list(attribution_output)
-        if not outputs:
-            raise ValueError("attribution_output is an empty iterable — pass at least one output.")
+
+    outputs = list(attribution_output)
+    if not outputs:
+        raise ValueError("attribution_output is an empty iterable — pass at least one output.")
 
     panels: list[tuple[np.ndarray, ImageAttributionOutput, int]] = []
     for output in outputs:
         n_targets = output.attributions.shape[0]
         if target_idx is None:
             target_indices = list(range(n_targets))
-        elif isinstance(target_idx, int):
-            target_indices = [target_idx]
         else:
             target_indices = list(target_idx)
 
@@ -339,119 +327,7 @@ def plot_image_attribution(
             **plot_kwargs,
         )
 
-        # TODO: pair class index with its human-readable label (model.config.id2label).
-        # Needs the id2label mapping plumbed in — either as a kwarg to this function
-        # or stored on ImageAttributionOutput at explain() time.
         ax.set_title(f"target {int(output.targets[t_idx].item())}")
-        ax.axis("off")
-
-    # Hide unused cells in the last row.
-    for j in range(n_plots, n_rows * actual_cols):
-        axes[j // actual_cols][j % actual_cols].axis("off")
-
-    fig.tight_layout()
-    return fig, axes
-
-
-def plot_image_attributions_comparison(
-    attribution_outputs: Iterable[ImageAttributionOutput],
-    labels: Iterable[str] | None = None,
-    target_idx: int = 0,
-    cmap: str = "coolwarm",
-    alpha: float = 0.5,
-    clip_percentile: float | None = 0.1,
-    absolute_value: bool = False,
-    img_size: float = 3.0,
-    cols: int = 4,
-    colorbar: bool = True,
-    center_zero: bool = True,
-    grayscale_background: bool = True,
-    **plot_kwargs,
-):
-    """
-    Compare several attribution methods on the SAME image, side by side.
-
-    Each method's heatmap is drawn as a **live mappable** into a shared grid of
-    subplots — not a rasterized snapshot of a separate figure. This is what lets
-    every panel carry its own colorbar in its own real score scale, so you can
-    read and compare the magnitude each method assigns, not just the spatial
-    pattern. (Rasterizing each method to RGB and tiling, the old approach, threw
-    the score scale away and produced static images with no legend.)
-
-    All outputs are expected to come from explaining the same image at the same
-    granularity, so their heatmaps share a grid shape; only the scores differ.
-
-    Args:
-        attribution_outputs: One `ImageAttributionOutput` per method to compare.
-        labels: Optional per-method titles (e.g. method names). If None, panels
-            are titled "method 0", "method 1", ... Must match the number of outputs.
-        target_idx: Which target to plot for every method (single int — the point
-            is to compare methods, holding the target fixed).
-        cmap: Matplotlib colormap for the heatmaps. Defaults to `coolwarm`
-            (diverging), used for every panel — signed or sequential alike — so
-            every method in the grid shares the same color language and is
-            actually comparable.
-        alpha: Heatmap opacity over the image (0-1).
-        clip_percentile: Clip at (p, 100-p) to suppress outliers. None disables.
-        absolute_value: If True, take abs() before plotting (magnitude only).
-        img_size: Subplot side length in inches.
-        cols: Max columns when laying out the methods in a grid.
-        colorbar: If True, attach a per-method colorbar showing its real score range.
-        center_zero: Center the color scale at 0 with a symmetric range. Defaults
-            to True for every panel, so hue tracks sign across the whole grid.
-            Magnitudes still differ per panel — read them off the colorbars. False
-            falls back to a plain min/max range per panel.
-        grayscale_background: If True, draw the underlying image in grayscale so
-            the colored heatmap stands out. Defaults to True.
-        **plot_kwargs: Extra kwargs forwarded to the heatmap `imshow`.
-
-    Returns:
-        (fig, axes) — matplotlib Figure and 2D Axes array.
-    """
-    outputs = list(attribution_outputs)
-    if not outputs:
-        raise ValueError("attribution_outputs is empty — pass at least one output.")
-
-    if labels is None:
-        label_list: list[str] = [f"method {i}" for i in range(len(outputs))]
-    else:
-        label_list = list(labels)
-        if len(label_list) != len(outputs):
-            raise ValueError(f"labels has {len(label_list)} entries but there are {len(outputs)} outputs.")
-
-    n_plots = len(outputs)
-    actual_cols = min(cols, n_plots)
-    n_rows = ceil(n_plots / actual_cols)
-    fig, axes = plt.subplots(
-        n_rows,
-        actual_cols,
-        figsize=(actual_cols * img_size, n_rows * img_size),
-        squeeze=False,
-    )
-
-    for i, (output, label) in enumerate(zip(outputs, label_list, strict=True)):
-        ax = axes[i // actual_cols][i % actual_cols]
-
-        img_disp = _denormalize(output)
-
-        n_targets = output.attributions.shape[0]
-        if not 0 <= target_idx < n_targets:
-            raise IndexError(f"target_idx {target_idx} out of range for '{label}' ({n_targets} targets).")
-
-        heatmap = _prepare_heatmap(output, target_idx, clip_percentile, absolute_value)
-        _draw_attribution_on_ax(
-            ax,
-            img_disp,
-            heatmap,
-            cmap=cmap,
-            alpha=alpha,
-            colorbar=colorbar,
-            center_zero=center_zero,
-            grayscale_background=grayscale_background,
-            fig=fig,
-            **plot_kwargs,
-        )
-        ax.set_title(label)
         ax.axis("off")
 
     # Hide unused cells in the last row.

@@ -50,8 +50,6 @@ class Perturbator(ABC):
     Abstract Base class for perturbators.
     """
 
-    # TODO: docstring — see todo/2026-07-30-to-do.md
-
     # Only what every perturbator has, whatever the modality and whatever the strategy.
     # Every other field is declared by the subclass that introduces it.
     # n_perturbations default to -1 because some Perturbators can only know the number
@@ -300,11 +298,11 @@ class ImageTensorPerturbator(TensorPerturbator):
         inputs = deepcopy(model_inputs)
         pixel_values: Float[torch.Tensor, "1 3 H W"] = inputs["pixel_values"]
 
-        perturbed_embeds: Float[torch.Tensor, "p 3 H W"]
+        perturbed_pixels: Float[torch.Tensor, "p 3 H W"]
         mask: Float[torch.Tensor, "p g"] | None
-        perturbed_embeds, mask = self.perturb_tensor(pixel_values)
+        perturbed_pixels, mask = self.perturb_tensor(pixel_values)
 
-        inputs["pixel_values"] = perturbed_embeds
+        inputs["pixel_values"] = perturbed_pixels
         return inputs, mask
 
     def perturb_tensor(
@@ -316,7 +314,7 @@ class ImageTensorPerturbator(TensorPerturbator):
         Args:
             pixel_values: Shape (1, 3, H, W).
         Returns:
-            perturbed_embeds: Shape (p, 3, H, W).
+            perturbed_pixels: Shape (p, 3, H, W).
             mask: (p, g) or None.
         """
         return pixel_values, None

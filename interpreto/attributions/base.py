@@ -340,12 +340,10 @@ class AttributionExplainer(ABC):
         self.granularity = granularity
         self.granularity_aggregation_strategy = combination_strategy
 
-        # The explainer is the single source of truth for the embedding module (it owns the
-        # model), so it pushes the authoritative one down, overriding the perturbator's default.
-        # Same reconcile as `ImageClassificationAttributionExplainer.__init__` does for
-        # `patch_size` and `granularity_combination_strategy`.
-        # The copy is frozen on CPU: `TextTensorPerturbator.perturb` embeds there, and the
-        # perturbator must not follow later mutations of the model's embedding matrix.
+        # gradient-based methods for text need the `inputs_embedder` which comes from the model.
+        # this `inputs_embedder` need the `setup_token_ids()` step beforehand
+        # also, we do not want perturbators to depend on the model
+        # the simplest was therefore to store assign it from the explainer init
         if isinstance(self.perturbator, TextTensorPerturbator):
             self.perturbator.inputs_embedder = deepcopy(model.get_input_embeddings()).cpu()
 
