@@ -1268,11 +1268,6 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         if isinstance(model_inputs, BatchFeature):
             if model_inputs["pixel_values"].ndim == 3:  # expand a single (3, H, W) to (1, 3, H, W)
                 model_inputs["pixel_values"] = model_inputs["pixel_values"].unsqueeze(0)
-            validated = self._validate_batch_feature(model_inputs)
-            # MVP is ViT-classification-only, where pixel_values is the only key. Re-processing
-            # rebuilds from pixel_values alone, so any other key a BatchFeature legally carries
-            # (bool_masked_pos, interpolate_pos_encoding) would be dropped here. Nothing in scope
-            # produces them; revisit if a head that needs them comes into scope.
             processed = self.image_processor(validated["pixel_values"], return_tensors="pt")
             return [self._validate_batch_feature(processed)]
 

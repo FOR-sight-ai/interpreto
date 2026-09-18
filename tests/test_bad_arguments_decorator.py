@@ -99,6 +99,6 @@ def test_old_sobol_argument_raises(bert_model, bert_tokenizer):
     """`n_token_perturbations` is only renamed for Sobol, the only method taking it."""
     with pytest.raises(PerturbationsError) as raised:
         Sobol(bert_model, processor=bert_tokenizer, n_token_perturbations=8)
-    assert "n_token_perturbations -> n_input_perturbations" in str(raised.value), (
+    assert "n_token_perturbations ->n_granularity_perturbations" in str(raised.value), (
         "The error message should indicate how to change the n_token_perturbations argument"
     )

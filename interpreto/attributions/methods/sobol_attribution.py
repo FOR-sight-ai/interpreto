@@ -65,7 +65,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
         >>> from interpreto.attributions import InferenceModes
         >>> method = Sobol(model, processor, batch_size=4,
         >>>                inference_mode=InferenceModes.LOGITS,
-        >>>                n_input_perturbations=8,
+        >>>               n_granularity_perturbations=8,
         >>>                granularity=TextGranularity.WORD,
         >>>                sobol_indices_order=Sobol.sobol_indices_orders.FIRST_ORDER,
         >>>                sampler=Sobol.samplers.SOBOL))
@@ -84,7 +84,7 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
         batch_size: int = 4,
-        n_input_perturbations: int = 32,
+        n_granularity_perturbations: int = 32,
         sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.TOTAL_ORDER,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,
         replace_value: int | float | None = None,
@@ -108,8 +108,8 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
                 choose the appropriate mode.
             device (torch.device): device on which the attribution method will be run.
             batch_size (int): batch size for the attribution method.
-            n_input_perturbations (int): the number of perturbations to generate
-            sobol_indices_order (SobolIndicesOrders): Sobol indices order, either `FIRST_ORDER` or `TOTAL_ORDER`.
+           n_granularity_perturbations (int): the number of perturbations to generate
+            sobol_indices (SobolIndicesOrders): Sobol indices order, either `FIRST_ORDER` or `TOTAL_ORDER`.
             sampler (SequenceSamplers): Sobol sequence sampler, either `SOBOL`, `HALTON` or `LatinHypercube`.
             replace_value: the id of the token used for masking in text methods, the value of the pixel
                 used for masking in image methods
@@ -131,13 +131,13 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
             processor=processor,
             granularity=granularity,
             replace_value=replace_value,
-            n_input_perturbations=n_input_perturbations,
+            n_granularity_perturbations=n_granularity_perturbations,
             sampler=sampler,
             is_binarized=issubclass(self.base_mask_perturbator_class, TextMaskPerturbator),
         )
 
         aggregator = SobolAggregator(
-            n_input_perturbations=n_input_perturbations,
+            n_granularity_perturbations=n_granularity_perturbations,
             sobol_indices_order=sobol_indices_order,
         )
 

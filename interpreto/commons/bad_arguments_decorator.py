@@ -35,7 +35,7 @@ RENAMING_MESSAGE = (
     "Interpreto has been updated and now also support vision models ! "
     "We have renamed some arguments notably : tokenizer -> processor, "
     "granularity_aggregation_strategy -> combination_strategy and "
-    "n_token_perturbations -> n_input_perturbations. "
+    "n_token_perturbations ->n_granularity_perturbations. "
     "An error was raised because you used {argument}"
 )
 
@@ -55,7 +55,7 @@ class AggregationStrategyError(TypeError):
 
 
 class PerturbationsError(TypeError):
-    """Raised when `n_token_perturbations` is used instead of `n_input_perturbations`."""
+    """Raised when `n_token_perturbations` is used instead of `n_granularity_perturbations`."""
 
     def __init__(self):
         super().__init__(RENAMING_MESSAGE.format(argument="n_token_perturbations"))
