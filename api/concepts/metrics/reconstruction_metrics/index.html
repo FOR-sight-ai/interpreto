@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2022,6 +2016,8 @@
       
         
       
+        
+      
     
     
     
@@ -2064,6 +2060,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3108,14 +3132,14 @@ It is also known as the reconstruction error.</p>
 <span class="normal"><a href="#__codelineno-0-95">95</a></span>
 <span class="normal"><a href="#__codelineno-0-96">96</a></span>
 <span class="normal"><a href="#__codelineno-0-97">97</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-75" name="__codelineno-0-75"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latent_activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the reconstruction error.</span>
+<a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="w">    </span><span class="sd">"""Compute the reconstruction error.</span>
 <a id="__codelineno-0-77" name="__codelineno-0-77"></a>
 <a id="__codelineno-0-78" name="__codelineno-0-78"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="sd">        latent_activations (LatentActivations): The latent activations to use for the computation.</span>
 <a id="__codelineno-0-80" name="__codelineno-0-80"></a>
 <a id="__codelineno-0-81" name="__codelineno-0-81"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-82" name="__codelineno-0-82"></a><span class="sd">        float: The reconstruction error.</span>
-<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    """</span>
 <a id="__codelineno-0-84" name="__codelineno-0-84"></a>    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
 <a id="__codelineno-0-85" name="__codelineno-0-85"></a>        <span class="n">concepts_activations</span><span class="p">:</span> <span class="n">ConceptsActivations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_explainer</span><span class="o">.</span><span class="n">activations_to_concepts</span><span class="p">(</span>
 <a id="__codelineno-0-86" name="__codelineno-0-86"></a>            <span class="n">latent_activations</span>
@@ -3129,7 +3153,7 @@ It is also known as the reconstruction error.</p>
 <a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction_space</span> <span class="ow">is</span> <span class="n">ReconstructionSpaces</span><span class="o">.</span><span class="n">LATENT_ACTIVATIONS</span><span class="p">:</span>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_function</span><span class="p">(</span><span class="n">latent_activations</span><span class="p">,</span> <span class="n">reconstructed_latent_activations</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a>
-<a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Only LATENT_ACTIVATIONS reconstruction space is supported.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">"Only LATENT_ACTIVATIONS reconstruction space is supported."</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3345,14 +3369,14 @@ Advances in Neural Information Processing Systems. 2023.&#160;<a class="footnote
 <span class="normal"><a href="#__codelineno-0-95">95</a></span>
 <span class="normal"><a href="#__codelineno-0-96">96</a></span>
 <span class="normal"><a href="#__codelineno-0-97">97</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-75" name="__codelineno-0-75"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latent_activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the reconstruction error.</span>
+<a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="w">    </span><span class="sd">"""Compute the reconstruction error.</span>
 <a id="__codelineno-0-77" name="__codelineno-0-77"></a>
 <a id="__codelineno-0-78" name="__codelineno-0-78"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="sd">        latent_activations (LatentActivations): The latent activations to use for the computation.</span>
 <a id="__codelineno-0-80" name="__codelineno-0-80"></a>
 <a id="__codelineno-0-81" name="__codelineno-0-81"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-82" name="__codelineno-0-82"></a><span class="sd">        float: The reconstruction error.</span>
-<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    """</span>
 <a id="__codelineno-0-84" name="__codelineno-0-84"></a>    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
 <a id="__codelineno-0-85" name="__codelineno-0-85"></a>        <span class="n">concepts_activations</span><span class="p">:</span> <span class="n">ConceptsActivations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_explainer</span><span class="o">.</span><span class="n">activations_to_concepts</span><span class="p">(</span>
 <a id="__codelineno-0-86" name="__codelineno-0-86"></a>            <span class="n">latent_activations</span>
@@ -3366,7 +3390,7 @@ Advances in Neural Information Processing Systems. 2023.&#160;<a class="footnote
 <a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction_space</span> <span class="ow">is</span> <span class="n">ReconstructionSpaces</span><span class="o">.</span><span class="n">LATENT_ACTIVATIONS</span><span class="p">:</span>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_function</span><span class="p">(</span><span class="n">latent_activations</span><span class="p">,</span> <span class="n">reconstructed_latent_activations</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a>
-<a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Only LATENT_ACTIVATIONS reconstruction space is supported.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">"Only LATENT_ACTIVATIONS reconstruction space is supported."</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3588,14 +3612,14 @@ The space where the distance thus error is computed and the distance function us
 <span class="normal"><a href="#__codelineno-0-95">95</a></span>
 <span class="normal"><a href="#__codelineno-0-96">96</a></span>
 <span class="normal"><a href="#__codelineno-0-97">97</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-75" name="__codelineno-0-75"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latent_activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the reconstruction error.</span>
+<a id="__codelineno-0-76" name="__codelineno-0-76"></a><span class="w">    </span><span class="sd">"""Compute the reconstruction error.</span>
 <a id="__codelineno-0-77" name="__codelineno-0-77"></a>
 <a id="__codelineno-0-78" name="__codelineno-0-78"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="sd">        latent_activations (LatentActivations): The latent activations to use for the computation.</span>
 <a id="__codelineno-0-80" name="__codelineno-0-80"></a>
 <a id="__codelineno-0-81" name="__codelineno-0-81"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-82" name="__codelineno-0-82"></a><span class="sd">        float: The reconstruction error.</span>
-<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    """</span>
 <a id="__codelineno-0-84" name="__codelineno-0-84"></a>    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
 <a id="__codelineno-0-85" name="__codelineno-0-85"></a>        <span class="n">concepts_activations</span><span class="p">:</span> <span class="n">ConceptsActivations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_explainer</span><span class="o">.</span><span class="n">activations_to_concepts</span><span class="p">(</span>
 <a id="__codelineno-0-86" name="__codelineno-0-86"></a>            <span class="n">latent_activations</span>
@@ -3609,7 +3633,7 @@ The space where the distance thus error is computed and the distance function us
 <a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruction_space</span> <span class="ow">is</span> <span class="n">ReconstructionSpaces</span><span class="o">.</span><span class="n">LATENT_ACTIVATIONS</span><span class="p">:</span>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_function</span><span class="p">(</span><span class="n">latent_activations</span><span class="p">,</span> <span class="n">reconstructed_latent_activations</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a>
-<a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Only LATENT_ACTIVATIONS reconstruction space is supported.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">"Only LATENT_ACTIVATIONS reconstruction space is supported."</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3910,7 +3934,7 @@ KL: Computes the Kullback-Leibler divergence between two tensors.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../assets/js/custom.js"></script>
       

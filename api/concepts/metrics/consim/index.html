@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2022,6 +2016,8 @@
       
         
       
+        
+      
     
     
     
@@ -2064,6 +2060,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2362,17 +2386,6 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;classes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#interpreto.concepts.metrics.ConSim(split_point)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;split_point
       
     </span>
   </a>
@@ -2745,17 +2758,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#interpreto.concepts.metrics.ConSim(split_point)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;split_point
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#interpreto.concepts.metrics.ConSim.select_examples" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2955,22 +2957,6 @@ The names of classes of the dataset.</p>
                   <code>None</code>
             </td>
           </tr>
-          <tr class="doc-section-item">
-            <td>
-<h3 id="interpreto.concepts.metrics.ConSim(split_point)" class="doc doc-heading doc-heading-parameter">                  <code>split_point</code>
-<a href="#interpreto.concepts.metrics.ConSim(split_point)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
-            <td>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>str
-Where to split the model to explain.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
       </tbody>
     </table>
 
@@ -3064,17 +3050,17 @@ You just have to implement the <code>generate</code> method.</p>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># ------------------------</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load a model and wrap it</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">splitter</span> <span class="o">=</span> <span class="n">SplitterForClassification</span><span class="p">(</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>    <span class="s2">&quot;textattack/bert-base-uncased-ag-news&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">... </span>    <span class="n">split_point</span><span class="o">=</span><span class="s2">&quot;bert.encoder.layer.10.output&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>    <span class="s2">"textattack/bert-base-uncased-ag-news"</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">... </span>    <span class="n">split_point</span><span class="o">=</span><span class="s2">"bert.encoder.layer.10.output"</span><span class="p">,</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">... </span>    <span class="n">model_autoclass</span><span class="o">=</span><span class="n">AutoModelForSequenceClassification</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">... </span>    <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">... </span><span class="p">)</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gp">&gt;&gt;&gt;</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># --------------------------------------</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Load a dataset and compute activations</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;fancyzhx/ag_news&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">classes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;World&quot;</span><span class="p">,</span> <span class="s2">&quot;Sports&quot;</span><span class="p">,</span> <span class="s2">&quot;Business&quot;</span><span class="p">,</span> <span class="s2">&quot;Sci/Tech&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">activations</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">splitter</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">])</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s2">"fancyzhx/ag_news"</span><span class="p">)</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">classes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"World"</span><span class="p">,</span> <span class="s2">"Sports"</span><span class="p">,</span> <span class="s2">"Business"</span><span class="p">,</span> <span class="s2">"Sci/Tech"</span><span class="p">]</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">activations</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">splitter</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">"train"</span><span class="p">][</span><span class="s2">"text"</span><span class="p">])</span>
 <a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="gp">&gt;&gt;&gt;</span>
 <a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># -------------------------</span>
 <a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Fit the concept explainer</span>
@@ -3084,7 +3070,7 @@ You just have to implement the <code>generate</code> method.</p>
     <p>The two steps of ConSim:</p>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># ------------------------------------------------------------------</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Step 0: Define the User-LLM and instantiate the ConSim metric</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">user_llm</span> <span class="o">=</span> <span class="n">OpenAILLM</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;YOUR_OPENAI_API_KEY&quot;</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4.1-nano&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">user_llm</span> <span class="o">=</span> <span class="n">OpenAILLM</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_OPENAI_API_KEY"</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4.1-nano"</span><span class="p">)</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">consim</span> <span class="o">=</span> <span class="n">ConSim</span><span class="p">(</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>    <span class="n">splitter</span><span class="p">,</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>    <span class="n">user_llm</span><span class="p">,</span>
@@ -3094,7 +3080,7 @@ You just have to implement the <code>generate</code> method.</p>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># ----------------------------------------------</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Step 1: Select interesting examples for ConSim</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">samples</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">consim</span><span class="o">.</span><span class="n">select_examples</span><span class="p">(</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="gp">... </span>    <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">],</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;label&quot;</span><span class="p">],</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="gp">... </span>    <span class="n">dataset</span><span class="p">[</span><span class="s2">"train"</span><span class="p">][</span><span class="s2">"text"</span><span class="p">],</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">"train"</span><span class="p">][</span><span class="s2">"label"</span><span class="p">],</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="gp">... </span><span class="p">)</span>
 <a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="gp">&gt;&gt;&gt;</span>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># -------------------------------------------------------------</span>
@@ -3112,7 +3098,10 @@ You just have to implement the <code>generate</code> method.</p>
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>interpreto/concepts/metrics/consim.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-261">261</a></span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-258">258</a></span>
+<span class="normal"><a href="#__codelineno-0-259">259</a></span>
+<span class="normal"><a href="#__codelineno-0-260">260</a></span>
+<span class="normal"><a href="#__codelineno-0-261">261</a></span>
 <span class="normal"><a href="#__codelineno-0-262">262</a></span>
 <span class="normal"><a href="#__codelineno-0-263">263</a></span>
 <span class="normal"><a href="#__codelineno-0-264">264</a></span>
@@ -3120,21 +3109,18 @@ You just have to implement the <code>generate</code> method.</p>
 <span class="normal"><a href="#__codelineno-0-266">266</a></span>
 <span class="normal"><a href="#__codelineno-0-267">267</a></span>
 <span class="normal"><a href="#__codelineno-0-268">268</a></span>
-<span class="normal"><a href="#__codelineno-0-269">269</a></span>
-<span class="normal"><a href="#__codelineno-0-270">270</a></span>
-<span class="normal"><a href="#__codelineno-0-271">271</a></span>
-<span class="normal"><a href="#__codelineno-0-272">272</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a>    <span class="n">user_llm</span><span class="p">:</span> <span class="n">LLMInterface</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="n">classes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="p">):</span>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">    Initialize the ConSim metric.</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">splitter</span> <span class="o">=</span> <span class="n">splitter</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">user_llm</span><span class="p">:</span> <span class="n">LLMInterface</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">user_llm</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">classes</span>
+<span class="normal"><a href="#__codelineno-0-269">269</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="n">user_llm</span><span class="p">:</span> <span class="n">LLMInterface</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a>    <span class="n">classes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="p">):</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">    Initialize the ConSim metric.</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">    """</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">splitter</span> <span class="o">=</span> <span class="n">splitter</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">user_llm</span><span class="p">:</span> <span class="n">LLMInterface</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">user_llm</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">classes</span>
 </code></pre></div></td></tr></table></div>
                   </details>
 
@@ -3356,7 +3342,10 @@ The predictions of the model on the interesting samples.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/metrics/consim.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-442">442</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-439">439</a></span>
+<span class="normal"><a href="#__codelineno-0-440">440</a></span>
+<span class="normal"><a href="#__codelineno-0-441">441</a></span>
+<span class="normal"><a href="#__codelineno-0-442">442</a></span>
 <span class="normal"><a href="#__codelineno-0-443">443</a></span>
 <span class="normal"><a href="#__codelineno-0-444">444</a></span>
 <span class="normal"><a href="#__codelineno-0-445">445</a></span>
@@ -3407,64 +3396,61 @@ The predictions of the model on the interesting samples.</p>
 <span class="normal"><a href="#__codelineno-0-490">490</a></span>
 <span class="normal"><a href="#__codelineno-0-491">491</a></span>
 <span class="normal"><a href="#__codelineno-0-492">492</a></span>
-<span class="normal"><a href="#__codelineno-0-493">493</a></span>
-<span class="normal"><a href="#__codelineno-0-494">494</a></span>
-<span class="normal"><a href="#__codelineno-0-495">495</a></span>
-<span class="normal"><a href="#__codelineno-0-496">496</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-442" name="__codelineno-0-442"></a><span class="k">def</span><span class="w"> </span><span class="nf">select_examples</span><span class="p">(</span>
-<a id="__codelineno-0-443" name="__codelineno-0-443"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-444" name="__codelineno-0-444"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-<a id="__codelineno-0-445" name="__codelineno-0-445"></a>    <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
-<a id="__codelineno-0-446" name="__codelineno-0-446"></a>    <span class="n">nb_lp_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-0-447" name="__codelineno-0-447"></a>    <span class="n">nb_ep_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-0-448" name="__codelineno-0-448"></a>    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-<a id="__codelineno-0-449" name="__codelineno-0-449"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
-<a id="__codelineno-0-450" name="__codelineno-0-450"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-451" name="__codelineno-0-451"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
-<a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="sd">    Select examples for the ConSim metric. It first computes the models&#39; predictions on the inputs.</span>
-<a id="__codelineno-0-454" name="__codelineno-0-454"></a><span class="sd">    Then, it selects `nb_lp_samples` + `nb_ep_samples` samples from the inputs.</span>
-<a id="__codelineno-0-455" name="__codelineno-0-455"></a><span class="sd">    The goal is to select uniformly between each class (with respect to the labels).</span>
-<a id="__codelineno-0-456" name="__codelineno-0-456"></a><span class="sd">    There should be as many samples where the initial model prediction are correct as incorrect.</span>
-<a id="__codelineno-0-457" name="__codelineno-0-457"></a><span class="sd">    The samples are then randomly shuffled.</span>
+<span class="normal"><a href="#__codelineno-0-493">493</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-439" name="__codelineno-0-439"></a><span class="k">def</span><span class="w"> </span><span class="nf">select_examples</span><span class="p">(</span>
+<a id="__codelineno-0-440" name="__codelineno-0-440"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-441" name="__codelineno-0-441"></a>    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<a id="__codelineno-0-442" name="__codelineno-0-442"></a>    <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+<a id="__codelineno-0-443" name="__codelineno-0-443"></a>    <span class="n">nb_lp_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-0-444" name="__codelineno-0-444"></a>    <span class="n">nb_ep_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-0-445" name="__codelineno-0-445"></a>    <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-0-446" name="__codelineno-0-446"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+<a id="__codelineno-0-447" name="__codelineno-0-447"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-448" name="__codelineno-0-448"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<a id="__codelineno-0-449" name="__codelineno-0-449"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-450" name="__codelineno-0-450"></a><span class="sd">    Select examples for the ConSim metric. It first computes the models' predictions on the inputs.</span>
+<a id="__codelineno-0-451" name="__codelineno-0-451"></a><span class="sd">    Then, it selects `nb_lp_samples` + `nb_ep_samples` samples from the inputs.</span>
+<a id="__codelineno-0-452" name="__codelineno-0-452"></a><span class="sd">    The goal is to select uniformly between each class (with respect to the labels).</span>
+<a id="__codelineno-0-453" name="__codelineno-0-453"></a><span class="sd">    There should be as many samples where the initial model prediction are correct as incorrect.</span>
+<a id="__codelineno-0-454" name="__codelineno-0-454"></a><span class="sd">    The samples are then randomly shuffled.</span>
+<a id="__codelineno-0-455" name="__codelineno-0-455"></a>
+<a id="__codelineno-0-456" name="__codelineno-0-456"></a><span class="sd">    The first `nb_lp_samples` samples are selected for the learning phase.</span>
+<a id="__codelineno-0-457" name="__codelineno-0-457"></a><span class="sd">    The last `nb_ep_samples` samples are selected for the evaluation phase.</span>
 <a id="__codelineno-0-458" name="__codelineno-0-458"></a>
-<a id="__codelineno-0-459" name="__codelineno-0-459"></a><span class="sd">    The first `nb_lp_samples` samples are selected for the learning phase.</span>
-<a id="__codelineno-0-460" name="__codelineno-0-460"></a><span class="sd">    The last `nb_ep_samples` samples are selected for the evaluation phase.</span>
-<a id="__codelineno-0-461" name="__codelineno-0-461"></a>
-<a id="__codelineno-0-462" name="__codelineno-0-462"></a><span class="sd">    Therefore, there is no guarantee on the repartition inside learning and evaluation phase.</span>
-<a id="__codelineno-0-463" name="__codelineno-0-463"></a>
-<a id="__codelineno-0-464" name="__codelineno-0-464"></a><span class="sd">    Arguments:</span>
-<a id="__codelineno-0-465" name="__codelineno-0-465"></a><span class="sd">        inputs: list[str]</span>
-<a id="__codelineno-0-466" name="__codelineno-0-466"></a><span class="sd">            The inputs to predict.</span>
-<a id="__codelineno-0-467" name="__codelineno-0-467"></a><span class="sd">        labels: torch.Tensor</span>
-<a id="__codelineno-0-468" name="__codelineno-0-468"></a><span class="sd">            The labels of the inputs.</span>
-<a id="__codelineno-0-469" name="__codelineno-0-469"></a><span class="sd">        nb_lp_samples: int</span>
-<a id="__codelineno-0-470" name="__codelineno-0-470"></a><span class="sd">            The number of samples to select for the learning phase.</span>
-<a id="__codelineno-0-471" name="__codelineno-0-471"></a><span class="sd">        nb_ep_samples: int</span>
-<a id="__codelineno-0-472" name="__codelineno-0-472"></a><span class="sd">            The number of samples to select for the evaluation phase.</span>
-<a id="__codelineno-0-473" name="__codelineno-0-473"></a><span class="sd">        seed: int</span>
-<a id="__codelineno-0-474" name="__codelineno-0-474"></a><span class="sd">            The seed to use for the random selection.</span>
-<a id="__codelineno-0-475" name="__codelineno-0-475"></a><span class="sd">        batch_size: int</span>
-<a id="__codelineno-0-476" name="__codelineno-0-476"></a><span class="sd">            The batch size to use for the predictions.</span>
-<a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="sd">        device: torch.device | str | None</span>
-<a id="__codelineno-0-478" name="__codelineno-0-478"></a><span class="sd">            The device to use for the predictions.</span>
-<a id="__codelineno-0-479" name="__codelineno-0-479"></a>
-<a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-481" name="__codelineno-0-481"></a><span class="sd">        interesting_samples: list[str]</span>
-<a id="__codelineno-0-482" name="__codelineno-0-482"></a><span class="sd">            The interesting samples.</span>
-<a id="__codelineno-0-483" name="__codelineno-0-483"></a><span class="sd">        labels: torch.Tensor</span>
-<a id="__codelineno-0-484" name="__codelineno-0-484"></a><span class="sd">            The labels of the interesting samples.</span>
-<a id="__codelineno-0-485" name="__codelineno-0-485"></a><span class="sd">        predictions: torch.Tensor</span>
-<a id="__codelineno-0-486" name="__codelineno-0-486"></a><span class="sd">            The predictions of the model on the interesting samples.</span>
-<a id="__codelineno-0-487" name="__codelineno-0-487"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-488" name="__codelineno-0-488"></a>    <span class="n">predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_predictions</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-<a id="__codelineno-0-489" name="__codelineno-0-489"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_interesting_elements</span><span class="p">(</span>
-<a id="__codelineno-0-490" name="__codelineno-0-490"></a>        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
-<a id="__codelineno-0-491" name="__codelineno-0-491"></a>        <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
-<a id="__codelineno-0-492" name="__codelineno-0-492"></a>        <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span>
-<a id="__codelineno-0-493" name="__codelineno-0-493"></a>        <span class="n">nb_lp_samples</span><span class="o">=</span><span class="n">nb_lp_samples</span><span class="p">,</span>
-<a id="__codelineno-0-494" name="__codelineno-0-494"></a>        <span class="n">nb_ep_samples</span><span class="o">=</span><span class="n">nb_ep_samples</span><span class="p">,</span>
-<a id="__codelineno-0-495" name="__codelineno-0-495"></a>        <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
-<a id="__codelineno-0-496" name="__codelineno-0-496"></a>    <span class="p">)</span>
+<a id="__codelineno-0-459" name="__codelineno-0-459"></a><span class="sd">    Therefore, there is no guarantee on the repartition inside learning and evaluation phase.</span>
+<a id="__codelineno-0-460" name="__codelineno-0-460"></a>
+<a id="__codelineno-0-461" name="__codelineno-0-461"></a><span class="sd">    Arguments:</span>
+<a id="__codelineno-0-462" name="__codelineno-0-462"></a><span class="sd">        inputs: list[str]</span>
+<a id="__codelineno-0-463" name="__codelineno-0-463"></a><span class="sd">            The inputs to predict.</span>
+<a id="__codelineno-0-464" name="__codelineno-0-464"></a><span class="sd">        labels: torch.Tensor</span>
+<a id="__codelineno-0-465" name="__codelineno-0-465"></a><span class="sd">            The labels of the inputs.</span>
+<a id="__codelineno-0-466" name="__codelineno-0-466"></a><span class="sd">        nb_lp_samples: int</span>
+<a id="__codelineno-0-467" name="__codelineno-0-467"></a><span class="sd">            The number of samples to select for the learning phase.</span>
+<a id="__codelineno-0-468" name="__codelineno-0-468"></a><span class="sd">        nb_ep_samples: int</span>
+<a id="__codelineno-0-469" name="__codelineno-0-469"></a><span class="sd">            The number of samples to select for the evaluation phase.</span>
+<a id="__codelineno-0-470" name="__codelineno-0-470"></a><span class="sd">        seed: int</span>
+<a id="__codelineno-0-471" name="__codelineno-0-471"></a><span class="sd">            The seed to use for the random selection.</span>
+<a id="__codelineno-0-472" name="__codelineno-0-472"></a><span class="sd">        batch_size: int</span>
+<a id="__codelineno-0-473" name="__codelineno-0-473"></a><span class="sd">            The batch size to use for the predictions.</span>
+<a id="__codelineno-0-474" name="__codelineno-0-474"></a><span class="sd">        device: torch.device | str | None</span>
+<a id="__codelineno-0-475" name="__codelineno-0-475"></a><span class="sd">            The device to use for the predictions.</span>
+<a id="__codelineno-0-476" name="__codelineno-0-476"></a>
+<a id="__codelineno-0-477" name="__codelineno-0-477"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-478" name="__codelineno-0-478"></a><span class="sd">        interesting_samples: list[str]</span>
+<a id="__codelineno-0-479" name="__codelineno-0-479"></a><span class="sd">            The interesting samples.</span>
+<a id="__codelineno-0-480" name="__codelineno-0-480"></a><span class="sd">        labels: torch.Tensor</span>
+<a id="__codelineno-0-481" name="__codelineno-0-481"></a><span class="sd">            The labels of the interesting samples.</span>
+<a id="__codelineno-0-482" name="__codelineno-0-482"></a><span class="sd">        predictions: torch.Tensor</span>
+<a id="__codelineno-0-483" name="__codelineno-0-483"></a><span class="sd">            The predictions of the model on the interesting samples.</span>
+<a id="__codelineno-0-484" name="__codelineno-0-484"></a><span class="sd">    """</span>
+<a id="__codelineno-0-485" name="__codelineno-0-485"></a>    <span class="n">predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_predictions</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+<a id="__codelineno-0-486" name="__codelineno-0-486"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_interesting_elements</span><span class="p">(</span>
+<a id="__codelineno-0-487" name="__codelineno-0-487"></a>        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+<a id="__codelineno-0-488" name="__codelineno-0-488"></a>        <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+<a id="__codelineno-0-489" name="__codelineno-0-489"></a>        <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span>
+<a id="__codelineno-0-490" name="__codelineno-0-490"></a>        <span class="n">nb_lp_samples</span><span class="o">=</span><span class="n">nb_lp_samples</span><span class="p">,</span>
+<a id="__codelineno-0-491" name="__codelineno-0-491"></a>        <span class="n">nb_ep_samples</span><span class="o">=</span><span class="n">nb_ep_samples</span><span class="p">,</span>
+<a id="__codelineno-0-492" name="__codelineno-0-492"></a>        <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+<a id="__codelineno-0-493" name="__codelineno-0-493"></a>    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3727,9 +3713,45 @@ Possible outputs:</p>
     </table>
 
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the model predictions and the user-llm predictions have different lengths.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="UserWarning">UserWarning</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the user-llm response is empty or the format is not respected; the method returns None.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/metrics/consim.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1147">1147</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1144">1144</a></span>
+<span class="normal"><a href="#__codelineno-0-1145">1145</a></span>
+<span class="normal"><a href="#__codelineno-0-1146">1146</a></span>
+<span class="normal"><a href="#__codelineno-0-1147">1147</a></span>
 <span class="normal"><a href="#__codelineno-0-1148">1148</a></span>
 <span class="normal"><a href="#__codelineno-0-1149">1149</a></span>
 <span class="normal"><a href="#__codelineno-0-1150">1150</a></span>
@@ -3868,156 +3890,149 @@ Possible outputs:</p>
 <span class="normal"><a href="#__codelineno-0-1283">1283</a></span>
 <span class="normal"><a href="#__codelineno-0-1284">1284</a></span>
 <span class="normal"><a href="#__codelineno-0-1285">1285</a></span>
-<span class="normal"><a href="#__codelineno-0-1286">1286</a></span>
-<span class="normal"><a href="#__codelineno-0-1287">1287</a></span>
-<span class="normal"><a href="#__codelineno-0-1288">1288</a></span>
-<span class="normal"><a href="#__codelineno-0-1289">1289</a></span>
-<span class="normal"><a href="#__codelineno-0-1290">1290</a></span>
-<span class="normal"><a href="#__codelineno-0-1291">1291</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1147" name="__codelineno-0-1147"></a><span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
-<a id="__codelineno-0-1148" name="__codelineno-0-1148"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-1149" name="__codelineno-0-1149"></a>    <span class="n">interesting_samples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
-<a id="__codelineno-0-1150" name="__codelineno-0-1150"></a>    <span class="n">predictions</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
-<a id="__codelineno-0-1151" name="__codelineno-0-1151"></a>    <span class="n">concept_explainer</span><span class="p">:</span> <span class="n">ConceptAutoEncoderExplainer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-1152" name="__codelineno-0-1152"></a>    <span class="n">concepts_interpretation</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-1153" name="__codelineno-0-1153"></a>    <span class="n">global_importances</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-1154" name="__codelineno-0-1154"></a>    <span class="n">prompt_type</span><span class="p">:</span> <span class="n">PromptTypes</span> <span class="o">=</span> <span class="n">PromptTypes</span><span class="o">.</span><span class="n">E3_global_and_local_concepts_with_lp</span><span class="p">,</span>
-<a id="__codelineno-0-1155" name="__codelineno-0-1155"></a>    <span class="n">anonymize_classes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-1156" name="__codelineno-0-1156"></a>    <span class="n">importance_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
-<a id="__codelineno-0-1157" name="__codelineno-0-1157"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Role</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
-<a id="__codelineno-0-1158" name="__codelineno-0-1158"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-1159" name="__codelineno-0-1159"></a><span class="sd">    Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.</span>
-<a id="__codelineno-0-1160" name="__codelineno-0-1160"></a>
-<a id="__codelineno-0-1161" name="__codelineno-0-1161"></a><span class="sd">    First local concepts importances are computed via the `concept_explainer`.</span>
-<a id="__codelineno-0-1162" name="__codelineno-0-1162"></a><span class="sd">    Then a prompt is constructed by integrating all the different elements and following the `prompt_type`.</span>
-<a id="__codelineno-0-1163" name="__codelineno-0-1163"></a><span class="sd">    The prompt is sent to the `user_llm` and the model predictions are extracted from the response.</span>
-<a id="__codelineno-0-1164" name="__codelineno-0-1164"></a><span class="sd">    Finally, the score is computed by comparing the model predictions with the `user_llm` predictions.</span>
-<a id="__codelineno-0-1165" name="__codelineno-0-1165"></a>
-<a id="__codelineno-0-1166" name="__codelineno-0-1166"></a><span class="sd">    The prompts have five parts:</span>
-<a id="__codelineno-0-1167" name="__codelineno-0-1167"></a>
-<a id="__codelineno-0-1168" name="__codelineno-0-1168"></a><span class="sd">    - Initial Phase (IP.1) the first part is the task description, which is a list of questions to ask the LLM.</span>
-<a id="__codelineno-0-1169" name="__codelineno-0-1169"></a>
-<a id="__codelineno-0-1170" name="__codelineno-0-1170"></a><span class="sd">    - Initial Phase (IP.2) the second is a global concepts explanation on $f$. Listing the important concepts for each class.</span>
-<a id="__codelineno-0-1171" name="__codelineno-0-1171"></a>
-<a id="__codelineno-0-1172" name="__codelineno-0-1172"></a><span class="sd">    - Learning Phase (LP.1) the third gives examples of samples and predictions from the model $f$.</span>
-<a id="__codelineno-0-1173" name="__codelineno-0-1173"></a>
-<a id="__codelineno-0-1174" name="__codelineno-0-1174"></a><span class="sd">    - Learning Phase (LP.2) the fourth is a local concepts explanation on $f$. Listing the important concepts in each example.</span>
-<a id="__codelineno-0-1175" name="__codelineno-0-1175"></a>
-<a id="__codelineno-0-1176" name="__codelineno-0-1176"></a><span class="sd">    - Evaluation Phase (EP.1) the fifth is a list of samples on which the meta-predictor $\\Psi$ will be asked to predict the model $f$ predictions.</span>
+<span class="normal"><a href="#__codelineno-0-1286">1286</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1144" name="__codelineno-0-1144"></a><span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span>
+<a id="__codelineno-0-1145" name="__codelineno-0-1145"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-1146" name="__codelineno-0-1146"></a>    <span class="n">interesting_samples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+<a id="__codelineno-0-1147" name="__codelineno-0-1147"></a>    <span class="n">predictions</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+<a id="__codelineno-0-1148" name="__codelineno-0-1148"></a>    <span class="n">concept_explainer</span><span class="p">:</span> <span class="n">ConceptAutoEncoderExplainer</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-1149" name="__codelineno-0-1149"></a>    <span class="n">concepts_interpretation</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-1150" name="__codelineno-0-1150"></a>    <span class="n">global_importances</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-1151" name="__codelineno-0-1151"></a>    <span class="n">prompt_type</span><span class="p">:</span> <span class="n">PromptTypes</span> <span class="o">=</span> <span class="n">PromptTypes</span><span class="o">.</span><span class="n">E3_global_and_local_concepts_with_lp</span><span class="p">,</span>
+<a id="__codelineno-0-1152" name="__codelineno-0-1152"></a>    <span class="n">anonymize_classes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-1153" name="__codelineno-0-1153"></a>    <span class="n">importance_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-0-1154" name="__codelineno-0-1154"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Role</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<a id="__codelineno-0-1155" name="__codelineno-0-1155"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-1156" name="__codelineno-0-1156"></a><span class="sd">    Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.</span>
+<a id="__codelineno-0-1157" name="__codelineno-0-1157"></a>
+<a id="__codelineno-0-1158" name="__codelineno-0-1158"></a><span class="sd">    First local concepts importances are computed via the `concept_explainer`.</span>
+<a id="__codelineno-0-1159" name="__codelineno-0-1159"></a><span class="sd">    Then a prompt is constructed by integrating all the different elements and following the `prompt_type`.</span>
+<a id="__codelineno-0-1160" name="__codelineno-0-1160"></a><span class="sd">    The prompt is sent to the `user_llm` and the model predictions are extracted from the response.</span>
+<a id="__codelineno-0-1161" name="__codelineno-0-1161"></a><span class="sd">    Finally, the score is computed by comparing the model predictions with the `user_llm` predictions.</span>
+<a id="__codelineno-0-1162" name="__codelineno-0-1162"></a>
+<a id="__codelineno-0-1163" name="__codelineno-0-1163"></a><span class="sd">    The prompts have five parts:</span>
+<a id="__codelineno-0-1164" name="__codelineno-0-1164"></a>
+<a id="__codelineno-0-1165" name="__codelineno-0-1165"></a><span class="sd">    - Initial Phase (IP.1) the first part is the task description, which is a list of questions to ask the LLM.</span>
+<a id="__codelineno-0-1166" name="__codelineno-0-1166"></a>
+<a id="__codelineno-0-1167" name="__codelineno-0-1167"></a><span class="sd">    - Initial Phase (IP.2) the second is a global concepts explanation on $f$. Listing the important concepts for each class.</span>
+<a id="__codelineno-0-1168" name="__codelineno-0-1168"></a>
+<a id="__codelineno-0-1169" name="__codelineno-0-1169"></a><span class="sd">    - Learning Phase (LP.1) the third gives examples of samples and predictions from the model $f$.</span>
+<a id="__codelineno-0-1170" name="__codelineno-0-1170"></a>
+<a id="__codelineno-0-1171" name="__codelineno-0-1171"></a><span class="sd">    - Learning Phase (LP.2) the fourth is a local concepts explanation on $f$. Listing the important concepts in each example.</span>
+<a id="__codelineno-0-1172" name="__codelineno-0-1172"></a>
+<a id="__codelineno-0-1173" name="__codelineno-0-1173"></a><span class="sd">    - Evaluation Phase (EP.1) the fifth is a list of samples on which the meta-predictor $\\Psi$ will be asked to predict the model $f$ predictions.</span>
+<a id="__codelineno-0-1174" name="__codelineno-0-1174"></a>
+<a id="__codelineno-0-1175" name="__codelineno-0-1175"></a><span class="sd">    The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the</span>
+<a id="__codelineno-0-1176" name="__codelineno-0-1176"></a><span class="sd">    model $f$ predictions and computes the accuracy of the explanations.</span>
 <a id="__codelineno-0-1177" name="__codelineno-0-1177"></a>
-<a id="__codelineno-0-1178" name="__codelineno-0-1178"></a><span class="sd">    The answer of the LLM will be a list of predictions for each sample. ConSim compares these predictions to the</span>
-<a id="__codelineno-0-1179" name="__codelineno-0-1179"></a><span class="sd">    model $f$ predictions and computes the accuracy of the explanations.</span>
-<a id="__codelineno-0-1180" name="__codelineno-0-1180"></a>
-<a id="__codelineno-0-1181" name="__codelineno-0-1181"></a><span class="sd">    Arguments:</span>
-<a id="__codelineno-0-1182" name="__codelineno-0-1182"></a><span class="sd">        interesting_samples: list[str]</span>
-<a id="__codelineno-0-1183" name="__codelineno-0-1183"></a><span class="sd">            The interesting samples.</span>
+<a id="__codelineno-0-1178" name="__codelineno-0-1178"></a><span class="sd">    Arguments:</span>
+<a id="__codelineno-0-1179" name="__codelineno-0-1179"></a><span class="sd">        interesting_samples: list[str]</span>
+<a id="__codelineno-0-1180" name="__codelineno-0-1180"></a><span class="sd">            The interesting samples.</span>
+<a id="__codelineno-0-1181" name="__codelineno-0-1181"></a>
+<a id="__codelineno-0-1182" name="__codelineno-0-1182"></a><span class="sd">        predictions: torch.Tensor</span>
+<a id="__codelineno-0-1183" name="__codelineno-0-1183"></a><span class="sd">            The predictions of the model on the interesting samples.</span>
 <a id="__codelineno-0-1184" name="__codelineno-0-1184"></a>
-<a id="__codelineno-0-1185" name="__codelineno-0-1185"></a><span class="sd">        predictions: torch.Tensor</span>
-<a id="__codelineno-0-1186" name="__codelineno-0-1186"></a><span class="sd">            The predictions of the model on the interesting samples.</span>
+<a id="__codelineno-0-1185" name="__codelineno-0-1185"></a><span class="sd">        concept_explainer: ConceptAutoEncoderExplainer | None</span>
+<a id="__codelineno-0-1186" name="__codelineno-0-1186"></a><span class="sd">            The concept explainer. Can be None for the baseline.</span>
 <a id="__codelineno-0-1187" name="__codelineno-0-1187"></a>
-<a id="__codelineno-0-1188" name="__codelineno-0-1188"></a><span class="sd">        concept_explainer: ConceptAutoEncoderExplainer | None</span>
-<a id="__codelineno-0-1189" name="__codelineno-0-1189"></a><span class="sd">            The concept explainer. Can be None for the baseline.</span>
-<a id="__codelineno-0-1190" name="__codelineno-0-1190"></a>
-<a id="__codelineno-0-1191" name="__codelineno-0-1191"></a><span class="sd">        concepts_interpretation: dict[int, str] | None</span>
-<a id="__codelineno-0-1192" name="__codelineno-0-1192"></a><span class="sd">            The words that activate the concepts the most and the least.</span>
-<a id="__codelineno-0-1193" name="__codelineno-0-1193"></a><span class="sd">            A dictionary with the concepts as keys and another dictionary as values.</span>
-<a id="__codelineno-0-1194" name="__codelineno-0-1194"></a><span class="sd">            The inner dictionary has the words as keys and the activations as values.</span>
-<a id="__codelineno-0-1195" name="__codelineno-0-1195"></a><span class="sd">            Can be None for the baseline.</span>
-<a id="__codelineno-0-1196" name="__codelineno-0-1196"></a>
-<a id="__codelineno-0-1197" name="__codelineno-0-1197"></a><span class="sd">        global_importances: dict[str, dict[int, float]] | None</span>
-<a id="__codelineno-0-1198" name="__codelineno-0-1198"></a><span class="sd">            The importance of the concepts for each class.</span>
-<a id="__codelineno-0-1199" name="__codelineno-0-1199"></a><span class="sd">            A dictionary with the classes as keys and another dictionary as values.</span>
-<a id="__codelineno-0-1200" name="__codelineno-0-1200"></a><span class="sd">            The inner dictionary has the concepts as keys and the importance as values.</span>
-<a id="__codelineno-0-1201" name="__codelineno-0-1201"></a><span class="sd">            Can be None for the baseline.</span>
+<a id="__codelineno-0-1188" name="__codelineno-0-1188"></a><span class="sd">        concepts_interpretation: dict[int, str] | None</span>
+<a id="__codelineno-0-1189" name="__codelineno-0-1189"></a><span class="sd">            The words that activate the concepts the most and the least.</span>
+<a id="__codelineno-0-1190" name="__codelineno-0-1190"></a><span class="sd">            A dictionary with the concepts as keys and another dictionary as values.</span>
+<a id="__codelineno-0-1191" name="__codelineno-0-1191"></a><span class="sd">            The inner dictionary has the words as keys and the activations as values.</span>
+<a id="__codelineno-0-1192" name="__codelineno-0-1192"></a><span class="sd">            Can be None for the baseline.</span>
+<a id="__codelineno-0-1193" name="__codelineno-0-1193"></a>
+<a id="__codelineno-0-1194" name="__codelineno-0-1194"></a><span class="sd">        global_importances: dict[str, dict[int, float]] | None</span>
+<a id="__codelineno-0-1195" name="__codelineno-0-1195"></a><span class="sd">            The importance of the concepts for each class.</span>
+<a id="__codelineno-0-1196" name="__codelineno-0-1196"></a><span class="sd">            A dictionary with the classes as keys and another dictionary as values.</span>
+<a id="__codelineno-0-1197" name="__codelineno-0-1197"></a><span class="sd">            The inner dictionary has the concepts as keys and the importance as values.</span>
+<a id="__codelineno-0-1198" name="__codelineno-0-1198"></a><span class="sd">            Can be None for the baseline.</span>
+<a id="__codelineno-0-1199" name="__codelineno-0-1199"></a>
+<a id="__codelineno-0-1200" name="__codelineno-0-1200"></a><span class="sd">        prompt_type: PromptTypes</span>
+<a id="__codelineno-0-1201" name="__codelineno-0-1201"></a><span class="sd">            The type of prompt to use. Possible values are:</span>
 <a id="__codelineno-0-1202" name="__codelineno-0-1202"></a>
-<a id="__codelineno-0-1203" name="__codelineno-0-1203"></a><span class="sd">        prompt_type: PromptTypes</span>
-<a id="__codelineno-0-1204" name="__codelineno-0-1204"></a><span class="sd">            The type of prompt to use. Possible values are:</span>
-<a id="__codelineno-0-1205" name="__codelineno-0-1205"></a>
-<a id="__codelineno-0-1206" name="__codelineno-0-1206"></a><span class="sd">            - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.</span>
-<a id="__codelineno-0-1207" name="__codelineno-0-1207"></a>
-<a id="__codelineno-0-1208" name="__codelineno-0-1208"></a><span class="sd">            - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.</span>
-<a id="__codelineno-0-1209" name="__codelineno-0-1209"></a>
-<a id="__codelineno-0-1210" name="__codelineno-0-1210"></a><span class="sd">            - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.</span>
-<a id="__codelineno-0-1211" name="__codelineno-0-1211"></a>
-<a id="__codelineno-0-1212" name="__codelineno-0-1212"></a><span class="sd">            - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.</span>
-<a id="__codelineno-0-1213" name="__codelineno-0-1213"></a>
-<a id="__codelineno-0-1214" name="__codelineno-0-1214"></a><span class="sd">            - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.</span>
-<a id="__codelineno-0-1215" name="__codelineno-0-1215"></a>
-<a id="__codelineno-0-1216" name="__codelineno-0-1216"></a><span class="sd">            - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.</span>
-<a id="__codelineno-0-1217" name="__codelineno-0-1217"></a>
-<a id="__codelineno-0-1218" name="__codelineno-0-1218"></a><span class="sd">        anonymize_classes: bool</span>
-<a id="__codelineno-0-1219" name="__codelineno-0-1219"></a><span class="sd">            Whether to anonymize the classes. Class names will be replaced by &quot;Class_i&quot; where i is the index of the class.</span>
-<a id="__codelineno-0-1220" name="__codelineno-0-1220"></a><span class="sd">            It prevents the user-llm to solve the task by simply guessing the class.</span>
-<a id="__codelineno-0-1221" name="__codelineno-0-1221"></a>
-<a id="__codelineno-0-1222" name="__codelineno-0-1222"></a><span class="sd">        importance_threshold: float</span>
-<a id="__codelineno-0-1223" name="__codelineno-0-1223"></a><span class="sd">            The threshold to select the most important concepts for each class.</span>
-<a id="__codelineno-0-1224" name="__codelineno-0-1224"></a><span class="sd">            The threshold correspond to the cumulative importance of the concepts to keep.</span>
-<a id="__codelineno-0-1225" name="__codelineno-0-1225"></a>
-<a id="__codelineno-0-1226" name="__codelineno-0-1226"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-1227" name="__codelineno-0-1227"></a><span class="sd">        score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]</span>
-<a id="__codelineno-0-1228" name="__codelineno-0-1228"></a><span class="sd">            Possible outputs:</span>
-<a id="__codelineno-0-1229" name="__codelineno-0-1229"></a>
-<a id="__codelineno-0-1230" name="__codelineno-0-1230"></a><span class="sd">            - score (float): The score of the ConSim metric. (The nominal behavior)</span>
-<a id="__codelineno-0-1231" name="__codelineno-0-1231"></a><span class="sd">            - None: If the model predictions are empty or the user-llm predictions are empty.</span>
-<a id="__codelineno-0-1232" name="__codelineno-0-1232"></a><span class="sd">                It was chosen to return None,</span>
-<a id="__codelineno-0-1233" name="__codelineno-0-1233"></a><span class="sd">                because ConSim should be called a lot of times for statistically significant results.</span>
-<a id="__codelineno-0-1234" name="__codelineno-0-1234"></a><span class="sd">                Therefore, having a None score once in a while is better than the script crashing.</span>
-<a id="__codelineno-0-1235" name="__codelineno-0-1235"></a><span class="sd">            - prompts and model predictions (tuple[list[tuple[Role, str]], list[str]]):</span>
-<a id="__codelineno-0-1236" name="__codelineno-0-1236"></a><span class="sd">                If no user_llm is provided, returns the prompts and the model predictions.</span>
-<a id="__codelineno-0-1237" name="__codelineno-0-1237"></a><span class="sd">                The prompt is the first element of the tuple (list[tuple[Role, str]]).</span>
-<a id="__codelineno-0-1238" name="__codelineno-0-1238"></a><span class="sd">                The predictions are the second element of the tuple (list[str]).</span>
-<a id="__codelineno-0-1239" name="__codelineno-0-1239"></a><span class="sd">                The user will have to call the ConSim prompts manually.</span>
-<a id="__codelineno-0-1240" name="__codelineno-0-1240"></a><span class="sd">                The response of the LLM on the prompts should be compared to the model predictions.</span>
-<a id="__codelineno-0-1241" name="__codelineno-0-1241"></a>
-<a id="__codelineno-0-1242" name="__codelineno-0-1242"></a><span class="sd">    Raises:</span>
-<a id="__codelineno-0-1243" name="__codelineno-0-1243"></a><span class="sd">        ValueError</span>
-<a id="__codelineno-0-1244" name="__codelineno-0-1244"></a><span class="sd">            If the model predictions and the user-llm predictions have different lengths.</span>
-<a id="__codelineno-0-1245" name="__codelineno-0-1245"></a><span class="sd">        Warnings</span>
-<a id="__codelineno-0-1246" name="__codelineno-0-1246"></a><span class="sd">            If the user-llm response is empty or the format is not respected.</span>
-<a id="__codelineno-0-1247" name="__codelineno-0-1247"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-1248" name="__codelineno-0-1248"></a>    <span class="n">local_importances</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="__codelineno-0-1249" name="__codelineno-0-1249"></a>    <span class="k">if</span> <span class="n">concept_explainer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-1250" name="__codelineno-0-1250"></a>        <span class="c1"># compute concepts importance  # TODO: when first layers can be skipped pass the concept activations</span>
-<a id="__codelineno-0-1251" name="__codelineno-0-1251"></a>        <span class="c1"># For now we force gradient-input</span>
-<a id="__codelineno-0-1252" name="__codelineno-0-1252"></a>        <span class="c1"># TODO: precise shapes with jaxtyping</span>
-<a id="__codelineno-0-1253" name="__codelineno-0-1253"></a>        <span class="k">if</span> <span class="n">prompt_type</span> <span class="ow">in</span> <span class="p">[</span>
-<a id="__codelineno-0-1254" name="__codelineno-0-1254"></a>            <span class="n">PromptTypes</span><span class="o">.</span><span class="n">E3_global_and_local_concepts_with_lp</span><span class="p">,</span>
-<a id="__codelineno-0-1255" name="__codelineno-0-1255"></a>            <span class="n">PromptTypes</span><span class="o">.</span><span class="n">U1_upper_bound_concepts_at_ep</span><span class="p">,</span>
-<a id="__codelineno-0-1256" name="__codelineno-0-1256"></a>        <span class="p">]:</span>
-<a id="__codelineno-0-1257" name="__codelineno-0-1257"></a>            <span class="k">if</span> <span class="n">prompt_type</span> <span class="ow">is</span> <span class="n">PromptTypes</span><span class="o">.</span><span class="n">E3_global_and_local_concepts_with_lp</span><span class="p">:</span>
-<a id="__codelineno-0-1258" name="__codelineno-0-1258"></a>                <span class="n">samples_to_explain</span> <span class="o">=</span> <span class="n">interesting_samples</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">interesting_samples</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
-<a id="__codelineno-0-1259" name="__codelineno-0-1259"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1260" name="__codelineno-0-1260"></a>                <span class="n">samples_to_explain</span> <span class="o">=</span> <span class="n">interesting_samples</span>
-<a id="__codelineno-0-1261" name="__codelineno-0-1261"></a>            <span class="n">local_importances_list</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span>
-<a id="__codelineno-0-1262" name="__codelineno-0-1262"></a>                <span class="n">inputs</span><span class="o">=</span><span class="n">samples_to_explain</span><span class="p">,</span>
-<a id="__codelineno-0-1263" name="__codelineno-0-1263"></a>                <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-1264" name="__codelineno-0-1264"></a>                <span class="n">tqdm_bar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-1265" name="__codelineno-0-1265"></a>            <span class="p">)</span>
-<a id="__codelineno-0-1266" name="__codelineno-0-1266"></a>            <span class="n">local_importances</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">local_importances_list</span><span class="p">)</span>
-<a id="__codelineno-0-1267" name="__codelineno-0-1267"></a>
-<a id="__codelineno-0-1268" name="__codelineno-0-1268"></a>    <span class="c1"># generate the prompt</span>
-<a id="__codelineno-0-1269" name="__codelineno-0-1269"></a>    <span class="n">prompts</span><span class="p">,</span> <span class="n">literal_model_predictions</span> <span class="o">=</span> <span class="n">ConSim</span><span class="o">.</span><span class="n">_generate_prompt</span><span class="p">(</span>
-<a id="__codelineno-0-1270" name="__codelineno-0-1270"></a>        <span class="n">sentences</span><span class="o">=</span><span class="n">interesting_samples</span><span class="p">,</span>
-<a id="__codelineno-0-1271" name="__codelineno-0-1271"></a>        <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span>
-<a id="__codelineno-0-1272" name="__codelineno-0-1272"></a>        <span class="n">classes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">,</span>
-<a id="__codelineno-0-1273" name="__codelineno-0-1273"></a>        <span class="n">concepts_interpretation</span><span class="o">=</span><span class="n">concepts_interpretation</span><span class="p">,</span>
-<a id="__codelineno-0-1274" name="__codelineno-0-1274"></a>        <span class="n">global_importances</span><span class="o">=</span><span class="n">global_importances</span><span class="p">,</span>
-<a id="__codelineno-0-1275" name="__codelineno-0-1275"></a>        <span class="n">local_importances</span><span class="o">=</span><span class="n">local_importances</span><span class="p">,</span>
-<a id="__codelineno-0-1276" name="__codelineno-0-1276"></a>        <span class="n">prompt_type</span><span class="o">=</span><span class="n">prompt_type</span><span class="p">,</span>
-<a id="__codelineno-0-1277" name="__codelineno-0-1277"></a>        <span class="n">anonymize_classes</span><span class="o">=</span><span class="n">anonymize_classes</span><span class="p">,</span>
-<a id="__codelineno-0-1278" name="__codelineno-0-1278"></a>        <span class="n">importance_threshold</span><span class="o">=</span><span class="n">importance_threshold</span><span class="p">,</span>
-<a id="__codelineno-0-1279" name="__codelineno-0-1279"></a>    <span class="p">)</span>
-<a id="__codelineno-0-1280" name="__codelineno-0-1280"></a>
-<a id="__codelineno-0-1281" name="__codelineno-0-1281"></a>    <span class="c1"># if no user_llm is provided, we return the prompts and the model predictions</span>
-<a id="__codelineno-0-1282" name="__codelineno-0-1282"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_llm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-1283" name="__codelineno-0-1283"></a>        <span class="k">return</span> <span class="n">prompts</span><span class="p">,</span> <span class="n">literal_model_predictions</span>
-<a id="__codelineno-0-1284" name="__codelineno-0-1284"></a>
-<a id="__codelineno-0-1285" name="__codelineno-0-1285"></a>    <span class="n">user_llm_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_llm</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
-<a id="__codelineno-0-1286" name="__codelineno-0-1286"></a>
-<a id="__codelineno-0-1287" name="__codelineno-0-1287"></a>    <span class="c1"># raise warnings if the response is empty or the format is not respected</span>
-<a id="__codelineno-0-1288" name="__codelineno-0-1288"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_score</span><span class="p">(</span>
-<a id="__codelineno-0-1289" name="__codelineno-0-1289"></a>        <span class="n">user_llm_response</span><span class="o">=</span><span class="n">user_llm_response</span><span class="p">,</span>
-<a id="__codelineno-0-1290" name="__codelineno-0-1290"></a>        <span class="n">literal_model_predictions</span><span class="o">=</span><span class="n">literal_model_predictions</span><span class="p">,</span>
-<a id="__codelineno-0-1291" name="__codelineno-0-1291"></a>    <span class="p">)</span>
+<a id="__codelineno-0-1203" name="__codelineno-0-1203"></a><span class="sd">            - `PromptTypes.L1_baseline_without_lp`: baseline without learning phase.</span>
+<a id="__codelineno-0-1204" name="__codelineno-0-1204"></a>
+<a id="__codelineno-0-1205" name="__codelineno-0-1205"></a><span class="sd">            - `PromptTypes.E1_global_concepts_without_lp`: global concepts without learning phase.</span>
+<a id="__codelineno-0-1206" name="__codelineno-0-1206"></a>
+<a id="__codelineno-0-1207" name="__codelineno-0-1207"></a><span class="sd">            - `PromptTypes.L2_baseline_with_lp`: baseline with learning phase.</span>
+<a id="__codelineno-0-1208" name="__codelineno-0-1208"></a>
+<a id="__codelineno-0-1209" name="__codelineno-0-1209"></a><span class="sd">            - `PromptTypes.E2_global_concepts_with_lp`: global concepts with learning phase.</span>
+<a id="__codelineno-0-1210" name="__codelineno-0-1210"></a>
+<a id="__codelineno-0-1211" name="__codelineno-0-1211"></a><span class="sd">            - `PromptTypes.E3_global_and_local_concepts_with_lp`: global and local concepts with learning phase.</span>
+<a id="__codelineno-0-1212" name="__codelineno-0-1212"></a>
+<a id="__codelineno-0-1213" name="__codelineno-0-1213"></a><span class="sd">            - `PromptTypes.U1_upper_bound_concepts_at_ep`: upper bound - concepts at evaluation phase.</span>
+<a id="__codelineno-0-1214" name="__codelineno-0-1214"></a>
+<a id="__codelineno-0-1215" name="__codelineno-0-1215"></a><span class="sd">        anonymize_classes: bool</span>
+<a id="__codelineno-0-1216" name="__codelineno-0-1216"></a><span class="sd">            Whether to anonymize the classes. Class names will be replaced by "Class_i" where i is the index of the class.</span>
+<a id="__codelineno-0-1217" name="__codelineno-0-1217"></a><span class="sd">            It prevents the user-llm to solve the task by simply guessing the class.</span>
+<a id="__codelineno-0-1218" name="__codelineno-0-1218"></a>
+<a id="__codelineno-0-1219" name="__codelineno-0-1219"></a><span class="sd">        importance_threshold: float</span>
+<a id="__codelineno-0-1220" name="__codelineno-0-1220"></a><span class="sd">            The threshold to select the most important concepts for each class.</span>
+<a id="__codelineno-0-1221" name="__codelineno-0-1221"></a><span class="sd">            The threshold correspond to the cumulative importance of the concepts to keep.</span>
+<a id="__codelineno-0-1222" name="__codelineno-0-1222"></a>
+<a id="__codelineno-0-1223" name="__codelineno-0-1223"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-1224" name="__codelineno-0-1224"></a><span class="sd">        score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]</span>
+<a id="__codelineno-0-1225" name="__codelineno-0-1225"></a><span class="sd">            Possible outputs:</span>
+<a id="__codelineno-0-1226" name="__codelineno-0-1226"></a>
+<a id="__codelineno-0-1227" name="__codelineno-0-1227"></a><span class="sd">            - score (float): The score of the ConSim metric. (The nominal behavior)</span>
+<a id="__codelineno-0-1228" name="__codelineno-0-1228"></a><span class="sd">            - None: If the model predictions are empty or the user-llm predictions are empty.</span>
+<a id="__codelineno-0-1229" name="__codelineno-0-1229"></a><span class="sd">                It was chosen to return None,</span>
+<a id="__codelineno-0-1230" name="__codelineno-0-1230"></a><span class="sd">                because ConSim should be called a lot of times for statistically significant results.</span>
+<a id="__codelineno-0-1231" name="__codelineno-0-1231"></a><span class="sd">                Therefore, having a None score once in a while is better than the script crashing.</span>
+<a id="__codelineno-0-1232" name="__codelineno-0-1232"></a><span class="sd">            - prompts and model predictions (tuple[list[tuple[Role, str]], list[str]]):</span>
+<a id="__codelineno-0-1233" name="__codelineno-0-1233"></a><span class="sd">                If no user_llm is provided, returns the prompts and the model predictions.</span>
+<a id="__codelineno-0-1234" name="__codelineno-0-1234"></a><span class="sd">                The prompt is the first element of the tuple (list[tuple[Role, str]]).</span>
+<a id="__codelineno-0-1235" name="__codelineno-0-1235"></a><span class="sd">                The predictions are the second element of the tuple (list[str]).</span>
+<a id="__codelineno-0-1236" name="__codelineno-0-1236"></a><span class="sd">                The user will have to call the ConSim prompts manually.</span>
+<a id="__codelineno-0-1237" name="__codelineno-0-1237"></a><span class="sd">                The response of the LLM on the prompts should be compared to the model predictions.</span>
+<a id="__codelineno-0-1238" name="__codelineno-0-1238"></a>
+<a id="__codelineno-0-1239" name="__codelineno-0-1239"></a><span class="sd">    Raises:</span>
+<a id="__codelineno-0-1240" name="__codelineno-0-1240"></a><span class="sd">        ValueError: If the model predictions and the user-llm predictions have different lengths.</span>
+<a id="__codelineno-0-1241" name="__codelineno-0-1241"></a><span class="sd">        UserWarning: If the user-llm response is empty or the format is not respected; the method returns None.</span>
+<a id="__codelineno-0-1242" name="__codelineno-0-1242"></a><span class="sd">    """</span>
+<a id="__codelineno-0-1243" name="__codelineno-0-1243"></a>    <span class="n">local_importances</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-0-1244" name="__codelineno-0-1244"></a>    <span class="k">if</span> <span class="n">concept_explainer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-1245" name="__codelineno-0-1245"></a>        <span class="c1"># compute concepts importance  # TODO: when first layers can be skipped pass the concept activations</span>
+<a id="__codelineno-0-1246" name="__codelineno-0-1246"></a>        <span class="c1"># For now we force gradient-input</span>
+<a id="__codelineno-0-1247" name="__codelineno-0-1247"></a>        <span class="c1"># TODO: precise shapes with jaxtyping</span>
+<a id="__codelineno-0-1248" name="__codelineno-0-1248"></a>        <span class="k">if</span> <span class="n">prompt_type</span> <span class="ow">in</span> <span class="p">[</span>
+<a id="__codelineno-0-1249" name="__codelineno-0-1249"></a>            <span class="n">PromptTypes</span><span class="o">.</span><span class="n">E3_global_and_local_concepts_with_lp</span><span class="p">,</span>
+<a id="__codelineno-0-1250" name="__codelineno-0-1250"></a>            <span class="n">PromptTypes</span><span class="o">.</span><span class="n">U1_upper_bound_concepts_at_ep</span><span class="p">,</span>
+<a id="__codelineno-0-1251" name="__codelineno-0-1251"></a>        <span class="p">]:</span>
+<a id="__codelineno-0-1252" name="__codelineno-0-1252"></a>            <span class="k">if</span> <span class="n">prompt_type</span> <span class="ow">is</span> <span class="n">PromptTypes</span><span class="o">.</span><span class="n">E3_global_and_local_concepts_with_lp</span><span class="p">:</span>
+<a id="__codelineno-0-1253" name="__codelineno-0-1253"></a>                <span class="n">samples_to_explain</span> <span class="o">=</span> <span class="n">interesting_samples</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="n">interesting_samples</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">]</span>
+<a id="__codelineno-0-1254" name="__codelineno-0-1254"></a>            <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1255" name="__codelineno-0-1255"></a>                <span class="n">samples_to_explain</span> <span class="o">=</span> <span class="n">interesting_samples</span>
+<a id="__codelineno-0-1256" name="__codelineno-0-1256"></a>            <span class="n">local_importances_list</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span>
+<a id="__codelineno-0-1257" name="__codelineno-0-1257"></a>                <span class="n">inputs</span><span class="o">=</span><span class="n">samples_to_explain</span><span class="p">,</span>
+<a id="__codelineno-0-1258" name="__codelineno-0-1258"></a>                <span class="n">concepts_x_gradients</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-1259" name="__codelineno-0-1259"></a>                <span class="n">tqdm_bar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-1260" name="__codelineno-0-1260"></a>            <span class="p">)</span>
+<a id="__codelineno-0-1261" name="__codelineno-0-1261"></a>            <span class="n">local_importances</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">local_importances_list</span><span class="p">)</span>
+<a id="__codelineno-0-1262" name="__codelineno-0-1262"></a>
+<a id="__codelineno-0-1263" name="__codelineno-0-1263"></a>    <span class="c1"># generate the prompt</span>
+<a id="__codelineno-0-1264" name="__codelineno-0-1264"></a>    <span class="n">prompts</span><span class="p">,</span> <span class="n">literal_model_predictions</span> <span class="o">=</span> <span class="n">ConSim</span><span class="o">.</span><span class="n">_generate_prompt</span><span class="p">(</span>
+<a id="__codelineno-0-1265" name="__codelineno-0-1265"></a>        <span class="n">sentences</span><span class="o">=</span><span class="n">interesting_samples</span><span class="p">,</span>
+<a id="__codelineno-0-1266" name="__codelineno-0-1266"></a>        <span class="n">predictions</span><span class="o">=</span><span class="n">predictions</span><span class="p">,</span>
+<a id="__codelineno-0-1267" name="__codelineno-0-1267"></a>        <span class="n">classes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">,</span>
+<a id="__codelineno-0-1268" name="__codelineno-0-1268"></a>        <span class="n">concepts_interpretation</span><span class="o">=</span><span class="n">concepts_interpretation</span><span class="p">,</span>
+<a id="__codelineno-0-1269" name="__codelineno-0-1269"></a>        <span class="n">global_importances</span><span class="o">=</span><span class="n">global_importances</span><span class="p">,</span>
+<a id="__codelineno-0-1270" name="__codelineno-0-1270"></a>        <span class="n">local_importances</span><span class="o">=</span><span class="n">local_importances</span><span class="p">,</span>
+<a id="__codelineno-0-1271" name="__codelineno-0-1271"></a>        <span class="n">prompt_type</span><span class="o">=</span><span class="n">prompt_type</span><span class="p">,</span>
+<a id="__codelineno-0-1272" name="__codelineno-0-1272"></a>        <span class="n">anonymize_classes</span><span class="o">=</span><span class="n">anonymize_classes</span><span class="p">,</span>
+<a id="__codelineno-0-1273" name="__codelineno-0-1273"></a>        <span class="n">importance_threshold</span><span class="o">=</span><span class="n">importance_threshold</span><span class="p">,</span>
+<a id="__codelineno-0-1274" name="__codelineno-0-1274"></a>    <span class="p">)</span>
+<a id="__codelineno-0-1275" name="__codelineno-0-1275"></a>
+<a id="__codelineno-0-1276" name="__codelineno-0-1276"></a>    <span class="c1"># if no user_llm is provided, we return the prompts and the model predictions</span>
+<a id="__codelineno-0-1277" name="__codelineno-0-1277"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_llm</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-1278" name="__codelineno-0-1278"></a>        <span class="k">return</span> <span class="n">prompts</span><span class="p">,</span> <span class="n">literal_model_predictions</span>
+<a id="__codelineno-0-1279" name="__codelineno-0-1279"></a>
+<a id="__codelineno-0-1280" name="__codelineno-0-1280"></a>    <span class="n">user_llm_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_llm</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">prompts</span><span class="p">)</span>
+<a id="__codelineno-0-1281" name="__codelineno-0-1281"></a>
+<a id="__codelineno-0-1282" name="__codelineno-0-1282"></a>    <span class="c1"># raise warnings if the response is empty or the format is not respected</span>
+<a id="__codelineno-0-1283" name="__codelineno-0-1283"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_score</span><span class="p">(</span>
+<a id="__codelineno-0-1284" name="__codelineno-0-1284"></a>        <span class="n">user_llm_response</span><span class="o">=</span><span class="n">user_llm_response</span><span class="p">,</span>
+<a id="__codelineno-0-1285" name="__codelineno-0-1285"></a>        <span class="n">literal_model_predictions</span><span class="o">=</span><span class="n">literal_model_predictions</span><span class="p">,</span>
+<a id="__codelineno-0-1286" name="__codelineno-0-1286"></a>    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4304,7 +4319,7 @@ But it gives an upper bound to the ConSim scores.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../assets/js/custom.js"></script>
       

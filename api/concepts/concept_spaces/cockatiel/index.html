@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2200,6 +2194,8 @@
       
         
       
+        
+      
     
     
     
@@ -2242,6 +2238,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2898,7 +2922,7 @@
 
 
 <a href="#interpreto.concepts.Cockatiel" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">Cockatiel</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="splitter (interpreto.concepts.Cockatiel(splitter))" href="#interpreto.concepts.Cockatiel(splitter)">splitter</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="nb_concepts (interpreto.concepts.Cockatiel(nb_concepts))" href="#interpreto.concepts.Cockatiel(nb_concepts)">nb_concepts</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="device (interpreto.concepts.Cockatiel(device))" href="#interpreto.concepts.Cockatiel(device)">device</a></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="force_relu (interpreto.concepts.Cockatiel(force_relu))" href="#interpreto.concepts.Cockatiel(force_relu)">force_relu</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n"><a class="autorefs autorefs-internal" title="**kwargs (interpreto.concepts.Cockatiel(**kwargs))" href="#interpreto.concepts.Cockatiel(**kwargs)">kwargs</a></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">Cockatiel</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="splitter (interpreto.concepts.Cockatiel(splitter))" href="#interpreto.concepts.Cockatiel(splitter)">splitter</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="nb_concepts (interpreto.concepts.Cockatiel(nb_concepts))" href="#interpreto.concepts.Cockatiel(nb_concepts)">nb_concepts</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="device (interpreto.concepts.Cockatiel(device))" href="#interpreto.concepts.Cockatiel(device)">device</a></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="force_relu (interpreto.concepts.Cockatiel(force_relu))" href="#interpreto.concepts.Cockatiel(force_relu)">force_relu</a></span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n"><a class="autorefs autorefs-internal" title="**kwargs (interpreto.concepts.Cockatiel(**kwargs))" href="#interpreto.concepts.Cockatiel(**kwargs)">kwargs</a></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -3151,11 +3175,11 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 <a id="__codelineno-0-551" name="__codelineno-0-551"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
 <a id="__codelineno-0-552" name="__codelineno-0-552"></a>    <span class="o">*</span><span class="p">,</span>
 <a id="__codelineno-0-553" name="__codelineno-0-553"></a>    <span class="n">nb_concepts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-<a id="__codelineno-0-554" name="__codelineno-0-554"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-554" name="__codelineno-0-554"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
 <a id="__codelineno-0-555" name="__codelineno-0-555"></a>    <span class="n">force_relu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-556" name="__codelineno-0-556"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <a id="__codelineno-0-557" name="__codelineno-0-557"></a><span class="p">):</span>
-<a id="__codelineno-0-558" name="__codelineno-0-558"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-558" name="__codelineno-0-558"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-559" name="__codelineno-0-559"></a><span class="sd">    Initialize the concept bottleneck explainer based on the Overcomplete BaseOptimDictionaryLearning framework.</span>
 <a id="__codelineno-0-560" name="__codelineno-0-560"></a>
 <a id="__codelineno-0-561" name="__codelineno-0-561"></a><span class="sd">    Args:</span>
@@ -3166,7 +3190,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 <a id="__codelineno-0-566" name="__codelineno-0-566"></a><span class="sd">        force_relu (bool): Whether to force the activations to be positive.</span>
 <a id="__codelineno-0-567" name="__codelineno-0-567"></a><span class="sd">        **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.</span>
 <a id="__codelineno-0-568" name="__codelineno-0-568"></a><span class="sd">            See the Overcomplete documentation of the provided `concept_model_class` for more details.</span>
-<a id="__codelineno-0-569" name="__codelineno-0-569"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-569" name="__codelineno-0-569"></a><span class="sd">    """</span>
 <a id="__codelineno-0-570" name="__codelineno-0-570"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-571" name="__codelineno-0-571"></a>        <span class="n">splitter</span><span class="p">,</span>
 <a id="__codelineno-0-572" name="__codelineno-0-572"></a>        <span class="n">nb_concepts</span><span class="o">=</span><span class="n">nb_concepts</span><span class="p">,</span>
@@ -3273,20 +3297,20 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-592">592</a></span>
 <span class="normal"><a href="#__codelineno-0-593">593</a></span>
 <span class="normal"><a href="#__codelineno-0-594">594</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-578" name="__codelineno-0-578"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<a id="__codelineno-0-579" name="__codelineno-0-579"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit an Overcomplete OptimDictionaryLearning model on the given activations.</span>
+<a id="__codelineno-0-579" name="__codelineno-0-579"></a><span class="w">    </span><span class="sd">"""Fit an Overcomplete OptimDictionaryLearning model on the given activations.</span>
 <a id="__codelineno-0-580" name="__codelineno-0-580"></a>
 <a id="__codelineno-0-581" name="__codelineno-0-581"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-582" name="__codelineno-0-582"></a><span class="sd">        activations (torch.Tensor): The activations used for fitting the `concept_model`.</span>
 <a id="__codelineno-0-583" name="__codelineno-0-583"></a><span class="sd">        **kwargs (dict): Additional keyword arguments to pass to the `concept_model`.</span>
 <a id="__codelineno-0-584" name="__codelineno-0-584"></a><span class="sd">            See the Overcomplete documentation of the provided `concept_model` for more details.</span>
-<a id="__codelineno-0-585" name="__codelineno-0-585"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-585" name="__codelineno-0-585"></a><span class="sd">    """</span>
 <a id="__codelineno-0-586" name="__codelineno-0-586"></a>    <span class="k">if</span> <span class="p">(</span><span class="n">activations</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
 <a id="__codelineno-0-587" name="__codelineno-0-587"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">force_relu</span><span class="p">:</span>
 <a id="__codelineno-0-588" name="__codelineno-0-588"></a>            <span class="n">activations</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
 <a id="__codelineno-0-589" name="__codelineno-0-589"></a>        <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-590" name="__codelineno-0-590"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-591" name="__codelineno-0-591"></a>                <span class="s2">&quot;The activations should be positive. If you want to force the activations to be positive, &quot;</span>
-<a id="__codelineno-0-592" name="__codelineno-0-592"></a>                <span class="s2">&quot;use the `NMFConcepts(..., force_relu=True)`.&quot;</span>
+<a id="__codelineno-0-591" name="__codelineno-0-591"></a>                <span class="s2">"The activations should be positive. If you want to force the activations to be positive, "</span>
+<a id="__codelineno-0-592" name="__codelineno-0-592"></a>                <span class="s2">"use the `NMFConcepts(..., force_relu=True)`."</span>
 <a id="__codelineno-0-593" name="__codelineno-0-593"></a>            <span class="p">)</span>
 <a id="__codelineno-0-594" name="__codelineno-0-594"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -3387,21 +3411,21 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-613">613</a></span>
 <span class="normal"><a href="#__codelineno-0-614">614</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-596" name="__codelineno-0-596"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-597" name="__codelineno-0-597"></a><span class="k">def</span><span class="w"> </span><span class="nf">activations_to_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
-<a id="__codelineno-0-598" name="__codelineno-0-598"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the `concept_model` encoder.</span>
+<a id="__codelineno-0-598" name="__codelineno-0-598"></a><span class="w">    </span><span class="sd">"""Encode the given activations using the `concept_model` encoder.</span>
 <a id="__codelineno-0-599" name="__codelineno-0-599"></a>
 <a id="__codelineno-0-600" name="__codelineno-0-600"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-601" name="__codelineno-0-601"></a><span class="sd">        activations (LatentActivations): The activations to encode.</span>
 <a id="__codelineno-0-602" name="__codelineno-0-602"></a>
 <a id="__codelineno-0-603" name="__codelineno-0-603"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-604" name="__codelineno-0-604"></a><span class="sd">        The encoded concept activations.</span>
-<a id="__codelineno-0-605" name="__codelineno-0-605"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-605" name="__codelineno-0-605"></a><span class="sd">    """</span>
 <a id="__codelineno-0-606" name="__codelineno-0-606"></a>    <span class="k">if</span> <span class="p">(</span><span class="n">activations</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
 <a id="__codelineno-0-607" name="__codelineno-0-607"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">force_relu</span><span class="p">:</span>
 <a id="__codelineno-0-608" name="__codelineno-0-608"></a>            <span class="n">activations</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
 <a id="__codelineno-0-609" name="__codelineno-0-609"></a>        <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-610" name="__codelineno-0-610"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-611" name="__codelineno-0-611"></a>                <span class="s2">&quot;The activations should be positive. If you want to force the activations to be positive, &quot;</span>
-<a id="__codelineno-0-612" name="__codelineno-0-612"></a>                <span class="s2">&quot;use the `NMFConcepts(..., force_relu=True)`.&quot;</span>
+<a id="__codelineno-0-611" name="__codelineno-0-611"></a>                <span class="s2">"The activations should be positive. If you want to force the activations to be positive, "</span>
+<a id="__codelineno-0-612" name="__codelineno-0-612"></a>                <span class="s2">"use the `NMFConcepts(..., force_relu=True)`."</span>
 <a id="__codelineno-0-613" name="__codelineno-0-613"></a>            <span class="p">)</span>
 <a id="__codelineno-0-614" name="__codelineno-0-614"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
@@ -3496,14 +3520,14 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-356">356</a></span>
 <span class="normal"><a href="#__codelineno-0-357">357</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-345" name="__codelineno-0-345"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-346" name="__codelineno-0-346"></a><span class="k">def</span><span class="w"> </span><span class="nf">concepts_to_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># LatentActivations</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode the given concepts using the `concept_model` decoder.</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="w">    </span><span class="sd">"""Decode the given concepts using the `concept_model` decoder.</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">        concepts (ConceptsActivations): The concepts to decode.</span>
 <a id="__codelineno-0-351" name="__codelineno-0-351"></a>
 <a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">        The decoded model activations.</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    """</span>
 <a id="__codelineno-0-355" name="__codelineno-0-355"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">concepts</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <a id="__codelineno-0-356" name="__codelineno-0-356"></a>        <span class="n">concepts</span> <span class="o">=</span> <span class="n">concepts</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">non_blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">concepts</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -3563,11 +3587,11 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-365">365</a></span>
 <span class="normal"><a href="#__codelineno-0-366">366</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># TODO: add this to tests</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the dictionary learned by the fitted `concept_model`.</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="w">    </span><span class="sd">"""Get the dictionary learned by the fitted `concept_model`.</span>
 <a id="__codelineno-0-362" name="__codelineno-0-362"></a>
 <a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">        torch.Tensor: A `torch.Tensor` containing the learned dictionary.</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    """</span>
 <a id="__codelineno-0-366" name="__codelineno-0-366"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">get_dictionary</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4002,8 +4026,8 @@ List length: correspond to the number of inputs.
 <a id="__codelineno-0-394" name="__codelineno-0-394"></a>    <span class="n">normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-0-395" name="__codelineno-0-395"></a>    <span class="n">tqdm_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-396" name="__codelineno-0-396"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;t g c&quot;</span><span class="p">]]:</span>
-<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"t g c"</span><span class="p">]]:</span>
+<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-399" name="__codelineno-0-399"></a><span class="sd">    Compute the gradients of the predictions with respect to the concepts.</span>
 <a id="__codelineno-0-400" name="__codelineno-0-400"></a>
 <a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="sd">    To clarify what this function does, lets detail some notations.</span>
@@ -4093,16 +4117,16 @@ List length: correspond to the number of inputs.
 <a id="__codelineno-0-485" name="__codelineno-0-485"></a><span class="sd">            because gradients have a much larger impact on the memory.</span>
 <a id="__codelineno-0-486" name="__codelineno-0-486"></a>
 <a id="__codelineno-0-487" name="__codelineno-0-487"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">        list[Float[torch.Tensor, &quot;t g c&quot;]]:</span>
+<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">        list[Float[torch.Tensor, "t g c"]]:</span>
 <a id="__codelineno-0-489" name="__codelineno-0-489"></a><span class="sd">            The gradients of the model output with respect to the concept activations.</span>
 <a id="__codelineno-0-490" name="__codelineno-0-490"></a><span class="sd">            List length: correspond to the number of inputs.</span>
 <a id="__codelineno-0-491" name="__codelineno-0-491"></a><span class="sd">                Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of</span>
 <a id="__codelineno-0-492" name="__codelineno-0-492"></a><span class="sd">                concepts.</span>
-<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">    """</span>
 <a id="__codelineno-0-494" name="__codelineno-0-494"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_differentiable_concept_decoder</span><span class="p">:</span>
 <a id="__codelineno-0-495" name="__codelineno-0-495"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-496" name="__codelineno-0-496"></a>            <span class="s2">&quot;The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. &quot;</span>
-<a id="__codelineno-0-497" name="__codelineno-0-497"></a>            <span class="sa">f</span><span class="s2">&quot;Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-496" name="__codelineno-0-496"></a>            <span class="s2">"The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. "</span>
+<a id="__codelineno-0-497" name="__codelineno-0-497"></a>            <span class="sa">f</span><span class="s2">"Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">."</span>
 <a id="__codelineno-0-498" name="__codelineno-0-498"></a>        <span class="p">)</span>
 <a id="__codelineno-0-499" name="__codelineno-0-499"></a>
 <a id="__codelineno-0-500" name="__codelineno-0-500"></a>    <span class="c1"># put everything on device</span>
@@ -4280,7 +4304,7 @@ List length: correspond to the number of inputs.
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../assets/js/custom.js"></script>
       

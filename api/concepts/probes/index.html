@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -1938,17 +1932,6 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#interpreto.concepts.ProbeExplainer(split_point)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;split_point
       
     </span>
   </a>
@@ -3313,6 +3296,8 @@
       
         
       
+        
+      
     
     
     
@@ -3355,6 +3340,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3962,17 +3975,6 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#interpreto.concepts.ProbeExplainer(split_point)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;split_point
       
     </span>
   </a>
@@ -5129,7 +5131,7 @@ detects the classification head and uses CLS-token activations.</p>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.probes</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinearRegressionProbe</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># 1. Wrap your classification model</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">model</span> <span class="o">=</span> <span class="n">SplitterForClassification</span><span class="p">(</span><span class="s2">&quot;textattack/bert-base-uncased-imdb&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">model</span> <span class="o">=</span> <span class="n">SplitterForClassification</span><span class="p">(</span><span class="s2">"textattack/bert-base-uncased-imdb"</span><span class="p">)</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># 2. Extract CLS-token activations — shape (n, d)</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">activations</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span>
@@ -5155,16 +5157,16 @@ This is appropriate when concepts are global properties of the input (e.g., topi
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.probes</span><span class="w"> </span><span class="kn">import</span> <span class="n">CosineCentroidProbe</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">model</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="p">(</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s2">&quot;gpt2&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">split_point</span><span class="o">=</span><span class="s2">&quot;transformer.h.6&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">device_map</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s2">"gpt2"</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">split_point</span><span class="o">=</span><span class="s2">"transformer.h.6"</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">device_map</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">,</span>
 <a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p">)</span>
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
 <a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Aggregate all tokens into one vector per sample — shape (n, d)</span>
 <a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">activations</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span>
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">texts</span><span class="p">,</span>
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">activation_granularity</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">activation_granularities</span><span class="o">.</span><span class="n">SAMPLE</span><span class="p">,</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">aggregation_strategies</span><span class="o">.</span><span class="n">MEAN</span><span class="p">,</span> <span class="c1"># MAX and LAST are also often compared in the literature</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">aggregation_strategy</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">aggregation_strategies</span><span class="o">.</span><span class="n">MEAN</span><span class="p">,</span>  <span class="c1"># MAX and LAST are also often compared in the literature</span>
 <a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">)</span>
 <a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
 <a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="n">probe</span> <span class="o">=</span> <span class="n">CosineCentroidProbe</span><span class="p">()</span>
@@ -5281,10 +5283,10 @@ when <code>score_j + bias_j &gt; 0</code>.</p>
 
 
 
-        <p>Concept explainer backed by a [Probe][interpreto.concepts.probes.base.Probe].</p>
+        <p>Concept explainer backed by a <code>Probe</code>.</p>
 <p>Integrates any pre-instantiated torch probe into the concept explainer
 pipeline, connecting it to a
-[BaseSplitter][interpreto.concepts.splitters.base_splitter.BaseSplitter]
+<code>BaseSplitter</code>
 for activation extraction.</p>
 <p>The probe is provided already instantiated (unfitted or pre-fitted).
 Calling <a class="autorefs autorefs-internal" title="            fit" href="#interpreto.concepts.ProbeExplainer.fit">fit</a>
@@ -5307,7 +5309,7 @@ delegates to the probe's own <code>fit</code> method.</p>
 <h3 id="interpreto.concepts.ProbeExplainer(splitter)" class="doc doc-heading doc-heading-parameter">                  <code>splitter</code>
 <a href="#interpreto.concepts.ProbeExplainer(splitter)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="interpreto.concepts.splitters.base_splitter.BaseSplitter">BaseSplitter</span></code>
+                  <code><span title="interpreto.concepts.splitters.BaseSplitter">BaseSplitter</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -5323,27 +5325,11 @@ delegates to the probe's own <code>fit</code> method.</p>
 <h3 id="interpreto.concepts.ProbeExplainer(concept_model)" class="doc doc-heading doc-heading-parameter">                  <code>concept_model</code>
 <a href="#interpreto.concepts.ProbeExplainer(concept_model)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="interpreto.concepts.probes.base.Probe">Probe</span></code>
+                  <code><span title="interpreto.concepts.probes.Probe">Probe</span></code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>An instantiated torch probe.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h3 id="interpreto.concepts.ProbeExplainer(split_point)" class="doc doc-heading doc-heading-parameter">                  <code>split_point</code>
-<a href="#interpreto.concepts.ProbeExplainer(split_point)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Layer name to extract activations from.</p>
               </div>
             </td>
             <td>
@@ -5370,7 +5356,8 @@ concepts = explainer.activations_to_concepts(activations)
 
                   <details class="mkdocstrings-source">
                     <summary>Source code in <code>interpreto/concepts/probes/base.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-214">214</a></span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-213">213</a></span>
+<span class="normal"><a href="#__codelineno-0-214">214</a></span>
 <span class="normal"><a href="#__codelineno-0-215">215</a></span>
 <span class="normal"><a href="#__codelineno-0-216">216</a></span>
 <span class="normal"><a href="#__codelineno-0-217">217</a></span>
@@ -5379,18 +5366,17 @@ concepts = explainer.activations_to_concepts(activations)
 <span class="normal"><a href="#__codelineno-0-220">220</a></span>
 <span class="normal"><a href="#__codelineno-0-221">221</a></span>
 <span class="normal"><a href="#__codelineno-0-222">222</a></span>
-<span class="normal"><a href="#__codelineno-0-223">223</a></span>
-<span class="normal"><a href="#__codelineno-0-224">224</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-<a id="__codelineno-0-215" name="__codelineno-0-215"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-216" name="__codelineno-0-216"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
-<a id="__codelineno-0-217" name="__codelineno-0-217"></a>    <span class="n">concept_model</span><span class="p">:</span> <span class="n">Probe</span><span class="p">,</span>
-<a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="p">):</span>
-<a id="__codelineno-0-219" name="__codelineno-0-219"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">concept_model</span><span class="p">,</span> <span class="n">Probe</span><span class="p">):</span>
-<a id="__codelineno-0-220" name="__codelineno-0-220"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;concept_model must be a Probe instance, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">concept_model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-221" name="__codelineno-0-221"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-<a id="__codelineno-0-222" name="__codelineno-0-222"></a>        <span class="n">splitter</span><span class="o">=</span><span class="n">splitter</span><span class="p">,</span>
-<a id="__codelineno-0-223" name="__codelineno-0-223"></a>        <span class="n">concept_model</span><span class="o">=</span><span class="n">concept_model</span><span class="p">,</span>
-<a id="__codelineno-0-224" name="__codelineno-0-224"></a>    <span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-223">223</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-213" name="__codelineno-0-213"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-214" name="__codelineno-0-214"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-215" name="__codelineno-0-215"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
+<a id="__codelineno-0-216" name="__codelineno-0-216"></a>    <span class="n">concept_model</span><span class="p">:</span> <span class="n">Probe</span><span class="p">,</span>
+<a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="p">):</span>
+<a id="__codelineno-0-218" name="__codelineno-0-218"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">concept_model</span><span class="p">,</span> <span class="n">Probe</span><span class="p">):</span>
+<a id="__codelineno-0-219" name="__codelineno-0-219"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"concept_model must be a Probe instance, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">concept_model</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+<a id="__codelineno-0-220" name="__codelineno-0-220"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-221" name="__codelineno-0-221"></a>        <span class="n">splitter</span><span class="o">=</span><span class="n">splitter</span><span class="p">,</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a>        <span class="n">concept_model</span><span class="o">=</span><span class="n">concept_model</span><span class="p">,</span>
+<a id="__codelineno-0-223" name="__codelineno-0-223"></a>    <span class="p">)</span>
 </code></pre></div></td></tr></table></div>
                   </details>
 
@@ -5474,7 +5460,8 @@ However, we allow and recommend to train several probes simultaneously.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/probes/base.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-236">236</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-235">235</a></span>
+<span class="normal"><a href="#__codelineno-0-236">236</a></span>
 <span class="normal"><a href="#__codelineno-0-237">237</a></span>
 <span class="normal"><a href="#__codelineno-0-238">238</a></span>
 <span class="normal"><a href="#__codelineno-0-239">239</a></span>
@@ -5494,29 +5481,28 @@ However, we allow and recommend to train several probes simultaneously.</p>
 <span class="normal"><a href="#__codelineno-0-253">253</a></span>
 <span class="normal"><a href="#__codelineno-0-254">254</a></span>
 <span class="normal"><a href="#__codelineno-0-255">255</a></span>
-<span class="normal"><a href="#__codelineno-0-256">256</a></span>
-<span class="normal"><a href="#__codelineno-0-257">257</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
-<a id="__codelineno-0-237" name="__codelineno-0-237"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">,</span>
-<a id="__codelineno-0-239" name="__codelineno-0-239"></a>    <span class="n">labels</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n c&quot;</span><span class="p">],</span>
-<a id="__codelineno-0-240" name="__codelineno-0-240"></a><span class="p">):</span>
-<a id="__codelineno-0-241" name="__codelineno-0-241"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit the probe on activations and multi-label targets.</span>
-<a id="__codelineno-0-242" name="__codelineno-0-242"></a>
-<a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="sd">        activations: Latent activations (2D tensor).</span>
-<a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="sd">        labels: Binary multi-label targets of shape `(n, c)`.</span>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">            This should be a matrix can be an extended vector `(n, 1)` for a single concept.</span>
-<a id="__codelineno-0-247" name="__codelineno-0-247"></a><span class="sd">            However, we allow and recommend to train several probes simultaneously.</span>
-<a id="__codelineno-0-248" name="__codelineno-0-248"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-<a id="__codelineno-0-250" name="__codelineno-0-250"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected activations to be a 2D array, (n, d), got shape </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-251" name="__codelineno-0-251"></a>    <span class="k">if</span> <span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-<a id="__codelineno-0-252" name="__codelineno-0-252"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a>            <span class="s2">&quot;Activations and labels must have the same number of samples, &quot;</span>
-<a id="__codelineno-0-254" name="__codelineno-0-254"></a>            <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">.&quot;</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a>        <span class="p">)</span>
-<a id="__codelineno-0-256" name="__codelineno-0-256"></a>
-<a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-256">256</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a>    <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">,</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a>    <span class="n">labels</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"n c"</span><span class="p">],</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="p">):</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a><span class="w">    </span><span class="sd">"""Fit the probe on activations and multi-label targets.</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="sd">        activations: Latent activations (2D tensor).</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="sd">        labels: Binary multi-label targets of shape `(n, c)`.</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="sd">            This should be a matrix can be an extended vector `(n, 1)` for a single concept.</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">            However, we allow and recommend to train several probes simultaneously.</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a><span class="sd">    """</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Expected activations to be a 2D array, (n, d), got shape </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="k">if</span> <span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>            <span class="s2">"Activations and labels must have the same number of samples, "</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">."</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a>        <span class="p">)</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -5595,7 +5581,8 @@ However, we allow and recommend to train several probes simultaneously.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>interpreto/concepts/probes/base.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-259">259</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-258">258</a></span>
+<span class="normal"><a href="#__codelineno-0-259">259</a></span>
 <span class="normal"><a href="#__codelineno-0-260">260</a></span>
 <span class="normal"><a href="#__codelineno-0-261">261</a></span>
 <span class="normal"><a href="#__codelineno-0-262">262</a></span>
@@ -5608,22 +5595,21 @@ However, we allow and recommend to train several probes simultaneously.</p>
 <span class="normal"><a href="#__codelineno-0-269">269</a></span>
 <span class="normal"><a href="#__codelineno-0-270">270</a></span>
 <span class="normal"><a href="#__codelineno-0-271">271</a></span>
-<span class="normal"><a href="#__codelineno-0-272">272</a></span>
-<span class="normal"><a href="#__codelineno-0-273">273</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="nd">@check_fitted</span>
-<a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="k">def</span><span class="w"> </span><span class="nf">activations_to_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConceptsActivations</span><span class="p">:</span>
-<a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode activations into concept scores using the fitted probe.</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">        activations: Latent activations of shape `(n, d)`.</span>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">        Concept scores of shape `(n, c)`.</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="c1"># Use the _fitted_flag buffer (always present) to infer the probe&#39;s device.</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="n">probe_device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">_fitted_flag</span><span class="o">.</span><span class="n">device</span>  <span class="c1"># type: ignore</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="k">if</span> <span class="n">activations</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">probe_device</span><span class="p">:</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a>        <span class="n">activations</span> <span class="o">=</span> <span class="n">activations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">probe_device</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-272">272</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="nd">@check_fitted</span>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="k">def</span><span class="w"> </span><span class="nf">activations_to_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConceptsActivations</span><span class="p">:</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="w">    </span><span class="sd">"""Encode activations into concept scores using the fitted probe.</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">        activations: Latent activations of shape `(n, d)`.</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="sd">        Concept scores of shape `(n, c)`.</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="sd">    """</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="c1"># Use the _fitted_flag buffer (always present) to infer the probe's device.</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="n">probe_device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">_fitted_flag</span><span class="o">.</span><span class="n">device</span>  <span class="c1"># type: ignore</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="k">if</span> <span class="n">activations</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">probe_device</span><span class="p">:</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>        <span class="n">activations</span> <span class="o">=</span> <span class="n">activations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">probe_device</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -5685,7 +5671,7 @@ Which are ways to interpret the concepts.</p>
 <span class="normal"><a href="#__codelineno-0-281">281</a></span>
 <span class="normal"><a href="#__codelineno-0-282">282</a></span>
 <span class="normal"><a href="#__codelineno-0-283">283</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_inputs_to_concepts_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelForInputsToConcepts</span><span class="p">:</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a model that maps raw inputs to concept activations.</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="w">    </span><span class="sd">"""Returns a model that maps raw inputs to concept activations.</span>
 <a id="__codelineno-0-275" name="__codelineno-0-275"></a>
 <a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">    The model can be passed to an attribution method,</span>
 <a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">    to obtain inputs to concepts attributions.</span>
@@ -5693,7 +5679,7 @@ Which are ways to interpret the concepts.</p>
 <a id="__codelineno-0-279" name="__codelineno-0-279"></a>
 <a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">        ModelForInputsToConcepts: A model that maps raw inputs to concept activations.</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">    """</span>
 <a id="__codelineno-0-283" name="__codelineno-0-283"></a>    <span class="k">return</span> <span class="n">ModelForInputsToConcepts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -7872,7 +7858,7 @@ bias = -t
         <p>Concept explainer using a scikit-learn probe.</p>
 <p>Integrates <a class="autorefs autorefs-internal" title="            interpreto.concepts.probes.sklearn.SklearnProbe" href="#interpreto.concepts.probes.sklearn.SklearnProbe">SklearnProbe</a> into the concept
 explainer pipeline, connecting it to a
-[BaseSplitter][interpreto.concepts.splitters.base_splitter.BaseSplitter]
+<code>BaseSplitter</code>
 for activation extraction.</p>
 
 
@@ -7892,7 +7878,7 @@ for activation extraction.</p>
 <h3 id="interpreto.concepts.probes.sklearn.SklearnProbeExplainer(splitter)" class="doc doc-heading doc-heading-parameter">                  <code>splitter</code>
 <a href="#interpreto.concepts.probes.sklearn.SklearnProbeExplainer(splitter)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="interpreto.concepts.splitters.base_splitter.BaseSplitter">BaseSplitter</span></code>
+                  <code><span title="interpreto.concepts.splitters.BaseSplitter">BaseSplitter</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -8047,13 +8033,13 @@ for activation extraction.</p>
 <a id="__codelineno-0-120" name="__codelineno-0-120"></a>    <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">,</span>
 <a id="__codelineno-0-121" name="__codelineno-0-121"></a>    <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
 <a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="p">):</span>
-<a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit the concept model.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="w">    </span><span class="sd">"""Fit the concept model."""</span>
 <a id="__codelineno-0-124" name="__codelineno-0-124"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-<a id="__codelineno-0-125" name="__codelineno-0-125"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected activations to be a 2D array, (n, d), got shape </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-125" name="__codelineno-0-125"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Expected activations to be a 2D array, (n, d), got shape </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <a id="__codelineno-0-126" name="__codelineno-0-126"></a>    <span class="k">if</span> <span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
 <a id="__codelineno-0-127" name="__codelineno-0-127"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-128" name="__codelineno-0-128"></a>            <span class="s2">&quot;Expected activations and labels to have the same number of rows, &quot;</span>
-<a id="__codelineno-0-129" name="__codelineno-0-129"></a>            <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-0-128" name="__codelineno-0-128"></a>            <span class="s2">"Expected activations and labels to have the same number of rows, "</span>
+<a id="__codelineno-0-129" name="__codelineno-0-129"></a>            <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">labels</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
 <a id="__codelineno-0-130" name="__codelineno-0-130"></a>        <span class="p">)</span>
 <a id="__codelineno-0-131" name="__codelineno-0-131"></a>
 <a id="__codelineno-0-132" name="__codelineno-0-132"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
@@ -8088,7 +8074,7 @@ for activation extraction.</p>
 
 
         <p>Probe wrapping a scikit-learn classifier with <code>decision_function</code>.</p>
-<p>Satisfies [ConceptModelProtocol][interpreto.typing.ConceptModelProtocol] structurally.
+<p>Satisfies <code>ConceptModelProtocol</code> structurally.
 Currently limited to a single binary concept.</p>
 
 
@@ -8193,8 +8179,8 @@ estimator constructor.</p>
 <span class="normal"><a href="#__codelineno-0-81">81</a></span>
 <span class="normal"><a href="#__codelineno-0-82">82</a></span>
 <span class="normal"><a href="#__codelineno-0-83">83</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-78" name="__codelineno-0-78"></a><span class="nd">@assert_fitted</span>
-<a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n d&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n 1&quot;</span><span class="p">]:</span>
-<a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the concept model.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"n d"</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"n 1"</span><span class="p">]:</span>
+<a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="w">    </span><span class="sd">"""Encode the given activations using the concept model."""</span>
 <a id="__codelineno-0-81" name="__codelineno-0-81"></a>    <span class="n">np_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
 <a id="__codelineno-0-82" name="__codelineno-0-82"></a>    <span class="n">np_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">np_X</span><span class="p">)</span>
 <a id="__codelineno-0-83" name="__codelineno-0-83"></a>    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">np_y</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -8226,8 +8212,8 @@ estimator constructor.</p>
 <span class="normal"><a href="#__codelineno-0-73">73</a></span>
 <span class="normal"><a href="#__codelineno-0-74">74</a></span>
 <span class="normal"><a href="#__codelineno-0-75">75</a></span>
-<span class="normal"><a href="#__codelineno-0-76">76</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n d&quot;</span><span class="p">],</span> <span class="n">y</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;n&quot;</span><span class="p">]):</span>
-<a id="__codelineno-0-73" name="__codelineno-0-73"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit the concept model.&quot;&quot;&quot;</span>
+<span class="normal"><a href="#__codelineno-0-76">76</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"n d"</span><span class="p">],</span> <span class="n">y</span><span class="p">:</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"n"</span><span class="p">]):</span>
+<a id="__codelineno-0-73" name="__codelineno-0-73"></a><span class="w">    </span><span class="sd">"""Fit the concept model."""</span>
 <a id="__codelineno-0-74" name="__codelineno-0-74"></a>    <span class="n">np_X</span><span class="p">,</span> <span class="n">np_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
 <a id="__codelineno-0-75" name="__codelineno-0-75"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">np_X</span><span class="p">,</span> <span class="n">np_y</span><span class="p">)</span>
 <a id="__codelineno-0-76" name="__codelineno-0-76"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">fitted</span> <span class="o">=</span> <span class="kc">True</span>
@@ -8386,7 +8372,7 @@ estimator constructor.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../assets/js/custom.js"></script>
       

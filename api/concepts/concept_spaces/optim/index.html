@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2327,6 +2321,8 @@
       
         
       
+        
+      
     
     
     
@@ -2369,6 +2365,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -3152,7 +3176,7 @@
 
 
 <a href="#interpreto.concepts.methods.DictionaryLearningExplainer" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">DictionaryLearningExplainer</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="splitter (interpreto.concepts.methods.DictionaryLearningExplainer(splitter))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(splitter)">splitter</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="nb_concepts (interpreto.concepts.methods.DictionaryLearningExplainer(nb_concepts))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(nb_concepts)">nb_concepts</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="device (interpreto.concepts.methods.DictionaryLearningExplainer(device))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(device)">device</a></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><a class="autorefs autorefs-internal" title="**kwargs (interpreto.concepts.methods.DictionaryLearningExplainer(**kwargs))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(**kwargs)">kwargs</a></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">DictionaryLearningExplainer</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="splitter (interpreto.concepts.methods.DictionaryLearningExplainer(splitter))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(splitter)">splitter</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="nb_concepts (interpreto.concepts.methods.DictionaryLearningExplainer(nb_concepts))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(nb_concepts)">nb_concepts</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="device (interpreto.concepts.methods.DictionaryLearningExplainer(device))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(device)">device</a></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><a class="autorefs autorefs-internal" title="**kwargs (interpreto.concepts.methods.DictionaryLearningExplainer(**kwargs))" href="#interpreto.concepts.methods.DictionaryLearningExplainer(**kwargs)">kwargs</a></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -3163,7 +3187,7 @@
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
 <p>Implementation of a concept explainer using an
-<a href="https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py">overcomplete.optimization.BaseOptimDictionaryLearning</a>
+<code>overcomplete.optimization.BaseOptimDictionaryLearning</code>
     (NMF and PCA variants) as <code>concept_model</code>.</p>
 
 
@@ -3208,7 +3232,7 @@ the concept explainer is fitted.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>An <a href="https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py">Overcomplete BaseOptimDictionaryLearning</a>
+                <p>An Overcomplete BaseOptimDictionaryLearning
 variant for concept extraction.</p>
               </div>
             </td>
@@ -3259,9 +3283,9 @@ variant for concept extraction.</p>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">CLS_TOKEN</span> <span class="o">=</span> <span class="n">BaseSplitter</span><span class="o">.</span><span class="n">activation_granularities</span><span class="o">.</span><span class="n">CLS_TOKEN</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">WORD</span> <span class="o">=</span> <span class="n">BaseSplitter</span><span class="o">.</span><span class="n">activation_granularities</span><span class="o">.</span><span class="n">WORD</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">...</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;stanfordnlp/imdb&quot;</span><span class="p">)[</span><span class="s2">&quot;train&quot;</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">][:</span><span class="mi">1000</span><span class="p">]</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">repo_id</span> <span class="o">=</span> <span class="s2">&quot;Qwen/Qwen3-0.6B&quot;</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">repo_id</span><span class="p">,</span> <span class="n">device_map</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">load_dataset</span><span class="p">(</span><span class="s2">"stanfordnlp/imdb"</span><span class="p">)[</span><span class="s2">"train"</span><span class="p">][</span><span class="s2">"text"</span><span class="p">][:</span><span class="mi">1000</span><span class="p">]</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">repo_id</span> <span class="o">=</span> <span class="s2">"Qwen/Qwen3-0.6B"</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">repo_id</span><span class="p">,</span> <span class="n">device_map</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">)</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">repo_id</span><span class="p">)</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="gp">...</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># 1. Split your model in two parts</span>
@@ -3289,7 +3313,7 @@ variant for concept extraction.</p>
 <a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="gp">...</span>
 <a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Print the interpretations</span>
 <a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">words</span> <span class="ow">in</span> <span class="n">interpretations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Concept </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">words</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Concept </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">words</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -3412,10 +3436,10 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 <a id="__codelineno-0-404" name="__codelineno-0-404"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
 <a id="__codelineno-0-405" name="__codelineno-0-405"></a>    <span class="o">*</span><span class="p">,</span>
 <a id="__codelineno-0-406" name="__codelineno-0-406"></a>    <span class="n">nb_concepts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-<a id="__codelineno-0-407" name="__codelineno-0-407"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-407" name="__codelineno-0-407"></a>    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"cpu"</span><span class="p">,</span>
 <a id="__codelineno-0-408" name="__codelineno-0-408"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <a id="__codelineno-0-409" name="__codelineno-0-409"></a><span class="p">):</span>
-<a id="__codelineno-0-410" name="__codelineno-0-410"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-410" name="__codelineno-0-410"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-411" name="__codelineno-0-411"></a><span class="sd">    Initialize the concept bottleneck explainer based on the Overcomplete BaseOptimDictionaryLearning framework.</span>
 <a id="__codelineno-0-412" name="__codelineno-0-412"></a>
 <a id="__codelineno-0-413" name="__codelineno-0-413"></a><span class="sd">    Args:</span>
@@ -3425,7 +3449,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 <a id="__codelineno-0-417" name="__codelineno-0-417"></a><span class="sd">        device (torch.device | str): Device to use for the `concept_module`.</span>
 <a id="__codelineno-0-418" name="__codelineno-0-418"></a><span class="sd">        **kwargs (dict): Additional keyword arguments to pass to the `concept_module`.</span>
 <a id="__codelineno-0-419" name="__codelineno-0-419"></a><span class="sd">            See the Overcomplete documentation of the provided `concept_model_class` for more details.</span>
-<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-420" name="__codelineno-0-420"></a><span class="sd">    """</span>
 <a id="__codelineno-0-421" name="__codelineno-0-421"></a>    <span class="n">concept_model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model_class</span><span class="p">(</span>
 <a id="__codelineno-0-422" name="__codelineno-0-422"></a>        <span class="n">nb_concepts</span><span class="o">=</span><span class="n">nb_concepts</span><span class="p">,</span>
 <a id="__codelineno-0-423" name="__codelineno-0-423"></a>        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>  <span class="c1"># type: ignore</span>
@@ -3525,15 +3549,15 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-436">436</a></span>
 <span class="normal"><a href="#__codelineno-0-437">437</a></span>
 <span class="normal"><a href="#__codelineno-0-438">438</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-428" name="__codelineno-0-428"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<a id="__codelineno-0-429" name="__codelineno-0-429"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fit an Overcomplete OptimDictionaryLearning model on the given activations.</span>
+<a id="__codelineno-0-429" name="__codelineno-0-429"></a><span class="w">    </span><span class="sd">"""Fit an Overcomplete OptimDictionaryLearning model on the given activations.</span>
 <a id="__codelineno-0-430" name="__codelineno-0-430"></a>
 <a id="__codelineno-0-431" name="__codelineno-0-431"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-432" name="__codelineno-0-432"></a><span class="sd">        activations (torch.Tensor): The activations used for fitting the `concept_model`.</span>
 <a id="__codelineno-0-433" name="__codelineno-0-433"></a><span class="sd">        **kwargs (dict): Additional keyword arguments to pass to the `concept_model`.</span>
 <a id="__codelineno-0-434" name="__codelineno-0-434"></a><span class="sd">            See the Overcomplete documentation of the provided `concept_model` for more details.</span>
-<a id="__codelineno-0-435" name="__codelineno-0-435"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-435" name="__codelineno-0-435"></a><span class="sd">    """</span>
 <a id="__codelineno-0-436" name="__codelineno-0-436"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-<a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected activations to be a 2D array, (n, d), got shape </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Expected activations to be a 2D array, (n, d), got shape </span><span class="si">{</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <a id="__codelineno-0-438" name="__codelineno-0-438"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3627,14 +3651,14 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-342">342</a></span>
 <span class="normal"><a href="#__codelineno-0-343">343</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-331" name="__codelineno-0-331"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-332" name="__codelineno-0-332"></a><span class="k">def</span><span class="w"> </span><span class="nf">activations_to_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the `concept_model` encoder.</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a><span class="w">    </span><span class="sd">"""Encode the given activations using the `concept_model` encoder.</span>
 <a id="__codelineno-0-334" name="__codelineno-0-334"></a>
 <a id="__codelineno-0-335" name="__codelineno-0-335"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-336" name="__codelineno-0-336"></a><span class="sd">        activations (LatentActivations): The activations to encode.</span>
 <a id="__codelineno-0-337" name="__codelineno-0-337"></a>
 <a id="__codelineno-0-338" name="__codelineno-0-338"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="sd">        The encoded concept activations.</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a><span class="sd">    """</span>
 <a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">activations</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="n">activations</span> <span class="o">=</span> <span class="n">activations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">non_blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -3730,14 +3754,14 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-356">356</a></span>
 <span class="normal"><a href="#__codelineno-0-357">357</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-345" name="__codelineno-0-345"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-346" name="__codelineno-0-346"></a><span class="k">def</span><span class="w"> </span><span class="nf">concepts_to_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># LatentActivations</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode the given concepts using the `concept_model` decoder.</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="w">    </span><span class="sd">"""Decode the given concepts using the `concept_model` decoder.</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">        concepts (ConceptsActivations): The concepts to decode.</span>
 <a id="__codelineno-0-351" name="__codelineno-0-351"></a>
 <a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">        The decoded model activations.</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    """</span>
 <a id="__codelineno-0-355" name="__codelineno-0-355"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">concepts</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <a id="__codelineno-0-356" name="__codelineno-0-356"></a>        <span class="n">concepts</span> <span class="o">=</span> <span class="n">concepts</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">non_blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">concepts</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -3797,11 +3821,11 @@ See the Overcomplete documentation of the provided <code>concept_model</code> fo
 <span class="normal"><a href="#__codelineno-0-365">365</a></span>
 <span class="normal"><a href="#__codelineno-0-366">366</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># TODO: add this to tests</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the dictionary learned by the fitted `concept_model`.</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="w">    </span><span class="sd">"""Get the dictionary learned by the fitted `concept_model`.</span>
 <a id="__codelineno-0-362" name="__codelineno-0-362"></a>
 <a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">        torch.Tensor: A `torch.Tensor` containing the learned dictionary.</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    """</span>
 <a id="__codelineno-0-366" name="__codelineno-0-366"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">get_dictionary</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4236,8 +4260,8 @@ List length: correspond to the number of inputs.
 <a id="__codelineno-0-394" name="__codelineno-0-394"></a>    <span class="n">normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-0-395" name="__codelineno-0-395"></a>    <span class="n">tqdm_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-396" name="__codelineno-0-396"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;t g c&quot;</span><span class="p">]]:</span>
-<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"t g c"</span><span class="p">]]:</span>
+<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-399" name="__codelineno-0-399"></a><span class="sd">    Compute the gradients of the predictions with respect to the concepts.</span>
 <a id="__codelineno-0-400" name="__codelineno-0-400"></a>
 <a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="sd">    To clarify what this function does, lets detail some notations.</span>
@@ -4327,16 +4351,16 @@ List length: correspond to the number of inputs.
 <a id="__codelineno-0-485" name="__codelineno-0-485"></a><span class="sd">            because gradients have a much larger impact on the memory.</span>
 <a id="__codelineno-0-486" name="__codelineno-0-486"></a>
 <a id="__codelineno-0-487" name="__codelineno-0-487"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">        list[Float[torch.Tensor, &quot;t g c&quot;]]:</span>
+<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">        list[Float[torch.Tensor, "t g c"]]:</span>
 <a id="__codelineno-0-489" name="__codelineno-0-489"></a><span class="sd">            The gradients of the model output with respect to the concept activations.</span>
 <a id="__codelineno-0-490" name="__codelineno-0-490"></a><span class="sd">            List length: correspond to the number of inputs.</span>
 <a id="__codelineno-0-491" name="__codelineno-0-491"></a><span class="sd">                Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of</span>
 <a id="__codelineno-0-492" name="__codelineno-0-492"></a><span class="sd">                concepts.</span>
-<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">    """</span>
 <a id="__codelineno-0-494" name="__codelineno-0-494"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_differentiable_concept_decoder</span><span class="p">:</span>
 <a id="__codelineno-0-495" name="__codelineno-0-495"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-496" name="__codelineno-0-496"></a>            <span class="s2">&quot;The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. &quot;</span>
-<a id="__codelineno-0-497" name="__codelineno-0-497"></a>            <span class="sa">f</span><span class="s2">&quot;Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-496" name="__codelineno-0-496"></a>            <span class="s2">"The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. "</span>
+<a id="__codelineno-0-497" name="__codelineno-0-497"></a>            <span class="sa">f</span><span class="s2">"Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">."</span>
 <a id="__codelineno-0-498" name="__codelineno-0-498"></a>        <span class="p">)</span>
 <a id="__codelineno-0-499" name="__codelineno-0-499"></a>
 <a id="__codelineno-0-500" name="__codelineno-0-500"></a>    <span class="c1"># put everything on device</span>
@@ -4383,7 +4407,7 @@ List length: correspond to the number of inputs.
 
 
 <a href="#interpreto.concepts.ConvexNMFConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ConvexNMFConcepts</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ConvexNMFConcepts</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4394,7 +4418,7 @@ List length: correspond to the number of inputs.
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
 <p><code>ConceptAutoEncoderExplainer</code> with the ConvexNMF from Ding et al. (2008)<sup id="interpreto.concepts.ConvexNMFConcepts--fnref:2"><a class="footnote-ref" href="#interpreto.concepts.ConvexNMFConcepts--fn:2">1</a></sup> as concept model.</p>
-<p>ConvexNMF implementation from <a href="https://kempnerinstitute.github.io/overcomplete/optimization/convex_nmf/">overcomplete.optimization.ConvexNMF</a> class.</p>
+<p>ConvexNMF implementation from <code>overcomplete.optimization.ConvexNMF</code> class.</p>
 <div class="footnote">
 <hr />
 <ol>
@@ -4525,7 +4549,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 
 
 <a href="#interpreto.concepts.DictionaryLearningConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">DictionaryLearningConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">DictionaryLearningConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(device)">device</span></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.DictionaryLearningConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4536,7 +4560,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
 <p><code>ConceptAutoEncoderExplainer</code> with the Dictionary Learning concepts from Mairal et al. (2009)<sup id="interpreto.concepts.DictionaryLearningConcepts--fnref:5"><a class="footnote-ref" href="#interpreto.concepts.DictionaryLearningConcepts--fn:5">1</a></sup> as concept model.</p>
-<p>Dictionary Learning implementation from <a href="https://kempnerinstitute.github.io/overcomplete/optimization/sklearn/">overcomplete.optimization.SkDictionaryLearning</a> class.</p>
+<p>Dictionary Learning implementation from <code>overcomplete.optimization.SkDictionaryLearning</code> class.</p>
 <div class="footnote">
 <hr />
 <ol>
@@ -4585,7 +4609,7 @@ Proceedings of the 26th Annual International Conference on Machine Learning, 200
 
 
 <a href="#interpreto.concepts.ICAConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ICAConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.ICAConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.ICAConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.ICAConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.ICAConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ICAConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.ICAConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.ICAConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.ICAConcepts(device)">device</span></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.ICAConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4644,7 +4668,7 @@ Neural Networks, 13(4-5), 2000, pp. 411-430.&#160;<a class="footnote-backref" hr
 
 
 <a href="#interpreto.concepts.KMeansConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">KMeansConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.KMeansConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.KMeansConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.KMeansConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.KMeansConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">KMeansConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.KMeansConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.KMeansConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.KMeansConcepts(device)">device</span></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.KMeansConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4694,7 +4718,7 @@ Neural Networks, 13(4-5), 2000, pp. 411-430.&#160;<a class="footnote-backref" hr
 
 
 <a href="#interpreto.concepts.NMFConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">NMFConcepts</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="n">force_relu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">NMFConcepts</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="n">force_relu</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4705,7 +4729,7 @@ Neural Networks, 13(4-5), 2000, pp. 411-430.&#160;<a class="footnote-backref" hr
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
 <p><code>ConceptAutoEncoderExplainer</code> with the NMF from Lee and Seung (1999)<sup id="interpreto.concepts.NMFConcepts--fnref:1"><a class="footnote-ref" href="#interpreto.concepts.NMFConcepts--fn:1">1</a></sup> as concept model.</p>
-<p>NMF implementation from <a href="https://kempnerinstitute.github.io/overcomplete/optimization/nmf/">overcomplete.optimization.NMF</a> class.</p>
+<p>NMF implementation from <code>overcomplete.optimization.NMF</code> class.</p>
 <div class="footnote">
 <hr />
 <ol>
@@ -4926,7 +4950,7 @@ See the Overcomplete documentation of the provided <code>concept_model_class</co
 
 
 <a href="#interpreto.concepts.PCAConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">PCAConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.PCAConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.PCAConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.PCAConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.PCAConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">PCAConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.PCAConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.PCAConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.PCAConcepts(device)">device</span></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.PCAConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4985,7 +5009,7 @@ Philosophical Magazine, 2(11), 1901, pp. 559-572.&#160;<a class="footnote-backre
 
 
 <a href="#interpreto.concepts.SemiNMFConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">SemiNMFConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.SemiNMFConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SemiNMFConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SemiNMFConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.SemiNMFConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">SemiNMFConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.SemiNMFConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SemiNMFConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SemiNMFConcepts(device)">device</span></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.SemiNMFConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -4996,7 +5020,7 @@ Philosophical Magazine, 2(11), 1901, pp. 559-572.&#160;<a class="footnote-backre
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
 <p><code>ConceptAutoEncoderExplainer</code> with the SemiNMF from Ding et al. (2008)<sup id="interpreto.concepts.SemiNMFConcepts--fnref:2"><a class="footnote-ref" href="#interpreto.concepts.SemiNMFConcepts--fn:2">1</a></sup> as concept model.</p>
-<p>SemiNMF implementation from <a href="https://kempnerinstitute.github.io/overcomplete/optimization/semi_nmf/">overcomplete.optimization.SemiNMF</a> class.</p>
+<p>SemiNMF implementation from <code>overcomplete.optimization.SemiNMF</code> class.</p>
 <div class="footnote">
 <hr />
 <ol>
@@ -5045,7 +5069,7 @@ IEEE Transactions on Pattern Analysis and Machine Intelligence, 32(1), 2010, pp.
 
 
 <a href="#interpreto.concepts.SparsePCAConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">SparsePCAConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.SparsePCAConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SparsePCAConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SparsePCAConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.SparsePCAConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">SparsePCAConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.SparsePCAConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SparsePCAConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SparsePCAConcepts(device)">device</span></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.SparsePCAConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5056,7 +5080,7 @@ IEEE Transactions on Pattern Analysis and Machine Intelligence, 32(1), 2010, pp.
 
         <p>Code: <a href="https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 1C5.923 1 1 5.923 1 12c0 4.867 3.149 8.979 7.521 10.436.55.096.756-.233.756-.522 0-.262-.013-1.128-.013-2.049-2.764.509-3.479-.674-3.699-1.292-.124-.317-.66-1.293-1.127-1.554-.385-.207-.936-.715-.014-.729.866-.014 1.485.797 1.691 1.128.99 1.663 2.571 1.196 3.204.907.096-.715.385-1.196.701-1.471-2.448-.275-5.005-1.224-5.005-5.432 0-1.196.426-2.186 1.128-2.956-.111-.275-.496-1.402.11-2.915 0 0 .921-.288 3.024 1.128a10.2 10.2 0 0 1 2.75-.371c.936 0 1.871.123 2.75.371 2.104-1.43 3.025-1.128 3.025-1.128.605 1.513.221 2.64.111 2.915.701.77 1.127 1.747 1.127 2.956 0 4.222-2.571 5.157-5.019 5.432.399.344.743 1.004.743 2.035 0 1.471-.014 2.654-.014 3.025 0 .289.206.632.756.522C19.851 20.979 23 16.854 23 12c0-6.077-4.922-11-11-11"/></svg></span> <code>concepts/methods/overcomplete.py</code> </a></p>
 <p><code>ConceptAutoEncoderExplainer</code> with SparsePCA as concept model.</p>
-<p>SparsePCA implementation from <a href="https://kempnerinstitute.github.io/overcomplete/optimization/sklearn/">overcomplete.optimization.SkSparsePCA</a> class.</p>
+<p>SparsePCA implementation from <code>overcomplete.optimization.SkSparsePCA</code> class.</p>
 
 
 
@@ -5096,7 +5120,7 @@ IEEE Transactions on Pattern Analysis and Machine Intelligence, 32(1), 2010, pp.
 
 
 <a href="#interpreto.concepts.SVDConcepts" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">SVDConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.SVDConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SVDConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SVDConcepts(device)">device</span></span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.SVDConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">SVDConcepts</span><span class="p">(</span><span class="n"><span title="interpreto.concepts.SVDConcepts(splitter)">splitter</span></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SVDConcepts(nb_concepts)">nb_concepts</span></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.SVDConcepts(device)">device</span></span><span class="o">=</span><span class="s1">'cpu'</span><span class="p">,</span> <span class="o">**</span><span class="n"><span title="interpreto.concepts.SVDConcepts(**kwargs)">kwargs</span></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -5278,7 +5302,7 @@ IEEE Transactions on Pattern Analysis and Machine Intelligence, 32(1), 2010, pp.
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../assets/js/custom.js"></script>
       

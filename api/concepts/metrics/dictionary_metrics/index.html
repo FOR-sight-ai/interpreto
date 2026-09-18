@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2022,6 +2016,8 @@
       
         
       
+        
+      
     
     
     
@@ -2064,6 +2060,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2863,7 +2887,7 @@ Both types are supported and can be mixed.</p>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">... </span>    <span class="c1"># set seed</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">... </span>    <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">... </span>    <span class="c1"># Create a concept model</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>    <span class="n">nmf_explainer</span> <span class="o">=</span> <span class="n">NMFConcepts</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">,</span> <span class="n">force_relu</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">... </span>    <span class="n">nmf_explainer</span> <span class="o">=</span> <span class="n">NMFConcepts</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">"cuda"</span><span class="p">,</span> <span class="n">force_relu</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">... </span>    <span class="c1"># Fit the concept model</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">... </span>    <span class="n">nmf_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">... </span>    <span class="n">concept_explainers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nmf_explainer</span><span class="p">)</span>
@@ -2973,18 +2997,18 @@ Both types are supported and can be mixed.</p>
 <span class="normal"><a href="#__codelineno-0-183">183</a></span>
 <span class="normal"><a href="#__codelineno-0-184">184</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-148" name="__codelineno-0-148"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
 <a id="__codelineno-0-149" name="__codelineno-0-149"></a>    <span class="bp">self</span><span class="p">,</span>
-<a id="__codelineno-0-150" name="__codelineno-0-150"></a>    <span class="o">*</span><span class="n">concept_explainers</span><span class="p">:</span> <span class="n">ConceptAutoEncoderExplainer</span> <span class="o">|</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;cpt d&quot;</span><span class="p">],</span>
+<a id="__codelineno-0-150" name="__codelineno-0-150"></a>    <span class="o">*</span><span class="n">concept_explainers</span><span class="p">:</span> <span class="n">ConceptAutoEncoderExplainer</span> <span class="o">|</span> <span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"cpt d"</span><span class="p">],</span>
 <a id="__codelineno-0-151" name="__codelineno-0-151"></a>    <span class="n">matching_algorithm</span><span class="p">:</span> <span class="n">DistanceFunctionProtocol</span> <span class="o">=</span> <span class="n">ConceptMatchingAlgorithm</span><span class="o">.</span><span class="n">COSINE_HUNGARIAN</span><span class="p">,</span>
 <a id="__codelineno-0-152" name="__codelineno-0-152"></a><span class="p">):</span>
 <a id="__codelineno-0-153" name="__codelineno-0-153"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_explainers</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-<a id="__codelineno-0-154" name="__codelineno-0-154"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;At least one `ConceptAutoEncoderExplainer`s or `torch.Tensor`s must be provided.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-154" name="__codelineno-0-154"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"At least one `ConceptAutoEncoderExplainer`s or `torch.Tensor`s must be provided."</span><span class="p">)</span>
 <a id="__codelineno-0-155" name="__codelineno-0-155"></a>
 <a id="__codelineno-0-156" name="__codelineno-0-156"></a>    <span class="c1"># if only one explainer is provided, duplicate it for self comparison</span>
 <a id="__codelineno-0-157" name="__codelineno-0-157"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_explainers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-158" name="__codelineno-0-158"></a>        <span class="n">concept_explainers</span> <span class="o">=</span> <span class="n">concept_explainers</span> <span class="o">*</span> <span class="mi">2</span>
 <a id="__codelineno-0-159" name="__codelineno-0-159"></a>
 <a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="c1"># extract dictionaries from concept explainers</span>
-<a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">dictionaries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;cpt d&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">dictionaries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"cpt d"</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
 <a id="__codelineno-0-162" name="__codelineno-0-162"></a>        <span class="n">ce</span><span class="o">.</span><span class="n">get_dictionary</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ce</span><span class="p">,</span> <span class="n">ConceptAutoEncoderExplainer</span><span class="p">)</span> <span class="k">else</span> <span class="n">ce</span> <span class="k">for</span> <span class="n">ce</span> <span class="ow">in</span> <span class="n">concept_explainers</span>
 <a id="__codelineno-0-163" name="__codelineno-0-163"></a>    <span class="p">]</span>
 <a id="__codelineno-0-164" name="__codelineno-0-164"></a>
@@ -2992,19 +3016,19 @@ Both types are supported and can be mixed.</p>
 <a id="__codelineno-0-166" name="__codelineno-0-166"></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dictionary</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dictionaries</span><span class="p">):</span>
 <a id="__codelineno-0-167" name="__codelineno-0-167"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dictionary</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
 <a id="__codelineno-0-168" name="__codelineno-0-168"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-169" name="__codelineno-0-169"></a>                <span class="sa">f</span><span class="s2">&quot;Dictionary </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> or dictionary extracted from concept explainer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not a torch.Tensor.&quot;</span>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a>                <span class="sa">f</span><span class="s2">"Dictionary </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> or dictionary extracted from concept explainer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not a torch.Tensor."</span>
 <a id="__codelineno-0-170" name="__codelineno-0-170"></a>            <span class="p">)</span>
 <a id="__codelineno-0-171" name="__codelineno-0-171"></a>
 <a id="__codelineno-0-172" name="__codelineno-0-172"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dictionary</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
 <a id="__codelineno-0-173" name="__codelineno-0-173"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-174" name="__codelineno-0-174"></a>                <span class="sa">f</span><span class="s2">&quot;Dictionary </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> or dictionary extracted from concept explainer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not a 2D tensor.&quot;</span>
+<a id="__codelineno-0-174" name="__codelineno-0-174"></a>                <span class="sa">f</span><span class="s2">"Dictionary </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> or dictionary extracted from concept explainer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not a 2D tensor."</span>
 <a id="__codelineno-0-175" name="__codelineno-0-175"></a>            <span class="p">)</span>
 <a id="__codelineno-0-176" name="__codelineno-0-176"></a>
 <a id="__codelineno-0-177" name="__codelineno-0-177"></a>        <span class="n">expected_shape</span> <span class="o">=</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">shape</span> <span class="k">if</span> <span class="n">expected_shape</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">expected_shape</span>
 <a id="__codelineno-0-178" name="__codelineno-0-178"></a>        <span class="k">if</span> <span class="n">dictionary</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">expected_shape</span><span class="p">:</span>
 <a id="__codelineno-0-179" name="__codelineno-0-179"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-180" name="__codelineno-0-180"></a>                <span class="sa">f</span><span class="s2">&quot;Dictionary </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> or dictionary extracted from concept explainer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> has a different shape from the first dictionary.&quot;</span>
-<a id="__codelineno-0-181" name="__codelineno-0-181"></a>                <span class="sa">f</span><span class="s2">&quot;Expected shape: </span><span class="si">{</span><span class="n">expected_shape</span><span class="si">}</span><span class="s2">, got shape: </span><span class="si">{</span><span class="n">dictionary</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a>                <span class="sa">f</span><span class="s2">"Dictionary </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> or dictionary extracted from concept explainer </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> has a different shape from the first dictionary."</span>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a>                <span class="sa">f</span><span class="s2">"Expected shape: </span><span class="si">{</span><span class="n">expected_shape</span><span class="si">}</span><span class="s2">, got shape: </span><span class="si">{</span><span class="n">dictionary</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">."</span>
 <a id="__codelineno-0-182" name="__codelineno-0-182"></a>            <span class="p">)</span>
 <a id="__codelineno-0-183" name="__codelineno-0-183"></a>
 <a id="__codelineno-0-184" name="__codelineno-0-184"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">distance_function</span> <span class="o">=</span> <span class="n">matching_algorithm</span>
@@ -3078,11 +3102,11 @@ Both types are supported and can be mixed.</p>
 <span class="normal"><a href="#__codelineno-0-196">196</a></span>
 <span class="normal"><a href="#__codelineno-0-197">197</a></span>
 <span class="normal"><a href="#__codelineno-0-198">198</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-187" name="__codelineno-0-187"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the mean score over pairwise comparison scores between dictionaries.</span>
+<a id="__codelineno-0-187" name="__codelineno-0-187"></a><span class="w">    </span><span class="sd">"""Compute the mean score over pairwise comparison scores between dictionaries.</span>
 <a id="__codelineno-0-188" name="__codelineno-0-188"></a>
 <a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="sd">        float: The stability score.</span>
-<a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="sd">    """</span>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a>    <span class="n">comparisons</span> <span class="o">=</span> <span class="p">[]</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>    <span class="k">for</span> <span class="n">dict_1</span><span class="p">,</span> <span class="n">dict_2</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dictionaries</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a>        <span class="c1"># compute pairwise comparison</span>
@@ -3245,7 +3269,7 @@ Both types are supported and can be mixed.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../assets/js/custom.js"></script>
       

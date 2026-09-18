@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2006,10 +2000,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#interpreto.concepts.ConceptAutoEncoderExplainer(concept_model ([BaseDictionaryLearning](https)" class="md-nav__link">
+  <a href="#interpreto.concepts.ConceptAutoEncoderExplainer(concept_model)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model ([BaseDictionaryLearning](https
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model
       
     </span>
   </a>
@@ -2228,6 +2222,8 @@
       
         
       
+        
+      
     
     
     
@@ -2270,6 +2266,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2851,10 +2875,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#interpreto.concepts.ConceptAutoEncoderExplainer(concept_model ([BaseDictionaryLearning](https)" class="md-nav__link">
+  <a href="#interpreto.concepts.ConceptAutoEncoderExplainer(concept_model)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model ([BaseDictionaryLearning](https
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;concept_model
       
     </span>
   </a>
@@ -2981,7 +3005,7 @@ Child classes should implement the <code>fit</code> and <code>activations_to_con
           <tr class="doc-section-item">
             <td><code><span title="interpreto.concepts.ConceptEncoderExplainer.splitter">splitter</span></code></td>
             <td>
-                  <code><span title="interpreto.concepts.splitters.base_splitter.BaseSplitter">BaseSplitter</span></code>
+                  <code><span title="interpreto.concepts.splitters.BaseSplitter">BaseSplitter</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3047,7 +3071,7 @@ The <code>ConceptModelProtocol</code> is defined in <code>interpreto.typing</cod
 <h3 id="interpreto.concepts.ConceptEncoderExplainer(splitter)" class="doc doc-heading doc-heading-parameter">                  <code>splitter</code>
 <a href="#interpreto.concepts.ConceptEncoderExplainer(splitter)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="interpreto.concepts.splitters.base_splitter.BaseSplitter">BaseSplitter</span></code>
+                  <code><span title="interpreto.concepts.splitters.BaseSplitter">BaseSplitter</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3112,17 +3136,17 @@ The <code>ConceptModelProtocol</code> is defined in <code>interpreto.typing</cod
 <a id="__codelineno-0-178" name="__codelineno-0-178"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
 <a id="__codelineno-0-179" name="__codelineno-0-179"></a>    <span class="n">concept_model</span><span class="p">:</span> <span class="n">ConceptModelProtocol</span><span class="p">,</span>
 <a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="p">):</span>
-<a id="__codelineno-0-181" name="__codelineno-0-181"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the concept explainer with a given splitted model.</span>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a><span class="w">    </span><span class="sd">"""Initializes the concept explainer with a given splitted model.</span>
 <a id="__codelineno-0-182" name="__codelineno-0-182"></a>
 <a id="__codelineno-0-183" name="__codelineno-0-183"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">        splitter (BaseSplitter): The model to apply the explanation on.</span>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">        splitter (interpreto.concepts.splitters.BaseSplitter): The model to apply the explanation on.</span>
 <a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="sd">            Its `split_point` attribute determines where activations are extracted.</span>
 <a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">        concept_model (ConceptModelProtocol): The model used to extract concepts from</span>
 <a id="__codelineno-0-187" name="__codelineno-0-187"></a><span class="sd">            the activations of `splitter`.</span>
 <a id="__codelineno-0-188" name="__codelineno-0-188"></a><span class="sd">            The `ConceptModelProtocol` is defined in `interpreto.typing`. It is basically a `torch.nn.Module` with an `encode` method.</span>
-<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="sd">    """</span>
 <a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">BaseSplitter</span><span class="p">):</span>
-<a id="__codelineno-0-191" name="__codelineno-0-191"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The given model should be a BaseSplitter (or subclass), but </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">splitter</span><span class="p">)</span><span class="si">}</span><span class="s2"> was given.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"The given model should be a BaseSplitter (or subclass), but </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">splitter</span><span class="p">)</span><span class="si">}</span><span class="s2"> was given."</span><span class="p">)</span>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span> <span class="o">=</span> <span class="n">splitter</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_concept_model</span> <span class="o">=</span> <span class="n">concept_model</span>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">__is_fitted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
@@ -3230,14 +3254,14 @@ The <code>ConceptModelProtocol</code> is defined in <code>interpreto.typing</cod
 <span class="normal"><a href="#__codelineno-0-246">246</a></span>
 <span class="normal"><a href="#__codelineno-0-247">247</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="nd">@abstractmethod</span>
 <a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fits `concept_model` on the given activations.</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="w">    </span><span class="sd">"""Fits `concept_model` on the given activations.</span>
 <a id="__codelineno-0-240" name="__codelineno-0-240"></a>
 <a id="__codelineno-0-241" name="__codelineno-0-241"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="sd">        activations (torch.Tensor): The latent activations used to fit the concept model.</span>
 <a id="__codelineno-0-243" name="__codelineno-0-243"></a>
 <a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="sd">        `None`, `concept_model` is fitted in-place, `is_fitted` is set to `True` and `split_point` is set.</span>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">    """</span>
 <a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3300,7 +3324,7 @@ Which are ways to interpret the concepts.</p>
 <span class="normal"><a href="#__codelineno-0-281">281</a></span>
 <span class="normal"><a href="#__codelineno-0-282">282</a></span>
 <span class="normal"><a href="#__codelineno-0-283">283</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_inputs_to_concepts_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModelForInputsToConcepts</span><span class="p">:</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a model that maps raw inputs to concept activations.</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="w">    </span><span class="sd">"""Returns a model that maps raw inputs to concept activations.</span>
 <a id="__codelineno-0-275" name="__codelineno-0-275"></a>
 <a id="__codelineno-0-276" name="__codelineno-0-276"></a><span class="sd">    The model can be passed to an attribution method,</span>
 <a id="__codelineno-0-277" name="__codelineno-0-277"></a><span class="sd">    to obtain inputs to concepts attributions.</span>
@@ -3308,7 +3332,7 @@ Which are ways to interpret the concepts.</p>
 <a id="__codelineno-0-279" name="__codelineno-0-279"></a>
 <a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">        ModelForInputsToConcepts: A model that maps raw inputs to concept activations.</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">    """</span>
 <a id="__codelineno-0-283" name="__codelineno-0-283"></a>    <span class="k">return</span> <span class="n">ModelForInputsToConcepts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3333,7 +3357,7 @@ Which are ways to interpret the concepts.</p>
 
 
 <a href="#interpreto.concepts.ConceptAutoEncoderExplainer" class="headerlink" title="Permanent link">&para;</a></h2>
-<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ConceptAutoEncoderExplainer</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="splitter (interpreto.concepts.ConceptAutoEncoderExplainer(splitter))" href="#interpreto.concepts.ConceptAutoEncoderExplainer(splitter)">splitter</a></span><span class="p">,</span> <span class="n"><span title="interpreto.concepts.ConceptAutoEncoderExplainer(concept_model)">concept_model</span></span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">ConceptAutoEncoderExplainer</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="splitter (interpreto.concepts.ConceptAutoEncoderExplainer(splitter))" href="#interpreto.concepts.ConceptAutoEncoderExplainer(splitter)">splitter</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="concept_model (interpreto.concepts.ConceptAutoEncoderExplainer(concept_model))" href="#interpreto.concepts.ConceptAutoEncoderExplainer(concept_model)">concept_model</a></span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents first">
@@ -3376,11 +3400,11 @@ The split point is determined by the model's <code>split_point</code> attribute.
           <tr class="doc-section-item">
             <td><code><span title="interpreto.concepts.ConceptAutoEncoderExplainer.concept_model">concept_model</span></code></td>
             <td>
-                  <code>[BaseDictionaryLearning](https</code>
+                  <code><span title="interpreto._vendor.overcomplete.base.BaseDictionaryLearning">BaseDictionaryLearning</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>//github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from the
+                <p>The model used to extract concepts from the
 activations of  <code>splitter</code>. The only assumption for classes inheriting from this class is
 that the <code>concept_model</code> can encode activations into concepts with <code>activations_to_concepts</code>.</p>
               </div>
@@ -3440,7 +3464,7 @@ that the <code>concept_model</code> can encode activations into concepts with <c
 <h3 id="interpreto.concepts.ConceptAutoEncoderExplainer(splitter)" class="doc doc-heading doc-heading-parameter">                  <code>splitter</code>
 <a href="#interpreto.concepts.ConceptAutoEncoderExplainer(splitter)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="interpreto.concepts.splitters.base_splitter.BaseSplitter">BaseSplitter</span></code>
+                  <code><span title="interpreto.concepts.splitters.BaseSplitter">BaseSplitter</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3454,13 +3478,14 @@ Its <code>split_point</code> attribute determines where activations are extracte
           </tr>
           <tr class="doc-section-item">
             <td>
-<h3 id="interpreto.concepts.ConceptAutoEncoderExplainer(concept_model ([BaseDictionaryLearning](https)" class="doc doc-heading doc-heading-parameter">                  <code>concept_model ([BaseDictionaryLearning](https</code>
-<a href="#interpreto.concepts.ConceptAutoEncoderExplainer(concept_model ([BaseDictionaryLearning](https)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
+<h3 id="interpreto.concepts.ConceptAutoEncoderExplainer(concept_model)" class="doc doc-heading doc-heading-parameter">                  <code>concept_model</code>
+<a href="#interpreto.concepts.ConceptAutoEncoderExplainer(concept_model)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
+                  <code><span title="interpreto._vendor.overcomplete.base.BaseDictionaryLearning">BaseDictionaryLearning</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>//github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from
+                <p>The model used to extract concepts from
 the activations of <code>splitter</code>.</p>
               </div>
             </td>
@@ -3499,14 +3524,14 @@ the activations of <code>splitter</code>.</p>
 <a id="__codelineno-0-313" name="__codelineno-0-313"></a>    <span class="n">splitter</span><span class="p">:</span> <span class="n">BaseSplitter</span><span class="p">,</span>
 <a id="__codelineno-0-314" name="__codelineno-0-314"></a>    <span class="n">concept_model</span><span class="p">:</span> <span class="n">BaseDictionaryLearning</span><span class="p">,</span>
 <a id="__codelineno-0-315" name="__codelineno-0-315"></a><span class="p">):</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the concept explainer with a given splitted model.</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="w">    </span><span class="sd">"""Initializes the concept explainer with a given splitted model.</span>
 <a id="__codelineno-0-317" name="__codelineno-0-317"></a>
 <a id="__codelineno-0-318" name="__codelineno-0-318"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a><span class="sd">        splitter (BaseSplitter): The model to apply the explanation on.</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a><span class="sd">        splitter (interpreto.concepts.splitters.BaseSplitter): The model to apply the explanation on.</span>
 <a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="sd">            Its `split_point` attribute determines where activations are extracted.</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="sd">        concept_model ([BaseDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/24568ba5736cbefca4b78a12246d92a1be04a1f4/overcomplete/base.py#L10)): The model used to extract concepts from</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a><span class="sd">        concept_model (BaseDictionaryLearning): The model used to extract concepts from</span>
 <a id="__codelineno-0-322" name="__codelineno-0-322"></a><span class="sd">            the activations of `splitter`.</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">    """</span>
 <a id="__codelineno-0-324" name="__codelineno-0-324"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="p">:</span> <span class="n">BaseDictionaryLearning</span>
 <a id="__codelineno-0-325" name="__codelineno-0-325"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">splitter</span><span class="p">,</span> <span class="n">concept_model</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
@@ -3613,14 +3638,14 @@ the activations of <code>splitter</code>.</p>
 <span class="normal"><a href="#__codelineno-0-246">246</a></span>
 <span class="normal"><a href="#__codelineno-0-247">247</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="nd">@abstractmethod</span>
 <a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fits `concept_model` on the given activations.</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="w">    </span><span class="sd">"""Fits `concept_model` on the given activations.</span>
 <a id="__codelineno-0-240" name="__codelineno-0-240"></a>
 <a id="__codelineno-0-241" name="__codelineno-0-241"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="sd">        activations (torch.Tensor): The latent activations used to fit the concept model.</span>
 <a id="__codelineno-0-243" name="__codelineno-0-243"></a>
 <a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="sd">        `None`, `concept_model` is fitted in-place, `is_fitted` is set to `True` and `split_point` is set.</span>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">    """</span>
 <a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -3714,14 +3739,14 @@ the activations of <code>splitter</code>.</p>
 <span class="normal"><a href="#__codelineno-0-342">342</a></span>
 <span class="normal"><a href="#__codelineno-0-343">343</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-331" name="__codelineno-0-331"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-332" name="__codelineno-0-332"></a><span class="k">def</span><span class="w"> </span><span class="nf">activations_to_concepts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">LatentActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># ConceptsActivations</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Encode the given activations using the `concept_model` encoder.</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a><span class="w">    </span><span class="sd">"""Encode the given activations using the `concept_model` encoder.</span>
 <a id="__codelineno-0-334" name="__codelineno-0-334"></a>
 <a id="__codelineno-0-335" name="__codelineno-0-335"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-336" name="__codelineno-0-336"></a><span class="sd">        activations (LatentActivations): The activations to encode.</span>
 <a id="__codelineno-0-337" name="__codelineno-0-337"></a>
 <a id="__codelineno-0-338" name="__codelineno-0-338"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="sd">        The encoded concept activations.</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a><span class="sd">    """</span>
 <a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">activations</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="n">activations</span> <span class="o">=</span> <span class="n">activations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">non_blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -3817,14 +3842,14 @@ the activations of <code>splitter</code>.</p>
 <span class="normal"><a href="#__codelineno-0-356">356</a></span>
 <span class="normal"><a href="#__codelineno-0-357">357</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-345" name="__codelineno-0-345"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-346" name="__codelineno-0-346"></a><span class="k">def</span><span class="w"> </span><span class="nf">concepts_to_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">:</span> <span class="n">ConceptsActivations</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># LatentActivations</span>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decode the given concepts using the `concept_model` decoder.</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="w">    </span><span class="sd">"""Decode the given concepts using the `concept_model` decoder.</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">        concepts (ConceptsActivations): The concepts to decode.</span>
 <a id="__codelineno-0-351" name="__codelineno-0-351"></a>
 <a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">        The decoded model activations.</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    """</span>
 <a id="__codelineno-0-355" name="__codelineno-0-355"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">!=</span> <span class="n">concepts</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
 <a id="__codelineno-0-356" name="__codelineno-0-356"></a>        <span class="n">concepts</span> <span class="o">=</span> <span class="n">concepts</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">non_blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">concepts</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
@@ -3884,11 +3909,11 @@ the activations of <code>splitter</code>.</p>
 <span class="normal"><a href="#__codelineno-0-365">365</a></span>
 <span class="normal"><a href="#__codelineno-0-366">366</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="nd">@check_fitted</span>
 <a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>  <span class="c1"># TODO: add this to tests</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the dictionary learned by the fitted `concept_model`.</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="w">    </span><span class="sd">"""Get the dictionary learned by the fitted `concept_model`.</span>
 <a id="__codelineno-0-362" name="__codelineno-0-362"></a>
 <a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">    Returns:</span>
 <a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">        torch.Tensor: A `torch.Tensor` containing the learned dictionary.</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    """</span>
 <a id="__codelineno-0-366" name="__codelineno-0-366"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_model</span><span class="o">.</span><span class="n">get_dictionary</span><span class="p">()</span>  <span class="c1"># type: ignore</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4323,8 +4348,8 @@ List length: correspond to the number of inputs.
 <a id="__codelineno-0-394" name="__codelineno-0-394"></a>    <span class="n">normalization</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <a id="__codelineno-0-395" name="__codelineno-0-395"></a>    <span class="n">tqdm_bar</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-396" name="__codelineno-0-396"></a>    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">&quot;t g c&quot;</span><span class="p">]]:</span>
-<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Float</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="s2">"t g c"</span><span class="p">]]:</span>
+<a id="__codelineno-0-398" name="__codelineno-0-398"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-399" name="__codelineno-0-399"></a><span class="sd">    Compute the gradients of the predictions with respect to the concepts.</span>
 <a id="__codelineno-0-400" name="__codelineno-0-400"></a>
 <a id="__codelineno-0-401" name="__codelineno-0-401"></a><span class="sd">    To clarify what this function does, lets detail some notations.</span>
@@ -4414,16 +4439,16 @@ List length: correspond to the number of inputs.
 <a id="__codelineno-0-485" name="__codelineno-0-485"></a><span class="sd">            because gradients have a much larger impact on the memory.</span>
 <a id="__codelineno-0-486" name="__codelineno-0-486"></a>
 <a id="__codelineno-0-487" name="__codelineno-0-487"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">        list[Float[torch.Tensor, &quot;t g c&quot;]]:</span>
+<a id="__codelineno-0-488" name="__codelineno-0-488"></a><span class="sd">        list[Float[torch.Tensor, "t g c"]]:</span>
 <a id="__codelineno-0-489" name="__codelineno-0-489"></a><span class="sd">            The gradients of the model output with respect to the concept activations.</span>
 <a id="__codelineno-0-490" name="__codelineno-0-490"></a><span class="sd">            List length: correspond to the number of inputs.</span>
 <a id="__codelineno-0-491" name="__codelineno-0-491"></a><span class="sd">                Tensor shape: (t, g, c) with t the target dimension, g the number of granularity elements in one input, and c the number of</span>
 <a id="__codelineno-0-492" name="__codelineno-0-492"></a><span class="sd">                concepts.</span>
-<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-493" name="__codelineno-0-493"></a><span class="sd">    """</span>
 <a id="__codelineno-0-494" name="__codelineno-0-494"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_differentiable_concept_decoder</span><span class="p">:</span>
 <a id="__codelineno-0-495" name="__codelineno-0-495"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-496" name="__codelineno-0-496"></a>            <span class="s2">&quot;The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. &quot;</span>
-<a id="__codelineno-0-497" name="__codelineno-0-497"></a>            <span class="sa">f</span><span class="s2">&quot;Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
+<a id="__codelineno-0-496" name="__codelineno-0-496"></a>            <span class="s2">"The concept decoder of this explainer is not differentiable. This is required to compute concept-to-output gradients. "</span>
+<a id="__codelineno-0-497" name="__codelineno-0-497"></a>            <span class="sa">f</span><span class="s2">"Current explainer class: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">."</span>
 <a id="__codelineno-0-498" name="__codelineno-0-498"></a>        <span class="p">)</span>
 <a id="__codelineno-0-499" name="__codelineno-0-499"></a>
 <a id="__codelineno-0-500" name="__codelineno-0-500"></a>    <span class="c1"># put everything on device</span>
@@ -4601,7 +4626,7 @@ List length: correspond to the number of inputs.
       <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../../assets/js/custom.js"></script>
       

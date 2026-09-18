@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -56,12 +56,6 @@
       <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="../../../assets/css/custom.css">
-    
-      <link rel="stylesheet" href="../../../css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="../../../css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="../../../css/pandas-dataframe.css">
     
     <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -535,7 +529,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -563,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -591,7 +585,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -619,7 +613,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -709,7 +703,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -793,7 +787,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -821,7 +815,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2163,6 +2157,8 @@
       
         
       
+        
+      
     
     
     
@@ -2205,6 +2201,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2818,7 +2842,7 @@
 <h1 id="api-concept-based-methods">API: Concept-based Methods<a class="headerlink" href="#api-concept-based-methods" title="Permanent link">&para;</a></h1>
 <h2 id="tutorials">Tutorials<a class="headerlink" href="#tutorials" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../../notebooks/concept_examples.ipynb">Concept Explanations Examples</a></li>
+<li><a href="../../../notebooks/classification_concept_tutorial/">Concept Explanations Examples</a></li>
 </ul>
 <h2 id="common-api">Common API<a class="headerlink" href="#common-api" title="Permanent link">&para;</a></h2>
 <p>This code snippet will not work in practice as some of the parameters are not defined.
@@ -2829,25 +2853,21 @@ Nonetheless, it shows the common API for all concept-based explainers.</p>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># 1. Load and split your model</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">model_with_split_points</span> <span class="o">=</span> <span class="n">ModelWithSplitPoints</span><span class="p">(</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="s2">&quot;your_model_id&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">split_point</span><span class="o">=</span><span class="s2">&quot;your_split_point&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">automodel</span><span class="o">=</span><span class="s2">&quot;your_automodel&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">device_map</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># 2. Compute the model activations on the split_point</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">activations</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">model_with_split_points</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="s2">"your_model_id"</span><span class="p">,</span> <span class="n">split_point</span><span class="o">=</span><span class="s2">"your_split_point"</span><span class="p">,</span> <span class="n">automodel</span><span class="o">=</span><span class="s2">"your_automodel"</span><span class="p">,</span> <span class="n">nb_concepts</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">device_map</span><span class="o">=</span><span class="s2">"cuda"</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># 2. Compute the model activations on the split_point</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">activations</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">=</span> <span class="n">model_with_split_points</span><span class="o">.</span><span class="n">get_activations</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># 3. Instantiate and fit the concept-based explainer on the activations</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">)</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="n">concept_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
 <a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="c1"># 3. Instantiate and fit the concept-based explainer on the activations</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="n">concept_explainer</span> <span class="o">=</span> <span class="n">ICAConcepts</span><span class="p">(</span><span class="n">model_with_split_points</span><span class="p">)</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="n">concept_explainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">activations</span><span class="p">)</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="c1"># 4. Interpret the obtained concepts</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="n">interpretation</span> <span class="o">=</span> <span class="n">TopKInputs</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">)</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="c1"># 5. Evaluate concepts&#39; contributions to the output</span>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="n">concept_gradients</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">dataset</span><span class="p">)</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="c1"># 4. Interpret the obtained concepts</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="n">interpretation</span> <span class="o">=</span> <span class="n">TopKInputs</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">)</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="c1"># 5. Evaluate concepts' contributions to the output</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="n">concept_gradients</span> <span class="o">=</span> <span class="n">concept_explainer</span><span class="o">.</span><span class="n">concept_output_gradient</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">dataset</span><span class="p">)</span>
 </code></pre></div>
 <p>The API has five steps:</p>
 <h3 id="step-1-load-and-split-your-model-with-a-splitter">Step 1: Load and split your model with a splitter<a class="headerlink" href="#step-1-load-and-split-your-model-with-a-splitter" title="Permanent link">&para;</a></h3>
@@ -2921,7 +2941,7 @@ These inputs can be tokens, words, sentences, or samples.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto.concepts.interpretations</span><span class="w"> </span><span class="kn">import</span> <span class="n">TopKInputs</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">topk</span> <span class="o">=</span> <span class="n">TopKInputs</span><span class="p">(</span><span class="n">concept_explainer</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">topk_words</span> <span class="o">=</span> <span class="n">topk</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">concepts_indices</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">topk_words</span> <span class="o">=</span> <span class="n">topk</span><span class="o">.</span><span class="n">interpret</span><span class="p">(</span><span class="n">inputs</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span> <span class="n">concepts_indices</span><span class="o">=</span><span class="s2">"all"</span><span class="p">)</span>
 </code></pre></div>
 <h4 id="llm-labels">LLM Labels<a class="headerlink" href="#llm-labels" title="Permanent link">&para;</a></h4>
 <p><a href="../interpretations/llm_labels/">LLM Labels</a> uses a large language model to generate natural-language labels
@@ -2947,7 +2967,7 @@ complementing the global view offered by TopKInputs.</p>
 <p><strong>Note:</strong> Only perturbation-based methods (Occlusion, Lime, KernelShap, Sobol) are supported.
 Gradient-based methods are not compatible with the input-to-concept pipeline.</p>
 </blockquote>
-<p>For classification models, use <a href="./splitter_for_classification.md"><code>SplitterForClassification</code></a>
+<p>For classification models, use <a href="../splitters/splitter_for_classification/"><code>SplitterForClassification</code></a>
 instead of <code>ModelWithSplitPoints</code> for a simpler setup.</p>
 <p>More details in the <a href="../interpretations/concept_attributions/">Concept Attributions documentation</a>.</p>
 <h3 id="step-6-evaluate-concepts-contributions-to-the-output-unsupervised-methods-only">Step 6: Evaluate concepts' contributions to the output (unsupervised methods only)<a class="headerlink" href="#step-6-evaluate-concepts-contributions-to-the-output-unsupervised-methods-only" title="Permanent link">&para;</a></h3>
@@ -3103,7 +3123,7 @@ Use the <code>concept_output_gradient</code> method to compute the gradient of t
       <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="../../../assets/js/custom.js"></script>
       

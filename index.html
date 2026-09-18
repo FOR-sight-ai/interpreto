@@ -36,7 +36,7 @@
       
       
       <link rel="icon" href="assets/img/interpreto_logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
     
@@ -44,7 +44,7 @@
     
 
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
@@ -69,12 +69,6 @@
       <link rel="stylesheet" href="assets/_mkdocstrings.css">
     
       <link rel="stylesheet" href="assets/css/custom.css">
-    
-      <link rel="stylesheet" href="css/ansi-colours.css">
-    
-      <link rel="stylesheet" href="css/jupyter-cells.css">
-    
-      <link rel="stylesheet" href="css/pandas-dataframe.css">
     
     <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -729,7 +723,7 @@
   <span class="md-ellipsis">
     
   
-    Use Attribution Methods
+    Interpreto attribution tutorial
   
 
     
@@ -757,7 +751,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Classification
+    Classification Concept-based Explanation Tutorial
   
 
     
@@ -785,7 +779,7 @@
   <span class="md-ellipsis">
     
   
-    Concept-based Explanations for Generation
+    Generation Concept-based Explanation Tutorial
   
 
     
@@ -813,7 +807,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Truthfulness (Generation)
+    Probing a Language Model for Truthfulness
   
 
     
@@ -903,7 +897,7 @@
   <span class="md-ellipsis">
     
   
-    Fairness Applications
+    Explainability for Bias Analysis in NLP Models
   
 
     
@@ -987,7 +981,7 @@
   <span class="md-ellipsis">
     
   
-    Probing for Linguistic Properties (Classification)
+    Probing a Sentiment Classifier for Linguistic Properties
   
 
     
@@ -1015,7 +1009,7 @@
   <span class="md-ellipsis">
     
   
-    Concepts Ngrams interpretation
+    Classification Concept-based N-gram Explanation Tutorial
   
 
     
@@ -2209,6 +2203,8 @@
       
         
       
+        
+      
     
     
     
@@ -2251,6 +2247,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/concepts/interpretations/base/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Classes & Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -2917,7 +2941,7 @@
 <p>The library is available on PyPI, try <code>pip install interpreto</code> to install it.</p>
 <p>Checkout the tutorials to get started:</p>
 <ul>
-<li><a href="https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_walkthrough.ipynb">Attributions walkthrough</a> (both classification and generation)</li>
+<li><a href="https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_tutorial.ipynb">Attributions walkthrough</a> (both classification and generation)</li>
 <li><a href="https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/classification_concept_tutorial.ipynb">Classification concept-based explanations</a></li>
 <li><a href="https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/generation_concept_tutorial.ipynb">Generation concept-based explanations</a></li>
 </ul>
@@ -2928,7 +2952,7 @@
 <p>They all work seamlessly for both classification (<code>...ForSequenceClassification</code>) and generation (<code>...ForCausalLM</code>)</p>
 <p><strong>Inference-based Methods:</strong></p>
 <ul>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernel_shap/"><code>KernelShap</code></a> — <a href="https://arxiv.org/abs/1705.07874">Lundberg and Lee, 2017</a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernelshap/"><code>KernelShap</code></a> — <a href="https://arxiv.org/abs/1705.07874">Lundberg and Lee, 2017</a></li>
 <li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/lime/"><code>LIME</code></a> — <a href="https://dl.acm.org/doi/abs/10.1145/2939672.2939778">Ribeiro et al., 2013</a></li>
 <li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/occlusion/"><code>Occlusion</code></a> — <a href="https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53">Zeiler and Fergus, 2014</a></li>
 <li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/sobol/"><code>Sobol</code></a> — <a href="https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html">Fel et al., 2021</a></li>
@@ -2936,12 +2960,12 @@
 <p><strong>Gradient-based methods:</strong></p>
 <ul>
 <li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/gradient_shap/"><code>GradientShap</code></a> — <a href="https://arxiv.org/abs/1705.07874">Lundberg and Lee, 2017</a></li>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/inputx_gradient/"><code>InputxGradient</code></a> — <a href="https://arxiv.org/abs/1312.6034">Simonyan et al., 2013</a></li>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradient/"><code>Integrated Gradient</code></a> — <a href="http://proceedings.mlr.press/v70/sundararajan17a.html">Sundararajan et al., 2017</a></li>
+<li><code>InputxGradient</code> — <a href="https://arxiv.org/abs/1312.6034">Simonyan et al., 2013</a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradients/"><code>Integrated Gradient</code></a> — <a href="http://proceedings.mlr.press/v70/sundararajan17a.html">Sundararajan et al., 2017</a></li>
 <li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/saliency/"><code>Saliency</code></a> — <a href="https://arxiv.org/abs/1312.6034">Simonyan et al., 2013</a></li>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/smooth_grad/"><code>SmoothGrad</code></a> — <a href="https://arxiv.org/abs/1706.03825">Smilkov et al., 2017</a></li>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/square_grad/"><code>SquareGrad</code></a> — <a href="https://arxiv.org/abs/1806.10758">Hooker et al., 2019</a></li>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/var_grad/"><code>VarGrad</code></a> — <a href="https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html">Richter et al., 2020</a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/smoothgrad/"><code>SmoothGrad</code></a> — <a href="https://arxiv.org/abs/1706.03825">Smilkov et al., 2017</a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/squaregrad/"><code>SquareGrad</code></a> — <a href="https://arxiv.org/abs/1806.10758">Hooker et al., 2019</a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/vargrad/"><code>VarGrad</code></a> — <a href="https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html">Richter et al., 2020</a></li>
 </ul>
 <h3 id="concept-based-methods-or-mechanistic-interpretability">💡 Concept-Based Methods or Mechanistic Interpretability<a class="headerlink" href="#concept-based-methods-or-mechanistic-interpretability" title="Permanent link">&para;</a></h3>
 <p>Concept-based explanations aim to provide high-level interpretations of latent model representations.</p>
@@ -2964,10 +2988,10 @@
 <p>Both can be tuned with <code>bias_calibrator</code> and <code>normalization</code> parameters.</p>
 <p><strong>2. (unsupervised) Dictionary Learning for Concept Discovery</strong> (mainly via <a href="https://github.com/KempnerInstitute/overcomplete"><code>overcomplete</code></a>):</p>
 <ul>
-<li>Interpret neurons directly via <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/"><code>NeuronsAsConcepts</code></a></li>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.NMFConcepts"><code>NMF</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SemiNMFConcepts"><code>Semi-NMF</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ConvexNMFConcepts"><code>ConvexNMF</code></a></li>
-<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ICAConcepts"><code>ICA</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SVDConcepts"><code>SVD</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.PCAConcepts"><code>PCA</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.KMeansConcepts"><code>KMeans</code></a></li>
-<li>SAE variants: <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.VanillaSAEConcepts"><code>Vanilla SAE</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.TopKSAEConcepts"><code>TopK SAE</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.JumpReLUSAEConcepts"><code>JumpReLU SAE</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.BatchTopKSAEConcepts"><code>BatchTopK SAE</code></a></li>
+<li>Interpret neurons directly via <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/neurons_as_concepts/"><code>NeuronsAsConcepts</code></a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.NMFConcepts"><code>NMF</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SemiNMFConcepts"><code>Semi-NMF</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ConvexNMFConcepts"><code>ConvexNMF</code></a></li>
+<li><a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ICAConcepts"><code>ICA</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SVDConcepts"><code>SVD</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.PCAConcepts"><code>PCA</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.KMeansConcepts"><code>KMeans</code></a></li>
+<li>SAE variants: <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.VanillaSAEConcepts"><code>Vanilla SAE</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.TopKSAEConcepts"><code>TopK SAE</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.JumpReLUSAEConcepts"><code>JumpReLU SAE</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.BatchTopKSAEConcepts"><code>BatchTopK SAE</code></a></li>
 </ul>
 <p><strong>3. (unsupervised) Available Concept Interpretation Techniques:</strong></p>
 <ul>
@@ -3005,7 +3029,7 @@
 <ul>
 <li>Concept-space (dictionary learning evaluation)</li>
 <li>faithfulness: <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.MSE"><code>MSE</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.FID"><code>FID</code></a>, and <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.ReconstructionError"><code>ReconstructionError</code></a></li>
-<li>complexity: <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.Sparsity"><code>Sparsity</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity/"><code>SparsityRatio</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity/#interpreto.concepts.metrics.SparsityRatio"><code>SparsityRatio</code></a></li>
+<li>complexity: <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.Sparsity"><code>Sparsity</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/"><code>SparsityRatio</code></a>, <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.SparsityRatio"><code>SparsityRatio</code></a></li>
 <li>stability: <a href="https://for-sight-ai.github.io/interpreto/api/concepts/metrics/dictionary_metrics/#interpreto.concepts.metrics.Stability"><code>Stability</code></a></li>
 <li>Concepts interpretations</li>
 <li>No metric yet, will be included soon.</li>
@@ -3013,7 +3037,7 @@
 <li>No metric yet, will be included soon.</li>
 </ul>
 <h2 id="contributing">👍 Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
-<p>Feel free to propose your ideas or come and contribute with us on the Interpreto 🪄 toolbox! We have a specific document where we describe in a simple way how to make your <a href="docs/contributing.md">first pull request</a>.</p>
+<p>Feel free to propose your ideas or come and contribute with us on the Interpreto 🪄 toolbox! We have a specific document where we describe in a simple way how to make your <a href="contributing/">first pull request</a>.</p>
 <h2 id="see-also">👀 See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <p>More from the DEEL project:</p>
 <ul>
@@ -3033,13 +3057,13 @@
 <p>If you use Interpreto 🪄 as part of your workflow in a scientific publication, please consider citing 🗞️ <a href="https://arxiv.org/abs/2512.09730">our paper</a>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nc">@article</span><span class="p">{</span><span class="nl">poche2025interpreto</span><span class="p">,</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="na">title</span><span class="w">       </span><span class="p">=</span><span class="w"> </span><span class="s">{Interpreto: An Explainability Library for Transformers}</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="na">author</span><span class="w">      </span><span class="p">=</span><span class="w"> </span><span class="s">{Poch{\&#39;e}, Antonin and Mullor, Thomas and Sarti, Gabriele and Boisnard, Fr{\&#39;e}d{\&#39;e}ric and Friedrich, Corentin and Claye, Charlotte and Hoofd, Fran{\c{c}}ois and Bernas, Raphael and Hudelot, C{\&#39;e}line and Jourdan, Fanny}</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="na">author</span><span class="w">      </span><span class="p">=</span><span class="w"> </span><span class="s">{Poch{\'e}, Antonin and Mullor, Thomas and Sarti, Gabriele and Boisnard, Fr{\'e}d{\'e}ric and Friedrich, Corentin and Claye, Charlotte and Hoofd, Fran{\c{c}}ois and Bernas, Raphael and Hudelot, C{\'e}line and Jourdan, Fanny}</span><span class="p">,</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="na">journal</span><span class="w">     </span><span class="p">=</span><span class="w"> </span><span class="s">{arXiv preprint arXiv:2512.09730}</span><span class="p">,</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="na">year</span><span class="w">        </span><span class="p">=</span><span class="w"> </span><span class="s">{2025}</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
 </code></pre></div>
 <h2 id="license">📝 License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
-<p>The package is released under <a href="LICENSE">MIT license</a>.</p>
+<p>The package is released under <a href="https://github.com/FOR-sight-ai/interpreto/blob/main/LICENSE">MIT license</a>.</p>
     
 
 
@@ -3081,13 +3105,13 @@
         
         
           
-          <a href="notebooks/attribution_tutorial/" class="md-footer__link md-footer__link--next" aria-label="Next: Use Attribution Methods">
+          <a href="notebooks/attribution_tutorial/" class="md-footer__link md-footer__link--next" aria-label="Next: Interpreto attribution tutorial">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Use Attribution Methods
+                Interpreto attribution tutorial
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -3166,7 +3190,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.indexes", "navigation.footer", "content.code.annotations", "content.code.copy", "announce.dismiss", "navigation.top", "navigation.instant", "toc.follow", "content.tabs.link", "search.share", "search.highlight", "search.suggest"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="assets/js/custom.js"></script>
       
