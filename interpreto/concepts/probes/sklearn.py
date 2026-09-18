@@ -54,7 +54,7 @@ from interpreto.typing import ConceptsActivations, LatentActivations
 class SklearnProbe:
     """Probe wrapping a scikit-learn classifier with `decision_function`.
 
-    Satisfies [ConceptModelProtocol][interpreto.typing.ConceptModelProtocol] structurally.
+    Satisfies `ConceptModelProtocol` structurally.
     Currently limited to a single binary concept.
 
     Args:
@@ -88,11 +88,11 @@ class SklearnProbeExplainer(ConceptEncoderExplainer[SklearnProbe]):
 
     Integrates [SklearnProbe][interpreto.concepts.probes.sklearn.SklearnProbe] into the concept
     explainer pipeline, connecting it to a
-    [BaseSplitter][interpreto.concepts.splitters.base_splitter.BaseSplitter]
+    `BaseSplitter`
     for activation extraction.
 
     Args:
-        splitter (BaseSplitter): Wrapped transformer model.
+        splitter (interpreto.concepts.splitters.BaseSplitter): Wrapped transformer model.
         sklearn_class (Any): Scikit-learn estimator class (default: `SVC`).
         sklearn_kwargs (dict[str, Any]): Arguments forwarded to the sklearn estimator.
     """

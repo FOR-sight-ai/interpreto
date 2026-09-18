@@ -51,8 +51,7 @@ jobs:
     - name: Install dependencies
       run: |
         source .venv/bin/activate
-        make update-deps
-        uv pip install -r requirements-dev.txt
+        uv pip install ".[docs,lint,notebook]"
 
 
     - name: Export HF_HUB_TOKEN
