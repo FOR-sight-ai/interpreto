@@ -22,75 +22,80 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-Base classes for perturbations used in attribution methods
+Base merged classes for perturbations used in attribution methods
 """
 # TODO : remake all the docstrings of this file to fit with new method signatures
 
 from __future__ import annotations
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from copy import deepcopy
 
 import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerBase
+from transformers.image_processing_utils import BaseImageProcessor
 
-from interpreto.commons.granularity import Granularity
+from interpreto.commons.granularity import (
+    Granularity,
+    GranularityResizeStrategy,
+    ImageGranularity,
+)
 from interpreto.typing import TensorMapping
 
 
-class Perturbator:
+class Perturbator(ABC):
     """
-    Base class for perturbators
-    If this class is instantiated, it behaves as a no-op perturbator
-    Perturbator may be subclassed to define custom perturbations, we recommend to use either IdsPerturbator or EmbeddingsPerturbator as base classes
+    Abstract Base class for perturbators.
     """
 
-    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        """
-        Method called when we ask the perturbator to perturb a mapping of tensors, generally the output of a tokenizer
-        The mapping should be similar to mappings returned by the tokenizer.
-        It should at least have "input_ids" and "attention_mask".
-        Optionally, the "offsets_mapping" might be required for the `SENTENCE` granularity.
-        Give directly the output of the tokenizer without modifying it would be the best and most common way to use this method
+    # TODO: docstring — see todo/2026-07-30-to-do.md
 
-        Args:
-            model_inputs (TensorMapping): output of the tokenizers
-        """
-        # add perturbation dimension
-        if model_inputs["input_ids"].ndim <= 1:
-            model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        # model_inputs["input_ids"] = model_inputs["input_ids"].unsqueeze(0)
-        # if "inputs_embeds" in model_inputs:
-        #    model_inputs["inputs_embeds"] = model_inputs["inputs_embeds"].unsqueeze(0)
-        # TODO : eventually add perturbation dimension to other keys in the mapping ?
+    # Only what every perturbator has, whatever the modality and whatever the strategy.
+    # Every other field is declared by the subclass that introduces it.
+    # n_perturbations default to -1 because some Perturbators can only know the number
+    # of perturbations at runtime (Occlusion and Sobol that both depend on g the granularity
+    # dim). If the Perturbator needs n_perturbations then the value should be a default on
+    # the perturbator
 
-        return model_inputs, torch.zeros_like(model_inputs["input_ids"], dtype=torch.float)
+    def __init__(
+        self,
+        *,
+        processor: PreTrainedTokenizerBase | BaseImageProcessor | None = None,
+        granularity: Granularity | None = None,
+        n_perturbations: int = -1,
+    ):
+        self.processor = processor
+        self.granularity = granularity
+        self.n_perturbations = n_perturbations
+
+    @abstractmethod
+    def perturb(self, inputs):
+        pass
 
     def __call__(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         return self.perturb(model_inputs)
 
 
-class EmbeddingsPerturbator(Perturbator):
+class TensorPerturbator(Perturbator):  # new class (just for typing and clarity)
     """
     Specific class for perturbators working on input embeddings
     All perturbators working on input embeddings only should inherit from this class
 
-    By default, it only convert input IDs to embeddings using the model's input embedder.
+    Carries no fields of its own: how the input tensor is obtained is modality-specific and is
+    introduced by the subclass that needs it.
     """
 
-    __slots__ = ("inputs_embedder",)
+    @abstractmethod
+    def perturb_tensor(self):  # renaming of `perturb_embeds`
+        pass
 
-    def __init__(self, inputs_embedder: torch.nn.Module):
-        """
-        Create a perturbator.
 
-        Args:
-            inputs_embedder: Model's module to convert input IDs to embeddings.
-        """
-        # Embedders is optional
-        self.inputs_embedder = deepcopy(inputs_embedder).cpu()
+class TextTensorPerturbator(TensorPerturbator):
+    """
+    Text specific class that inherits from TensorPerturbator.
+    """
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
         # very input_ids are present
@@ -108,7 +113,7 @@ class EmbeddingsPerturbator(Perturbator):
         # perturb embeddings
         perturbed_embeds: Float[torch.Tensor, "p l d"]
         mask: Float[torch.Tensor, "p l"] | None
-        perturbed_embeds, mask = self.perturb_embeds(inputs_embeds)
+        perturbed_embeds, mask = self.perturb_tensor(inputs_embeds)
 
         # repeat inputs elements to match perturbations
         p = perturbed_embeds.shape[0]
@@ -120,7 +125,7 @@ class EmbeddingsPerturbator(Perturbator):
 
         return inputs, mask
 
-    def perturb_embeds(
+    def perturb_tensor(
         self, inputs_embeds: Float[torch.Tensor, "1 l d"]
     ) -> tuple[Float[torch.Tensor, "p l d"], Float[torch.Tensor, "p l"] | None]:
         """
@@ -142,32 +147,40 @@ class EmbeddingsPerturbator(Perturbator):
         return inputs_embeds, None
 
 
-class IdsPerturbator(Perturbator):
+class MaskPerturbator(Perturbator):  # new class (just for typing and clarity)
     """
-    Base class for perturbations consisting in applying masks on token (or groups of tokens)
-    All perturbators working on input IDs by applying a mask should inherit from this class
-    """
+    Perturbator that hides granularity units by overwriting them with a baseline, rather than
+    editing the input tensor directly.
 
-    __slots__ = ("tokenizer", "n_perturbations", "replace_token_id", "granularity")
+    Owns the only field that Mask based methods share whatever the modality: the baseline
+    written into masked units (a token id on the text side, a pixel value on the image side).
+    """
 
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizer | None,
-        replace_token_id: int,
-        n_perturbations: int = 1,
-        granularity: Granularity = Granularity.TOKEN,
+        *,
+        replace_value: int | float = 0.0,
+        **kwargs,
     ):
-        self.tokenizer = tokenizer
+        """
+        Args:
+            replace_value: baseline written into masked units.
+        """
+        super().__init__(**kwargs)
+        self.replace_value = replace_value
 
-        # number of perturbations made by the "perturb" method
-        self.n_perturbations = n_perturbations
+    @abstractmethod
+    def get_mask(self):
+        pass
 
-        # token id used to replace the masked tokens
-        self.replace_token_id = replace_token_id
 
-        # granularity level of the perturbation (token masking, word masking...)
-        # in most commons cases, this should be set to Granularity.TOKEN
-        self.granularity = granularity
+class TextMaskPerturbator(MaskPerturbator):
+    """
+    Base class for perturbations consisting in applying masks on token (or groups of tokens)
+    All perturbators working on input IDs by applying a mask should inherit from this class
+
+    This class is combined with a method perturbator at runtime.
+    """
 
     @jaxtyped(typechecker=beartype)
     @staticmethod
@@ -239,7 +252,7 @@ class IdsPerturbator(Perturbator):
         # compute association matrix between the granularity level and ALL_TOKENS
         association_matrix: Int[torch.Tensor, "g l"] = self.granularity.get_association_matrix(
             model_inputs,  # type: ignore
-            self.tokenizer,
+            self.processor,
         )[0].float()
 
         # compute granularity-wise perturbation mask based on the length of the sequence (granularity-wise)
@@ -252,7 +265,7 @@ class IdsPerturbator(Perturbator):
             self.apply_mask(
                 inputs=model_inputs["input_ids"].T,
                 mask=real_mask,
-                mask_value=torch.Tensor([self.replace_token_id]),
+                mask_value=torch.Tensor([self.replace_value]),
             )
             .squeeze(-1)
             .to(torch.int)
@@ -265,3 +278,143 @@ class IdsPerturbator(Perturbator):
                 repeats[0] = model_inputs["input_ids"].shape[0]
                 model_inputs[k] = model_inputs[k].repeat(*repeats)
         return model_inputs, gran_mask
+
+
+class ImageTensorPerturbator(TensorPerturbator):
+    """
+    Image-side analog of `TextTensorPerturbator`.
+
+    Operates directly on `pixel_values` of shape `(1, 3, H, W)`.
+
+    Subclasses override `perturb_tensor` to produce a `(p, 3, H, W)` batch.
+
+    Used by gradient-style methods (Saliency, SmoothGrad, IntegratedGradient).
+
+    This class is combined with a method perturbator at runtime.
+    """
+
+    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+        if "pixel_values" not in model_inputs:
+            raise ValueError("model_inputs should contain 'pixel_values'")
+
+        inputs = deepcopy(model_inputs)
+        pixel_values: Float[torch.Tensor, "1 3 H W"] = inputs["pixel_values"]
+
+        perturbed_embeds: Float[torch.Tensor, "p 3 H W"]
+        mask: Float[torch.Tensor, "p g"] | None
+        perturbed_embeds, mask = self.perturb_tensor(pixel_values)
+
+        inputs["pixel_values"] = perturbed_embeds
+        return inputs, mask
+
+    def perturb_tensor(
+        self, pixel_values: Float[torch.Tensor, "1 3 H W"]
+    ) -> tuple[Float[torch.Tensor, "p 3 H W"], Float[torch.Tensor, "p g"] | None]:
+        """
+        Default no-op: subclasses override to apply noise / interpolation / etc.
+
+        Args:
+            pixel_values: Shape (1, 3, H, W).
+        Returns:
+            perturbed_embeds: Shape (p, 3, H, W).
+            mask: (p, g) or None.
+        """
+        return pixel_values, None
+
+
+class ImageMaskPerturbator(MaskPerturbator):
+    """
+    Image-side analog of `TextMaskPerturbator`.
+
+    Masking-based perturbator: each perturbation hides a subset of granularity
+    units by overwriting their pixel positions with a
+    constant `replace_value` baseline. This is the basis for perturbation
+    methods (Occlusion, LIME, KernelShap, Sobol).
+
+    perturb uses an interpolation strategy rather than an association matrix
+    which was deemed more natural for images.
+
+    This class is combined with a method perturbator at runtime.
+    """
+
+    def __init__(self, **kwargs):
+        """
+        No other arguments because the Image specific arguments are setup by the AttributionExplainer
+        """
+        super().__init__(**kwargs)
+        if self.granularity is ImageGranularity.PIXEL:
+            raise ValueError(
+                "granularity=PIXEL is invalid for a mask perturbator: masking single pixels is intractable. Use PATCH."
+            )
+        self.granularity = ImageGranularity.PATCH
+
+    @jaxtyped(typechecker=beartype)
+    @abstractmethod
+    def get_mask(self, mask_dim: int, **kwargs) -> Float[torch.Tensor, "{self.n_perturbations} {mask_dim}"]:
+        """
+        Return the granularity-wise perturbation mask, of shape `(n_perturbations, g)`.
+
+        `mask_dim` is `g`, the number of granularity units. `1` marks a masked
+        unit (replaced by the baseline), `0` marks a kept unit. Implemented by
+        subclasses (random masking for LIME, single-unit masking for Occlusion, etc.).
+
+        Args:
+            mask_dim (int): number of granularity units `g`.
+            kwargs: extra arguments for specific mask strategies.
+
+        Returns:
+            torch.Tensor: mask of shape `(n_perturbations, g)`.
+        """
+        raise NotImplementedError()
+
+    def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
+        if "pixel_values" not in model_inputs:
+            raise ValueError("model_inputs should contain 'pixel_values'")
+
+        inputs = deepcopy(model_inputs)
+        pixel_values: Float[torch.Tensor, "1 3 H W"] = inputs["pixel_values"]
+
+        if pixel_values.shape[0] != 1:
+            raise ValueError(
+                "Inputs are treated one by one in the perturbator, "
+                f"but received pixel_values of shape {tuple(pixel_values.shape)} "
+                "- expected shape (1, 3, H, W)."
+            )
+
+        _, c, h, w = pixel_values.shape
+        l = h * w
+
+        # PATCH is set directly by the explainer by reading model.config.
+        if self.patch_size is None:
+            raise ValueError(
+                "patch_size is None. It must be set "
+                "from the model config. Normally the explainer does this at construction. "
+                "If using the perturbator standalone, pass patch_size explicitly."
+            )
+
+        gh, gw = h // self.patch_size, w // self.patch_size
+
+        # granularity-wise mask from the subclass: (p, g) with g = gh * gw
+
+        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(gh * gw)
+        p = gran_mask.shape[0]
+
+        # expand to pixel space by resizing the (gh, gw) grid up to (h, w): (p, l)
+        # TODO: For now, we have chosen to fix the resize of the mask to the NEAREST
+        # strategy to keep clarity and simplify the API. This will need to be changed
+        # in the future if we want to implement methods such as RISE that require soft
+        # masks and would thus require a BILINEAR upsampling strategy rather than NEAREST
+        grid: Float[torch.Tensor, "p gh gw"] = gran_mask.reshape(p, gh, gw)
+        real_mask: Float[torch.Tensor, "p l"] = GranularityResizeStrategy.NEAREST.resize(
+            grid,
+            output_size=(h, w),
+        ).reshape(p, l)
+
+        # apply the mask in flattened spatial space, broadcasting across channels
+        flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
+        spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
+        perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + self.replace_value * spatial_mask
+        perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
+
+        inputs["pixel_values"] = perturbed_pixel_values
+        return inputs, gran_mask

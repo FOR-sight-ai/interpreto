@@ -34,10 +34,8 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from scipy.stats import qmc
-from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import IdsPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.attributions.perturbations.base import MaskPerturbator
 
 
 class SequenceSamplers(Enum):
@@ -50,63 +48,60 @@ class SequenceSamplers(Enum):
     LatinHypercube = qmc.LatinHypercube
 
 
-class SobolTokenPerturbator(IdsPerturbator):
+class SobolPerturbator(MaskPerturbator):
+    """
+    Perturbator producing Sobol (quasi-Monte-Carlo) masks for Sobol attribution.
+
+    It is combined with a modality base at runtime by the Sobol method.
+    """
+
     def __init__(
         self,
-        tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
-        replace_token_id: int = 0,
-        n_token_perturbations: int = 16,
+        *,
+        n_input_perturbations: int = 16,
         sampler: SequenceSamplers = SequenceSamplers.SOBOL,
+        is_binarized: bool = True,
+        **kwargs,
     ):
         """
-        Initialize the perturbator.
-
         Args:
-            tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model
-            inputs_embedder (torch.nn.Module | None): optional inputs embedder
-            nb_token_perturbations (int): number of Monte Carlo samples perturbations for each token.
-            granularity (str): granularity level of the perturbations (token, word, sentence, etc.)
+            n_input_perturbations (int): Monte-Carlo samples per granularity unit.
             sampler (SequenceSamplers): Sobol sequence sampler, either `SOBOL`, `HALTON` or `LatinHypercube`.
+            is_binarized (bool): whether the quasi-Monte-Carlo design is thresholded into a binary
+                mask. Tokens are discrete so the text side requires it; images blend continuously.
         """
-        super().__init__(
-            tokenizer=tokenizer,
-            granularity=granularity,
-            n_perturbations=-1,  # TODO: find a better way to handle this, I guess, it should not be an attribute of the parent class
-            replace_token_id=replace_token_id,
-        )
-        self.n_token_perturbations = n_token_perturbations
+        # total p = (g + 2) * k is determined at mask time, not up front.
+        super().__init__(**kwargs)
+        self.n_input_perturbations = n_input_perturbations
         self.sampler_class = sampler.value
+        self.is_binarized = is_binarized
 
     @jaxtyped(typechecker=beartype)
     def get_mask(self, mask_dim: int, **kwargs) -> Float[torch.Tensor, "p {mask_dim}"]:
         """
-        Generates a binary mask for each token in the sequence.
+        Generates a quasi-Monte-Carlo mask for each granularity unit in the sequence.
 
         Args:
-            mask_dim (int): Length of the input sequence.
+            mask_dim (int): number of granularity units `g`.
 
         Returns:
-            masks (torch.Tensor): A tensor of shape ``((mask_dim + 2) * k, mask_dim)``.
+            torch.Tensor: shape `((g + 2) * k, g)`.
         """
-        # Simplify typing
-        l, k = mask_dim, self.n_token_perturbations
+        l, k = mask_dim, self.n_input_perturbations
         p = (l + 2) * k
 
-        # Generate to random independent matrices A & B
+        # two independent random matrices A & B
         AB: Float[torch.Tensor, k, 2 * l] = torch.Tensor(self.sampler_class(2 * l).random(k))
         A: Float[torch.Tensor, k, l] = AB[:, :l]
         B: Float[torch.Tensor, k, l] = AB[:, l:]
 
-        # Initialize C
+        # C is a collection of C_i; C_i is A with its i-th column replaced by B[:, i]
         C: Float[torch.Tensor, l, k, l] = A.repeat(l, 1, 1)
-
-        # C is a collection of C_i, where each C_i is a matrix of size (l, k)
-        # with the i-th column being B[:, i] and the rest being A.
         indices = torch.arange(l)
         C[indices, :, indices] = B.T
 
-        # We reshape stack all C_i, A, and B to match the expected shape from interpreto API.
         masks: Float[torch.Tensor, p, l] = torch.concat([A, B, C.view(l * k, l)], dim=0)
 
-        return (masks < 0.5).float()
+        if self.is_binarized:
+            return (masks < 0.5).float()
+        return masks

@@ -76,9 +76,9 @@ class TorchAggregator(Aggregator):
     @jaxtyped(typechecker=beartype)
     def aggregate(
         self,
-        results: Float[Tensor, "p t l"],
+        results: Float[Tensor, "p t l"] | Float[Tensor, "p t d l"],
         mask: torch.Tensor | None = None,
-    ) -> Float[Tensor, "t l"]:
+    ) -> Float[Tensor, "t l"] | Float[Tensor, "t d l"]:
         return self._method(results, dim=0)  # type: ignore
 
 
@@ -170,7 +170,7 @@ class TrapezoidalMeanAggregator(Aggregator):
     @jaxtyped(typechecker=beartype)
     def aggregate(
         self,
-        results: Float[Tensor, "p t l"],
+        results: Float[Tensor, "p t l"] | Float[Tensor, "p t d l"],
         mask: torch.Tensor | None = None,
-    ) -> Float[Tensor, "t l"]:
+    ) -> Float[Tensor, "t l"] | Float[Tensor, "t d l"]:
         return torch.trapezoid(results, dim=0) / (results.shape[0] - 1)
