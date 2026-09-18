@@ -50,7 +50,9 @@ class GaussianNoisePerturbator(TensorPerturbator):
         self.std = std
 
     @jaxtyped(typechecker=beartype)
-    def perturb_tensor(self, inputs: Float[torch.Tensor, "1 *rest"]) -> tuple[Float[torch.Tensor, "p *rest"], None]:
+    def perturb_tensor(
+        self, inputs: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 3 H W"]
+    ) -> tuple[Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p 3 H W"], None]:
         """
         Add independent Gaussian noise to every entry of `inputs`.
 
@@ -63,6 +65,8 @@ class GaussianNoisePerturbator(TensorPerturbator):
                 is no mask to report.
         """
         # Repeat along the perturbation axis only, whatever the rank of the trailing dimensions.
-        perturbed: Float[torch.Tensor, "p *rest"] = inputs.repeat(self.n_perturbations, *(1,) * (inputs.ndim - 1))
+        perturbed: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 3 H W"] = inputs.repeat(
+            self.n_perturbations, *(1,) * (inputs.ndim - 1)
+        )
         perturbed += torch.randn_like(perturbed) * self.std
         return perturbed, None
