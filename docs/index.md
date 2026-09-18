@@ -28,7 +28,7 @@ The library is available on PyPI, try `pip install interpreto` to install it.
 
 Checkout the tutorials to get started:
 
-- [Attributions walkthrough](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_walkthrough.ipynb) (both classification and generation)
+- [Attributions walkthrough](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/attribution_tutorial.ipynb) (both classification and generation)
 - [Classification concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/classification_concept_tutorial.ipynb)
 - [Generation concept-based explanations](https://github.com/FOR-sight-ai/interpreto/tree/main/docs/notebooks/generation_concept_tutorial.ipynb)
 
@@ -44,7 +44,7 @@ They all work seamlessly for both classification (`...ForSequenceClassification`
 
 **Inference-based Methods:**
 
-- [`KernelShap`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernel_shap/) — [Lundberg and Lee, 2017](https://arxiv.org/abs/1705.07874)
+- [`KernelShap`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/kernelshap/) — [Lundberg and Lee, 2017](https://arxiv.org/abs/1705.07874)
 - [`LIME`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/lime/) — [Ribeiro et al., 2013](https://dl.acm.org/doi/abs/10.1145/2939672.2939778)
 - [`Occlusion`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/occlusion/) — [Zeiler and Fergus, 2014](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53)
 - [`Sobol`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/sobol/) — [Fel et al., 2021](https://proceedings.neurips.cc/paper/2021/hash/da94cbeff56cfda50785df477941308b-Abstract.html)
@@ -52,12 +52,12 @@ They all work seamlessly for both classification (`...ForSequenceClassification`
 **Gradient-based methods:**
 
 - [`GradientShap`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/gradient_shap/) — [Lundberg and Lee, 2017](https://arxiv.org/abs/1705.07874)
-- [`InputxGradient`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/inputx_gradient/) — [Simonyan et al., 2013](https://arxiv.org/abs/1312.6034)
-- [`Integrated Gradient`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradient/) — [Sundararajan et al., 2017](http://proceedings.mlr.press/v70/sundararajan17a.html)
+- `InputxGradient` — [Simonyan et al., 2013](https://arxiv.org/abs/1312.6034)
+- [`Integrated Gradient`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/integrated_gradients/) — [Sundararajan et al., 2017](http://proceedings.mlr.press/v70/sundararajan17a.html)
 - [`Saliency`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/saliency/) — [Simonyan et al., 2013](https://arxiv.org/abs/1312.6034)
-- [`SmoothGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/smooth_grad/) — [Smilkov et al., 2017](https://arxiv.org/abs/1706.03825)
-- [`SquareGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/square_grad/) — [Hooker et al., 2019](https://arxiv.org/abs/1806.10758)
-- [`VarGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/var_grad/) — [Richter et al., 2020](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
+- [`SmoothGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/smoothgrad/) — [Smilkov et al., 2017](https://arxiv.org/abs/1706.03825)
+- [`SquareGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/squaregrad/) — [Hooker et al., 2019](https://arxiv.org/abs/1806.10758)
+- [`VarGrad`](https://for-sight-ai.github.io/interpreto/api/attributions/methods/vargrad/) — [Richter et al., 2020](https://proceedings.neurips.cc/paper/2020/hash/9c22c0b51b3202246463e986c7e205df-Abstract.html)
 
 ### 💡 Concept-Based Methods or Mechanistic Interpretability
 
@@ -87,10 +87,10 @@ Both can be tuned with `bias_calibrator` and `normalization` parameters.
 
 **2. (unsupervised) Dictionary Learning for Concept Discovery** (mainly via [`overcomplete`](https://github.com/KempnerInstitute/overcomplete)):
 
-- Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/neurons_as_concepts/)
-- [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ConvexNMFConcepts)
-- [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/optim/#interpreto.concepts.KMeansConcepts)
-- SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/methods/sae/#interpreto.concepts.BatchTopKSAEConcepts)
+- Interpret neurons directly via [`NeuronsAsConcepts`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/neurons_as_concepts/)
+- [`NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.NMFConcepts), [`Semi-NMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SemiNMFConcepts), [`ConvexNMF`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ConvexNMFConcepts)
+- [`ICA`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.ICAConcepts), [`SVD`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.SVDConcepts), [`PCA`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.PCAConcepts), [`KMeans`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/optim/#interpreto.concepts.KMeansConcepts)
+- SAE variants: [`Vanilla SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.VanillaSAEConcepts), [`TopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.TopKSAEConcepts), [`JumpReLU SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.JumpReLUSAEConcepts), [`BatchTopK SAE`](https://for-sight-ai.github.io/interpreto/api/concepts/concept_spaces/sae/#interpreto.concepts.methods.BatchTopKSAEConcepts)
 
 **3. (unsupervised) Available Concept Interpretation Techniques:**
 
@@ -138,7 +138,7 @@ Or independently:
 
 - Concept-space (dictionary learning evaluation)
   - faithfulness: [`MSE`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.MSE), [`FID`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.FID), and [`ReconstructionError`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/reconstruction_metrics/#interpreto.concepts.metrics.ReconstructionError)
-  - complexity: [`Sparsity`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.Sparsity), [`SparsityRatio`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity/), [`SparsityRatio`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity/#interpreto.concepts.metrics.SparsityRatio)
+  - complexity: [`Sparsity`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.Sparsity), [`SparsityRatio`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/), [`SparsityRatio`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/sparsity_metrics/#interpreto.concepts.metrics.SparsityRatio)
   - stability: [`Stability`](https://for-sight-ai.github.io/interpreto/api/concepts/metrics/dictionary_metrics/#interpreto.concepts.metrics.Stability)
 - Concepts interpretations
   - No metric yet, will be included soon.
@@ -147,7 +147,7 @@ Or independently:
 
 ## 👍 Contributing
 
-Feel free to propose your ideas or come and contribute with us on the Interpreto 🪄 toolbox! We have a specific document where we describe in a simple way how to make your [first pull request](docs/contributing.md).
+Feel free to propose your ideas or come and contribute with us on the Interpreto 🪄 toolbox! We have a specific document where we describe in a simple way how to make your [first pull request](contributing.md).
 
 ## 👀 See Also
 
@@ -184,4 +184,4 @@ If you use Interpreto 🪄 as part of your workflow in a scientific publication,
 
 ## 📝 License
 
-The package is released under [MIT license](LICENSE).
+The package is released under [MIT license](https://github.com/FOR-sight-ai/interpreto/blob/main/LICENSE).

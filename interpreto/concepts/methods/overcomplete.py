@@ -179,7 +179,7 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
 
         Returns:
             concept_model_class (type[overcomplete.sae.SAE]): One of the supported [Overcomplete SAE](https://kempnerinstitute.github.io/overcomplete/saes/vanilla/)
-                variants. Supported classes are available in [interpreto.concepts.SAEExplainerClasses]().
+                variants. Supported classes are available in `interpreto.concepts.SAEExplainerClasses`.
         """
         raise NotImplementedError
 
@@ -331,7 +331,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
     """Code: [:octicons-mark-github-24: `concepts/methods/overcomplete.py` ](https://github.com/FOR-sight-ai/interpreto/blob/dev/interpreto/concepts/methods/overcomplete.py)
 
     Implementation of a concept explainer using an
-    [overcomplete.optimization.BaseOptimDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py)
+    `overcomplete.optimization.BaseOptimDictionaryLearning`
         (NMF and PCA variants) as `concept_model`.
 
     Attributes:
@@ -339,7 +339,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
             It should have at least one split point on which `concept_model` can be fitted.
         split_point (str | None): The split point used to train the `concept_model`. Default: `None`, set only when
             the concept explainer is fitted.
-        concept_model (overcomplete.optimization.BaseOptimDictionaryLearning): An [Overcomplete BaseOptimDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py)
+        concept_model (overcomplete.optimization.BaseOptimDictionaryLearning): An Overcomplete BaseOptimDictionaryLearning
             variant for concept extraction.
         is_fitted (bool): Whether the `concept_model` was fit on model activations.
         has_differentiable_concept_encoder (bool): Whether the `activations_to_concepts` operation is differentiable.
@@ -394,7 +394,7 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         Defines the concept model class to use for the explainer.
 
         Returns:
-            concept_model_class (type[overcomplete.optimization.BaseOptimDictionaryLearning]): One of the supported [Overcomplete BaseOptimDictionaryLearning](https://github.com/KempnerInstitute/overcomplete/blob/main/overcomplete/optimization/base.py)
+            concept_model_class (type[overcomplete.optimization.BaseOptimDictionaryLearning]): One of the supported Overcomplete BaseOptimDictionaryLearning
                 variants for concept extraction.
         """
         raise NotImplementedError
@@ -464,7 +464,7 @@ class TopKSAEConcepts(SAEExplainer[oc_sae.TopKSAE]):
 
     `ConceptAutoEncoderExplainer` with the TopK SAE from Gao et al. (2024)[^3] as concept model.
 
-    TopK SAE implementation from [overcomplete.sae.TopKSAE](https://kempnerinstitute.github.io/overcomplete/saes/topk_sae/) class.
+    TopK SAE implementation from [overcomplete.sae.TopKSAE](https://kempnerinstitute.github.io/overcomplete/saes/topk/) class.
 
     [^3]:
         Gao, L. et al., [Scaling and evaluating sparse autoencoders](https://openreview.net/forum?id=tcsZt9ZNKD).
@@ -481,7 +481,7 @@ class BatchTopKSAEConcepts(SAEExplainer[oc_sae.BatchTopKSAE]):
 
     `ConceptAutoEncoderExplainer` with the BatchTopK SAE from Bussmann et al. (2024)[^4] as concept model.
 
-    BatchTopK SAE implementation from [overcomplete.sae.BatchTopKSAE](https://kempnerinstitute.github.io/overcomplete/saes/batchtopk_sae/) class.
+    BatchTopK SAE implementation from [overcomplete.sae.BatchTopKSAE](https://kempnerinstitute.github.io/overcomplete/saes/batchtopk/) class.
 
     [^4]:
         Bussmann, B., Leask, P., Nanda, N. [BatchTopK Sparse Autoencoders](https://arxiv.org/abs/2412.06410).
@@ -498,7 +498,7 @@ class JumpReLUSAEConcepts(SAEExplainer[oc_sae.JumpSAE]):
 
     `ConceptAutoEncoderExplainer` with the JumpReLU SAE from Rajamanoharan et al. (2024)[^5] as concept model.
 
-    JumpReLU SAE implementation from [overcomplete.sae.JumpReLUSAE](https://kempnerinstitute.github.io/overcomplete/saes/jump_sae/) class.
+    JumpReLU SAE implementation from [overcomplete.sae.JumpReLUSAE](https://kempnerinstitute.github.io/overcomplete/saes/jumprelu/) class.
 
     [^5]:
         Rajamanoharan, S. et al., [Jumping Ahead: Improving Reconstruction Fidelity with JumpReLU Sparse Autoencoders](https://arxiv.org/abs/2407.14435).
@@ -533,7 +533,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
 
     `ConceptAutoEncoderExplainer` with the NMF from Lee and Seung (1999)[^1] as concept model.
 
-    NMF implementation from [overcomplete.optimization.NMF](https://kempnerinstitute.github.io/overcomplete/optimization/nmf/) class.
+    NMF implementation from `overcomplete.optimization.NMF` class.
 
     [^1]:
         Lee, D., Seung, H. [Learning the parts of objects by non-negative matrix factorization](https://doi.org/10.1038/44565).
@@ -619,7 +619,7 @@ class SemiNMFConcepts(DictionaryLearningExplainer[oc_opt.SemiNMF]):
 
     `ConceptAutoEncoderExplainer` with the SemiNMF from Ding et al. (2008)[^2] as concept model.
 
-    SemiNMF implementation from [overcomplete.optimization.SemiNMF](https://kempnerinstitute.github.io/overcomplete/optimization/semi_nmf/) class.
+    SemiNMF implementation from `overcomplete.optimization.SemiNMF` class.
 
     [^2]:
         C. H. Q. Ding, T. Li and M. I. Jordan, [Convex and Semi-Nonnegative Matrix Factorizations](https://ieeexplore.ieee.org/document/4685898).
@@ -638,7 +638,7 @@ class ConvexNMFConcepts(DictionaryLearningExplainer[oc_opt.ConvexNMF]):
 
     `ConceptAutoEncoderExplainer` with the ConvexNMF from Ding et al. (2008)[^2] as concept model.
 
-    ConvexNMF implementation from [overcomplete.optimization.ConvexNMF](https://kempnerinstitute.github.io/overcomplete/optimization/convex_nmf/) class.
+    ConvexNMF implementation from `overcomplete.optimization.ConvexNMF` class.
 
     [^2]:
         C. H. Q. Ding, T. Li and M. I. Jordan, [Convex and Semi-Nonnegative Matrix Factorizations](https://ieeexplore.ieee.org/document/4685898).
@@ -684,7 +684,7 @@ class DictionaryLearningConcepts(DictionaryLearningExplainer[oc_opt.SkDictionary
 
     `ConceptAutoEncoderExplainer` with the Dictionary Learning concepts from Mairal et al. (2009)[^5] as concept model.
 
-    Dictionary Learning implementation from [overcomplete.optimization.SkDictionaryLearning](https://kempnerinstitute.github.io/overcomplete/optimization/sklearn/) class.
+    Dictionary Learning implementation from `overcomplete.optimization.SkDictionaryLearning` class.
 
     [^5]:
         J. Mairal, F. Bach, J. Ponce, G. Sapiro, [Online dictionary learning for sparse coding](https://www.di.ens.fr/~fbach/mairal_icml09.pdf)
@@ -701,7 +701,7 @@ class SparsePCAConcepts(DictionaryLearningExplainer[oc_opt.SkSparsePCA]):
 
     `ConceptAutoEncoderExplainer` with SparsePCA as concept model.
 
-    SparsePCA implementation from [overcomplete.optimization.SkSparsePCA](https://kempnerinstitute.github.io/overcomplete/optimization/sklearn/) class.
+    SparsePCA implementation from `overcomplete.optimization.SkSparsePCA` class.
     """
 
     @property
