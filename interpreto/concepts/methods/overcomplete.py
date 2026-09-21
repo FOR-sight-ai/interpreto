@@ -410,6 +410,9 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         """
         if len(activations.shape) != 2:
             raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        # These models create their dictionary during fit using PyTorch's default
+        # floating dtype, so no parameter or buffer exposes that dtype beforehand.
+        activations = self._normalize_to_concept_model(activations, fallback_dtype=torch.get_default_dtype())
         self.concept_model.fit(activations, **kwargs)
 
 
@@ -566,7 +569,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
                     "The activations should be positive. If you want to force the activations to be positive, "
                     "use the `NMFConcepts(..., force_relu=True)`."
                 )
-        self.concept_model.fit(activations, **kwargs)
+        super().fit(activations, **kwargs)
 
     @check_fitted
     def activations_to_concepts(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations

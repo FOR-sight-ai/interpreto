@@ -238,7 +238,9 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """Set the device on which the concept model is stored."""
         self.to(device)
 
-    def _normalize_to_concept_model(self, inputs: torch.Tensor, *, move_device: bool = True) -> torch.Tensor:
+    def _normalize_to_concept_model(
+        self, inputs: torch.Tensor, *, move_device: bool = True, fallback_dtype: torch.dtype | None = None
+    ) -> torch.Tensor:
         """Move floating inputs to the concept model's dtype and device.
 
         A bit complex because concept models can come from overcomplete.
@@ -246,8 +248,10 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         Models without floating parameters or buffers impose no dtype. Casts
         remain differentiable, so concept-gradient paths are preserved. Device
         movement can be disabled for datasets that are transferred in batches.
+        ``fallback_dtype`` can define the initialization dtype for an unfitted
+        model that does not expose floating state yet.
         """
-        target_dtype: torch.dtype | None = None
+        target_dtype = fallback_dtype
         if isinstance(self.concept_model, torch.nn.Module):
             concept_model = cast(torch.nn.Module, self.concept_model)
             for tensor in itertools.chain(concept_model.parameters(), concept_model.buffers()):

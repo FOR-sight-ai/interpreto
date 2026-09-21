@@ -246,6 +246,19 @@ def test_sae_fit_normalizes_dtype_without_moving_dataset(monkeypatch):
     assert observed == {"device": activations.device, "dtype": torch.float32}
 
 
+def test_semi_nmf_fit_normalizes_activations_to_model_dtype(
+    splitted_encoder_ml: SplitterForClassification,
+):
+    """Semi-NMF factors and mixed-precision activations use the same dtype."""
+    explainer = SemiNMFConcepts(splitted_encoder_ml, nb_concepts=3, device=DEVICE)
+    activations = torch.randn(4, splitted_encoder_ml.config.hidden_size, dtype=torch.bfloat16)
+
+    explainer.fit(activations, max_iter=1)
+
+    assert explainer.get_dictionary().dtype == torch.get_default_dtype()
+    assert explainer.get_dictionary().device.type == torch.device(DEVICE).type
+
+
 def test_concept_output_gradient_uses_splitter_contract(
     splitted_encoder_ml: SplitterForClassification, sentences: list[str]
 ):
