@@ -34,7 +34,7 @@ import pytest
 import torch
 
 from interpreto import SplitterForClassification, TextTokensSplitter
-from interpreto.commons.llm_interface import LLMInterface, Role
+from interpreto.commons.llm_interface import LLMInterface
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.interpretations import LLMLabels
 from interpreto.concepts.interpretations.llm_labels import (
@@ -275,8 +275,11 @@ def test_build_example_prompt():
 
 
 class LLMInterfaceMock(LLMInterface):
-    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str:
         return "mock answer"
+
+    def batch_generate(self, system_prompt: str, user_prompts: list[str], **generation_kwargs) -> list[str]:
+        return ["mock answer"] * len(user_prompts)
 
 
 def test_llm_labels_concept_selection(classification_splitter: SplitterForClassification):

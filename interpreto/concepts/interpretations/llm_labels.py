@@ -32,8 +32,9 @@ from typing import Literal, NamedTuple
 
 import torch
 from jaxtyping import Float
+from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
-from interpreto.commons.llm_interface import LLMInterface, Role
+from interpreto.commons.llm_interface import LLMInterface, _resolve_llm_interface
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
@@ -112,8 +113,16 @@ class LLMLabels(BaseConceptInterpretationMethod):
         token_pooling (TokenPooling):
             Optional pooling applied to token activations before interpretation.
 
-        llm_interface (LLMInterface):
-            The LLM interface to use for the interpretation.
+        llm_interface:
+            The model used to label concepts. Its behavior depends on the
+            provided value:
+            - **`str`**: Hugging Face repository ID. The model and tokenizer
+              are loaded from the Hub.
+            - **`tuple[PreTrainedModel, PreTrainedTokenizerBase]`**: Preloaded
+              model and tokenizer, used directly.
+            - **`LLMInterface`**: Existing LLM interface, used directly.
+            - **`None`**: Uses the concept explainer's splitter when it is
+              generation-capable.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -157,7 +166,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         *,
         concept_explainer: ConceptEncoderExplainer,
         token_pooling: TokenPooling = None,
-        llm_interface: LLMInterface,
+        llm_interface: str | tuple[PreTrainedModel, PreTrainedTokenizerBase] | LLMInterface | None = None,
         concept_encoding_batch_size: int = 1024,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
@@ -185,7 +194,8 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 stacklevel=2,
             )
 
-        self.llm_interface = llm_interface
+        fallback_model = concept_explainer.splitter if llm_interface is None else None
+        self.llm_interface = _resolve_llm_interface(llm_interface, fallback_model=fallback_model)
         self.sampling_method = sampling_method
         self.k_examples = k_examples
         self.k_context = k_context
@@ -205,7 +215,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
         inputs: list[str] | None = None,
         latent_activations: LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
-    ) -> Mapping[int, str | None]:
+    ) -> Mapping[int, str]:
         """
         Give the interpretation of the concepts dimensions in the latent space into a human-readable format.
         The interpretation is a mapping between the concepts indices and a short textual description.
@@ -229,7 +239,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 it is computed from the inputs or latent activations.
 
         Returns:
-            Mapping[int, str | None]: The textual labels of the concepts indices.
+            Mapping[int, str]: The textual labels of the concepts indices.
         """
         sure_concepts_indices: list[int]
         granular_inputs: list[str]
@@ -247,7 +257,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
             concepts_activations=concepts_activations,
         )
 
-        labels: Mapping[int, str | None] = {}
+        example_prompts: list[str] = []
         for concept_idx in sure_concepts_indices:
             example_idx = self.sampling_method.sample_examples(
                 concept_activations=sure_concepts_activations[:, concept_idx],
@@ -261,15 +271,10 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 sample_ids=granular_sample_ids,
                 k_context=self.k_context,
             )
-            example_prompt = _build_example_prompt(examples)
-            prompt: list[tuple[Role, str]] = [
-                (Role.SYSTEM, self.system_prompt),
-                (Role.USER, example_prompt),
-                (Role.ASSISTANT, ""),
-            ]
-            label = self.llm_interface.generate(prompt)
-            labels[concept_idx] = label
-        return labels
+            example_prompts.append(_build_example_prompt(examples))
+
+        labels = self.llm_interface.batch_generate(self.system_prompt, example_prompts)
+        return dict(zip(sure_concepts_indices, labels, strict=True))
 
 
 def _sample_top(

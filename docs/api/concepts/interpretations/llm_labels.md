@@ -14,6 +14,21 @@ example (`k_context`) apply only to unpooled token-level interpretation;
 `k_context` is forced to `0` for pooled representations, vocabulary examples,
 and independently encoded words or n-grams.
 
+## Labeling Model
+
+Pass an existing `LLMInterface`, a Hugging Face repository ID, or a preloaded
+`(model, tokenizer)` tuple through `llm_interface`:
+
+```python
+label_methods = LLMLabels(
+    concept_explainer=concept_explainer,
+    llm_interface="Qwen/Qwen3.5-9B",
+)
+```
+
+When `llm_interface=None`, `LLMLabels` reuses the concept explainer's NNsight
+splitter. This default is available only when that splitter is generation-capable.
+
 ## API Reference
 
 ::: interpreto.concepts.interpretations.LLMLabels
@@ -33,3 +48,4 @@ and independently encoded words or n-grams.
       inherited_members: true
       members:
         - generate
+        - batch_generate
