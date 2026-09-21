@@ -24,10 +24,6 @@
 
 """
 Matplotlib visualization for `ImageAttributionOutput`.
-
-The normalization / percentile-clipping idea follows xplique's `plots/image.py`
-(Apache 2.0, DEEL / Université Paul Sabatier). The heatmap is reconstructed on demand
-from the canonical `(t, g)` `ImageAttributionOutput.attributions` via `resize_to_image`.
 """
 
 from __future__ import annotations
@@ -123,7 +119,6 @@ def _prepare_heatmap(
         contribution=attribution_output.attributions,
         resize_strategy=attribution_output.granularity_resize,
         inputs=attribution_output.model_inputs_to_explain,
-        patch_size=attribution_output.patch_size,
     )
     row = attributions_image[target_idx].detach().cpu()
     if row.dtype is torch.bfloat16:

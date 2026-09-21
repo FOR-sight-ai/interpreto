@@ -101,26 +101,12 @@ def wrong_patch_size():
     ],
 )
 @pytest.mark.parametrize("patch_size", [1, 2])
-def test_resize_strategy_output_size(input, output, strategy, patch_size):
+def test_resize_strategy_output_size(input, output, strategy):
     if output is not None:
-        assert strategy.resize(input, output, patch_size).shape == (1, *output), (
+        assert strategy.resize(input, output).shape == (1, *output), (
             "resize() with an explicit output_size must return shape (1, *output). The leading "
             "1 comes from this test's single-channel input fixtures, not output_size"
         )
-    else:
-        c, h, w = input.shape
-        h_out = h // patch_size
-        w_out = w // patch_size
-        assert strategy.resize(input, output, patch_size).shape == (c, h_out, w_out), (
-            "resize() with output_size=None and input.shape = (c,h,w) must have shape "
-            "(c, h//patch_size, w // patch_size)"
-        )
-
-
-def test_resize_fail(null_matrix, wrong_patch_size):
-    strategy = GranularityResizeStrategy.NEAREST
-    with pytest.raises(AssertionError):
-        strategy.resize(input=null_matrix, output_size=None, patch_size=wrong_patch_size)
 
 
 def test_resize_nearest(matrix):

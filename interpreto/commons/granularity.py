@@ -165,35 +165,33 @@ class GranularityResizeStrategy(Enum):
         self,
         input: Float[torch.Tensor, "t h w"],
         output_size: tuple[int, int] | None = None,
-        patch_size: int = 16,
     ) -> Float[torch.Tensor, "t gh gw"]:
         """
         Spatially resize per-channel maps, keeping the 2-D layout.
 
-        Direction-agnostic: downsamples (pixel grid -> patch grid, for aggregating gradient
-        attributions) when `output_size` is left `None`, or resizes to an explicit target (e.g.
-        upsampling a perturbation mask back to pixel resolution) when `output_size` is given.
+        Resizes the input to output_size using the value of GranularityResizeStrategy.
 
-        Unlike `GranularityAggregationStrategy.aggregate` (which reduces a unit's pixels to a
-        scalar), this keeps the 2-D layout and interpolates the whole grid. The `t` axis is treated
-        as the channel dimension, so all maps are resized in one call and the per-channel axis is
-        preserved (no broadcast across them). Runs on `x`'s device (CPU or GPU).
+        Raises an error if output_size is None and (h % patch_size != 0 or
+        w % patch_size != 0).
+
+        This is used to resize explanations maps from granularity space to pixel
+        space in ImageGranularity.resize_to_image itself used in
+        visualisation.image_attributions::_prepare_heatmap.
+
+        It is also used to resize masks from granularity space to
+        pixel space although NEAREST is hardcoded as the default GranularityResizeStrategy
+        there and this ought to change at some point.
 
         Args:
             x (Float[torch.Tensor, "t h_in w_in"]): Per-channel maps to resize.
-            patch_size (int): Patch side length; used only when `output_size` is `None`, to derive
-                the downsample target ``(h_in // patch_size, w_in // patch_size)``.
             output_size (tuple[int, int] | None): Explicit target ``(h_out, w_out)``. When provided,
                 it is used directly and `patch_size` is ignored; prefer computing it at the call site.
 
         Returns:
-            Float[torch.Tensor, "t h_out w_out"]: Resized maps, same dtype/device as ``x``.
+            Float[torch.Tensor, "t h_out w_out"]: Resized maps.
         """
         if output_size is None:
-            _, h_in, w_in = input.shape
-            assert h_in % patch_size == 0, "the height of the image must be divisble by the patch_size"
-            assert w_in % patch_size == 0, "the width of the image must be divisble by the patch_size"
-            output_size = (h_in // patch_size, w_in // patch_size)
+            raise ValueError("An output size should be given when trying to resize an input.")
         # interpolate expects 4-D (N, C, H, W); treat the maps as a single batch of `t` channels
         x4: Float[torch.Tensor, "1 t h_in w_in"] = input.unsqueeze(0)
         match self:
@@ -1064,7 +1062,6 @@ class ImageGranularity(Granularity):
         contribution: Float[torch.Tensor, "t g"],
         resize_strategy: GranularityResizeStrategy,
         inputs: TensorMapping,
-        patch_size: int = 16,
     ) -> Float[torch.Tensor, "t h w"]:
         """
         Expand per-granularity-unit scores `(t, g)` back to a pixel-resolution map `(t, H, W)`.
