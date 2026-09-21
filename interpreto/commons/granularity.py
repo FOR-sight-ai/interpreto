@@ -237,7 +237,7 @@ class TextGranularity(Granularity):
     SENTENCE = "sentence"  # Sentences of the input
     PART_SENTENCE = "part_sentence"  # Part of sentences, split on ",", ";", ":", ".", "!", "?"
     # PARAGRAPH = "paragraph"  # Not supported yet, the "\n\n" characters are replaced by spaces in many tokenizers.
-    DEFAULT = ALL_TOKENS
+    DEFAULT = WORD
 
     # @jaxtyped(typechecker=beartype)
     def get_indices(

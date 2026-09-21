@@ -307,7 +307,7 @@ class AttributionExplainer(ABC):
                 If None, defaults to the device of the model.
             granularity (Granularity, optional): The level of granularity for the explanation.
                 Modality-specific: subclasses narrow it to `TextGranularity` or `ImageGranularity`.
-                Defaults to TextGranularity.DEFAULT (ALL_TOKENS).
+                Defaults to TextGranularity.DEFAULT (WORD).
                 To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
             combination_strategy (GranularityCombinationStrategy, optional): The method used to combine
                 scores at the specified granularity, for gradient-based methods. Thus, it is ignored
@@ -1070,14 +1070,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         self.resize_strategy = combination_strategy
         # patch_size is sourced from the model config; required by ImageGranularity.PATCH
         self.patch_size = int(getattr(model.config, "patch_size", 16))
-        # The explainer is the single source of truth for patch_size (it owns model.config).
-        # A mask perturbator builds its (g, l) association matrix from patch_size, and the
-        # explainer's (t, l) -> (t, g) aggregation interprets the result against the same g;
-        # if the two disagree the mask<->score correspondence silently breaks. So we push the
-        # authoritative value down, overriding the perturbator's placeholder default.
-        # NOTE: this is the "version (a)" reconcile. If the isinstance wart or the
-        # silently-overwritten default become a problem, switch to "version (b)" (perturbator
-        # stops storing patch_size; explainer passes it into perturb() at call time).
+        # The explainer is the single source of truth for patch_size.
 
         # Might be moved into a more general Granularity argument/object later
         if isinstance(self.perturbator, ImageMaskPerturbator):
@@ -1222,7 +1215,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
 
         Args:
         model_inputs : Iterable[TensorMapping]
-            A batch of input mappings, typically containing tokenized inputs such as "input_ids", "attention_mask", etc.
+            A batch of input mappings, typically containing keys such as "pixel_values".
 
         targets : int | torch.Tensor | Iterable[int] | Iterable[torch.Tensor] | None, optional
             Classification targets for each input. If None, targets are computed using model inference
@@ -1231,7 +1224,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         Returns
         -------
         tuple[Iterable[TensorMapping], Iterable[torch.Tensor]]
-            - model_inputs_to_explain: List of tokenized input mappings with required explanation metadata (e.g., special tokens mask).
+            - model_inputs_to_explain: List of pixel values..
             - sanitized_targets: List of 1D integer tensors, each corresponding to a target label for an input.
 
         Raises
@@ -1350,31 +1343,18 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             pert_generator, sanitized_targets
         )
 
-        # Aggregate over perturbations: (p, t, d, l) -> (t, d, l) for gradient methods (the cross-
-        #   perturbation statistic — mean/var/squared-mean — lands per channel, so VarGrad/SquareGrad
-        #   get the faithful formula);
+        # Aggregate over perturbations: (p, t, d, l) -> (t, d, l) for gradient methods.
         #   (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw.
         aggregated: Iterator[Float[torch.Tensor, "t d l"] | Float[torch.Tensor, "t g"]] = (
             self.aggregator(score.detach(), mask) for score, mask in zip(scores, mask_generator, strict=True)
         )
 
         # Collapse the 3 channels of gradient scores to a per-pixel value: (t, d, l) -> (t, l).
-        # Signed mean (no abs): for mean/trapezoid methods this keeps direction (positive = pushes
-        # the target logit up), matching the signed attributions the mask methods produce; for
-        # VarGrad/SquareGrad the per-channel statistic is already non-negative so the sign is moot.
-        # Done here, after the per-perturbation statistic, never inside the aggregator (mask methods
-        # share the aggregator and have no channel axis).
+        # Signed mean (no abs).
         contributions: Iterator[Float[torch.Tensor, "t l"] | Float[torch.Tensor, "t g"]] = (
             contribution.mean(dim=1) if self.inference_wrapper.gradients else contribution
             for contribution in aggregated
         )
-
-        # NOTE: a `granularity.granularity_resize(...)` pool used to sit here, mapping (t, l) -> (t, g)
-        # for gradient methods. It is gone because granularity is now fixed by the method family:
-        # gradient methods are always PIXEL, so g == l and the pool was the identity; perturbation
-        # methods encode granularity in their masks, so they were already returned unchanged. The
-        # function is kept, commented out, in `commons/granularity.py` in case a future method needs
-        # a granularity other than its family's native one. `contributions` is thus already (t, g).
 
         image_mean, image_std = self._resolve_normalization_stats()
 

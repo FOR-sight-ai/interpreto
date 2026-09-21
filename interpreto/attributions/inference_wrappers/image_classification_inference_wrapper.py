@@ -137,12 +137,11 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
         `l = H*W`, but the 3 channels are kept as a `d` axis (signed, no abs):
         `(c, 3, H, W) -> (c, 3=d, H*W=l)`.
 
-        Keeping channels signed and un-collapsed is what lets the cross-perturbation
-        statistic (mean/var/squared-mean) in the aggregator be applied per channel —
-        which VarGrad/SquareGrad need to compute the correct formula. The channel
-        magnitude collapse (`abs().mean`) happens later, in the explainer, *after* the
-        per-perturbation statistic. For image `d=3` is tiny, so unlike the text wrapper
-        there is no memory reason to collapse early here.
+        Keeping channels signed and un-collapsed is what lets VarGrad/SquareGrad
+        compute the correct formula.
+
+        For image `d=3` is tiny, so unlike the text wrapper there is no memory
+        reason to collapse early here.
 
         Args:
             inputs (TensorMapping):
@@ -185,9 +184,7 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
 
             # Keep channels signed and un-collapsed: (c, 3, H, W) -> (c, 3=d, l=H*W).
             # The l ordering (row-major over H, W) matches the mask path and resize_to_image's
-            # reshape(t, H, W). No abs / no channel mean here — those happen post-aggregator so the
-            # per-perturbation statistic (mean/var/squared-mean) lands per channel (faithful VarGrad/
-            # SquareGrad).
+            # reshape(t, H, W).
             target_wise_per_channel: Float[torch.Tensor, f"{c} d l"] = target_wise_grads.flatten(2, 3)
             gradients_list.append(target_wise_per_channel)
 
