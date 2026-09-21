@@ -27,6 +27,8 @@
 # CRIAQ and ANITI - https://www.deel.ai/
 # =====================================================================================
 
+from importlib.metadata import PackageNotFoundError, version
+
 from .attributions import (
     GradientShap,
     IntegratedGradients,
@@ -42,7 +44,12 @@ from .attributions import (
 from .commons import (
     Granularity,
 )
-from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .concepts import (
+    ModelWithSplitPoints,
+    SplitterForClassification,
+    SplitterForGeneration,
+    TextTokensSplitter,
+)
 from .visualizations import (
     AttributionVisualization,
     plot_attributions,
@@ -52,11 +59,9 @@ from .visualizations import (
 
 def get_version() -> str:
     """Returns the current version of the Interpreto library."""
-    import pkg_resources  # noqa: PLC0415  # ruff: disable=import-outside-toplevel
-
     try:
-        return pkg_resources.get_distribution("interpreto").version
-    except pkg_resources.DistributionNotFound:
+        return version("interpreto")
+    except PackageNotFoundError:
         return "unknown"
 
 
@@ -73,6 +78,7 @@ __all__ = [
     "SmoothGrad",
     "SplitterForClassification",
     "SplitterForGeneration",
+    "TextTokensSplitter",
     "Sobol",
     "VarGrad",
     "get_version",

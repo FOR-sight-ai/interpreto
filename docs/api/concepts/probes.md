@@ -9,15 +9,16 @@ to learn a mapping from activations to concept scores. This contrasts with the u
 [Concept Spaces](./concept_spaces/base.md) (ICA, NMF, SAEs, …) which discover concepts
 from unlabeled activations alone.
 
-The probe workflow uses the same `ModelWithSplitPoints` activation extraction as unsupervised
+The probe workflow uses the same splitter activation extraction as unsupervised
 methods, but the `fit` step requires both activations **and** binary concept labels.
 
 ## Usage Guide
 
 ### Classification Model (SplitterForClassification)
 
-The simplest setup for classification models. `SplitterForClassification` automatically
-detects the classification head and uses CLS-token activations.
+The simplest setup for classification models. `SplitterForClassification`
+automatically detects the classification head and returns the single
+representation consumed by that head.
 
 ```python
 from interpreto import SplitterForClassification
@@ -27,47 +28,44 @@ from interpreto.concepts.probes import LinearRegressionProbe
 # 1. Wrap your classification model
 model = SplitterForClassification("textattack/bert-base-uncased-imdb")
 
-# 2. Extract CLS-token activations — shape (n, d)
+# 2. Extract classification representations - shape (n, d)
 activations, predictions = model.get_activations(texts)
 
 # 3. Instantiate probe and explainer
 probe = LinearRegressionProbe()
 explainer = ProbeExplainer(model, concept_model=probe)
 
-# 4. Fit on activations + binary concept labels — labels shape (n, c)
+# 4. Fit on activations + binary concept labels - labels shape (n, c)
 explainer.fit(activations, labels)
 
 # 5. Score new inputs
 concept_scores = explainer.activations_to_concepts(new_activations)
 ```
 
-### Generation Model (SplitterForGeneration or ModelWithSplitPoints)
+### Text Model (TextTokensSplitter)
 
-For generation models, you must choose how to aggregate the sequence of token-level
-activations into a fixed-size representation. Two common strategies:
+For causal and encoder text models, choose whether to keep token-level
+activations or aggregate them into a fixed-size representation.
 
 #### Strategy A: Aggregate to one vector per sample
 
-Use `activation_granularity=SAMPLE` to pool all tokens into one activation vector.
+Use `token_pooling` to pool the retained tokens into one activation vector per input.
 This is appropriate when concepts are global properties of the input (e.g., topic, style).
 
 ```python
-from interpreto import ModelWithSplitPoints
+from interpreto import TextTokensSplitter
 from interpreto.concepts import ProbeExplainer
 from interpreto.concepts.probes import CosineCentroidProbe
 
-model = ModelWithSplitPoints(
+model = TextTokensSplitter(
     "gpt2",
     split_point="transformer.h.6",
+    task="text-generation",
     device_map="cuda",
 )
 
-# Aggregate all tokens into one vector per sample — shape (n, d)
-activations, _ = model.get_activations(
-    texts,
-    activation_granularity=model.activation_granularities.SAMPLE,
-    aggregation_strategy=model.aggregation_strategies.MEAN,  # MAX and LAST are also often compared in the literature
-)
+# Aggregate retained tokens into one vector per sample - shape (n, d).
+activations, _ = model.get_activations(texts, token_pooling="mean")
 
 probe = CosineCentroidProbe()
 explainer = ProbeExplainer(model, concept_model=probe)
@@ -76,28 +74,23 @@ explainer.fit(activations, labels)
 
 #### Strategy B: Per-token activations (flattened)
 
-Use `activation_granularity=TOKEN` to get one activation per token (special tokens
-removed, then flattened). This is appropriate when concepts are local properties
+The default output contains one activation per retained token, flattened across
+samples. This is appropriate when concepts are local properties
 (e.g., named-entity type, part-of-speech) and labels are provided per-token.
 
-This is the behavior of `SplitterForGeneration`, which can be seen as a special case of `ModelWithSplitPoints`.
-
 ```python
-# One vector per token, flattened across all samples — shape (n*l, d)
-activations, _ = model.get_activations(
-    texts,
-    activation_granularity=model.activation_granularities.TOKEN,
-)
+# One vector per retained token - shape (n_tokens, d).
+activations, _ = model.get_activations(texts)
 
-# labels must also be flattened to match: shape (n*l, c)
+# Labels must have one row per retained token: shape (n_tokens, c).
 probe = LinearRegressionProbe()
 explainer = ProbeExplainer(model, concept_model=probe)
 explainer.fit(activations, token_labels)
 ```
 
-!!! tip "Choosing a granularity"
-    - **SAMPLE / CLS_TOKEN**: one score per input — good for document-level concepts.
-    - **TOKEN / WORD / SENTENCE**: one score per unit — good for local/fine-grained concepts.
+!!! tip "Choosing a representation"
+    - **Classification or pooled text:** one score per input, suitable for document-level concepts.
+    - **Unpooled text:** one score per retained token, suitable for word-level concepts.
 
 ### Using Normalizations
 

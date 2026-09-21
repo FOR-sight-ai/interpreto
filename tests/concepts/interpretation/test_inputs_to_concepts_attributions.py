@@ -22,6 +22,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from unittest.mock import Mock
+
 import pytest
 import torch
 
@@ -49,6 +51,7 @@ from interpreto.concepts import (
     TopKSAEConcepts,
     VanillaSAEConcepts,
 )
+from interpreto.concepts.base import ModelForInputsToConcepts
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -97,6 +100,23 @@ def test_inputs_to_concepts_attributions_fast(sentences):
     While the other tests are slow because they test with multiple models and explainers.
     """
     inputs_to_concepts_attributions("hf-internal-testing/tiny-random-bert", PCAConcepts, KernelShap, sentences)
+
+
+def test_inputs_to_concepts_model_preserves_lazy_splitter():
+    """Constructing and moving the bridge does not dispatch a lazy NNsight model."""
+    splitter = SSC("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+    concept_explainer = Mock()
+    concept_explainer.splitter = splitter
+    concept_explainer.concept_model.nb_concepts = 3
+    concept_explainer.device = torch.device("cpu")
+
+    model = ModelForInputsToConcepts(concept_explainer)
+
+    assert not splitter.dispatched
+    assert model.device == concept_explainer.device
+    model.to(torch.device("cpu"))
+    assert not splitter.dispatched
+    concept_explainer.to.assert_called_once_with(torch.device("cpu"))
 
 
 @pytest.mark.slow

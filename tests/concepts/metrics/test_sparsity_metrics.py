@@ -26,14 +26,14 @@ from __future__ import annotations
 
 import torch
 
+from interpreto import SplitterForClassification
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.metrics import Sparsity, SparsityRatio
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def test_sparsity(splitted_encoder_ml: ModelWithSplitPoints):
+def test_sparsity(splitted_encoder_ml: SplitterForClassification):
     """
     Test that the sparsity metric measures expected sparsity
     """
@@ -42,9 +42,6 @@ def test_sparsity(splitted_encoder_ml: ModelWithSplitPoints):
     n = 50
     d = 32
     sparsity_ratio = 0.1  # should make an integer through 1 / sparsity_ratio
-    split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_point = split
-
     concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
     activations = torch.arange(n * d, device=DEVICE).reshape(n, d)
     sparse_activations = activations * (activations % (1 / sparsity_ratio) == 0).float()

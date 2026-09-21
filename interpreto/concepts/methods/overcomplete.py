@@ -129,11 +129,9 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
     Examples:
         >>> import datasets
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer
-        >>> from interpreto import BaseSplitter
+        >>> from interpreto import TextTokensSplitter
         >>> from interpreto.concepts import VanillaSAE
         >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> CLS_TOKEN = BaseSplitter.activation_granularities.CLS_TOKEN
-        >>> WORD = BaseSplitter.activation_granularities.WORD
         ...
         >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
         >>> repo_id = "Qwen/Qwen3-0.6B"
@@ -141,24 +139,19 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
         >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
         ...
         >>> # 1. Split your model in two parts
-        >>> splitted_model = BaseSplitter(
-        >>>     model, tokenizer=tokenizer, split_point=5,
+        >>> splitted_model = TextTokensSplitter(
+        >>>     model, tokenizer=tokenizer, split_point=5, task="text-generation",
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
-        >>> activations, _ = splitted_model.get_activations(
-        >>>     dataset, activation_granularity=WORD
-        >>> )
+        >>> activations, _ = splitted_model.get_activations(dataset)
         ...
         >>> # 3. Fit a concept model on the dataset
         >>> explainer = VanillaSAE(splitted_model, nb_concepts=100, device="cuda")
         >>> explainer.fit(activations, lr=1e-3, nb_epochs=20, batch_size=1024)
         ...
         >>> # 4. Interpret the concepts
-        >>> interpreter = TopKInputs(
-        >>>     concept_explainer=explainer,
-        >>>     activation_granularity=WORD,
-        >>> )
+        >>> interpreter = TopKInputs(concept_explainer=explainer)
         >>> interpretations = interpreter.interpret(
         >>>     inputs=dataset, latent_activations=activations
         >>> )
@@ -269,7 +262,8 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             device = self.device
         if len(activations.shape) != 2:
             raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
-        dataloader = DataLoader(TensorDataset(activations.detach()), batch_size=batch_size, shuffle=True)
+        activations = self._normalize_to_concept_model(activations.detach(), move_device=False)
+        dataloader = DataLoader(TensorDataset(activations), batch_size=batch_size, shuffle=True)
         optimizer_kwargs.update({"lr": lr})
         optimizer = optimizer_class(self.concept_model.parameters(), **optimizer_kwargs)  # type: ignore
         train_params = {
@@ -311,20 +305,8 @@ class SAEExplainer(ConceptAutoEncoderExplainer[oc_sae.SAE], Generic[_SAE_co]):
             The encoded concept activations.
         """
         # SAEs.encode returns both codes (concepts activations) and pre_codes (before relu)
-        _, codes = super().activations_to_concepts(activations.to(self.device))
+        _, codes = super().activations_to_concepts(activations)
         return codes
-
-    @check_fitted
-    def concepts_to_activations(self, concepts: torch.Tensor) -> torch.Tensor:
-        """Decode the given concepts using the `concept_model` decoder.
-
-        Args:
-            concepts (torch.Tensor): The concepts to decode.
-
-        Returns:
-            The decoded concept activations.
-        """
-        return self.concept_model.decode(concepts.to(self.device))  # type: ignore
 
 
 class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDictionaryLearning], Generic[_BODL_co]):
@@ -348,11 +330,9 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
     Examples:
         >>> import datasets
         >>> from transformers import AutoModelForCausalLM, AutoTokenizer
-        >>> from interpreto import BaseSplitter
+        >>> from interpreto import TextTokensSplitter
         >>> from interpreto.concepts import ICAConcepts
         >>> from interpreto.concepts.interpretations import TopKInputs
-        >>> CLS_TOKEN = BaseSplitter.activation_granularities.CLS_TOKEN
-        >>> WORD = BaseSplitter.activation_granularities.WORD
         ...
         >>> dataset = datasets.load_dataset("stanfordnlp/imdb")["train"]["text"][:1000]
         >>> repo_id = "Qwen/Qwen3-0.6B"
@@ -360,24 +340,19 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         >>> tokenizer = AutoTokenizer.from_pretrained(repo_id)
         ...
         >>> # 1. Split your model in two parts
-        >>> splitted_model = BaseSplitter(
-        >>>     model, tokenizer=tokenizer, split_point=5,
+        >>> splitted_model = TextTokensSplitter(
+        >>>     model, tokenizer=tokenizer, split_point=5, task="text-generation",
         >>> )
         ...
         >>> # 2. Compute a dataset of activations
-        >>> activations, _ = splitted_model.get_activations(
-        >>>     dataset, activation_granularity=WORD
-        >>> )
+        >>> activations, _ = splitted_model.get_activations(dataset)
         ...
         >>> # 3. Fit a concept model on the dataset
         >>> explainer = ICAConcepts(splitted_model, nb_concepts=20)
         >>> explainer.fit(activations)
         ...
         >>> # 4. Interpret the concepts
-        >>> interpreter = TopKInputs(
-        >>>     concept_explainer=explainer,
-        >>>     activation_granularity=WORD,
-        >>> )
+        >>> interpreter = TopKInputs(concept_explainer=explainer)
         >>> interpretations = interpreter.interpret(
         >>>     inputs=dataset, latent_activations=activations
         >>> )
@@ -435,6 +410,9 @@ class DictionaryLearningExplainer(ConceptAutoEncoderExplainer[oc_opt.BaseOptimDi
         """
         if len(activations.shape) != 2:
             raise ValueError(f"Expected activations to be a 2D array, (n, d), got shape {activations.shape}")
+        # These models create their dictionary during fit using PyTorch's default
+        # floating dtype, so no parameter or buffer exposes that dtype beforehand.
+        activations = self._normalize_to_concept_model(activations, fallback_dtype=torch.get_default_dtype())
         self.concept_model.fit(activations, **kwargs)
 
 
@@ -591,7 +569,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
                     "The activations should be positive. If you want to force the activations to be positive, "
                     "use the `NMFConcepts(..., force_relu=True)`."
                 )
-        self.concept_model.fit(activations, **kwargs)
+        super().fit(activations, **kwargs)
 
     @check_fitted
     def activations_to_concepts(self, activations: LatentActivations) -> torch.Tensor:  # ConceptsActivations
@@ -611,7 +589,7 @@ class NMFConcepts(DictionaryLearningExplainer[oc_opt.NMF]):
                     "The activations should be positive. If you want to force the activations to be positive, "
                     "use the `NMFConcepts(..., force_relu=True)`."
                 )
-        return self.concept_model.encode(activations)  # type: ignore
+        return super().activations_to_concepts(activations)
 
 
 class SemiNMFConcepts(DictionaryLearningExplainer[oc_opt.SemiNMF]):

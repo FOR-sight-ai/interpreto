@@ -27,22 +27,22 @@ Simplified model splitter for sequence classification models.
 
 ``SplitterForClassification`` wraps a HuggingFace ``ForSequenceClassification``
 model and always splits at the classification head. Activations are the
-CLS-token representations fed into the head.
+representations used by the classification head.
 """
 
 from __future__ import annotations
 
 import gc
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from functools import cached_property
 from typing import Any
 
 import torch
 from jaxtyping import Float, Int
+from nnsight import save as nnsight_save
 from tqdm import tqdm
 from transformers import (
-    AutoModelForSequenceClassification,
     BatchEncoding,
-    PretrainedConfig,
     PreTrainedModel,
     PreTrainedTokenizer,
     PreTrainedTokenizerFast,
@@ -60,15 +60,17 @@ class SplitterForClassification(BaseSplitter):
     a backbone followed by a single classification head.
 
     The split point is always the classification head, and activations are
-    the CLS-token representations fed into that head.
+    the representations used by that head.
     """
+
+    _HEAD_CANDIDATES = ("classifier", "classification_head", "score")
 
     def __init__(
         self,
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | None = None,
+        *,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
-        config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
         **kwargs,
@@ -78,7 +80,7 @@ class SplitterForClassification(BaseSplitter):
         The wrapper loads a sequence classification model and automatically identifies
         its classification head as the split point. This simplifies the concept pipeline
         for classification models by removing the need to manually specify split points and
-        forcing the granularity to be the [CLS] token.
+        exposing one representation per sample.
 
         Args:
             model_or_repo_id (str | PreTrainedModel): A Hugging Face model ID or a pre-loaded
@@ -91,7 +93,6 @@ class SplitterForClassification(BaseSplitter):
                 Here we use the input of the split_point not its output.
             tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): The tokenizer
                 associated with the model. If None, it is loaded from the model repo.
-            config (PretrainedConfig | None): Model configuration. If None, loaded automatically.
             batch_size (int): Batch size for activation extraction and gradient computation.
             device_map (torch.device | str | None): Device on which to load the model
                 (e.g., ``"cuda"`` or ``"cpu"``).
@@ -119,25 +120,24 @@ class SplitterForClassification(BaseSplitter):
                     "Please provide a model that inherits from `transformers.ForSequenceClassification`."
                 )
 
-        # Pass a placeholder split_point; our overridden setter skips walk_modules validation.
-        # The real split point is resolved after super().__init__() loads the model,
-        # because the split_point setter needs access to self._model.
         super().__init__(
             model_or_repo_id,
             split_point=split_point,
-            config=config,
+            task="text-classification",
             tokenizer=tokenizer,
-            automodel=AutoModelForSequenceClassification,  # type: ignore
             batch_size=batch_size,
             device_map=device_map,
             **kwargs,
         )
 
-    @property
-    def split_point(self) -> str:
-        return self._split_point
+        # Some heads select one sequence position themselves (e.g. RoBERTa),
+        # while token-wise heads leave that selection to the parent model.
+        head_parameter = next(self._split_module.parameters())
+        sample_input = head_parameter.new_empty(1, 2, self.config.hidden_size)
+        with torch.no_grad():
+            self._head_is_token_wise = self._split_module(sample_input).ndim == 3
 
-    @split_point.setter
+    @BaseSplitter.split_point.setter  # type: ignore[attr-defined]
     def split_point(self, split_point: str | int | None) -> None:
         """Set the split_point corresponding to the classification head name.
 
@@ -145,44 +145,106 @@ class SplitterForClassification(BaseSplitter):
             split_point (str | None): Name of the classification head.
                 If None, the first classification head is used.
         """
-        sub_modules = list(self._model._modules.keys())
         if split_point is None:
-            resolved = None
-            for candidate in ["classifier", "classification_head", "score"]:
-                if candidate in sub_modules:
-                    resolved = candidate
-                    break
-            if resolved is None:
+            prefix = f"{self.path}."
+            modules = {path.removeprefix(prefix) for path, _ in self.named_modules() if path.startswith(prefix)}
+            split_point = next((name for name in self._HEAD_CANDIDATES if name in modules), None)
+            if split_point is None:
                 raise ValueError(
                     "No classification head found in the model. "
                     "Please specify the classification head name using the `split_point` parameter."
                 )
-            self._split_point = resolved
-        else:
-            if split_point not in sub_modules:
-                raise ValueError(
-                    f"The provided classification head name '{split_point}' is not valid. "
-                    f"Existing model modules are: {', '.join(sub_modules)}."
-                )
-            self._split_point = str(split_point)
 
-    def __extract_cls_token(self, activations: Float[torch.Tensor, "n l d"]) -> Float[torch.Tensor, "n d"]:
-        """
-        Extract the CLS token from the activations.
+        if not isinstance(split_point, str):
+            raise ValueError(f"The provided classification head '{split_point}' is not valid.")
 
-        In some model such as Roberta the token CLS is done in the classification head,
-        and is not part of the model's forward pass.
-        In this case, we need to extract the CLS token from the activations.
-        """
-        padding_side = getattr(self.tokenizer, "padding_side", "right")
-        if padding_side == "right":
+        BaseSplitter.split_point.fset(self, split_point)  # type: ignore[attr-defined]
+
+    def _select_classification_representation(
+        self,
+        activations: torch.Tensor,
+        input_ids: torch.Tensor | None,
+    ) -> Float[torch.Tensor, "n d"]:
+        """Select the first token, or the last non-padding token for token-wise heads."""
+        # The head already receives one representation per sample.
+        if activations.ndim == 2:
+            return activations
+
+        # Sequence-reducing heads such as RoBERTa classify the first token.
+        if not self._head_is_token_wise:
             return activations[:, 0, :]
-        return activations[:, -1, :]
+
+        # Without padding information, token-wise heads classify the last token.
+        pad_token_id = self.config.pad_token_id
+        if input_ids is None or pad_token_id is None:
+            return activations[:, -1, :]
+
+        # With padding, select each sample's last non-padding token.
+        non_padding = input_ids != pad_token_id
+        token_indices = torch.arange(input_ids.shape[-1], device=input_ids.device)
+        positions = (token_indices * non_padding).argmax(-1).to(activations.device)
+        return activations[
+            torch.arange(activations.shape[0], device=activations.device),
+            positions,
+        ]
+
+    @cached_property
+    def _standalone_token_template(self) -> tuple[torch.Tensor, int]:
+        """Get the template of special tokens to integrate a standalone token ID."""
+        input_ids = self.tokenizer("a", return_tensors="pt")["input_ids"]
+        token_id = self.tokenizer("a", add_special_tokens=False)["input_ids"][0]
+        position = (input_ids[0] == token_id).nonzero()[0].item()
+        return input_ids, position
+
+    def _prepare_batch(
+        self,
+        inputs: list[str] | Iterable[int] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None,
+        kwargs: dict[str, Any],
+    ) -> dict[str, torch.Tensor]:
+        """Prepare model inputs while retaining the input IDs used for token selection."""
+        if inputs is None:
+            if not kwargs:
+                raise ValueError("Either inputs or kwargs must be provided.")
+            return dict(kwargs)
+
+        if isinstance(inputs, torch.Tensor):
+            return {"input_ids": inputs}
+
+        if isinstance(inputs, (BatchEncoding, dict)):
+            return dict(inputs)
+
+        if not isinstance(inputs, list):
+            inputs = list(inputs)
+
+        if not inputs:
+            raise ValueError("List inputs cannot be empty.")
+
+        if all(isinstance(x, str) for x in inputs):
+            return dict(
+                self.tokenizer(
+                    inputs,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                )
+            )
+
+        if all(isinstance(x, int) for x in inputs):
+            # Integrate the provided token IDs into the special tokens template.
+            template, position = self._standalone_token_template
+            input_ids = template.expand(len(inputs), -1).clone()
+            input_ids[:, position] = torch.as_tensor(inputs, dtype=input_ids.dtype)
+
+            return {"input_ids": input_ids}
+
+        raise TypeError("List inputs must contain only strings or only integer token IDs.")
 
     def inputs_to_activations(
-        self, inputs: list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None = None, **kwargs
+        self,
+        inputs: list[str] | Iterable[int] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None = None,
+        **kwargs,
     ) -> Float[torch.Tensor, "n d"]:
-        """Compute latent activations (CLS-token representations) from raw inputs.
+        """Compute latent classification representations from raw inputs.
 
         Runs the model backbone up to the classification head and extracts the
         input representation that would be fed to the classifier.
@@ -192,30 +254,32 @@ class SplitterForClassification(BaseSplitter):
         which is batched in the ``InputsToConceptsInferenceWrapper``.
 
         Args:
-            inputs (list[str] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None):
-                Raw model inputs. Can be a list of strings, a tensor of input IDs,
-                a BatchEncoding, or a dictionary of tensors.
+            inputs (list[str] | Iterable[int] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None):
+                Raw model inputs. A list of strings is tokenized normally. A list
+                of integers represents standalone token IDs and receives the
+                tokenizer's model-specific special tokens. A tensor is treated
+                as an already-prepared batch of input IDs. BatchEncoding and
+                tensor dictionaries are forwarded unchanged.
             **kwargs (dict[str, Any]): Additional keyword arguments forwarded to the trace context
                 (e.g., ``truncation=True``).
 
         Returns:
-            Float[torch.Tensor, "n d"]: The CLS-token activations of shape
+            Float[torch.Tensor, "n d"]: The classification activations of shape
                 ``(n_samples, hidden_dim)``.
 
         Raises:
             ValueError: If both ``inputs`` and ``kwargs`` are empty.
         """
-        if inputs is None and len(kwargs) == 0:
-            raise ValueError("Either inputs or kwargs must be provided.")
+        prepared = self._prepare_batch(inputs, kwargs)
 
-        with self.trace(inputs, **kwargs) as tracer:
-            activations = getattr(self, self.split_point).input.save()
+        with self.trace(prepared, **(kwargs if inputs is not None else {})) as tracer:
+            activations = self._split_module.input.save()
             tracer.stop()  # we only needed the CLS token, no need to complete the forward pass
 
-        # force two dimensions
-        if activations.ndim == 3:
-            activations = self.__extract_cls_token(activations)
-        return activations
+        return self._select_classification_representation(
+            activations,
+            prepared.get("input_ids"),
+        )
 
     def activations_to_outputs(
         self,
@@ -235,53 +299,63 @@ class SplitterForClassification(BaseSplitter):
             Float[torch.Tensor, "n cls"]: Classification logits of shape
                 ``(n_samples, n_classes)``.
         """
-        return getattr(self, self.split_point)(activations).logits
+        if not self.dispatched:
+            self.dispatch()
+
+        classification_head = self._split_module
+        activations = activations.to(next(classification_head.parameters()))
+
+        # A singleton sequence works for both composite heads, such as
+        # RoBERTa's, and token-wise linear heads.
+        logits = classification_head(activations.unsqueeze(1))
+        return logits[:, 0] if logits.ndim == 3 else logits
 
     def get_activations(
         self,
-        inputs: list[str] | Int[torch.Tensor, "n l"],
+        inputs: list[str] | Iterable[int] | Int[torch.Tensor, "n l"],
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
         **kwargs,
     ) -> tuple[LatentActivations, torch.Tensor]:
-        """Extract CLS-token activations and predictions for a dataset of inputs.
+        """Extract classification activations and predictions for a dataset of inputs.
 
         Iterates over the inputs in batches, extracting the activations at the
         classification head input and the model predictions.
 
         Args:
-            inputs (list[str] | Int[torch.Tensor, "n l"]): Raw text inputs or
-                tokenized input IDs.
+            inputs (list[str] | Iterable[int] | Int[torch.Tensor, "n l"]): Raw text
+                inputs, standalone token IDs, or an already-prepared 2D tensor
+                of token IDs.
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional keyword arguments for
                 the model forward pass (e.g., ``{"truncation": True}``).
-            **kwargs (dict[str, Any]): Unused, kept for API compatibility with ``ModelWithSplitPoints``.
+            **kwargs (dict[str, Any]): Unused, kept for consistency with other splitter interfaces.
 
         Returns:
             tuple[LatentActivations, torch.Tensor]: The activations tensor of shape
                 ``(n_samples, hidden_dim)`` and predicted class indices of shape ``(n_samples,)``.
         """
+        prepared_inputs = inputs if isinstance(inputs, (list, torch.Tensor)) else list(inputs)
+
         activations = []
         predictions = []
-        classification_head = getattr(self, self.split_point)
+        classification_head = self._split_module
 
-        self._model.eval()
+        self.eval()
         with torch.no_grad():
-            for i in tqdm(range(0, len(inputs), self.batch_size), disable=not tqdm_bar):
+            for i in tqdm(range(0, len(prepared_inputs), self.batch_size), disable=not tqdm_bar):
                 # extract and prepare a batch of inputs
-                end_idx = min(i + self.batch_size, len(inputs))
-                batch = inputs[i:end_idx]
-                if isinstance(batch, torch.Tensor):
-                    batch = {"input_ids": batch}
+                batch = self._prepare_batch(prepared_inputs[i : i + self.batch_size], {})
 
                 # get activations and predictions for the batch
                 with self.trace(batch, **forward_kwargs):
                     batch_activations = classification_head.input.save()
                     batch_predictions = self.output.logits.argmax(dim=-1).save()  # type: ignore
 
-                # force two dimensions
-                if batch_activations.ndim == 3:
-                    batch_activations = self.__extract_cls_token(batch_activations)
+                batch_activations = self._select_classification_representation(
+                    batch_activations,
+                    batch.get("input_ids"),
+                )
 
                 # Materialize outside the trace. This is necessary to avoid memory leaks.
                 activations.append(batch_activations.detach().cpu().clone())
@@ -333,7 +407,6 @@ class SplitterForClassification(BaseSplitter):
             list[Float[torch.Tensor, "t 1 c"]]: A list of gradient tensors,
                 one per sample, each of shape ``(n_targets, 1, n_concepts)``.
         """
-        classification_head = getattr(self, self.split_point)
         if batch_size is None:
             batch_size = self.batch_size
 
@@ -353,18 +426,14 @@ class SplitterForClassification(BaseSplitter):
                     )
 
             # encode activations to concepts
-            batch_concepts: Float[torch.Tensor, "b c"] = activations_to_concepts(batch_activations.to(self.device))
+            batch_concepts: Float[torch.Tensor, "b c"] = activations_to_concepts(batch_activations)
             del batch_activations
             batch_concepts.requires_grad_(True)
 
             # decode concepts to logits
-            try:
-                logits: Float[torch.Tensor, "b t_all"] = classification_head(concepts_to_activations(batch_concepts))
-            except IndexError:
-                # we might forced two dimensions in `self.inputs_to_activations`
-                logits: Float[torch.Tensor, "b t_all"] = classification_head(
-                    concepts_to_activations(batch_concepts).unsqueeze(dim=1)
-                )
+            logits: Float[torch.Tensor, "b t_all"] = self.activations_to_outputs(
+                concepts_to_activations(batch_concepts)
+            )
 
             # specify which classes to compute gradients for
             if targets is None:
@@ -397,14 +466,16 @@ class SplitterForClassification(BaseSplitter):
         return gradients_list
 
     def get_latent_shape(self) -> torch.Size:
-        """Get the shape of the latent activations.
+        """Get the shape of the exposed classification representation.
 
-        Uses a quick trace with a dummy input to determine the classifier input shape.
+        Uses a quick trace with a dummy input to determine the classifier input
+        hidden size. The splitter exposes one representation per sample even
+        when the classification head receives a sequence.
 
         Returns:
-            torch.Size: Shape of the activations at the classification head input.
+            torch.Size: Shape ``(1, hidden_dim)``.
         """
-        with self.trace("scan") as tracer:
-            shape = getattr(self, self.split_point).input.shape.save()
+        with self.trace("Hello world") as tracer:
+            shape = nnsight_save(self._split_module.input.shape)
             tracer.stop()
-        return shape
+        return torch.Size([1, shape[-1]])
