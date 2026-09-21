@@ -365,7 +365,8 @@ def _sample_quantile(
     quantile_size = non_zero_samples.size(0) // k_quantile
     samples_per_quantile = k_examples // k_quantile
 
-    sorted_indexes = torch.argsort(concept_activations, descending=True)[: non_zero_samples.size(0)]
+    sorted_nonzero_positions = torch.argsort(concept_activations[non_zero_samples], descending=True)
+    sorted_indexes = non_zero_samples[sorted_nonzero_positions]
     sample_indices: list[int] = []
     for i in range(k_quantile):
         if i == k_quantile - 1:
@@ -510,35 +511,34 @@ def _build_example_prompt(examples: list[Example]) -> str:
 
 
 # From https://github.com/EleutherAI/delphi/blob/article_version/sae_auto_interp/explainers/default/prompts.py
-SYSTEM_PROMPT_WITH_CONTEXT = """Your role is to label the concepts/patterns present in the different examples.
+SYSTEM_PROMPT_WITH_CONTEXT = """You assign a short label to a concept from examples.
 
-You will be given a list of text examples on which special tokens are selected and between delimiters like <<this>>.
-How important each token is for the behavior is listed after each example in parentheses, with importance from 0 to 10.
+Each example contains highlighted text between `<< >>`. The highlighted text is the main evidence for the concept. Activation scores range from 0 to 10; higher scores provide stronger evidence.
 
-Hard rules:
-- The label should summarize the concept linking the examples together. Give a single label describing all examples highlighted tokens.
-- The label should be between 1 and 5 words long.
-- The shorter the label the better. The best is a word.
-- Do not make a sentence.
-- The label should be the most precise possible. The goal is to be able to differentiate between concepts.
-- The label should encompass most examples. But you can ignore the non-informative ones.
-- Do not mention the marker tokens (<< >>) in your explanation. Nor refer to the importance.
-- Only focus on the content and the label.
-- Never ever give labels with more than 5 words, they would be cut out.
+Infer the most specific concept shared by the strongest examples.
 
-Some examples: 'blue', 'positive sentiment and enthusiasm', 'legal entities', 'medical places', 'hate', 'noun phrase', 'ion or iou sounds', 'questions' final words'...
+Output exactly one noun phrase of 1 to 5 words.
+
+Output only the label.
+Do not explain your answer.
+Do not summarize the examples.
+Do not mention activations, examples, tokens, or markers.
+Do not write a sentence.
+Do not use quotes, bullets, Markdown, or a prefix such as "Label:".
 """
 
-SYSTEM_PROMPT_WITHOUT_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
-Your task is to analyze text and provide an explanation that thoroughly encapsulates possible patterns found in it.
-Guidelines:
+SYSTEM_PROMPT_WITHOUT_CONTEXT = """You assign a short label to a concept from text examples.
 
-You will be given a list of text examples.
-How important each text is for the behavior is listed after each example in parentheses, with importance from 0 to 10.
+Each example has an activation score from 0 to 10. Higher scores provide stronger evidence for the concept.
 
-- Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
-- If the examples are uninformative, you don't need to mention them. Don't focus on giving examples, but try to summarize the patterns found in the examples.
-- Do not make lists of possible explanations. Find a single concept that best describes the examples.
-- Strike the balance between being concise and informative. From 1 to 5 words. 5 is an absolute maximum.
-- Refrain from including uninformative elements like "patterns found include ...", "the examples show ...", or "text contains ...".
+Infer the most specific concept generally applicable to the examples.
+
+Output exactly one noun phrase of 1 to 5 words.
+
+Output only the label.
+Do not explain your answer.
+Do not summarize the examples.
+Do not mention the examples or activation scores.
+Do not write a sentence.
+Do not use quotes, bullets, Markdown, or a prefix such as "Label:".
 """

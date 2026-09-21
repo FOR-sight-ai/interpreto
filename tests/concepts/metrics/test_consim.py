@@ -58,7 +58,7 @@ import pytest
 import torch
 
 from interpreto import SplitterForClassification
-from interpreto.commons.llm_interface import LLMInterface
+from interpreto.commons.llm_interface import LLMInterface, Role
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.metrics.consim import ConSim, PromptTypes
 
@@ -76,14 +76,15 @@ class LLMInterfacePlaceholder(LLMInterface):
     def __init__(self):
         pass
 
-    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str:
+    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+        system_prompt, user_prompt = prompt[0][1], prompt[1][1]
 
         # extract the classes from the system prompt
-        classes_str = system_prompt.split("The classes are: [")[1].split("]", maxsplit=1)[0]
+        classes_str = system_prompt.split("The classes are: [")[1].split("]")[0]
         classes = classes_str.split(", ")
 
         # extract the sample indices from the user prompt
-        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_", maxsplit=1)[0]
+        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_")[0]
         # Format:
         #     Sample_0: "this is the first sample"
         #     Sample_1: "this is the second sample"
@@ -98,14 +99,15 @@ class WrongNumberOfAnswers(LLMInterface):
     def __init__(self):
         pass
 
-    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str:
+    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
+        system_prompt, user_prompt = prompt[0][1], prompt[1][1]
 
         # extract the classes from the system prompt
-        classes_str = system_prompt.split("The classes are: [")[1].split("]", maxsplit=1)[0]
+        classes_str = system_prompt.split("The classes are: [")[1].split("]")[0]
         classes = classes_str.split(", ")
 
         # extract the sample indices from the user prompt
-        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_", maxsplit=1)[0]
+        ep_samples_str = user_prompt.split("\n\nConcepts contributions for Sample_")[0]
         # Format:
         #     Sample_0: "this is the first sample"
         #     Sample_1: "this is the second sample"
@@ -123,7 +125,7 @@ class WrongFormat(LLMInterface):
     def __init__(self):
         pass
 
-    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str:
+    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
         return "The predictions are: {class_0, class_1, class_2}"
 
 
@@ -131,7 +133,7 @@ class EmptyResponse(LLMInterface):
     def __init__(self):
         pass
 
-    def generate(self, system_prompt: str, user_prompt: str, **generation_kwargs) -> str:
+    def generate(self, prompt: list[tuple[Role, str]]) -> str | None:
         return ""
 
 
@@ -470,9 +472,12 @@ def test_consim_generate_prompt():
     )
 
     # test prompt format
-    system, user = prompts
-    assert isinstance(system, str)
-    assert isinstance(user, str)
+    assert prompts[0][0] is Role.SYSTEM, "prompt should respect the format [(Role.SYSTEM, str), ...]"
+    system = prompts[0][1]
+    assert isinstance(system, str), "prompt should respect the format [(Role.SYSTEM, str), (Role, str)]"
+    assert prompts[1][0] is Role.USER, "prompt should respect the format [(Role.SYSTEM, str), (Role.USER, str)]"
+    user = prompts[1][1]
+    assert isinstance(user, str), "prompt should respect the format [(Role.SYSTEM, str), (Role.USER, str)]"
 
     # verify literal predictions
     assert isinstance(literal, list), "literal predictions should be a list of strings"
