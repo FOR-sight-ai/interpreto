@@ -71,11 +71,7 @@ SENTENCE_SPLIT_EXCEPTIONS = (
 )
 
 
-class GranularityCombinationStrategy(Enum):
-    pass
-
-
-class GranularityAggregationStrategy(GranularityCombinationStrategy):
+class GranularityAggregationStrategy(Enum):
     """
     Enumeration of the available aggregation strategies for combining token-level
     scores into a single score for each unit of a higher-level granularity
@@ -156,7 +152,7 @@ class GranularityAggregationStrategy(GranularityCombinationStrategy):
                 raise NotImplementedError(f"Aggregation strategy {self} not implemented.")
 
 
-class GranularityResizeStrategy(GranularityCombinationStrategy):
+class GranularityResizeStrategy(Enum):
     # TODO: evaluate if it needs an unfold function such as GranularityAggregationStrategy
     # NOTE: torch has no hamming/lanczos modes, and torchvision only offers them via the CPU-only
     # PIL backend, so they are unavailable for GPU tensors regardless of library.

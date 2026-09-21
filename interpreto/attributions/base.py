@@ -68,7 +68,6 @@ from interpreto.attributions.perturbations.base import (
 from interpreto.commons import (
     Granularity,
     GranularityAggregationStrategy,
-    GranularityCombinationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
     TextGranularity,
@@ -359,7 +358,7 @@ class AttributionExplainer(ABC):
     _model_task: ModelTask
     default_mask_granularity: Granularity
     default_tensor_granularity: Granularity
-    default_combination_strategy: GranularityCombinationStrategy
+    default_combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy
 
     def __init__(
         self,
@@ -370,7 +369,8 @@ class AttributionExplainer(ABC):
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
         granularity: Granularity = TextGranularity.DEFAULT,
-        combination_strategy: GranularityCombinationStrategy = GranularityAggregationStrategy.MEAN,
+        combination_strategy: GranularityAggregationStrategy
+        | GranularityResizeStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,  # TODO: add to all classes
         use_gradient: bool = False,
         input_x_gradient: bool = True,
@@ -393,14 +393,13 @@ class AttributionExplainer(ABC):
                 Modality-specific: subclasses narrow it to `TextGranularity` or `ImageGranularity`.
                 Defaults to TextGranularity.DEFAULT (WORD).
                 To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
-            combination_strategy (GranularityCombinationStrategy, optional): The method used to combine
+            combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy, optional): The method used to combine
                 scores at the specified granularity, for gradient-based methods. Thus, it is ignored
                 for perturbation based methods.
                 Defaults to GranularityAggregationStrategy.MEAN.
                 Ignored for `granularity` set to `ALL_TOKENS` or `TOKEN`.
-                Named generically because the text path passes a `GranularityAggregationStrategy` and
-                the image path a `GranularityResizeStrategy` through the same parameter; both are
-                `GranularityCombinationStrategy` members.
+                Typed generically because the text path passes a `GranularityAggregationStrategy` and
+                the image path a `GranularityResizeStrategy` through the same parameter.
             inference_mode (Callable[[torch.Tensor], torch.Tensor], optional): The mode used for inference.
                 It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.
             use_gradient (bool, optional): If True, computes gradients instead of inference for targeted explanations.
@@ -1034,7 +1033,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
-        combination_strategy: GranularityCombinationStrategy = GranularityResizeStrategy.BILINEAR,
+        combination_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         use_gradient: bool = False,
         input_x_gradient: bool = True,
@@ -1276,18 +1275,18 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         mask_generator: Iterator[Int[torch.Tensor, "p g"] | None]
         pert_generator, mask_generator = split_iterator(self.perturbator.perturb(m) for m in model_inputs_to_explain)
 
-        # Gradient methods yield signed, per-channel scores (p, t, d, l); mask methods yield (p, t).
-        scores: Iterator[Float[torch.Tensor, "p t d l"] | Float[torch.Tensor, "p t"]] = self.inference_wrapper(
+        # Gradient methods yield signed, per-channel scores (p, t, c, l); mask methods yield (p, t).
+        scores: Iterator[Float[torch.Tensor, "p t c l"] | Float[torch.Tensor, "p t"]] = self.inference_wrapper(
             pert_generator, sanitized_targets
         )
 
-        # Aggregate over perturbations: (p, t, d, l) -> (t, d, l) for gradient methods.
+        # Aggregate over perturbations: (p, t, c, l) -> (t, c, l) for gradient methods.
         #   (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw.
-        aggregated: Iterator[Float[torch.Tensor, "t d l"] | Float[torch.Tensor, "t g"]] = (
+        aggregated: Iterator[Float[torch.Tensor, "t c l"] | Float[torch.Tensor, "t g"]] = (
             self.aggregator(score.detach(), mask) for score, mask in zip(scores, mask_generator, strict=True)
         )
 
-        # Collapse the 3 channels of gradient scores to a per-pixel value: (t, d, l) -> (t, l).
+        # Collapse the 3 channels of gradient scores to a per-pixel value: (t, c, l) -> (t, l).
         # Signed mean (no abs).
         contributions: Iterator[Float[torch.Tensor, "t l"] | Float[torch.Tensor, "t g"]] = (
             contribution.mean(dim=1) if self.inference_wrapper.gradients else contribution

@@ -43,7 +43,12 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionExplainer, InferenceModes, MultitaskExplainerMixin
 from interpreto.attributions.perturbations import RandomMaskedPerturbator
-from interpreto.commons import Granularity, GranularityCombinationStrategy, general_bad_argument
+from interpreto.commons import (
+    Granularity,
+    GranularityAggregationStrategy,
+    GranularityResizeStrategy,
+    general_bad_argument,
+)
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
@@ -78,7 +83,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
         model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
         granularity: Granularity | None = None,
-        combination_strategy: GranularityCombinationStrategy | None = None,
+        combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
         batch_size: int = 4,
@@ -98,7 +103,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
             granularity (Granularity | None): the level of granularity for the explanation.
                 Defaults to the modality's default_mask_granularity: WORD for text,
                 PATCH for images.
-            combination_strategy (GranularityCombinationStrategy | None): how per-token
+            combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy | None): how per-token
                 scores are combined into granularity scores (on the text side). how masks
                 and heatmaps are resized from the granularity space to the image space
                 for images.

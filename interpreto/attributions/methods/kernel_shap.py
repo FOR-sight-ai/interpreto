@@ -42,7 +42,7 @@ from interpreto.attributions.base import AttributionExplainer, MultitaskExplaine
 from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.attributions.perturbations import ShapPerturbator
 from interpreto.commons import general_bad_argument
-from interpreto.commons.granularity import Granularity, GranularityCombinationStrategy
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy, GranularityResizeStrategy
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
@@ -75,7 +75,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
         model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
         granularity: Granularity | None = None,
-        combination_strategy: GranularityCombinationStrategy | None = None,
+        combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
         batch_size: int = 4,
@@ -92,7 +92,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
             granularity (Granularity | None): the level of granularity for the explanation.
                 Defaults to the modality's default_mask_granularity: WORD for text,
                 PATCH for images.
-            combination_strategy (GranularityCombinationStrategy | None): how per-token or
+            combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy | None): how per-token or
                 scores are combined into granularity scores (on the text side). how masks
                 and heatmaps are resized from the granularity space to the image space
                 for images.

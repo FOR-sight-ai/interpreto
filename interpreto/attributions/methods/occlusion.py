@@ -39,7 +39,8 @@ from interpreto.attributions.inference_wrappers.inference_wrapper import Inferen
 from interpreto.attributions.perturbations.occlusion_perturbation import OcclusionPerturbator
 from interpreto.commons import (
     Granularity,
-    GranularityCombinationStrategy,
+    GranularityAggregationStrategy,
+    GranularityResizeStrategy,
     general_bad_argument,
 )
 from interpreto.concepts.base import ModelForInputsToConcepts
@@ -72,7 +73,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
         granularity: Granularity | None = None,
-        combination_strategy: GranularityCombinationStrategy | None = None,
+        combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
         batch_size: int = 4,
@@ -88,7 +89,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
             granularity (Granularity | None): the level of granularity for the explanation.
                 Defaults to the modality's `default_tensor_granularity`: `WORD` for text,
                 `PIXEL` for images.
-            combination_strategy (GranularityCombinationStrategy | None): how per-token or
+            combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy | None): how per-token or
                 per-pixel gradients are combined into granularity scores. Defaults to the
                 modality's `default_combination_strategy`.
             inference_mode (Callable[[torch.Tensor], torch.Tensor]): the mode used for inference.

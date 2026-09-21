@@ -293,9 +293,10 @@ def plot_image_attribution(
         n_targets = output.attributions.shape[0]
         if target_idx is None:
             target_indices = list(range(n_targets))
+        elif isinstance(target_idx, int):
+            target_indices = [target_idx]
         else:
             target_indices = list(target_idx)
-
         if not target_indices:
             raise ValueError("target_idx is empty — pass None to plot all targets.")
         for t_idx in target_indices:
