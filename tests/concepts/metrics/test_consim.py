@@ -152,7 +152,7 @@ def test_consim_extract_interesting_elements(splitted_encoder_ml: SplitterForCla
     Test the `_extract_interesting_elements` method of the ConSim metric.
     """
     classes = ["0", "1"]
-    consim = ConSim(splitted_encoder_ml, user_llm=None, classes=classes)
+    consim = ConSim(splitted_encoder_ml, user_llm=LLMInterfacePlaceholder(), classes=classes)
 
     inputs = [f"sentence {i}" for i in range(6)]
     labels = torch.tensor([0, 1, 0, 1, 0, 1])
@@ -205,7 +205,7 @@ def test_consim_select_examples(splitted_encoder_ml: SplitterForClassification, 
         return None, predictions
 
     monkeypatch.setattr(splitted_encoder_ml, "get_activations", fake_get_activations)
-    consim = ConSim(splitted_encoder_ml, None, classes=classes)
+    consim = ConSim(splitted_encoder_ml, LLMInterfacePlaceholder(), classes=classes)
 
     # 2 correct and 2 incorrect elements should be returned
     samples, labels, predictions = consim.select_examples(inputs, labels, nb_lp_samples=2, nb_ep_samples=2, seed=0)
