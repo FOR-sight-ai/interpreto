@@ -172,6 +172,90 @@ def setup_mask_token_id(model: PreTrainedModel, tokenizer: PreTrainedTokenizerBa
     return int(replace_token_id)
 
 
+def process_targets_classfication(
+    targets: ClassificationTarget, expected_length: int | None = None
+) -> list[Int[torch.Tensor, "t"]]:
+    """
+    Normalize classification targets into a list of 1D integer tensors.
+    The same helper function is used for both text and image classification.
+
+    Args:
+        targets (int | torch.Tensor | Iterable[int] | Iterable[torch.Tensor]):
+            The classification target(s). Supported formats include:
+            - int: Interpreted as a single target.
+            - torch.Tensor:
+                * 1D tensors are treated as a sequence of individual targets.
+                * 2D tensors must have shape (n, t), where `n` is the number of targets.
+            - Iterable[int]: Each integer is treated as a separate target.
+            - Iterable[torch.Tensor]: Each tensor must be 1D and contain integers.
+
+        expected_length (int | None, optional):
+            If specified, validates that the number of targets matches this expected length.
+
+    Returns:
+        Iterable[torch.Tensor]
+            A list of 1D integer tensors, one per input instance.
+
+    Raises:
+        ValueError
+            - If the number of targets does not match `expected_length`.
+        TypeError
+            - If the type of `targets` is unsupported.
+            - If tensor targets are not 1D or 2D.
+            - If tensor values are not integers.
+    """
+    # integer
+    if isinstance(targets, int):
+        if expected_length is not None and expected_length != 1:
+            raise ValueError(
+                "Mismatch between the inputs and targets length."
+                + f" Target is a single integer, but the length of the inputs is {expected_length}."
+            )
+        return [torch.tensor([targets])]
+
+    # tensor
+    if isinstance(targets, torch.Tensor):
+        if targets.ndim == 1:
+            # one dimensional tensors are treated as iterable of integer targets
+            targets = targets.unsqueeze(-1)
+        if expected_length is not None and expected_length != targets.shape[0]:
+            raise ValueError(
+                "Mismatch between the inputs and targets length."
+                + f" Target tensor of {targets.shape[0]} elements, but the length of the inputs is {expected_length}."
+            )
+        if targets.ndim != 2:
+            raise TypeError(
+                "Target tensor must be one-dimensional or two-dimensional."
+                + f" Target tensor has {targets.ndim} dimensions."
+            )
+        if torch.is_floating_point(targets):
+            raise TypeError("Target tensor must be integers.")
+        return list(targets.unbind(dim=0))
+
+    # iterable
+    if isinstance(targets, Iterable):
+        if expected_length is not None and len(targets) != expected_length:  # type: ignore
+            raise ValueError(
+                "Mismatch between the inputs and targets length."
+                + f" Target is an iterable of {len(targets)} elements, but the length of the inputs is {expected_length}."  # type: ignore
+            )
+
+        # iterable[int]
+        if all(isinstance(t, int) for t in targets):
+            return [torch.tensor([target]) for target in targets]
+
+        # iterable[torch.Tensor]
+        iterable_targets: list[torch.Tensor] = list(targets)  # type: ignore
+        if all(isinstance(t, torch.Tensor) for t in iterable_targets):
+            if any(target.ndim != 1 for target in iterable_targets):
+                raise TypeError("If the targets are iterable of tensors, the tensors must be one-dimensional.")
+            if any(torch.is_floating_point(target) for target in iterable_targets):
+                raise TypeError("If the targets are iterable of tensors, they must be integers.")
+            return iterable_targets
+
+    raise TypeError(f"Target type {type(targets)} not supported.")
+
+
 class ModelTask(Enum):
     """
     Enum to represent the model task type.
@@ -650,83 +734,10 @@ class TextClassificationAttributionExplainer(AttributionExplainer):
         self, targets: ClassificationTarget, expected_length: int | None = None
     ) -> list[Int[torch.Tensor, "t"]]:
         """
-        Normalize classification targets into a list of 1D integer tensors.
+        Calls process_targets_classification.
 
-        Args:
-            targets (int | torch.Tensor | Iterable[int] | Iterable[torch.Tensor]):
-                The classification target(s). Supported formats include:
-                - int: Interpreted as a single target.
-                - torch.Tensor:
-                    * 1D tensors are treated as a sequence of individual targets.
-                    * 2D tensors must have shape (n, t), where `n` is the number of targets.
-                - Iterable[int]: Each integer is treated as a separate target.
-                - Iterable[torch.Tensor]: Each tensor must be 1D and contain integers.
-
-            expected_length (int | None, optional):
-                If specified, validates that the number of targets matches this expected length.
-
-        Returns:
-            Iterable[torch.Tensor]
-                A list of 1D integer tensors, one per input instance.
-
-        Raises:
-            ValueError
-                - If the number of targets does not match `expected_length`.
-            TypeError
-                - If the type of `targets` is unsupported.
-                - If tensor targets are not 1D or 2D.
-                - If tensor values are not integers.
         """
-        # integer
-        if isinstance(targets, int):
-            if expected_length is not None and expected_length != 1:
-                raise ValueError(
-                    "Mismatch between the inputs and targets length."
-                    + f" Target is a single integer, but the length of the inputs is {expected_length}."
-                )
-            return [torch.tensor([targets])]
-
-        # tensor
-        if isinstance(targets, torch.Tensor):
-            if targets.ndim == 1:
-                # one dimensional tensors are treated as iterable of integer targets
-                targets = targets.unsqueeze(-1)
-            if expected_length is not None and expected_length != targets.shape[0]:
-                raise ValueError(
-                    "Mismatch between the inputs and targets length."
-                    + f" Target tensor of {targets.shape[0]} elements, but the length of the inputs is {expected_length}."
-                )
-            if targets.ndim != 2:
-                raise TypeError(
-                    "Target tensor must be one-dimensional or two-dimensional."
-                    + f" Target tensor has {targets.ndim} dimensions."
-                )
-            if torch.is_floating_point(targets):
-                raise TypeError("Target tensor must be integers.")
-            return list(targets.unbind(dim=0))
-
-        # iterable
-        if isinstance(targets, Iterable):
-            if expected_length is not None and len(targets) != expected_length:  # type: ignore
-                raise ValueError(
-                    "Mismatch between the inputs and targets length."
-                    + f" Target is an iterable of {len(targets)} elements, but the length of the inputs is {expected_length}."  # type: ignore
-                )
-
-            # iterable[int]
-            if all(isinstance(t, int) for t in targets):
-                return [torch.tensor([target]) for target in targets]
-
-            # iterable[torch.Tensor]
-            iterable_targets: list[torch.Tensor] = list(targets)  # type: ignore
-            if all(isinstance(t, torch.Tensor) for t in iterable_targets):
-                if any(target.ndim != 1 for target in iterable_targets):
-                    raise TypeError("If the targets are iterable of tensors, the tensors must be one-dimensional.")
-                if any(torch.is_floating_point(target) for target in iterable_targets):
-                    raise TypeError("If the targets are iterable of tensors, they must be integers.")
-                return iterable_targets
-
-        raise TypeError(f"Target type {type(targets)} not supported.")
+        return process_targets_classfication(targets, expected_length)
 
     @jaxtyped(typechecker=beartype)
     def process_inputs_to_explain_and_targets(
@@ -1123,83 +1134,10 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         self, targets: ClassificationTarget, expected_length: int | None = None
     ) -> list[Int[torch.Tensor, "t"]]:
         """
-        Normalize classification targets into a list of 1D integer tensors.
+        Calls process_targets_classification.
 
-        Args:
-            targets (int | torch.Tensor | Iterable[int] | Iterable[torch.Tensor]):
-                The classification target(s). Supported formats include:
-                - int: Interpreted as a single target.
-                - torch.Tensor:
-                    * 1D tensors are treated as a sequence of individual targets.
-                    * 2D tensors must have shape (n, t), where `n` is the number of targets.
-                - Iterable[int]: Each integer is treated as a separate target.
-                - Iterable[torch.Tensor]: Each tensor must be 1D and contain integers.
-
-            expected_length (int | None, optional):
-                If specified, validates that the number of targets matches this expected length.
-
-        Returns:
-            Iterable[torch.Tensor]
-                A list of 1D integer tensors, one per input instance.
-
-        Raises:
-            ValueError
-                - If the number of targets does not match `expected_length`.
-            TypeError
-                - If the type of `targets` is unsupported.
-                - If tensor targets are not 1D or 2D.
-                - If tensor values are not integers.
         """
-        # integer
-        if isinstance(targets, int):
-            if expected_length is not None and expected_length != 1:
-                raise ValueError(
-                    "Mismatch between the inputs and targets length."
-                    + f" Target is a single integer, but the length of the inputs is {expected_length}."
-                )
-            return [torch.tensor([targets])]
-
-        # tensor
-        if isinstance(targets, torch.Tensor):
-            if targets.ndim == 1:
-                # one dimensional tensors are treated as iterable of integer targets
-                targets = targets.unsqueeze(-1)
-            if expected_length is not None and expected_length != targets.shape[0]:
-                raise ValueError(
-                    "Mismatch between the inputs and targets length."
-                    + f" Target tensor of {targets.shape[0]} elements, but the length of the inputs is {expected_length}."
-                )
-            if targets.ndim != 2:
-                raise TypeError(
-                    "Target tensor must be one-dimensional or two-dimensional."
-                    + f" Target tensor has {targets.ndim} dimensions."
-                )
-            if torch.is_floating_point(targets):
-                raise TypeError("Target tensor must be integers.")
-            return list(targets.unbind(dim=0))
-
-        # iterable
-        if isinstance(targets, Iterable):
-            if expected_length is not None and len(targets) != expected_length:  # type: ignore
-                raise ValueError(
-                    "Mismatch between the inputs and targets length."
-                    + f" Target is an iterable of {len(targets)} elements, but the length of the inputs is {expected_length}."  # type: ignore
-                )
-
-            # iterable[int]
-            if all(isinstance(t, int) for t in targets):
-                return [torch.tensor([target]) for target in targets]
-
-            # iterable[torch.Tensor]
-            iterable_targets: list[torch.Tensor] = list(targets)  # type: ignore
-            if all(isinstance(t, torch.Tensor) for t in iterable_targets):
-                if any(target.ndim != 1 for target in iterable_targets):
-                    raise TypeError("If the targets are iterable of tensors, the tensors must be one-dimensional.")
-                if any(torch.is_floating_point(target) for target in iterable_targets):
-                    raise TypeError("If the targets are iterable of tensors, they must be integers.")
-                return iterable_targets
-
-        raise TypeError(f"Target type {type(targets)} not supported.")
+        return process_targets_classfication(targets, expected_length)
 
     def process_inputs_to_explain_and_targets(
         self,
@@ -1261,7 +1199,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         if isinstance(model_inputs, BatchFeature):
             if model_inputs["pixel_values"].ndim == 3:  # expand a single (3, H, W) to (1, 3, H, W)
                 model_inputs["pixel_values"] = model_inputs["pixel_values"].unsqueeze(0)
-            processed = self.image_processor(validated["pixel_values"], return_tensors="pt")
+            processed = self.image_processor(model_inputs["pixel_values"], return_tensors="pt")
             return [self._validate_batch_feature(processed)]
 
         # Raw-image types.

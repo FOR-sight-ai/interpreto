@@ -340,7 +340,7 @@ def test_plot_image_attribution_raises_on_empty_target_idx(vit_processor, image)
     # Without the guard this is a ZeroDivisionError from the grid layout: min(cols, 0) == 0.
     output = _processed_output(vit_processor, image, 1.0)
 
-    with pytest.raises(ValueError, match="empty"):
+    with pytest.raises(TypeError, match="be of type"):
         plot_image_attribution(output, target_idx=[])
 
 

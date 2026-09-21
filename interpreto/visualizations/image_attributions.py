@@ -279,9 +279,14 @@ def plot_image_attribution(
         from a script, or just keep the reference in a notebook.
     """
 
-    outputs = list(attribution_output)
-    if not outputs:
-        raise ValueError("attribution_output is an empty iterable — pass at least one output.")
+    if isinstance(attribution_output, ImageAttributionOutput):
+        outputs = [attribution_output]
+    elif isinstance(attribution_output, Iterable[ImageAttributionOutput]):
+        outputs = list(attribution_output)
+    else:
+        raise TypeError(
+            "attribution_output should either be of type ImageAttributionOuptut or Iterable[ImageAttributionOutput]"
+        )
 
     panels: list[tuple[np.ndarray, ImageAttributionOutput, int]] = []
     for output in outputs:
