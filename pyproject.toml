@@ -23,7 +23,7 @@
 # -*- encoding: utf-8 -*-
 
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -31,7 +31,7 @@ name = "interpreto"
 version = "0.5.1"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { file = "LICENSE" }
 keywords = []
 authors = [
@@ -56,38 +56,29 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Scientific/Engineering :: Visualization",
   "Typing :: Typed",
 ]
 dependencies = [
-  "transformers>=4.22.0",
+  "transformers>=5,<6",
+  "accelerate>=1.1,<2",
   "nltk",
-  "torch>=2.0",
+  "torch>=2,<3",
   "nnsight>=0.8.0rc1,<0.9.0",
-  "jaxtyping<=0.2.36",
-  "beartype",
-  "pymdown-extensions",
-  "bitsandbytes>=0.48.1",
+  "ipython>=8.27",
+  "numpy>=2.2",
   "scipy",
   "matplotlib",
   "scikit-learn",
   "einops",
-  "nvidia-cublas-cu11>=11.10.3.66; sys_platform=='Linux'",
-  "nvidia-cuda-cupti-cu11>=11.7.101; sys_platform=='Linux'",
-  "nvidia-cuda-nvrtc-cu11>=11.7.99; sys_platform=='Linux'",
-  "nvidia-cuda-runtime-cu11>=11.7.99; sys_platform=='Linux'",
-  "nvidia-cudnn-cu11>=8.5.0.96; sys_platform=='Linux'",
-  "nvidia-cufft-cu11>=10.9.0.58; sys_platform=='Linux'",
-  "nvidia-curand-cu11>=10.2.10.91; sys_platform=='Linux'",
-  "nvidia-cusolver-cu11>=11.4.0.1; sys_platform=='Linux'",
-  "nvidia-cusparse-cu11>=11.7.4.91; sys_platform=='Linux'",
-  "nvidia-nccl-cu11>=2.14.3; sys_platform=='Linux'",
-  "nvidia-nvtx-cu11>=11.7.91; sys_platform=='Linux'",
+  "tqdm",
+  "jaxtyping>=0.2.36,<0.3",
+  "beartype>=0.22",
 ]
 
 [project.optional-dependencies]
@@ -99,23 +90,21 @@ docs = [
   "mkdocstrings>=0.25.2",
   "mkdocstrings-python>=1.10.9",
   "mkdocs-jupyter>=0.26.3",
-  "ruff",
-  "docstr-coverage>=2.3.2",
+  "pymdown-extensions",
+  "ruff==0.16.4",
 ]
 lint = [
-  "setuptools",
-  "pydoclint>=0.4.0",
   "pre-commit>=2.19.0",
+  # Review this pin intentionally before 2027-01-01.
+  "ruff==0.16.4",
+]
+test = [
+  "bitsandbytes>=0.48.1",
   "pytest>=7.2.0",
   "pytest-cov>=4.0.0",
   "pytest-xdist>=3.5.0",
-  # Review this pin intentionally before 2027-01-01.
-  "ruff==0.16.4",
-  "virtualenv>=20.26.6",
-  "networkx>=3.0.0",
-  "numpy>=2.2.0",
 ]
-notebook = ["ipykernel>=6.29.2", "ipywidgets>=8.1.2"]
+notebook = ["ipykernel>=6.29.2"]
 
 [project.urls]
 homepage = "https://github.com/FOR-sight-ai/interpreto"
@@ -125,7 +114,7 @@ changelog = "https://github.com/FOR-sight-ai/interpreto/blob/main/CHANGELOG.md"
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 
 
@@ -186,7 +175,7 @@ packages = ["interpreto"]
 
 [tool.ruff]
 required-version = "==0.16.4"
-target-version = "py310"
+target-version = "py311"
 exclude = [
   ".git",
   ".vscode",
@@ -211,9 +200,6 @@ src = ["interpreto", "examples", "tests"]
 extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
-external = [
-  "DOC", # pydoclint
-]
 ignore = [
   "B006",    # mutable default argument
   "C901",    # function too complex
@@ -253,12 +239,6 @@ isort = { known-first-party = ["interpreto"], order-by-type = true }
 pylint = { max-branches = 22 }
 pyupgrade = { keep-runtime-typing = true }
 pydocstyle = { convention = "google" }
-
-
-[tool.pydoclint]
-style = 'google'
-exclude = '\.git|\.tox|tests/data|some_script\.py|interpreto/_vendor'
-require-return-section-when-returning-nothing = true
 
 
 [tool.pyright]

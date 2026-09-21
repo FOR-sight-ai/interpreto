@@ -51,7 +51,7 @@ install:
 install-dev:
 	if [ ! -f .venv/bin/python ]; then uv venv; fi && \
 		source .venv/bin/activate && \
-		uv pip install -e ".[docs,lint,notebook]" && \
+		uv pip install -e ".[docs,lint,notebook,test]" && \
 		pre-commit install
 
 #* Linting
