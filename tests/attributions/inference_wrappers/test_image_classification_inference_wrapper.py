@@ -52,11 +52,11 @@ IMAGE_CLASSIFICATION_MODELS = [
 @pytest.mark.parametrize(
     "logits",
     [
-        torch.tensor([[1.0, 3.0, 2.0]]),
-        torch.tensor([[1.0, 3.0, 2.0], [5.0, 0.0, -1.0]]),
-        torch.tensor([[-1.0, -3.0, -2.0]]),
+        5 * (torch.rand(1, 3)),
+        5 * (torch.rand(1, 2, 3) - 0.5),
+        5 * (torch.rand(1, 3) - 1),
         torch.tensor([[2.0, 2.0, 2.0]]),
-        torch.tensor([[0.5]]),
+        torch.rand(1, 1),
     ],
 )
 def test_extract_targets_from_logits(logits):

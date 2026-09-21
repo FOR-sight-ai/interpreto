@@ -41,14 +41,14 @@ from interpreto.attributions.base import ImageAttributionOutput
 
 def _denormalize(attribution_output: ImageAttributionOutput, range_tolerance: float = 1e-3) -> np.ndarray:
     """
-    Recover a displayable image from the pre-processed `pixel_values`.
+    Recover a denormalized image from the pre-processed `pixel_values`.
 
-    `x * image_std + image_mean` inverts the processor's normalization exactly, but nothing
-    guarantees the result lands in [0, 1] — that depends on the scale the tensor was in
-    before normalization (`rescale_factor`, the input dtype), which the stats alone do not
-    pin down. So the range is checked rather than assumed, and a violation is reported, not
-    repaired: fitting the observed range would be the min-max stretch this replaced, which
-    silently produces a plausible, wrong image.
+    `x * image_std + image_mean` inverts the processor's normalization exactly. However,
+    the denormalized image may not fall within the [0, 1] range required by
+    _draw_attribution_on_ax if it wasn't in the [0, 1] range initially.
+
+    If this happens a warning is printed because the image is clamped to [0, 1] and thus
+    may look wrong.
 
     Args:
         range_tolerance: slack on the [0, 1] range check, to absorb float error in
@@ -229,7 +229,7 @@ def plot_image_attribution(
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
     img_size: float = 3.0,
-    cols: int = 4,
+    cols: int = 1,
     colorbar: bool = True,
     center_zero: bool = True,
     grayscale_background: bool = True,
@@ -276,12 +276,10 @@ def plot_image_attribution(
 
     if isinstance(attribution_output, ImageAttributionOutput):
         outputs = [attribution_output]
-    elif isinstance(attribution_output, Iterable[ImageAttributionOutput]):
-        outputs = list(attribution_output)
     else:
-        raise TypeError(
-            "attribution_output should either be of type ImageAttributionOuptut or Iterable[ImageAttributionOutput]"
-        )
+        outputs = list(attribution_output)
+    if not outputs:
+        raise ValueError("attribution_output seems empty. Is there at least one output ?")
 
     panels: list[tuple[np.ndarray, ImageAttributionOutput, int]] = []
     for output in outputs:

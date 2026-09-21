@@ -34,7 +34,6 @@ from beartype import beartype
 from jaxtyping import Bool, Float, Int, jaxtyped
 from torch.nn.functional import interpolate
 from transformers.tokenization_utils_base import BatchEncoding, PreTrainedTokenizerBase
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
 # TODO I dont know where to put this...
 END_SENTENCE = (".", "?", "!")
@@ -237,7 +236,7 @@ class TextGranularity(Granularity):
     def get_indices(
         self,
         inputs: BatchEncoding,
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast | None,
+        tokenizer: PreTrainedTokenizerBase | None,
     ) -> list[list[list[int]]]:
         """
         Return *indices* of the tokens that correspond to the desired
@@ -268,7 +267,7 @@ class TextGranularity(Granularity):
         Args:
             inputs_mapping (BatchEncoding): Tokenized inputs, the output of
                 `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
-            tokenizer (PreTrainedTokenizerBase | PreTrainedTokenizerFast): Hugging-Face tokenizer used downstream.
+            tokenizer (PreTrainedTokenizerBase): Hugging-Face tokenizer used downstream.
 
         Raises:
             NoWordIdsError: if *WORD* granularity is requested with a slow
@@ -379,9 +378,7 @@ class TextGranularity(Granularity):
         return [[i] for i, tok_id in enumerate(tokens_ids) if tok_id not in special_ids]
 
     @staticmethod
-    def __word_ids_are_usable(
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast, inputs: BatchEncoding
-    ) -> bool:
+    def __word_ids_are_usable(tokenizer: PreTrainedTokenizerBase, inputs: BatchEncoding) -> bool:
         """Return True when we have a fast-tokenizer and word ids provide meaningful word grouping."""
         if not tokenizer.is_fast:
             print("Tokenizer is not fast, cannot use word_ids for WORD granularity.")
@@ -410,7 +407,7 @@ class TextGranularity(Granularity):
 
     @staticmethod
     def __word_get_indices_from_input_ids(
-        input_ids: list[int] | torch.Tensor, tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast
+        input_ids: list[int] | torch.Tensor, tokenizer: PreTrainedTokenizerBase
     ) -> list[list[int]]:
         """Indices for :pyattr:`WORD` – group tokens belonging to the same word."""
         special_ids = tokenizer.all_special_ids
@@ -470,7 +467,7 @@ class TextGranularity(Granularity):
 
     @staticmethod
     def __build_sentence_exception_id_seqs(
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast,
+        tokenizer: PreTrainedTokenizerBase,
     ) -> list[list[int]]:
         """
         Build token-id sequences for exceptions (multiple casing + optional leading space),
@@ -533,7 +530,7 @@ class TextGranularity(Granularity):
     def __sentence_get_indices_from_offsets(
         input_ids: torch.Tensor,
         offsets: list[tuple[int, int]],
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast,
+        tokenizer: PreTrainedTokenizerBase,
         split: list[str],
     ) -> list[list[int]]:
         """
@@ -599,7 +596,7 @@ class TextGranularity(Granularity):
     @staticmethod
     def __sentence_get_indices_from_input_ids(
         input_ids: list[int] | torch.Tensor,
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast,
+        tokenizer: PreTrainedTokenizerBase,
         split: list[str],
     ) -> list[list[int]]:
         """
@@ -656,7 +653,7 @@ class TextGranularity(Granularity):
     def get_association_matrix(
         self,
         inputs: BatchEncoding,
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         indices_list: list[list[list[int]]] | None = None,
     ) -> list[Bool[torch.Tensor, "g lp"]]:
         """
@@ -664,7 +661,7 @@ class TextGranularity(Granularity):
 
         Args:
             inputs (BatchEncoding): Tokenized inputs, the output of `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
-            tokenizer (PreTrainedTokenizerBase | PreTrainedTokenizerFast): Hugging-Face tokenizer used downstream.
+            tokenizer (PreTrainedTokenizerBase): Hugging-Face tokenizer used downstream.
             indices_list (list[list[list[int]]] | None): Precomputed indices list from `get_indices` method to avoid recomputation.
 
         Raises:
@@ -698,7 +695,7 @@ class TextGranularity(Granularity):
     def get_decomposition(
         self,
         inputs: BatchEncoding,
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         return_text: bool = False,
         raw_text: list[str] | None = None,
         indices_list: list[list[list[int]]] | None = None,
@@ -714,7 +711,7 @@ class TextGranularity(Granularity):
         Args:
             inputs (BatchEncoding): Tokenized inputs to decompose, the output of
                 `self.tokenizer("some_text", return_tensors="pt", return_offsets_mapping=True, truncation=True)`
-            tokenizer (PreTrainedTokenizerBase | PreTrainedTokenizerFast): Huggingface tokenizer used downstream.
+            tokenizer (PreTrainedTokenizerBase): Huggingface tokenizer used downstream.
             return_text (bool, optional):
                 If True, the text corresponding to the token indices is returned.
                 If False, the token ids are returned. Defaults to False.
@@ -790,7 +787,7 @@ class TextGranularity(Granularity):
         contribution: torch.Tensor,
         granularity_aggregation_strategy: GranularityAggregationStrategy | None = None,
         inputs: BatchEncoding | None = None,
-        tokenizer: PreTrainedTokenizerBase | PreTrainedTokenizerFast | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         aggregate_inputs: bool = False,
         aggregate_targets: bool = False,
         indices_list: list[list[list[int]]] | None = None,
@@ -831,7 +828,7 @@ class TextGranularity(Granularity):
                 In the case of generation, this should include the generated tokens.
                 Required if granularity is not `ALL_TOKENS`.
 
-            tokenizer (PreTrainedTokenizerBase | PreTrainedTokenizerFast | None):
+            tokenizer (PreTrainedTokenizerBase | None):
                 Required for TOKEN/WORD-level filtering.
 
             aggregate_inputs (bool):
