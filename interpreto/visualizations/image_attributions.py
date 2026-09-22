@@ -230,7 +230,7 @@ def plot_image_attribution(
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
     img_size: float = 3.0,
-    cols: int = 1,
+    cols: int = 4,
     colorbar: bool = True,
     center_zero: bool = True,
     grayscale_background: bool = True,
