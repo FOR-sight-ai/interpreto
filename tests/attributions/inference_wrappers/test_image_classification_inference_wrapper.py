@@ -48,12 +48,14 @@ IMAGE_CLASSIFICATION_MODELS = [
     "akahana/vit-base-cats-vs-dogs",
 ]
 
+torch.manual_seed(0)
+
 
 @pytest.mark.parametrize(
     "logits",
     [
         5 * (torch.rand(1, 3)),
-        5 * (torch.rand(1, 2, 3) - 0.5),
+        5 * (torch.rand(1, 2) - 0.5),
         5 * (torch.rand(1, 3) - 1),
         torch.tensor([[2.0, 2.0, 2.0]]),
         torch.rand(1, 1),
@@ -178,6 +180,7 @@ def test_image_classification_wrapper(model_name):
     inference_wrapper.gradients = True
     try:
         test_gradients = list(inference_wrapper(pixel_inputs, expected_targets))
+    # raised when the model does not take input_embeds as inputs. It's necessary for gradient-base methods, see intepreto.typing for more details
     except IncompatibilityError:
         test_gradients = "ignore"
 

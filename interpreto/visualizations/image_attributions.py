@@ -119,6 +119,7 @@ def _prepare_heatmap(
         contribution=attribution_output.attributions,
         resize_strategy=attribution_output.granularity_resize,
         inputs=attribution_output.model_inputs_to_explain,
+        patch_size=attribution_output.patch_size,
     )
     row = attributions_image[target_idx].detach().cpu()
     if row.dtype is torch.bfloat16:

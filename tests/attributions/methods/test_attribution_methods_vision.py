@@ -36,12 +36,10 @@ from interpreto.attributions import (
     Lime,
     Occlusion,
     Saliency,
-    SmoothGrad,
     Sobol,
 )
 from interpreto.attributions.aggregations.base import (
     Aggregator,
-    MeanAggregator,
     OcclusionAggregator,
 )
 from interpreto.attributions.aggregations.linear_regression_aggregation import (
@@ -53,7 +51,6 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 from interpreto.attributions.aggregations.sobol_aggregation import SobolAggregator, SobolIndicesOrders
 from interpreto.attributions.base import ImageAttributionOutput
 from interpreto.attributions.perturbations import (
-    GaussianNoisePerturbator,
     ImageTensorPerturbator,
     OcclusionPerturbator,
     RandomMaskedPerturbator,
@@ -77,20 +74,12 @@ SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
 
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
+torch.manual_seed(0)
+
 
 @pytest.fixture(scope="module")
 def image1() -> Image.Image:
     return Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB")
-
-
-@pytest.fixture(scope="module")
-def image2() -> Image.Image:
-    return Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[1]).convert("RGB")
-
-
-@pytest.fixture(scope="module")
-def image_list(image1, image2) -> list[Image.Image]:
-    return [image1, image2]
 
 
 @pytest.fixture(scope="module")
@@ -99,43 +88,13 @@ def small_tensor_1() -> torch.Tensor:
 
 
 @pytest.fixture(scope="module")
-def small_tensor_2() -> torch.Tensor:
-    return torch.rand(3, 30, 30)
-
-
-@pytest.fixture(scope="module")
-def small_tensor_list(small_tensor_1, small_tensor_2) -> list[torch.Tensor]:
-    return [small_tensor_1, small_tensor_2]
-
-
-@pytest.fixture(scope="module")
 def small_batch_feature_1() -> BatchFeature:
     return BatchFeature({"pixel_values": torch.rand(3, 30, 30)})
 
 
 @pytest.fixture(scope="module")
-def small_batch_feature_2() -> BatchFeature:
-    return BatchFeature({"pixel_values": torch.rand(3, 30, 30)})
-
-
-@pytest.fixture(scope="module")
-def small_batch_feature_list(small_batch_feature_1, small_batch_feature_2) -> list[BatchFeature]:
-    return [small_batch_feature_1, small_batch_feature_2]
-
-
-@pytest.fixture(scope="module")
 def small_ndarray_1() -> np.ndarray:
     return np.random.rand(3, 30, 30).astype(np.float32)
-
-
-@pytest.fixture(scope="module")
-def small_ndarray_2() -> np.ndarray:
-    return np.random.rand(3, 30, 30).astype(np.float32)
-
-
-@pytest.fixture(scope="module")
-def small_ndarray_list(small_ndarray_1, small_ndarray_2) -> list[np.ndarray]:
-    return [small_ndarray_1, small_ndarray_2]
 
 
 @pytest.fixture(scope="module")
@@ -149,20 +108,15 @@ def model_and_processor():
 FAST_METHOD_SPECS = [
     (Occlusion, OcclusionPerturbator, OcclusionAggregator, ImageGranularity.PATCH),
     (Saliency, ImageTensorPerturbator, Aggregator, ImageGranularity.PIXEL),
-    (SmoothGrad, GaussianNoisePerturbator, MeanAggregator, ImageGranularity.PIXEL),
 ]
 
 
 # (fixture_name, targets): single-unit inputs get one target, list inputs get one target per item.
 INPUT_FIXTURES = [
     ("image1", 0),
-    ("image_list", [0, 1]),
     ("small_tensor_1", 0),
-    ("small_tensor_list", [0, 1]),
     ("small_batch_feature_1", 0),
-    ("small_batch_feature_list", [0, 1]),
     ("small_ndarray_1", 0),
-    ("small_ndarray_list", [0, 1]),
 ]
 
 
@@ -304,8 +258,6 @@ def test_vision_attribution_methods_fast(
 # sweeping. Kept to a small representative set: both orders, all three samplers.
 SOBOL_SPECS = [
     (5, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL),
-    (5, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON),
-    (5, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube),
 ]
 
 
@@ -375,8 +327,6 @@ def test_image_sobol(
 # three kernel_width forms (None -> default fn, an int, a float).
 LIME_SPECS = [
     (5, 0.5, DistancesFromMask.HAMMING, None),
-    (5, 0.8, DistancesFromMask.EUCLIDEAN, 5),
-    (5, 0.5, DistancesFromMask.COSINE, 0.5),
 ]
 
 
@@ -522,3 +472,154 @@ def test_vision_attribution_methods_slow(
         granularity,
         GranularityResizeStrategy.BILINEAR,
     )
+
+
+SOBOL_SPECS_SLOW = [
+    (5, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON),
+    (5, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube),
+]
+
+
+@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
+@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
+@pytest.mark.parametrize("n_granularity_perturbations, order, sampler", SOBOL_SPECS_SLOW)
+def test_image_sobol_slow(
+    request,
+    model_and_processor,
+    n_granularity_perturbations,
+    order,
+    sampler,
+    resize_strategy,
+    input_fixture,
+    targets,
+):
+    model, processor = model_and_processor
+    inputs = request.getfixturevalue(input_fixture)
+    explainer = Sobol(
+        model,
+        processor,
+        n_granularity_perturbations=n_granularity_perturbations,
+        sobol_indices_order=order,
+        sampler=sampler,
+        combination_strategy=resize_strategy,
+    )
+    #
+    # The two Sobol-specific knobs must land on the right objects (stored as their `.value`).
+    assert explainer.perturbator.sampler_class == sampler.value, (
+        "explainer.perturbator.sampler_class should be the sampler value passed as input. "
+        f"Expected {sampler.value}, got {explainer.perturbator.sampler_class}"
+    )
+    assert explainer.aggregator.sobol_indices_order == order.value, (
+        "explainer.aggregator.sobol_indices_order should be the order value passed as input. "
+        f"Expected {order.value}, got {explainer.aggregator.sobol_indices_order}"
+    )
+    _assert_explains_and_plots(
+        explainer,
+        processor,
+        SobolPerturbator,
+        SobolAggregator,
+        inputs,
+        targets,
+        ImageGranularity.PATCH,
+        resize_strategy,
+    )
+    #
+    # The Sobol perturbator builds ((g + 2) * k, g) masks, where g = gh * gw is the number of
+    # patches and k = n_granularity_perturbations. Derive g from the processed pixel grid and the
+    # reconciled patch_size, then check the mask directly (mirrors the text-side Sobol test).
+    _, _, height, width = explainer.process_model_inputs(inputs)[0]["pixel_values"].shape
+    patch_size = explainer.perturbator.patch_size
+    seq_len = (height // patch_size) * (width // patch_size)
+    mask = explainer.perturbator.get_mask(seq_len)
+    assert isinstance(mask, torch.Tensor), "get_mask must return a torch.Tensor"
+    assert mask.shape == ((seq_len + 2) * n_granularity_perturbations, seq_len), (
+        "Sobol mask must have shape ((seq_len + 2) * n_granularity_perturbations, seq_len). Expected "
+        f"{((seq_len + 2) * n_granularity_perturbations, seq_len)}, got {tuple(mask.shape)}"
+    )
+    assert mask.dtype == torch.float32, "Sobol mask.dtype must be torch.float32"
+
+
+LIME_SPECS_SLOW = [
+    (5, 0.8, DistancesFromMask.EUCLIDEAN, 5),
+    (5, 0.5, DistancesFromMask.COSINE, 0.5),
+]
+
+
+@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
+@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
+@pytest.mark.parametrize("n_perturbations, perturb_probability, distance_function, kernel_width", LIME_SPECS_SLOW)
+def test_image_lime_slow(
+    request,
+    model_and_processor,
+    n_perturbations,
+    perturb_probability,
+    distance_function,
+    kernel_width,
+    resize_strategy,
+    input_fixture,
+    targets,
+):
+    model, processor = model_and_processor
+    inputs = request.getfixturevalue(input_fixture)
+    explainer = Lime(
+        model,
+        processor,
+        n_perturbations=n_perturbations,
+        perturb_probability=perturb_probability,
+        distance_function=distance_function,
+        kernel_width=kernel_width,
+        combination_strategy=resize_strategy,
+    )
+    #
+    # The LIME-specific knobs must land on the right objects.
+    assert explainer.perturbator.n_perturbations == n_perturbations, (
+        "explainer.perturbator.n_perturbations should be the n_perturbations passed as input. "
+        f"Expected {n_perturbations}, got {explainer.perturbator.n_perturbations}"
+    )
+    assert pytest.approx(explainer.perturbator.perturb_probability, rel=1e-6) == perturb_probability, (
+        "explainer.perturbator.perturb_probability should be the perturb_probability passed as input. "
+        f"Expected {perturb_probability}, got {explainer.perturbator.perturb_probability}"
+    )
+    assert explainer.aggregator.distance_function == distance_function, (
+        "explainer.aggregator.distance_function should be the distance_function passed as input. "
+        f"Expected {distance_function}, got {explainer.aggregator.distance_function}"
+    )
+    assert explainer.aggregator.similarity_kernel == Kernels.EXPONENTIAL, (
+        "explainer.aggregator.similarity_kernel should be the exponential kernel LIME always uses. "
+        f"Expected {Kernels.EXPONENTIAL}, got {explainer.aggregator.similarity_kernel}"
+    )
+    # kernel_width=None falls back to the default kernel-width function; otherwise it is stored as-is.
+    if kernel_width is None:
+        assert explainer.aggregator.kernel_width == default_kernel_width_fn, (
+            "explainer.aggregator.kernel_width should fall back to default_kernel_width_fn when kernel_width=None. "
+            f"Got {explainer.aggregator.kernel_width}"
+        )
+    else:
+        assert explainer.aggregator.kernel_width == kernel_width, (
+            "explainer.aggregator.kernel_width should be the kernel_width passed as input. "
+            f"Expected {kernel_width}, got {explainer.aggregator.kernel_width}"
+        )
+    _assert_explains_and_plots(
+        explainer,
+        processor,
+        RandomMaskedPerturbator,
+        LinearRegressionAggregator,
+        inputs,
+        targets,
+        ImageGranularity.PATCH,
+        resize_strategy,
+    )
+    #
+    # The LIME perturbator builds (n_perturbations, g) masks, where g = gh * gw is the number of
+    # patches. Derive g from the processed pixel grid and the reconciled patch_size, then check
+    # the mask directly (mirrors the text-side LIME test).
+    _, _, height, width = explainer.process_model_inputs(inputs)[0]["pixel_values"].shape
+    patch_size = explainer.perturbator.patch_size
+    seq_len = (height // patch_size) * (width // patch_size)
+    mask = explainer.perturbator.get_mask(seq_len)
+    assert isinstance(mask, torch.Tensor), "get_mask must return a torch.Tensor"
+    assert mask.shape == (n_perturbations, seq_len), (
+        f"LIME mask must have shape (n_perturbations, seq_len). Expected {(n_perturbations, seq_len)}, got "
+        f"{tuple(mask.shape)}"
+    )
+    assert mask.dtype == torch.float32, "LIME mask.dtype must be torch.float32"

@@ -1059,6 +1059,7 @@ class ImageGranularity(Granularity):
         contribution: Float[torch.Tensor, "t g"],
         resize_strategy: GranularityResizeStrategy,
         inputs: TensorMapping,
+        patch_size: int,
     ) -> Float[torch.Tensor, "t h w"]:
         """
         Expand per-granularity-unit scores `(t, g)` back to a pixel-resolution map `(t, H, W)`.
