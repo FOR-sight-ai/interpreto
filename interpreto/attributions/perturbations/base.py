@@ -412,15 +412,19 @@ class ImageMaskPerturbator(MaskPerturbator):
         flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
         spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
 
-        image_processor = self.processor
+        image_processor: BaseImageProcessor | None = self.processor
         replace_tensor: Float[torch.Tensor, "p c l"] = torch.full_like(spatial_mask, self.replace_value).expand(
             -1, c, -1
         )
+        torch.permute(replace_tensor, (1, 0, 2))
         # Since the image is processed, we process the replace_tensor the same way so that the replace value the user wanted to use has
         # the meaning the user wanted to give it.
-        processed_replace_value = image_processor(replace_tensor, return_tensors="pt")["pixel_values"]
+        processed_replace_tensor = image_processor(
+            replace_tensor, input_data_format="channels_first", return_tensors="pt"
+        )["pixel_values"]
 
-        perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + processed_replace_value
+        torch.permute(processed_replace_tensor, (1, 0, 2))
+        perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + processed_replace_tensor
         perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
 
         inputs["pixel_values"] = perturbed_pixel_values

@@ -54,10 +54,10 @@ torch.manual_seed(0)
 @pytest.mark.parametrize(
     "logits",
     [
-        5 * (torch.rand(1, 3)),
-        5 * (torch.rand(1, 2) - 0.5),
-        5 * (torch.rand(1, 3) - 1),
-        torch.tensor([[2.0, 2.0, 2.0]]),
+        5 * (torch.rand(1, 3)),  # positive input
+        5 * (torch.rand(1, 2) - 0.5),  # mixed input
+        5 * (torch.rand(1, 3) - 1),  # negative input
+        torch.tensor([[2.0, 2.0, 2.0]]),  # constant input
         torch.rand(1, 1),
     ],
 )
