@@ -411,7 +411,12 @@ class ImageMaskPerturbator(MaskPerturbator):
         # apply the mask in flattened spatial space, broadcasting across channels
         flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
         spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
-        perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + self.replace_value * spatial_mask
+
+        image_processor = self.processor
+        # We process the replace_value here so that it has been processed the same. image_processor returns a dict containing pixel_values.
+        processed_replace_value = image_processor(torch.full_like(spatial_mask, self.replace_value))["pixel_values"]
+
+        perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + processed_replace_value
         perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
 
         inputs["pixel_values"] = perturbed_pixel_values
