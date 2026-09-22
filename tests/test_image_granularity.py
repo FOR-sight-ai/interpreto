@@ -101,9 +101,9 @@ def wrong_patch_size():
     ],
 )
 @pytest.mark.parametrize("patch_size", [1, 2])
-def test_resize_strategy_output_size(input, output, strategy):
+def test_resize_strategy_output_size(input, output, strategy, patch_size):
     if output is not None:
-        assert strategy.resize(input, output).shape == (1, *output), (
+        assert strategy.resize(input, output, patch_size).shape == (1, *output), (
             "resize() with an explicit output_size must return shape (1, *output). The leading "
             "1 comes from this test's single-channel input fixtures, not output_size"
         )
