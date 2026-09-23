@@ -34,15 +34,21 @@ from torch import nn
 
 from interpreto.concepts.splitters import AllLayersSplitter
 
-from ._lens_base import BaseLens
+from .logit_lens import LogitLens
 
 
-class TunedLens(BaseLens):
+class TunedLens(LogitLens):
     """Learn one affine residual translator for each non-final model state.
 
-    Translators are initialized to zero, making the initial Tuned Lens identical
-    to a Logit Lens. During fitting they are trained together to match the final
-    model distribution.
+    Tuned Lens follows [Belrose et al. (2023)](https://arxiv.org/abs/2303.08112).
+    Its translators are initialized to zero, making a new Tuned Lens identical
+    to a Logit Lens. During fitting, all translators are trained together to
+    match the model's final prediction distribution. Texts are processed one at
+    a time while all model depths share one prediction-head call.
+
+    Use separate training and evaluation texts when assessing a fitted lens.
+    Because this class is a regular :class:`torch.nn.Module`, translators can be
+    persisted with ``state_dict()`` and ``load_state_dict()``.
 
     Args:
         splitter (AllLayersSplitter): Model wrapper used to collect and project all layer states.
@@ -62,12 +68,13 @@ class TunedLens(BaseLens):
         reference_parameter = next(
             parameter for parameter in splitter._model.parameters() if parameter.is_floating_point()
         )
+        device = None if reference_parameter.is_meta else reference_parameter.device
         self.translators = nn.ModuleList(
             [
                 nn.Linear(
                     hidden_size,
                     hidden_size,
-                    device=reference_parameter.device,
+                    device=device,
                     dtype=reference_parameter.dtype,
                 )
                 for _ in splitter.split_points
@@ -78,6 +85,7 @@ class TunedLens(BaseLens):
             nn.init.zeros_(translator.bias)
 
     def _transform(self, activations: torch.Tensor) -> torch.Tensor:
+        self.translators.to(device=activations.device, dtype=activations.dtype)
         translated = [
             activation + translator(activation)
             for translator, activation in zip(self.translators, activations[:-1], strict=True)
@@ -129,15 +137,11 @@ class TunedLens(BaseLens):
         if epochs < 1:
             raise ValueError("`epochs` must be positive.")
 
-        optimizer = torch.optim.AdamW(
-            self.translators.parameters(),
-            lr=learning_rate,
-            weight_decay=weight_decay,
-        )
         model_parameters = list(self.splitter._model.parameters())
         requires_grad = [parameter.requires_grad for parameter in model_parameters]
         self.splitter._model.requires_grad_(False)
         losses = []
+        optimizer = None
 
         try:
             self.train()
@@ -145,8 +149,15 @@ class TunedLens(BaseLens):
                 epoch_loss = 0.0
                 for text in texts:
                     activations = torch.cat(self.splitter.get_activations(text), dim=0)
+                    transformed = self._transform(activations)
+                    if optimizer is None:
+                        optimizer = torch.optim.AdamW(
+                            self.translators.parameters(),
+                            lr=learning_rate,
+                            weight_decay=weight_decay,
+                        )
                     optimizer.zero_grad(set_to_none=True)
-                    loss = self._loss(self.splitter.apply_head(self._transform(activations)))
+                    loss = self._loss(self.splitter.apply_head(transformed))
                     loss.backward()
                     optimizer.step()
                     epoch_loss += loss.item()

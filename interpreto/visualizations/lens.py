@@ -31,7 +31,7 @@ from collections.abc import Mapping
 from html import escape
 
 from IPython.display import HTML, display
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
+from transformers import PreTrainedTokenizerBase
 
 from interpreto.typing import LabelNames, LensResults, LensTopKOutput
 
@@ -46,10 +46,8 @@ _LENS_STYLES = """
 .lens-score { color: #526172; }
 """
 
-Tokenizer = PreTrainedTokenizer | PreTrainedTokenizerFast
 
-
-def _decode(tokenizer: Tokenizer, token_id: int) -> str:
+def _decode(tokenizer: PreTrainedTokenizerBase, token_id: int) -> str:
     return tokenizer.decode(
         [token_id],
         skip_special_tokens=False,
@@ -57,7 +55,7 @@ def _decode(tokenizer: Tokenizer, token_id: int) -> str:
     )
 
 
-def _predictions(output: LensTopKOutput, index: int, tokenizer: Tokenizer) -> str:
+def _predictions(output: LensTopKOutput, index: int, tokenizer: PreTrainedTokenizerBase) -> str:
     indices = output["top_indices"][0, index].tolist()
     scores = output["top_scores"][0, index].tolist()
     return ", ".join(
@@ -67,7 +65,7 @@ def _predictions(output: LensTopKOutput, index: int, tokenizer: Tokenizer) -> st
     )
 
 
-def _render_language_model(results: LensResults, inputs: str, tokenizer: Tokenizer) -> str:
+def _render_language_model(results: LensResults, inputs: str, tokenizer: PreTrainedTokenizerBase) -> str:
     token_ids = tokenizer.encode(inputs)
     sections = []
     for layer_name, output in results.items():
@@ -120,7 +118,7 @@ def plot_lens(
     results: LensResults,
     inputs: str,
     *,
-    tokenizer: Tokenizer,
+    tokenizer: PreTrainedTokenizerBase,
     label_names: LabelNames | None = None,
     custom_css: str = "",
     save_path: str | os.PathLike[str] | None = None,
@@ -130,7 +128,7 @@ def plot_lens(
     Args:
         results (LensResults): Output returned by `LogitLens.explain()` or `TunedLens.explain()`.
         inputs (str): Text used to produce `results`.
-        tokenizer (Tokenizer): Tokenizer used by the lens splitter.
+        tokenizer (PreTrainedTokenizerBase): Tokenizer used by the lens splitter.
         label_names (LabelNames | None): Optional display names for classification labels.
         custom_css (str): Additional CSS appended to the visualization styles.
         save_path (str | os.PathLike[str] | None): Optional path for the rendered HTML.
@@ -143,7 +141,7 @@ def plot_lens(
 
     Examples:
         >>> results = lens.explain("Interpreto is useful.")
-        >>> plot_lens(results, "Interpreto is useful.", tokenizer=tokenizer)
+        >>> plot_lens(results, "Interpreto is useful.", tokenizer=splitter.tokenizer)
     """
     if not results:
         raise ValueError("`results` must contain at least one layer output.")

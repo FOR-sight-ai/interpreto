@@ -58,8 +58,8 @@ They all work seamlessly for both classification (`...ForSequenceClassification`
 
 ### 🔍 Lens Methods
 
-- [`LogitLens`](https://for-sight-ai.github.io/interpreto/api/lens/methods/logit_lens/) — [nostalgebraist, 2020](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens)
-- [`TunedLens`](https://for-sight-ai.github.io/interpreto/api/lens/methods/tuned_lens/) — [Belrose et al., 2023](https://arxiv.org/abs/2303.08112)
+- [`LogitLens`](https://for-sight-ai.github.io/interpreto/api/lens/) — [nostalgebraist, 2020](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens)
+- [`TunedLens`](https://for-sight-ai.github.io/interpreto/api/lens/) — [Belrose et al., 2023](https://arxiv.org/abs/2303.08112)
 
 Both methods use `AllLayersSplitter` to decode every transformer block boundary together.
 

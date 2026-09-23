@@ -28,9 +28,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import torch
+from torch import nn
 
 import interpreto.visualizations.lens as lens_visualizations
 from interpreto import AllLayersSplitter, LogitLens, TunedLens, plot_lens
@@ -122,6 +124,26 @@ def test_tuned_lens_starts_as_a_logit_lens(gpt2_splitter):
         )
 
 
+def test_tuned_lens_initializes_lazy_models_on_the_activation_device():
+    """Meta model parameters do not create meta-device translators."""
+
+    class LazyModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.weight = nn.Parameter(torch.empty(4, device="meta"))
+            self.config = SimpleNamespace(hidden_size=4)
+
+    splitter = SimpleNamespace(_model=LazyModel(), split_points=["model.layers.0"])
+    lens = TunedLens(splitter)
+    activations = torch.randn(2, 3, 4)
+
+    transformed = lens._transform(activations)
+
+    assert isinstance(lens, LogitLens)
+    assert lens.translators[0].weight.device == activations.device
+    assert transformed.device == activations.device
+
+
 def test_tuned_lens_fits_every_layer_together(gpt2_splitter, monkeypatch):
     texts = ["Interpreto is useful.", "Lens methods expose intermediate predictions."]
     lens = TunedLens(gpt2_splitter, top_k=3)
@@ -174,10 +196,11 @@ def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
     assert "yes" in displayed_html[0]
 
 
-def test_lens_notebook_is_portable_and_has_no_error_outputs():
+def test_lens_notebook_is_executed_and_has_no_error_outputs():
     notebook = json.loads((REPOSITORY_ROOT / "docs" / "notebooks" / "lens_notebook.ipynb").read_text())
+    code_cells = [cell for cell in notebook["cells"] if cell["cell_type"] == "code" and cell["source"]]
 
     assert notebook["metadata"]["kernelspec"]["name"] == "python3"
-    assert all(
-        output.get("output_type") != "error" for cell in notebook["cells"] for output in cell.get("outputs", [])
-    )
+    assert code_cells
+    assert all(cell["execution_count"] is not None for cell in code_cells)
+    assert all(output.get("output_type") != "error" for cell in code_cells for output in cell.get("outputs", []))

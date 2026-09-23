@@ -47,6 +47,13 @@ def test_build_html_header_includes_assets_and_custom_css():
     assert custom_css in header
 
 
+def test_build_html_header_can_omit_javascript():
+    header = _build_html_header("", include_js=False)
+
+    assert "<style>" in header
+    assert "<script>" not in header
+
+
 def test_normalize_colormap_casts_keys_and_drops_none():
     result = _normalize_colormap({"1": "red", 2: None, 3.0: "blue"})
     assert result == {1: "red", 3: "blue"}

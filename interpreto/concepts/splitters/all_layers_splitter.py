@@ -36,19 +36,20 @@ from transformers import (
     AutoModelForCausalLM,
     PretrainedConfig,
     PreTrainedModel,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
+    PreTrainedTokenizerBase,
 )
+
+from .base_splitter import InitializationError
 
 
 class AllLayersSplitter(LanguageModel):
     """Extract the residual stream before and after every transformer block.
 
-    The transformer blocks are inferred from the longest non-empty
-    :class:`torch.nn.ModuleList` in the model. Activations are returned in model
-    order: the input to the first block followed by the output of every block.
-    A model with ``L`` transformer blocks therefore returns ``L + 1`` tensors
-    of shape ``(1, sequence_length, model_width)``.
+    The transformer blocks are inferred from the model configuration or selected
+    explicitly with ``layer_path``. Activations are returned in model order: the
+    input to the first block followed by the output of every block. A model with
+    ``L`` transformer blocks therefore returns ``L + 1`` tensors of shape
+    ``(1, sequence_length, model_width)``.
 
     This splitter is intended for methods that compare representations across
     model depths, such as Logit Lens and Tuned Lens. It does not implement the
@@ -60,16 +61,19 @@ class AllLayersSplitter(LanguageModel):
             local checkpoint path, or preloaded model.
         automodel (type[AutoModel]): Hugging Face AutoClass used when loading a
             model from a repository ID or local path.
-        tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None):
-            Tokenizer associated with a preloaded model.
+        tokenizer (PreTrainedTokenizerBase | None): Tokenizer associated with a
+            preloaded model.
         config (PretrainedConfig | None): Optional model configuration passed
             to the model loader.
         device_map (torch.device | str | None): Device map passed to the model
             loader.
+        layer_path (str | None): Path to the transformer block ``ModuleList``,
+            relative to the Hugging Face model. Required when it cannot be
+            identified unambiguously from ``config.num_hidden_layers``.
         **kwargs (Any): Additional arguments passed to NNsight's ``LanguageModel``.
 
     Raises:
-        ValueError: If the model does not contain a non-empty module list.
+        InitializationError: If a preloaded model is provided without a tokenizer.
 
     Example:
         >>> from transformers import AutoModelForCausalLM
@@ -85,11 +89,17 @@ class AllLayersSplitter(LanguageModel):
         model_or_repo_id: str | PreTrainedModel,
         *,
         automodel: type[AutoModel] = AutoModelForCausalLM,
-        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         config: PretrainedConfig | None = None,
         device_map: torch.device | str | None = None,
+        layer_path: str | None = None,
         **kwargs: Any,
     ) -> None:
+        if isinstance(model_or_repo_id, PreTrainedModel) and tokenizer is None:
+            raise InitializationError(
+                "Tokenizer is not set. When providing a model instance, the tokenizer must be set."
+            )
+
         super().__init__(
             model_or_repo_id,
             config=config,
@@ -102,17 +112,52 @@ class AllLayersSplitter(LanguageModel):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        module_lists = [
-            (name, module)
-            for name, module in self._model.named_modules()
-            if name and isinstance(module, nn.ModuleList) and len(module) > 0
-        ]
-        if not module_lists:
-            raise ValueError("Could not find a non-empty ModuleList containing the model's transformer blocks.")
-
-        layer_name, layers = max(module_lists, key=lambda item: len(item[1]))
+        layer_name, layers = self._find_layers(self._model, layer_path)
         self.split_points = [f"model.{layer_name}.{index}" for index in range(len(layers))]
         self._block_output_arity: list[int | None] = [None] * len(self.split_points)
+
+    @staticmethod
+    def _find_layers(model: PreTrainedModel, layer_path: str | None) -> tuple[str, nn.ModuleList]:
+        """Return the model's transformer block container.
+
+        Args:
+            model (PreTrainedModel): Model containing the transformer blocks.
+            layer_path (str | None): Explicit path to the block container, if known.
+
+        Returns:
+            tuple[str, nn.ModuleList]: Module path and transformer blocks.
+
+        Raises:
+            ValueError: If the transformer block container cannot be identified.
+        """
+        if layer_path is not None:
+            try:
+                layers = model.get_submodule(layer_path)
+            except AttributeError as error:
+                raise ValueError(f"Could not find transformer blocks at `{layer_path}`.") from error
+            if not isinstance(layers, nn.ModuleList) or not layers:
+                raise ValueError(f"`{layer_path}` must point to a non-empty ModuleList.")
+            return layer_path, layers
+
+        module_lists = [
+            (name, module)
+            for name, module in model.named_modules()
+            if name and isinstance(module, nn.ModuleList) and len(module) > 0
+        ]
+        expected_depth = getattr(model.config, "num_hidden_layers", None)
+        candidates = (
+            module_lists
+            if expected_depth is None
+            else [(name, module) for name, module in module_lists if len(module) == expected_depth]
+        )
+        if len(candidates) == 1:
+            return candidates[0]
+
+        found = ", ".join(f"{name} ({len(module)})" for name, module in candidates or module_lists) or "none"
+        raise ValueError(
+            "Could not identify the transformer block ModuleList unambiguously. "
+            f"Candidates: {found}. Pass `layer_path` explicitly."
+        )
 
     @property
     def activation_names(self) -> list[str]:

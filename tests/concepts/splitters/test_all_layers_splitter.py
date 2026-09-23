@@ -24,9 +24,11 @@
 
 import pytest
 import torch
+from torch import nn
 from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
 
 from interpreto.concepts.splitters import AllLayersSplitter
+from interpreto.concepts.splitters.base_splitter import InitializationError
 
 SLOW_MODEL_CASES = [
     pytest.param(
@@ -87,6 +89,36 @@ def test_all_layers_splitter_bert_fast(bert_model, bert_tokenizer):
 def test_all_layers_splitter_gpt2_fast(gpt2_model, gpt2_tokenizer):
     """GPT-2 exposes every block and projects the final output faithfully."""
     _assert_activations_and_head(gpt2_model, gpt2_tokenizer, "transformer.h")
+
+
+def test_all_layers_splitter_requires_a_tokenizer_for_preloaded_models(gpt2_model):
+    """A missing tokenizer raises the same initialization error as other splitters."""
+    with pytest.raises(InitializationError, match="Tokenizer is not set"):
+        AllLayersSplitter(gpt2_model)
+
+
+def test_all_layers_splitter_ignores_longer_unrelated_module_lists(gpt2_model, monkeypatch):
+    """Automatic discovery uses the configured transformer depth, not list length."""
+    decoy = nn.ModuleList(nn.Identity() for _ in range(len(gpt2_model.transformer.h) + 1))
+    monkeypatch.setattr(gpt2_model, "decoy", decoy, raising=False)
+
+    layer_name, layers = AllLayersSplitter._find_layers(gpt2_model, layer_path=None)
+
+    assert layer_name == "transformer.h"
+    assert layers is gpt2_model.transformer.h
+
+
+def test_all_layers_splitter_requires_a_path_for_ambiguous_layers(gpt2_model, monkeypatch):
+    """Ambiguous automatic discovery fails clearly and accepts an explicit path."""
+    decoy = nn.ModuleList(nn.Identity() for _ in gpt2_model.transformer.h)
+    monkeypatch.setattr(gpt2_model, "decoy", decoy, raising=False)
+
+    with pytest.raises(ValueError, match="Pass `layer_path` explicitly"):
+        AllLayersSplitter._find_layers(gpt2_model, layer_path=None)
+
+    layer_name, layers = AllLayersSplitter._find_layers(gpt2_model, layer_path="transformer.h")
+    assert layer_name == "transformer.h"
+    assert layers is gpt2_model.transformer.h
 
 
 def test_all_layers_splitter_head_preserves_activation_gradients(gpt2_model, gpt2_tokenizer):

@@ -24,18 +24,34 @@
 
 """Logit Lens implementation."""
 
-from ._lens_base import BaseLens
+from __future__ import annotations
+
+import torch
+from torch import nn
+
+from interpreto.concepts.splitters import AllLayersSplitter
+from interpreto.typing import LensResults
 
 
-class LogitLens(BaseLens):
+class LogitLens(nn.Module):
     """Project every residual-stream state through the model prediction head.
 
-    The residual states are collected in one model trace and projected together
-    through :class:`~interpreto.concepts.splitters.AllLayersSplitter`.
+    Logit Lens was introduced by
+    [nostalgebraist](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens).
+    It has no learned parameters: residual states are collected in one model
+    trace and projected together through the model's native prediction path.
+
+    The prediction head was trained on final states, so early-layer scores are
+    useful for rankings and within-model comparisons rather than as calibrated
+    probabilities. Inference processes one text at a time; callers can iterate
+    over several texts when needed.
 
     Args:
         splitter (AllLayersSplitter): Model wrapper used to collect and project all layer states.
         top_k (int): Maximum number of token or class scores returned per prediction.
+
+    Raises:
+        ValueError: If ``top_k`` is not positive.
 
     Examples:
         >>> from interpreto import AllLayersSplitter, LogitLens
@@ -45,3 +61,50 @@ class LogitLens(BaseLens):
         >>> list(results) == splitter.activation_names
         True
     """
+
+    def __init__(self, splitter: AllLayersSplitter, top_k: int = 5) -> None:
+        super().__init__()
+        if top_k < 1:
+            raise ValueError("`top_k` must be positive.")
+
+        self.splitter = splitter
+        self.top_k = top_k
+        self.splitter._model.eval()
+
+    def _transform(self, activations: torch.Tensor) -> torch.Tensor:
+        return activations
+
+    def _get_logits(self, inputs: str) -> torch.Tensor:
+        # Stack model depths so the prediction head handles them in one call.
+        activations = torch.cat(self.splitter.get_activations(inputs), dim=0)
+        return self.splitter.apply_head(self._transform(activations))
+
+    def _format_outputs(self, logits: torch.Tensor) -> LensResults:
+        if logits.dtype in {torch.float16, torch.bfloat16}:
+            logits = logits.float()
+
+        top_logits, top_indices = logits.topk(min(self.top_k, logits.shape[-1]), dim=-1)
+        top_scores = (top_logits - logits.logsumexp(dim=-1, keepdim=True)).exp()
+        return {
+            layer_name: {
+                "top_indices": top_indices[index : index + 1].detach().cpu(),
+                "top_scores": top_scores[index : index + 1].detach().cpu(),
+            }
+            for index, layer_name in enumerate(self.splitter.activation_names)
+        }
+
+    @torch.inference_mode()
+    def explain(self, inputs: str) -> LensResults:
+        """Return top predictions at every transformer block boundary.
+
+        Args:
+            inputs (str): One text passed to the wrapped model.
+
+        Returns:
+            LensResults: Top indices and normalized scores for each residual-stream state.
+        """
+        return self._format_outputs(self._get_logits(inputs))
+
+    def forward(self, inputs: str) -> LensResults:
+        """Alias for :meth:`explain`."""
+        return self.explain(inputs)
