@@ -60,7 +60,7 @@ class Perturbator(ABC):
     def __init__(
         self,
         *,
-        processor: PreTrainedTokenizerBase | BaseImageProcessor | None = None,
+        processor: PreTrainedTokenizerBase | BaseImageProcessor,
         granularity: Granularity | None = None,
         n_perturbations: int = -1,
     ):
@@ -412,7 +412,8 @@ class ImageMaskPerturbator(MaskPerturbator):
         flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
         spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
 
-        image_processor: BaseImageProcessor | None = self.processor
+        image_processor: PreTrainedTokenizerBase | BaseImageProcessor = self.processor
+        assert image_processor is not None, "image_processor is None for some godforsaken reason"
         replace_tensor: Float[torch.Tensor, "p c l"] = torch.full_like(spatial_mask, self.replace_value).expand(
             -1, c, -1
         )
@@ -423,7 +424,7 @@ class ImageMaskPerturbator(MaskPerturbator):
             replace_tensor, input_data_format="channels_first", return_tensors="pt"
         )["pixel_values"]
 
-        processed_replace_tensor = torch.permute(processed_replace_tensor, (1, 0, 2))
+        processed_replace_tensor = torch.permute(torch.squeeze(processed_replace_tensor), (1, 0, 2))
         perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + processed_replace_tensor
         perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
 
