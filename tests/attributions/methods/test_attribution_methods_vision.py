@@ -33,9 +33,13 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 from transformers.image_processing_utils import BatchFeature
 
 from interpreto.attributions import (
+    GradientShap,
+    IntegratedGradients,
+    KernelShap,
     Lime,
     Occlusion,
     Saliency,
+    SmoothGrad,
     Sobol,
 )
 from interpreto.attributions.aggregations.base import (
@@ -54,6 +58,7 @@ from interpreto.attributions.perturbations import (
     ImageTensorPerturbator,
     OcclusionPerturbator,
     RandomMaskedPerturbator,
+    ShapPerturbator,
     SobolPerturbator,
 )
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
@@ -64,59 +69,80 @@ plt.switch_backend("Agg")  # headless: render into a buffer, never open a window
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-IMAGE_CLASSIFICATION_MODELS = [
-    "hf-internal-testing/tiny-random-vit",
-    "hf-internal-testing/tiny-random-BeitForImageClassification",
-    "hf-internal-testing/tiny-random-ViTForImageClassification",
-]
-
-SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
-
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
 torch.manual_seed(0)
 
 
-@pytest.fixture(scope="module")
-def image1() -> Image.Image:
-    return Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB")
-
-
-@pytest.fixture(scope="module")
-def small_tensor_1() -> torch.Tensor:
-    return torch.rand(3, 30, 30)
-
-
-@pytest.fixture(scope="module")
-def small_batch_feature_1() -> BatchFeature:
-    return BatchFeature({"pixel_values": torch.rand(3, 30, 30)})
-
-
-@pytest.fixture(scope="module")
-def small_ndarray_1() -> np.ndarray:
-    return np.random.rand(3, 30, 30).astype(np.float32)
-
-
-@pytest.fixture(scope="module")
-def model_and_processor():
-    model_name = IMAGE_CLASSIFICATION_MODELS[0]
+def model_and_processor(model_name: str):
     model = AutoModelForImageClassification.from_pretrained(model_name)
     processor = AutoImageProcessor.from_pretrained(model_name)
     return model, processor
 
 
+# First part of the module is about the fast tests
+# Method, Perturbator, Aggregator, Granularity, ResizeStrategy, input, target, model
 FAST_METHOD_SPECS = [
-    (Occlusion, OcclusionPerturbator, OcclusionAggregator, ImageGranularity.PATCH),
-    (Saliency, ImageTensorPerturbator, Aggregator, ImageGranularity.PIXEL),
-]
-
-
-# (fixture_name, targets): single-unit inputs get one target, list inputs get one target per item.
-INPUT_FIXTURES = [
-    ("image1", 0),
-    ("small_tensor_1", 0),
-    ("small_batch_feature_1", 0),
-    ("small_ndarray_1", 0),
+    (
+        Occlusion,
+        OcclusionPerturbator,
+        OcclusionAggregator,
+        ImageGranularity.PATCH,
+        GranularityResizeStrategy.NEAREST,
+        Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
+        0,
+        "hf-internal-testing/tiny-random-vit",
+    ),
+    (
+        KernelShap,
+        ShapPerturbator,
+        LinearRegressionAggregator,
+        ImageGranularity.PATCH,
+        GranularityResizeStrategy.BICUBIC,
+        BatchFeature({"pixel_values": torch.rand(3, 30, 30)}),
+        0,
+        "hf-internal-testing/tiny-random-ViTForImageClassification",
+    ),
+    (
+        Saliency,
+        ImageTensorPerturbator,
+        type(None),
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.NEAREST,
+        np.random.rand(3, 30, 30).astype(np.float32),
+        0,
+        "hf-internal-testing/tiny-random-BeitForImageClassification",
+    ),
+    (
+        SmoothGrad,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.BILINEAR,
+        BatchFeature({"pixel_values": torch.rand(3, 30, 30)}),
+        1,
+        "hf-internal-testing/tiny-random-ViTForImageClassification",
+    ),
+    (
+        IntegratedGradients,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.BICUBIC,
+        torch.rand(3, 30, 30),
+        1,
+        "hf-internal-testing/tiny-random-vit",
+    ),
+    (
+        GradientShap,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.AREA,
+        Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
+        0,
+    ),
+    "hf-internal-testing/tiny-random-BeitForImageClassification",
 ]
 
 
@@ -131,7 +157,7 @@ def _assert_explains_and_plots(
     resize_strategy,
 ):
     """
-    Shared body for the vision method tests. Given an already-built explainer, check that its
+    Shared bod: list[Image | Tensor | BatchFeature | ndarray[_AnyShape, dtype[floating]]]y for the vision method tests. Given an already-built explainer, check that its
     perturbator/aggregator are the expected types, run `explain`, and check the outputs: length,
     type, granularity/resize strategy, that everything is on the CPU, that the stored per-output
     model inputs match a fresh deterministic re-run, and that the de-normalization stats are the
@@ -209,22 +235,14 @@ def _assert_explains_and_plots(
     return output
 
 
-@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
-@pytest.mark.parametrize("attribution_method, perturbator, aggregator, granularity", FAST_METHOD_SPECS)
+@pytest.mark.parametrize(
+    "attribution_method, perturbator, aggregator, granularity, resize_strategy, input, targets, model_name",
+    FAST_METHOD_SPECS,
+)
 def test_vision_attribution_methods_fast(
-    request,
-    model_and_processor,
-    attribution_method,
-    perturbator,
-    aggregator,
-    granularity,
-    resize_strategy,
-    input_fixture,
-    targets,
+    attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets, model_name
 ):
-    model, processor = model_and_processor
-    inputs = request.getfixturevalue(input_fixture)
+    model, processor = model_and_processor(model_name)
 
     if attribution_method in (Occlusion, Saliency):
         explainer = attribution_method(
@@ -257,25 +275,32 @@ def test_vision_attribution_methods_fast(
 # (not `n_perturbations`) and two extra knobs, the indices `order` and the `sampler`, both worth
 # sweeping. Kept to a small representative set: both orders, all three samplers.
 SOBOL_SPECS = [
-    (5, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.SOBOL),
+    (
+        5,
+        SobolIndicesOrders.FIRST_ORDER,
+        SequenceSamplers.SOBOL,
+        GranularityResizeStrategy.AREA,
+        np.random.rand(3, 30, 30).astype(np.float32),
+        1,
+        "hf-internal-testing/tiny-random-vit",
+    ),
 ]
 
 
-@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
-@pytest.mark.parametrize("n_granularity_perturbations, order, sampler", SOBOL_SPECS)
+@pytest.mark.parametrize(
+    "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name", SOBOL_SPECS
+)
 def test_image_sobol(
-    request,
     model_and_processor,
     n_granularity_perturbations,
     order,
     sampler,
     resize_strategy,
-    input_fixture,
+    inputs,
     targets,
+    model_name,
 ):
-    model, processor = model_and_processor
-    inputs = request.getfixturevalue(input_fixture)
+    model, processor = model_and_processor(model_name)
     explainer = Sobol(
         model,
         processor,
@@ -320,32 +345,38 @@ def test_image_sobol(
     assert mask.dtype == torch.float32, "Sobol mask.dtype must be torch.float32"
 
 
-# LIME carries its own machinery (random masking + a similarity-weighted linear surrogate), so
-# like Sobol it gets its own test rather than a FAST_METHOD_SPECS row: on top of `n_perturbations`
-# it takes `perturb_probability`, the `distance_function`, and the `kernel_width`, all worth
-# sweeping. Values mirror the text-side LIME test: the three distance functions paired with the
-# three kernel_width forms (None -> default fn, an int, a float).
+# LIME carries its own machinery (random masking + distance weighing function), so
+# like Sobol it gets its own test.
+# n_perturbations, perturb_probability, distance_function, kernel_width, resize_strategy, inputs, model_name
 LIME_SPECS = [
-    (5, 0.5, DistancesFromMask.HAMMING, None),
+    (
+        5,
+        0.5,
+        DistancesFromMask.HAMMING,
+        None,
+        GranularityResizeStrategy.BILINEAR,
+        torch.rand(3, 30, 30),
+        1,
+        "hf-internal-testing/tiny-random-BeitForImageClassification",
+    ),
 ]
 
 
-@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
-@pytest.mark.parametrize("n_perturbations, perturb_probability, distance_function, kernel_width", LIME_SPECS)
+@pytest.mark.parametrize(
+    "n_perturbations, perturb_probability, distance_function, kernel_width, resize_strategy, inputs, model_name",
+    LIME_SPECS,
+)
 def test_image_lime(
-    request,
-    model_and_processor,
     n_perturbations,
     perturb_probability,
     distance_function,
     kernel_width,
     resize_strategy,
-    input_fixture,
+    inputs,
     targets,
+    model_name,
 ):
-    model, processor = model_and_processor
-    inputs = request.getfixturevalue(input_fixture)
+    model, processor = model_and_processor(model_name)
     explainer = Lime(
         model,
         processor,
@@ -410,56 +441,87 @@ def test_image_lime(
     assert mask.dtype == torch.float32, "LIME mask.dtype must be torch.float32"
 
 
-# End-to-end smoke test against a *real* ViT (not the tiny random one). The point is to catch
-# any shape/dtype drift between what `explain` returns and what the viz consumes that the tiny
-# model can hide. Everything else is deliberately kept small: one resize strategy (BILINEAR)
-# and a handful of representative inputs. All ten methods run in the same
-# function — Sobol and LIME use their default parameters here, so they need none of their extra
-# knobs and construct exactly like the others. The raw tensor/ndarray are deliberately given a
+# Here we want to test if the methods still work on bigger input and on a real vit ('akahana/vit-base-cats-vs-dogs' trained to classify cats and dogs).
+# The raw tensor/ndarray are deliberately given a
 # real, non-square size (3, 340, 270) so the processor's resize/crop path is actually exercised.
-@pytest.fixture(scope="module")
-def large_tensor() -> torch.Tensor:
-    return torch.rand(3, 340, 270)
-
-
-@pytest.fixture(scope="module")
-def large_ndarray() -> np.ndarray:
-    return np.random.rand(3, 340, 270).astype(np.float32)
-
-
-SLOW_INPUT_FIXTURES = [
-    ("image_list", [0, 1]),
-    ("large_tensor", 0),
-    ("large_ndarray", 0),
-]
-
-SLOW_METHOD_SPECS = FAST_METHOD_SPECS + [
-    (Sobol, SobolPerturbator, SobolAggregator, ImageGranularity.PATCH),
-    (Lime, RandomMaskedPerturbator, LinearRegressionAggregator, ImageGranularity.PATCH),
+# attribution_method, perturbator, aggregator, granularity, resize_strategy, input, targets
+SLOW_METHOD_SPECS = [
+    (
+        Occlusion,
+        OcclusionPerturbator,
+        OcclusionAggregator,
+        ImageGranularity.PATCH,
+        GranularityResizeStrategy.BICUBIC,
+        np.random.rand(3, 340, 270).astype(np.float32),
+        1,
+    ),
+    (
+        KernelShap,
+        ShapPerturbator,
+        LinearRegressionAggregator,
+        ImageGranularity.PATCH,
+        GranularityResizeStrategy.BILINEAR,
+        torch.rand(3, 340, 270),
+        0,
+    ),
+    (
+        Saliency,
+        ImageTensorPerturbator,
+        type(None),
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.AREA,
+        [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[:2]],
+        [0, 1],
+    ),
+    (
+        SmoothGrad,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.AREA,
+        Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
+        0,
+    ),
+    (
+        IntegratedGradients,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.NEAREST,
+        torch.rand(3, 340, 270),
+        1,
+    ),
+    (
+        GradientShap,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.BILINEAR,
+        np.random.rand(3, 340, 270).astype(np.float32),
+        [0, 1],
+    ),
 ]
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("input_fixture, targets", SLOW_INPUT_FIXTURES)
-@pytest.mark.parametrize("attribution_method, perturbator, aggregator, granularity", SLOW_METHOD_SPECS)
+@pytest.mark.parametrize(
+    "attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets", SLOW_METHOD_SPECS
+)
 def test_vision_attribution_methods_slow(
-    request,
     attribution_method,
     perturbator,
     aggregator,
     granularity,
-    input_fixture,
+    resize_strategy,
+    inputs,
     targets,
 ):
-    model = AutoModelForImageClassification.from_pretrained(SLOW_MODELS[0])
-    processor = AutoImageProcessor.from_pretrained(SLOW_MODELS[0])
-    inputs = request.getfixturevalue(input_fixture)
+    model, processor = model_and_processor("akahana/vit-base-cats-vs-dogs")
 
-    # Default parameters for every method (Sobol/LIME included), so construction is uniform.
     explainer = attribution_method(
         model,
         processor,
-        combination_strategy=GranularityResizeStrategy.BILINEAR,
+        combination_strategy=resize_strategy,
     )
 
     _assert_explains_and_plots(
@@ -470,19 +532,34 @@ def test_vision_attribution_methods_slow(
         inputs,
         targets,
         granularity,
-        GranularityResizeStrategy.BILINEAR,
+        resize_strategy=resize_strategy,
     )
 
 
-SOBOL_SPECS_SLOW = [
-    (5, SobolIndicesOrders.TOTAL_ORDER, SequenceSamplers.HALTON),
-    (5, SobolIndicesOrders.FIRST_ORDER, SequenceSamplers.LatinHypercube),
+SLOW_SOBOL_SPECS = [
+    (
+        5,
+        SobolIndicesOrders.TOTAL_ORDER,
+        SequenceSamplers.HALTON,
+        GranularityResizeStrategy.BILINEAR,
+        torch.rand(3, 340, 270),
+        1,
+    ),
+    (
+        5,
+        SobolIndicesOrders.FIRST_ORDER,
+        SequenceSamplers.LatinHypercube,
+        GranularityResizeStrategy.BILINEAR,
+        Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
+        1,
+    ),
 ]
 
 
-@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
-@pytest.mark.parametrize("n_granularity_perturbations, order, sampler", SOBOL_SPECS_SLOW)
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets", SLOW_SOBOL_SPECS
+)
 def test_image_sobol_slow(
     request,
     model_and_processor,
@@ -490,11 +567,10 @@ def test_image_sobol_slow(
     order,
     sampler,
     resize_strategy,
-    input_fixture,
+    inputs,
     targets,
 ):
-    model, processor = model_and_processor
-    inputs = request.getfixturevalue(input_fixture)
+    model, processor = model_and_processor("akahana/vit-base-cats-vs-dogs")
     explainer = Sobol(
         model,
         processor,
@@ -526,7 +602,7 @@ def test_image_sobol_slow(
     #
     # The Sobol perturbator builds ((g + 2) * k, g) masks, where g = gh * gw is the number of
     # patches and k = n_granularity_perturbations. Derive g from the processed pixel grid and the
-    # reconciled patch_size, then check the mask directly (mirrors the text-side Sobol test).
+    # patch_size, then check the mask directly (mirrors the text-side Sobol test).
     _, _, height, width = explainer.process_model_inputs(inputs)[0]["pixel_values"].shape
     patch_size = explainer.perturbator.patch_size
     seq_len = (height // patch_size) * (width // patch_size)
@@ -539,28 +615,36 @@ def test_image_sobol_slow(
     assert mask.dtype == torch.float32, "Sobol mask.dtype must be torch.float32"
 
 
-LIME_SPECS_SLOW = [
-    (5, 0.8, DistancesFromMask.EUCLIDEAN, 5),
-    (5, 0.5, DistancesFromMask.COSINE, 0.5),
+SLOW_LIME_SPECS = [
+    (5, 0.8, DistancesFromMask.EUCLIDEAN, 5, GranularityResizeStrategy.BICUBIC, torch.rand(3, 340, 270), 1),
+    (
+        5,
+        0.5,
+        DistancesFromMask.COSINE,
+        0.5,
+        GranularityResizeStrategy.NEAREST,
+        np.random.rand(3, 340, 270).astype(np.float32),
+        0,
+    ),
 ]
 
 
-@pytest.mark.parametrize("input_fixture, targets", INPUT_FIXTURES)
-@pytest.mark.parametrize("resize_strategy", list(GranularityResizeStrategy))
-@pytest.mark.parametrize("n_perturbations, perturb_probability, distance_function, kernel_width", LIME_SPECS_SLOW)
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "n_perturbations, perturb_probability, distance_function, kernel_width, resize_strategy, inputs, targets",
+    SLOW_LIME_SPECS,
+)
 def test_image_lime_slow(
-    request,
     model_and_processor,
     n_perturbations,
     perturb_probability,
     distance_function,
     kernel_width,
     resize_strategy,
-    input_fixture,
+    inputs,
     targets,
 ):
-    model, processor = model_and_processor
-    inputs = request.getfixturevalue(input_fixture)
+    model, processor = model_and_processor("akahana/vit-base-cats-vs-dogs")
     explainer = Lime(
         model,
         processor,
