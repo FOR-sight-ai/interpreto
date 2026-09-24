@@ -24,6 +24,7 @@
 
 from collections.abc import MutableMapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 import torch
@@ -122,9 +123,10 @@ def test_image_embedding_perturbator(perturbator_class, model_name, images):
     )
 
     p = 10
-    perturbator = perturbator_class(n_perturbations=p)
-    _setup_attribution_explainer_values(perturbator, model=model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
+
+    perturbator = perturbator_class(n_perturbations=p, processor=image_processor)
+    _setup_attribution_explainer_values(perturbator, model=model_name)
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
@@ -165,12 +167,11 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 
     patch_size = 2
     p = 15
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
 
-    perturbator = perturbator_class()
+    perturbator = perturbator_class(processor=image_processor)
     perturbator.n_perturbations = p
     _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
-
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
@@ -226,9 +227,10 @@ def test_slow_image_embedding_perturbator(perturbator_class, model_name, images)
     )
 
     p = 10
-    perturbator = perturbator_class(n_perturbations=p)
+    image_processor: Any = AutoImageProcessor.from_pretrained(model_name)
+
+    perturbator = perturbator_class(n_perturbations=p, processor=image_processor)
     _setup_attribution_explainer_values(perturbator, model=model_name)
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
@@ -270,12 +272,11 @@ def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
 
     patch_size = 16
     p = 15
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
 
-    perturbator = perturbator_class()
+    perturbator = perturbator_class(processor=image_processor)
     perturbator.n_perturbations = p
     _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
-
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
@@ -371,10 +372,13 @@ def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
 )
 def test_image_sobol_masks(sampler):
     k = 10
+    # We need an image_processor to build the perturbator but it is not useful per se in this test
+    image_processor = AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
     image_sobol_perturbator = _image_variant(SobolPerturbator, ImageTensorPerturbator)
     perturbator = image_sobol_perturbator(
         n_granularity_perturbations=k,
         sampler=sampler,
+        processor=image_processor,
     )
 
     perturbator.patch_size = 4
@@ -404,7 +408,9 @@ def test_image_sobol_masks(sampler):
 
 
 def test_image_occlusion_masks():
-    perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)()
+    # We need an image_processor to build the perturbator but it is not useful per se in this test
+    image_processor = AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
+    perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)(processor=image_processor)
 
     perturbator.patch_size = 4
     perturbator.granularity_combination_strategy = GranularityResizeStrategy.BILINEAR
