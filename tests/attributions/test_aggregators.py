@@ -115,7 +115,7 @@ def test_aggregator_shapes_sobol():
     )
 
 
-def test_shap_aggregator_issue_68():
+def test_shap_aggregator_issue_68(bert_tokenizer):
     """
     Reproduce issue 68: https://github.com/FOR-sight-ai/interpreto/issues/68
 
