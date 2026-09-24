@@ -54,11 +54,14 @@ _LENS_STYLES = """
 
 
 def _decode(tokenizer: PreTrainedTokenizerBase, token_id: int) -> str:
-    return tokenizer.decode(
+    token = tokenizer.decode(
         [token_id],
         skip_special_tokens=False,
         clean_up_tokenization_spaces=False,
     )
+    if token.isspace():
+        return token.replace(" ", "␠").replace("\t", "\\t").replace("\r", "\\r").replace("\n", "\\n")
+    return token
 
 
 def _score_bounds(results: LensResults) -> tuple[float, float]:
@@ -122,7 +125,7 @@ def _render_language_model(results: LensResults, inputs: str, tokenizer: PreTrai
             for token_id in token_ids
         ),
     ]
-    for layer_index, (layer_name, output) in enumerate(results.items()):
+    for layer_index, (layer_name, output) in reversed(list(enumerate(results.items()))):
         cells.append(_layer_label(layer_index, layer_name))
         for token_index in range(len(token_ids)):
             label, score, title = _language_prediction(output, token_index, tokenizer)
@@ -159,7 +162,7 @@ def _render_classification(results: LensResults, inputs: str, label_names: Label
         "<div class='lens-grid' style='grid-template-columns: max-content minmax(8rem, max-content)'>",
         "<div class='lens-corner'>Layer</div><div class='lens-header'>Prediction</div>",
     ]
-    for layer_index, (layer_name, output) in enumerate(results.items()):
+    for layer_index, (layer_name, output) in reversed(list(enumerate(results.items()))):
         label, score, title = _classification_prediction(output, label_names)
         cells.append(_layer_label(layer_index, layer_name))
         cells.append(_cell(label, score, f"{layer_name}\n{title}", score_bounds))
@@ -176,7 +179,7 @@ def plot_lens(
     custom_css: str = "",
     save_path: str | os.PathLike[str] | None = None,
 ) -> None:
-    """Display the top prediction at every model depth as a compact grid.
+    """Display model-depth predictions from the final layer to the input.
 
     Color intensity shows relative confidence. Hover over a cell to see its
     numerical score and the remaining top-k predictions.

@@ -191,17 +191,8 @@ class AllLayersSplitter(LanguageModel):
                     return candidate
         raise RuntimeError(f"Could not extract a 3D hidden state at `{layer_name}`.")
 
-    def get_activations(self, inputs: str) -> list[torch.Tensor]:
-        """Extract the residual stream for one text input.
-
-        Args:
-            inputs (str): Text passed to the wrapped model.
-
-        Returns:
-            list[torch.Tensor]: Input to the first transformer block followed by
-                every transformer block output in ``split_points`` order.
-                Each tensor has shape ``(1, sequence_length, model_width)``.
-        """
+    def _trace_activations(self, inputs: str | torch.Tensor) -> list[torch.Tensor]:
+        """Extract every residual state from text or internal token IDs."""
         with torch.no_grad():
             with self.trace(inputs) as tracer:
                 cached = tracer.cache(
@@ -223,6 +214,19 @@ class AllLayersSplitter(LanguageModel):
             for output, layer_name in zip(outputs, self.split_points, strict=True)
         )
         return activations
+
+    def get_activations(self, inputs: str) -> list[torch.Tensor]:
+        """Extract the residual stream for one text input.
+
+        Args:
+            inputs (str): Text passed to the wrapped model.
+
+        Returns:
+            list[torch.Tensor]: Input to the first transformer block followed by
+                every transformer block output in ``split_points`` order.
+                Each tensor has shape ``(1, sequence_length, model_width)``.
+        """
+        return self._trace_activations(inputs)
 
     def apply_head(self, activations: torch.Tensor) -> torch.Tensor:
         """Apply the wrapped model's prediction head to residual activations.

@@ -107,6 +107,62 @@ def test_logit_lens_requires_a_positive_top_k(gpt2_splitter):
         LogitLens(gpt2_splitter, top_k=0)
 
 
+def test_logit_lens_generation_uses_next_token_convention_and_can_align(gpt2_splitter):
+    lens = LogitLens(gpt2_splitter, top_k=3)
+    prompt = "Interpreto helps"
+    model_inputs = gpt2_splitter.tokenizer(prompt, return_tensors="pt")
+    sequence = gpt2_splitter._model.generate(**model_inputs, max_new_tokens=3, do_sample=False)[0]
+    generated_ids = sequence[model_inputs["input_ids"].shape[1] :]
+
+    generated_text, results = lens.generate(prompt, max_new_tokens=3)
+    aligned_text, aligned_results = lens.generate(prompt, max_new_tokens=3, align=True)
+
+    assert generated_text == gpt2_splitter.tokenizer.decode(
+        generated_ids,
+        skip_special_tokens=False,
+        clean_up_tokenization_spaces=False,
+    )
+    assert aligned_text == generated_text
+    assert all(output["top_indices"].shape[1] == len(generated_ids) for output in results.values())
+    final_layer = gpt2_splitter.activation_names[-1]
+    next_token_predictions = results[final_layer]["top_indices"][0, :, 0]
+    aligned_predictions = aligned_results[final_layer]["top_indices"][0, :, 0]
+    torch.testing.assert_close(next_token_predictions[:-1], generated_ids[1:])
+    torch.testing.assert_close(aligned_predictions, generated_ids)
+
+
+def test_logit_lens_traces_generated_ids_without_retokenizing(gpt2_splitter, monkeypatch):
+    lens = LogitLens(gpt2_splitter, top_k=3)
+    model_inputs = gpt2_splitter.tokenizer("Interpreto helps", return_tensors="pt")
+    generated_ids = torch.tensor([1, 2])
+    sequence = torch.cat((model_inputs["input_ids"][0], generated_ids))
+    traced_inputs = []
+
+    monkeypatch.setattr(gpt2_splitter._model, "generate", lambda **_: sequence.unsqueeze(0))
+    monkeypatch.setattr(gpt2_splitter.tokenizer, "decode", lambda *_args, **_kwargs: "merged token")
+
+    def get_logits(inputs):
+        traced_inputs.append(inputs)
+        return torch.zeros(
+            len(gpt2_splitter.activation_names),
+            sequence.shape[0],
+            gpt2_splitter._model.config.vocab_size,
+        )
+
+    monkeypatch.setattr(lens, "_get_logits", get_logits)
+
+    generated_text, results = lens.generate("Interpreto helps", max_new_tokens=2)
+
+    assert generated_text == "merged token"
+    torch.testing.assert_close(traced_inputs[0], sequence.unsqueeze(0))
+    assert all(output["top_indices"].shape[1] == len(generated_ids) for output in results.values())
+
+
+def test_logit_lens_requires_a_positive_generation_length(gpt2_splitter):
+    with pytest.raises(ValueError, match="positive"):
+        LogitLens(gpt2_splitter).generate("Interpreto helps", max_new_tokens=0)
+
+
 def test_lenses_accept_a_repository_id(monkeypatch):
     class Splitter:
         def __init__(self, repo_id):
@@ -205,9 +261,16 @@ def test_plot_lens_renders_every_layer(gpt2_splitter, monkeypatch):
     assert all(layer_name in html for layer_name in gpt2_splitter.activation_names)
     assert html.count("class='lens-layer-label'") == len(results)
     assert html.count("class='lens-prediction'") == len(results) * len(gpt2_splitter.tokenizer.encode(text))
+    assert html.index(f">Layer {len(results) - 2}</div>") < html.index(">Input</div>")
     assert "<details" not in html
     assert "<table" not in html
     assert "<script>" not in html
+
+
+def test_plot_lens_displays_whitespace_tokens():
+    tokenizer = SimpleNamespace(decode=lambda *_args, **_kwargs: "\n")
+
+    assert lens_visualizations._decode(tokenizer, 0) == r"\n"
 
 
 def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
@@ -222,6 +285,7 @@ def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
     assert "no" in html
     assert "yes" in html
     assert html.count("class='lens-prediction'") == len(results)
+    assert html.index(f">Layer {len(results) - 2}</div>") < html.index(">Input</div>")
     assert "Relative confidence" in html
 
 

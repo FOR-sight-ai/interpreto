@@ -38,6 +38,17 @@ results = lens(text)
 plot_lens(results, text, tokenizer=lens.splitter.tokenizer)
 ```
 
+For a causal language model, each position predicts the following token. `generate()` follows this convention by default.
+Pass `align=True` to shift the predictions so the final-layer output matches the generated token displayed in each
+column:
+
+```python
+prompt = "Although the committee initially rejected the proposal,"
+generated_text, generated_results = lens.generate(prompt, max_new_tokens=10, align=True)
+
+plot_lens(generated_results, generated_text, tokenizer=lens.splitter.tokenizer)
+```
+
 ## `LogitLens`
 
 ::: interpreto.LogitLens
@@ -56,7 +67,8 @@ plot_lens(results, text, tokenizer=lens.splitter.tokenizer)
 
 ## `plot_lens`
 
-`plot_lens` renders one compact row per model depth. The visible cells contain only the top prediction and use color
-intensity to show relative confidence. Hover over a cell to inspect its numerical score and remaining top-k results.
+`plot_lens` renders one compact row per model depth, from the final layer at the top to the input at the bottom. The
+visible cells contain only the top prediction and use color intensity to show relative confidence. Hover over a cell to
+inspect its numerical score and remaining top-k results.
 
 ::: interpreto.visualizations.plot_lens
