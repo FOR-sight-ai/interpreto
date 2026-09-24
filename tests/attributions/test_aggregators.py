@@ -129,7 +129,8 @@ def test_shap_aggregator_issue_68():
     # ShapPerturbator only implements get_mask; perturb stays abstract until it is mixed with a
     # modality base, which is what the explainer does at construction.
     perturbator_class = type("ModalitySpecificShap", (ShapPerturbator, TextMaskPerturbator), {})
-    perturbator = perturbator_class(n_perturbations=p)
+    # We need a value for the processor to build the perturbator eventhough it's not really useful there
+    perturbator = perturbator_class(n_perturbations=p, processor=bert_tokenizer)
 
     aggregator = LinearRegressionAggregator(
         distance_function=None,  # Kernel SHAP does not use distance function

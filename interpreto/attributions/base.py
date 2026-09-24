@@ -1074,7 +1074,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             device=device,
             mode=inference_mode,
         )  # type: ignore
-        self.perturbator = perturbator or ImageTensorPerturbator(processor=image_processor)
+        self.perturbator = perturbator or ImageTensorPerturbator(processor=self.image_processor)
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.resize_strategy = combination_strategy
