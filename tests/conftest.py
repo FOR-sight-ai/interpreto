@@ -28,7 +28,14 @@ Common fixtures for all tests
 
 import torch
 from pytest import fixture
-from transformers import AutoModelForCausalLM, AutoModelForMaskedLM, AutoModelForSequenceClassification, AutoTokenizer
+from transformers import (
+    AutoImageProcessor,
+    AutoModelForCausalLM,
+    AutoModelForImageClassification,
+    AutoModelForMaskedLM,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
 
 from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
@@ -81,6 +88,16 @@ def bert_model():
 @fixture(scope="session")
 def bert_tokenizer():
     return AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+
+
+@fixture(scope="session")
+def vit_model():
+    return AutoModelForImageClassification.from_pretrained("hf-internal-testing/tiny-random-vit")
+
+
+@fixture(scope="session")
+def vit_image_processor():
+    return AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
 
 
 @fixture(scope="session")

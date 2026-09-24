@@ -24,7 +24,7 @@
 
 :root {
   /* Set the text color and background color depending on the current
-  * vscode theme if available, or on the current light/dark mode if in 
+  * vscode theme if available, or on the current light/dark mode if in
   * a browser
   */
   --background-color: var(--vscode-editor-background,
