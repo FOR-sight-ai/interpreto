@@ -109,6 +109,8 @@ class AllLayersSplitter(LanguageModel):
             **kwargs,
         )
 
+        if self.tokenizer is None:
+            raise ValueError("`tokenizer` must be provided when it cannot be inferred from the model.")
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
