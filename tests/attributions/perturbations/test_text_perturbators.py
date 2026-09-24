@@ -46,7 +46,7 @@ def _text_variant(method_class: type, modality_base: type) -> type:
     Combine a method perturbator with a text modality base, as the explainer does at construction
     time. The method class alone leaves `perturb` abstract.
     """
-    return type("Text" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
+    return type("Text" + method_class.__name__, (method_class, modality_base), {})
 
 
 def _setup_attribution_explainer_values(perturbator, model):
@@ -80,7 +80,7 @@ def test_embeddings_perturbators(perturbator_class, sentences, bert_model, bert_
     p = 10
     d = 32
 
-    perturbator = perturbator_class(n_perturbations=p)
+    perturbator = perturbator_class(n_perturbations=p, processor=bert_tokenizer)
     _setup_attribution_explainer_values(perturbator, bert_model)
 
     for sent in sentences:
@@ -280,11 +280,13 @@ def test_linear_interpolation_perturbation_adjust_baseline_invalid():
     "sampler",
     [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
 )
-def test_sobol_masks(sampler):
+def test_sobol_masks(sampler, bert_model, bert_tokenizer):
     k = 10
+    # processor is necessary to construct the perturbator
     perturbator = _text_variant(SobolPerturbator, TextMaskPerturbator)(
         n_granularity_perturbations=k,
         sampler=sampler,
+        processor=bert_tokenizer,
     )
 
     for l in range(2, 20, 3):
@@ -303,8 +305,9 @@ def test_sobol_masks(sampler):
                 assert torch.all(torch.isclose(C[i, :, i + 1 :], A[:, i + 1 :], atol=1e-5))
 
 
-def test_occlusion_masks():
-    perturbator = _text_variant(OcclusionPerturbator, TextMaskPerturbator)()
+def test_occlusion_masks(bert_tokenizer):
+    # processor is necessary to construct the perturbator
+    perturbator = _text_variant(OcclusionPerturbator, TextMaskPerturbator)(processor=bert_tokenizer)
     for l in range(2, 20, 3):
         mask = perturbator.get_mask(l)
         assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))

@@ -65,7 +65,7 @@ def _image_variant(method_class: type, modality_base: type) -> type:
     Combine a method perturbator with an image modality base, as the explainer does at
     construction time. The method class alone leaves `perturb` abstract.
     """
-    return type("Image" + method_class.__name__, (method_class, modality_base), {"__slots__": ()})
+    return type("Image" + method_class.__name__, (method_class, modality_base), {})
 
 
 image_embedding_perturbators = [

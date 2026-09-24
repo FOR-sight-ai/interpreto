@@ -382,6 +382,16 @@ class ImageMaskPerturbator(MaskPerturbator):
         _, c, h, w = pixel_values.shape
         l = h * w
 
+        image_processor: PreTrainedTokenizerBase | BaseImageProcessor = self.processor
+
+        replace_tensor: Float[torch.Tensor, "1 c h w"] = torch.full_like(pixel_values, self.replace_value)
+
+        # Since the image is processed, we process the replace_tensor the same way so that the replace value the user wanted to use has
+        # the meaning the user wanted to give it.
+        processed_replace_tensor: Float[torch.Tensor, "1 c h w"] = image_processor(
+            replace_tensor, input_data_format="channels_first", return_tensors="pt"
+        )["pixel_values"]
+
         # PATCH is set directly by the explainer by reading model.config.
         if self.patch_size is None:
             raise ValueError(
@@ -412,20 +422,12 @@ class ImageMaskPerturbator(MaskPerturbator):
         flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
         spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
 
-        image_processor: PreTrainedTokenizerBase | BaseImageProcessor = self.processor
-        assert image_processor is not None, "image_processor is None for some godforsaken reason"
-        replace_tensor: Float[torch.Tensor, "p c l"] = torch.full_like(spatial_mask, self.replace_value).expand(
-            -1, c, -1
-        )
-        replace_tensor = torch.permute(replace_tensor, (1, 0, 2))
-        # Since the image is processed, we process the replace_tensor the same way so that the replace value the user wanted to use has
-        # the meaning the user wanted to give it.
-        processed_replace_tensor = image_processor(
-            replace_tensor, input_data_format="channels_first", return_tensors="pt"
-        )["pixel_values"]
+        # reshape processed_replace_tensor so that it broadcasts correctly
+        processed_replace_tensor = processed_replace_tensor.unsqueeze(dim=0).reshape(1, c, l)
 
-        processed_replace_tensor = torch.permute(torch.squeeze(processed_replace_tensor), (1, 0, 2))
-        perturbed_flat: Float[torch.Tensor, "p 3 l"] = flat * (1 - spatial_mask) + processed_replace_tensor
+        perturbed_flat: Float[torch.Tensor, "p 3 l"] = (
+            flat * (1 - spatial_mask) + processed_replace_tensor * spatial_mask
+        )
         perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
 
         inputs["pixel_values"] = perturbed_pixel_values

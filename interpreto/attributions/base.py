@@ -171,7 +171,7 @@ def setup_mask_token_id(model: PreTrainedModel, tokenizer: PreTrainedTokenizerBa
     return int(replace_token_id)
 
 
-def process_targets_classfication(
+def process_targets_classification(
     targets: ClassificationTarget, expected_length: int | None = None
 ) -> list[Int[torch.Tensor, "t"]]:
     """
@@ -736,7 +736,7 @@ class TextClassificationAttributionExplainer(AttributionExplainer):
         Calls process_targets_classification.
 
         """
-        return process_targets_classfication(targets, expected_length)
+        return process_targets_classification(targets, expected_length)
 
     @jaxtyped(typechecker=beartype)
     def process_inputs_to_explain_and_targets(
@@ -1136,7 +1136,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         Calls process_targets_classification.
 
         """
-        return process_targets_classfication(targets, expected_length)
+        return process_targets_classification(targets, expected_length)
 
     def process_inputs_to_explain_and_targets(
         self,

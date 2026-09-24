@@ -106,7 +106,7 @@ FAST_METHOD_SPECS = [
     (
         Saliency,
         ImageTensorPerturbator,
-        type(None),
+        Aggregator,
         ImageGranularity.PIXEL,
         GranularityResizeStrategy.NEAREST,
         np.random.rand(3, 30, 30).astype(np.float32),
@@ -141,8 +141,8 @@ FAST_METHOD_SPECS = [
         GranularityResizeStrategy.AREA,
         Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
         0,
+        "hf-internal-testing/tiny-random-BeitForImageClassification",
     ),
-    "hf-internal-testing/tiny-random-BeitForImageClassification",
 ]
 
 
@@ -236,7 +236,7 @@ def _assert_explains_and_plots(
 
 
 @pytest.mark.parametrize(
-    "attribution_method, perturbator, aggregator, granularity, resize_strategy, input, targets, model_name",
+    "attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets, model_name",
     FAST_METHOD_SPECS,
 )
 def test_vision_attribution_methods_fast(
@@ -291,7 +291,6 @@ SOBOL_SPECS = [
     "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name", SOBOL_SPECS
 )
 def test_image_sobol(
-    model_and_processor,
     n_granularity_perturbations,
     order,
     sampler,
@@ -363,7 +362,7 @@ LIME_SPECS = [
 
 
 @pytest.mark.parametrize(
-    "n_perturbations, perturb_probability, distance_function, kernel_width, resize_strategy, inputs, model_name",
+    "n_perturbations, perturb_probability, distance_function, kernel_width, resize_strategy, inputs, targets, model_name",
     LIME_SPECS,
 )
 def test_image_lime(
@@ -453,7 +452,7 @@ SLOW_METHOD_SPECS = [
         ImageGranularity.PATCH,
         GranularityResizeStrategy.BICUBIC,
         np.random.rand(3, 340, 270).astype(np.float32),
-        1,
+        [1],
     ),
     (
         KernelShap,
@@ -462,12 +461,12 @@ SLOW_METHOD_SPECS = [
         ImageGranularity.PATCH,
         GranularityResizeStrategy.BILINEAR,
         torch.rand(3, 340, 270),
-        0,
+        torch.tensor([0]),
     ),
     (
         Saliency,
         ImageTensorPerturbator,
-        type(None),
+        Aggregator,
         ImageGranularity.PIXEL,
         GranularityResizeStrategy.AREA,
         [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[:2]],
@@ -498,7 +497,7 @@ SLOW_METHOD_SPECS = [
         ImageGranularity.PIXEL,
         GranularityResizeStrategy.BILINEAR,
         np.random.rand(3, 340, 270).astype(np.float32),
-        [0, 1],
+        torch.tensor([[0, 1]]),
     ),
 ]
 
@@ -561,8 +560,6 @@ SLOW_SOBOL_SPECS = [
     "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets", SLOW_SOBOL_SPECS
 )
 def test_image_sobol_slow(
-    request,
-    model_and_processor,
     n_granularity_perturbations,
     order,
     sampler,
@@ -635,7 +632,6 @@ SLOW_LIME_SPECS = [
     SLOW_LIME_SPECS,
 )
 def test_image_lime_slow(
-    model_and_processor,
     n_perturbations,
     perturb_probability,
     distance_function,
