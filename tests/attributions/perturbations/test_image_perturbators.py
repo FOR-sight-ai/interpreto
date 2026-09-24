@@ -24,7 +24,6 @@
 
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any
 
 import pytest
 import torch
@@ -50,13 +49,10 @@ from interpreto.attributions.perturbations.base import (
 from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons import GranularityResizeStrategy
 
-IMAGE_CLASSIFICATION_MODELS = [
-    "hf-internal-testing/tiny-random-vit",
+SLOW_MODELS = [
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
 ]
-
-SLOW_MODELS = ["akahana/vit-base-cats-vs-dogs"]
 
 FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 
@@ -93,21 +89,11 @@ def _setup_attribution_explainer_values(
     Sets values for the Perturbators that should be set by the AttributionExplainer in the normal
     functioning of the library
     """
-    if isinstance(perturbator, ImageMaskPerturbator):
-        if patch_size is None:
-            patch_size = int(getattr(model.config, "patch_size", 2))
-        perturbator.patch_size = patch_size
-        perturbator.granularity_combination_strategy = resize_strategy
+    perturbator.patch_size = patch_size
+    perturbator.granularity_combination_strategy = resize_strategy
 
 
-@pytest.fixture(scope="module")
-def images():
-    return [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))]
-
-
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-@pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
-def test_image_embedding_perturbator(perturbator_class, model_name, images):
+def _check_image_embedding_perturbator(perturbator_class, image_processor, images):
     """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
     assert issubclass(perturbator_class, ImageTensorPerturbator), (
         "image embedding perturbators must subclass ImageTensorPerturbator"
@@ -123,10 +109,7 @@ def test_image_embedding_perturbator(perturbator_class, model_name, images):
     )
 
     p = 10
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
-
     perturbator = perturbator_class(n_perturbations=p, processor=image_processor)
-    _setup_attribution_explainer_values(perturbator, model=model_name)
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
@@ -148,9 +131,7 @@ def test_image_embedding_perturbator(perturbator_class, model_name, images):
         )
 
 
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-@pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
-def test_image_mask_perturbator(perturbator_class, model_name, images):
+def _check_image_mask_perturbator(perturbator_class, model, image_processor, images):
     """Mirror of test_token_perturbators for the image mask-based perturbators."""
     assert issubclass(perturbator_class, ImageMaskPerturbator), (
         "image mask perturbators must subclass ImageMaskPerturbator"
@@ -167,11 +148,9 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
 
     patch_size = 2
     p = 15
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
-
     perturbator = perturbator_class(processor=image_processor)
     perturbator.n_perturbations = p
-    _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
+    _setup_attribution_explainer_values(perturbator, model=model, patch_size=patch_size)
 
     for img in images:
         processed_image = image_processor(img, return_tensors="pt")
@@ -206,111 +185,37 @@ def test_image_mask_perturbator(perturbator_class, model_name, images):
             "there must be exactly one mask per perturbed sample ie the shapes of the masks and the inputs "
             "should match"
         )
+
+
+@pytest.fixture(scope="module")
+def images():
+    return [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))]
+
+
+@pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
+def test_image_embedding_perturbator(perturbator_class, vit_image_processor, images):
+    _check_image_embedding_perturbator(perturbator_class, vit_image_processor, images)
+
+
+@pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
+def test_image_mask_perturbator(perturbator_class, vit_model, vit_image_processor, images):
+    _check_image_mask_perturbator(perturbator_class, vit_model, vit_image_processor, images)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", SLOW_MODELS)
 @pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
 def test_slow_image_embedding_perturbator(perturbator_class, model_name, images):
-    """Mirror of test_embeddings_perturbators for the image tensor-space perturbators."""
-    assert issubclass(perturbator_class, ImageTensorPerturbator), (
-        "image embedding perturbators must subclass ImageTensorPerturbator"
-    )
-    assert not issubclass(perturbator_class, ImageMaskPerturbator), (
-        "image embedding perturbators must not subclass ImageMaskPerturbator"
-    )
-    assert not issubclass(perturbator_class, TextMaskPerturbator), (
-        "image embedding perturbators must not subclass TextMaskPerturbator"
-    )
-    assert not issubclass(perturbator_class, TextTensorPerturbator), (
-        "image embedding perturbators must not subclass TextTensorPerturbator"
-    )
-
-    p = 10
-    image_processor: Any = AutoImageProcessor.from_pretrained(model_name)
-
-    perturbator = perturbator_class(n_perturbations=p, processor=image_processor)
-    _setup_attribution_explainer_values(perturbator, model=model_name)
-
-    for img in images:
-        processed_image = image_processor(img, return_tensors="pt")
-        assert isinstance(processed_image, BatchFeature), "the image processor must return a BatchFeature"
-
-        perturbed_inputs, _ = perturbator.perturb(processed_image)
-
-        assert isinstance(perturbed_inputs, MutableMapping), "perturbed_inputs must be a MutableMapping"
-
-        assert "pixel_values" in perturbed_inputs.keys(), "perturbed_inputs must have the 'pixel_values' key"
-        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor), (
-            'perturbed_inputs["pixel_values"] must be a torch.Tensor'
-        )
-
-        _, _, h, w = processed_image["pixel_values"].shape
-        assert perturbed_inputs["pixel_values"].shape == (p, 3, h, w), (
-            'perturbed_inputs["pixel_values"] must have shape (n_perturbations, 3, H, W). Expected '
-            f"{(p, 3, h, w)}, got {tuple(perturbed_inputs['pixel_values'].shape)}"
-        )
+    _check_image_embedding_perturbator(perturbator_class, AutoImageProcessor.from_pretrained(model_name), images)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", SLOW_MODELS)
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
 def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
-    """Mirror of test_token_perturbators for the image mask-based perturbators."""
-    assert issubclass(perturbator_class, ImageMaskPerturbator), (
-        "image mask perturbators must subclass ImageMaskPerturbator"
+    _check_image_mask_perturbator(
+        perturbator_class, model_name, AutoImageProcessor.from_pretrained(model_name), images
     )
-    assert not issubclass(perturbator_class, ImageTensorPerturbator), (
-        "image mask perturbators must not subclass ImageTensorPerturbator"
-    )
-    assert not issubclass(perturbator_class, TextMaskPerturbator), (
-        "image mask perturbators must not subclass TextMaskPerturbator"
-    )
-    assert not issubclass(perturbator_class, TextTensorPerturbator), (
-        "image mask perturbators must not subclass TextTensorPerturbator"
-    )
-
-    patch_size = 16
-    p = 15
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
-
-    perturbator = perturbator_class(processor=image_processor)
-    perturbator.n_perturbations = p
-    _setup_attribution_explainer_values(perturbator, model=model_name, patch_size=patch_size)
-
-    for img in images:
-        processed_image = image_processor(img, return_tensors="pt")
-        assert isinstance(processed_image, BatchFeature), "the image processor must return a BatchFeature"
-
-        perturbed_inputs, masks = perturbator.perturb(processed_image)
-
-        assert isinstance(perturbed_inputs, BatchFeature), "perturbed_inputs must be a BatchFeature"
-        assert "pixel_values" in perturbed_inputs.keys(), "perturbed_inputs must have the 'pixel_values' key"
-        assert isinstance(perturbed_inputs["pixel_values"], torch.Tensor), (
-            'perturbed_inputs["pixel_values"] must be a torch.Tensor'
-        )
-
-        _, _, h, w = processed_image["pixel_values"].shape
-        g = (h // patch_size) * (w // patch_size)
-        if isinstance(perturbator, OcclusionPerturbator):
-            real_p = g + 1
-        elif isinstance(perturbator, SobolPerturbator):
-            k = perturbator.n_granularity_perturbations
-            real_p = (g + 2) * k
-        else:
-            real_p = perturbator.n_perturbations
-
-        assert perturbed_inputs["pixel_values"].shape == (real_p, 3, h, w), (
-            'perturbed_inputs["pixel_values"] must have shape (real_p, 3, H, W), where real_p accounts for the '
-            "method's actual number of masks (g+1 for Occlusion, (g+2)*k for Sobol, n_perturbations otherwise). "
-            f"Expected {(real_p, 3, h, w)}, got {tuple(perturbed_inputs['pixel_values'].shape)}"
-        )
-
-        assert isinstance(masks, torch.Tensor), "masks must be a torch.Tensor"
-        assert masks.shape[0] == perturbed_inputs["pixel_values"].shape[0], (
-            "there must be exactly one mask per perturbed sample ie the shapes of the masks and the inputs "
-            "should match"
-        )
 
 
 def test_linear_interpolation_image_perturbation_adjust_baseline():
@@ -370,15 +275,14 @@ def test_linear_interpolation_image_perturbation_adjust_baseline_invalid():
     "sampler",
     [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
 )
-def test_image_sobol_masks(sampler):
+def test_image_sobol_masks(sampler, vit_image_processor):
     k = 10
     # We need an image_processor to build the perturbator but it is not useful per se in this test
-    image_processor = AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
     image_sobol_perturbator = _image_variant(SobolPerturbator, ImageTensorPerturbator)
     perturbator = image_sobol_perturbator(
         n_granularity_perturbations=k,
         sampler=sampler,
-        processor=image_processor,
+        processor=vit_image_processor,
     )
 
     perturbator.patch_size = 4
@@ -407,10 +311,9 @@ def test_image_sobol_masks(sampler):
                 )
 
 
-def test_image_occlusion_masks():
+def test_image_occlusion_masks(vit_image_processor):
     # We need an image_processor to build the perturbator but it is not useful per se in this test
-    image_processor = AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
-    perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)(processor=image_processor)
+    perturbator = _image_variant(OcclusionPerturbator, ImageMaskPerturbator)(processor=vit_image_processor)
 
     perturbator.patch_size = 4
     perturbator.granularity_combination_strategy = GranularityResizeStrategy.BILINEAR
