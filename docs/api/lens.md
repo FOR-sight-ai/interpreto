@@ -1,8 +1,8 @@
 # Lens
 
-Lens methods decode the residual stream at every transformer block boundary. They use an
-[`AllLayersSplitter`](concepts/splitters/all_layers_splitter.md) explicitly so the same configured model, tokenizer,
-and device can be reused.
+Lens methods decode the residual stream at every transformer block boundary. Pass a model repository ID directly for
+the common case, or provide a configured [`AllLayersSplitter`](concepts/splitters/all_layers_splitter.md) when you need
+to select a model class, tokenizer, device, or transformer block path.
 
 Inference accepts one text at a time. To explain several texts, iterate over them. `TunedLens.fit()` accepts either one
 text or an iterable and trains on each text sequentially.
@@ -28,15 +28,14 @@ plot_lens(results, text, tokenizer=splitter.tokenizer, label_names=["negative", 
 ## Generation with Tuned Lens
 
 ```python
-from interpreto import AllLayersSplitter, TunedLens, plot_lens
+from interpreto import TunedLens, plot_lens
 
 text = "Paris is the capital of"
-splitter = AllLayersSplitter("distilgpt2")
-lens = TunedLens(splitter, top_k=3)
+lens = TunedLens("distilgpt2", top_k=3)
 lens.fit(["Paris is the capital of France.", "Rome is the capital of Italy."], epochs=1)
 results = lens(text)
 
-plot_lens(results, text, tokenizer=splitter.tokenizer)
+plot_lens(results, text, tokenizer=lens.splitter.tokenizer)
 ```
 
 ## `LogitLens`
@@ -57,7 +56,7 @@ plot_lens(results, text, tokenizer=splitter.tokenizer)
 
 ## `plot_lens`
 
-`plot_lens` renders each layer as a table. Language-model rows show the input token and numerical top-k predictions;
-classification rows show class names and scores.
+`plot_lens` renders one compact row per model depth. The visible cells contain only the top prediction and use color
+intensity to show relative confidence. Hover over a cell to inspect its numerical score and remaining top-k results.
 
 ::: interpreto.visualizations.plot_lens

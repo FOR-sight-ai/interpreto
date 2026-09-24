@@ -61,7 +61,7 @@ They all work seamlessly for both classification (`...ForSequenceClassification`
 - [`LogitLens`](https://for-sight-ai.github.io/interpreto/api/lens/) — [nostalgebraist, 2020](https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens)
 - [`TunedLens`](https://for-sight-ai.github.io/interpreto/api/lens/) — [Belrose et al., 2023](https://arxiv.org/abs/2303.08112)
 
-Both methods use `AllLayersSplitter` to decode every transformer block boundary together.
+Both methods accept a model repository ID directly or a configured `AllLayersSplitter` for advanced use cases.
 
 ### 💡 Concept-Based Methods or Mechanistic Interpretability
 

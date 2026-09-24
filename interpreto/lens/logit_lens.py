@@ -47,27 +47,27 @@ class LogitLens(nn.Module):
     over several texts when needed.
 
     Args:
-        splitter (AllLayersSplitter): Model wrapper used to collect and project all layer states.
+        splitter (str | AllLayersSplitter): Hugging Face repository ID or configured model wrapper
+            used to collect and project all layer states.
         top_k (int): Maximum number of token or class scores returned per prediction.
 
     Raises:
         ValueError: If ``top_k`` is not positive.
 
     Examples:
-        >>> from interpreto import AllLayersSplitter, LogitLens
-        >>> splitter = AllLayersSplitter("hf-internal-testing/tiny-random-gpt2")
-        >>> lens = LogitLens(splitter, top_k=3)
+        >>> from interpreto import LogitLens
+        >>> lens = LogitLens("hf-internal-testing/tiny-random-gpt2", top_k=3)
         >>> results = lens("Interpreto is useful.")
-        >>> list(results) == splitter.activation_names
+        >>> list(results) == lens.splitter.activation_names
         True
     """
 
-    def __init__(self, splitter: AllLayersSplitter, top_k: int = 5) -> None:
+    def __init__(self, splitter: str | AllLayersSplitter, top_k: int = 5) -> None:
         super().__init__()
         if top_k < 1:
             raise ValueError("`top_k` must be positive.")
 
-        self.splitter = splitter
+        self.splitter = splitter if isinstance(splitter, AllLayersSplitter) else AllLayersSplitter(splitter)
         self.top_k = top_k
         self.splitter._model.eval()
 

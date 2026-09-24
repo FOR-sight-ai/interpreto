@@ -51,22 +51,22 @@ class TunedLens(LogitLens):
     persisted with ``state_dict()`` and ``load_state_dict()``.
 
     Args:
-        splitter (AllLayersSplitter): Model wrapper used to collect and project all layer states.
+        splitter (str | AllLayersSplitter): Hugging Face repository ID or configured model wrapper
+            used to collect and project all layer states.
         top_k (int): Maximum number of token or class scores returned per prediction.
 
     Examples:
-        >>> from interpreto import AllLayersSplitter, TunedLens
-        >>> splitter = AllLayersSplitter("hf-internal-testing/tiny-random-gpt2")
-        >>> lens = TunedLens(splitter, top_k=3)
+        >>> from interpreto import TunedLens
+        >>> lens = TunedLens("hf-internal-testing/tiny-random-gpt2", top_k=3)
         >>> losses = lens.fit(["Interpreto is useful."], epochs=1)
         >>> results = lens("Interpreto is useful.")
     """
 
-    def __init__(self, splitter: AllLayersSplitter, top_k: int = 5) -> None:
+    def __init__(self, splitter: str | AllLayersSplitter, top_k: int = 5) -> None:
         super().__init__(splitter, top_k)
-        hidden_size = splitter._model.config.hidden_size
+        hidden_size = self.splitter._model.config.hidden_size
         reference_parameter = next(
-            parameter for parameter in splitter._model.parameters() if parameter.is_floating_point()
+            parameter for parameter in self.splitter._model.parameters() if parameter.is_floating_point()
         )
         device = None if reference_parameter.is_meta else reference_parameter.device
         self.translators = nn.ModuleList(
@@ -77,7 +77,7 @@ class TunedLens(LogitLens):
                     device=device,
                     dtype=reference_parameter.dtype,
                 )
-                for _ in splitter.split_points
+                for _ in self.splitter.split_points
             ]
         )
         for translator in self.translators:

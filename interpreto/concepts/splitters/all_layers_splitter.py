@@ -74,6 +74,7 @@ class AllLayersSplitter(LanguageModel):
 
     Raises:
         InitializationError: If a preloaded model is provided without a tokenizer.
+        ValueError: If a tokenizer cannot be inferred for a repository ID.
 
     Example:
         >>> from transformers import AutoModelForCausalLM

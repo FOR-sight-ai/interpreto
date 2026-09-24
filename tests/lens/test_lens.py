@@ -34,6 +34,7 @@ import pytest
 import torch
 from torch import nn
 
+import interpreto.lens.logit_lens as logit_lens_module
 import interpreto.visualizations.lens as lens_visualizations
 from interpreto import AllLayersSplitter, LogitLens, TunedLens, plot_lens
 
@@ -106,6 +107,24 @@ def test_logit_lens_requires_a_positive_top_k(gpt2_splitter):
         LogitLens(gpt2_splitter, top_k=0)
 
 
+def test_lenses_accept_a_repository_id(monkeypatch):
+    class Splitter:
+        def __init__(self, repo_id):
+            self.repo_id = repo_id
+            self._model = nn.Linear(4, 4)
+            self._model.config = SimpleNamespace(hidden_size=4)
+            self.split_points = ["model.layers.0"]
+
+    monkeypatch.setattr(logit_lens_module, "AllLayersSplitter", Splitter)
+
+    logit_lens = LogitLens("model-id")
+    tuned_lens = TunedLens("model-id")
+
+    assert logit_lens.splitter.repo_id == "model-id"
+    assert tuned_lens.splitter.repo_id == "model-id"
+    assert len(tuned_lens.translators) == 1
+
+
 def test_tuned_lens_starts_as_a_logit_lens(gpt2_splitter):
     text = "Interpreto is useful."
     logit_results = LogitLens(gpt2_splitter, top_k=3)(text)
@@ -124,7 +143,7 @@ def test_tuned_lens_starts_as_a_logit_lens(gpt2_splitter):
         )
 
 
-def test_tuned_lens_initializes_lazy_models_on_the_activation_device():
+def test_tuned_lens_initializes_lazy_models_on_the_activation_device(monkeypatch):
     """Meta model parameters do not create meta-device translators."""
 
     class LazyModel(nn.Module):
@@ -134,6 +153,7 @@ def test_tuned_lens_initializes_lazy_models_on_the_activation_device():
             self.config = SimpleNamespace(hidden_size=4)
 
     splitter = SimpleNamespace(_model=LazyModel(), split_points=["model.layers.0"])
+    monkeypatch.setattr(logit_lens_module, "AllLayersSplitter", SimpleNamespace)
     lens = TunedLens(splitter)
     activations = torch.randn(2, 3, 4)
 
@@ -181,7 +201,13 @@ def test_plot_lens_renders_every_layer(gpt2_splitter, monkeypatch):
     plot_lens(results, text, tokenizer=gpt2_splitter.tokenizer)
 
     assert len(displayed_html) == 1
-    assert all(layer_name in displayed_html[0] for layer_name in gpt2_splitter.activation_names)
+    html = displayed_html[0]
+    assert all(layer_name in html for layer_name in gpt2_splitter.activation_names)
+    assert html.count("class='lens-layer-label'") == len(results)
+    assert html.count("class='lens-prediction'") == len(results) * len(gpt2_splitter.tokenizer.encode(text))
+    assert "<details" not in html
+    assert "<table" not in html
+    assert "<script>" not in html
 
 
 def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
@@ -192,8 +218,11 @@ def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
 
     plot_lens(results, "Interpreto is useful.", tokenizer=bert_splitter.tokenizer, label_names={0: "no", 1: "yes"})
 
-    assert "no" in displayed_html[0]
-    assert "yes" in displayed_html[0]
+    html = displayed_html[0]
+    assert "no" in html
+    assert "yes" in html
+    assert html.count("class='lens-prediction'") == len(results)
+    assert "Relative confidence" in html
 
 
 def test_lens_notebook_is_executed_and_has_no_error_outputs():
