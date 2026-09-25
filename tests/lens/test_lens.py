@@ -1,0 +1,334 @@
+# MIT License
+#
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""Tests for Logit Lens and Tuned Lens."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+import torch
+from torch import nn
+
+import interpreto.lens.logit_lens as logit_lens_module
+import interpreto.visualizations.lens as lens_visualizations
+from interpreto import AllLayersSplitter, LogitLens, TunedLens, plot_lens
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.fixture(scope="module")
+def gpt2_splitter(gpt2_model, gpt2_tokenizer):
+    if gpt2_tokenizer.pad_token is None:
+        gpt2_tokenizer.pad_token = gpt2_tokenizer.eos_token
+    gpt2_model.eval()
+    return AllLayersSplitter(gpt2_model, tokenizer=gpt2_tokenizer)
+
+
+@pytest.fixture(scope="module")
+def bert_splitter(bert_model, bert_tokenizer):
+    bert_model.eval()
+    return AllLayersSplitter(bert_model, tokenizer=bert_tokenizer)
+
+
+def _expected_top_k(logits: torch.Tensor, top_k: int) -> tuple[torch.Tensor, torch.Tensor]:
+    logits = logits.float()
+    top_logits, top_indices = logits.topk(top_k, dim=-1)
+    top_scores = (top_logits - logits.logsumexp(dim=-1, keepdim=True)).exp()
+    return top_indices, top_scores
+
+
+def test_logit_lens_processes_all_layers_in_one_head_call(gpt2_splitter, monkeypatch):
+    apply_head = gpt2_splitter.apply_head
+    head_inputs = []
+
+    def record_head_input(activations):
+        head_inputs.append(activations)
+        return apply_head(activations)
+
+    monkeypatch.setattr(gpt2_splitter, "apply_head", record_head_input)
+    results = LogitLens(gpt2_splitter, top_k=3)("Interpreto is useful.")
+
+    assert list(results) == gpt2_splitter.activation_names
+    assert len(head_inputs) == 1
+    assert head_inputs[0].shape[0] == len(gpt2_splitter.activation_names)
+    assert all(output["top_indices"].shape == output["top_scores"].shape for output in results.values())
+    assert all(output["top_indices"].shape[:1] == (1,) for output in results.values())
+    assert all(output["top_indices"].shape[-1] == 3 for output in results.values())
+
+
+def test_logit_lens_final_output_matches_the_model(gpt2_splitter):
+    text = "Interpreto is useful."
+    results = LogitLens(gpt2_splitter, top_k=3)(text)
+    unaligned_results = LogitLens(gpt2_splitter, top_k=3)(text, align=False)
+    model_inputs = gpt2_splitter.tokenizer(text, return_tensors="pt")
+
+    with torch.no_grad():
+        logits = gpt2_splitter._model(**model_inputs).logits
+    expected_indices, expected_scores = _expected_top_k(logits, top_k=3)
+    final_layer = gpt2_splitter.activation_names[-1]
+    final_output = results[final_layer]
+
+    torch.testing.assert_close(final_output["top_indices"], expected_indices[:, :-1])
+    torch.testing.assert_close(final_output["top_scores"], expected_scores[:, :-1])
+    torch.testing.assert_close(unaligned_results[final_layer]["top_indices"], expected_indices)
+    torch.testing.assert_close(unaligned_results[final_layer]["top_scores"], expected_scores)
+
+
+def test_logit_lens_uses_the_same_path_for_classification(bert_splitter):
+    results = LogitLens(bert_splitter)("Interpreto is useful.")
+
+    assert list(results) == bert_splitter.activation_names
+    assert all(output["top_indices"].shape == (1, 2) for output in results.values())
+
+
+def test_logit_lens_requires_a_positive_top_k(gpt2_splitter):
+    with pytest.raises(ValueError, match="positive"):
+        LogitLens(gpt2_splitter, top_k=0)
+
+
+def test_logit_lens_generation_uses_next_token_convention_and_can_align(gpt2_splitter):
+    lens = LogitLens(gpt2_splitter, top_k=3)
+    prompt = "Interpreto helps"
+    model_inputs = gpt2_splitter.tokenizer(prompt, return_tensors="pt")
+    sequence = gpt2_splitter._model.generate(**model_inputs, max_new_tokens=3, do_sample=False)[0]
+    generated_ids = sequence[model_inputs["input_ids"].shape[1] :]
+
+    aligned_text, aligned_results = lens.generate(prompt, max_new_tokens=3)
+    generated_text, results = lens.generate(prompt, max_new_tokens=3, align=False)
+
+    assert generated_text == gpt2_splitter.tokenizer.decode(
+        generated_ids,
+        skip_special_tokens=False,
+        clean_up_tokenization_spaces=False,
+    )
+    assert aligned_text == generated_text
+    assert all(output["top_indices"].shape[1] == len(generated_ids) for output in results.values())
+    final_layer = gpt2_splitter.activation_names[-1]
+    next_token_predictions = results[final_layer]["top_indices"][0, :, 0]
+    aligned_predictions = aligned_results[final_layer]["top_indices"][0, :, 0]
+    torch.testing.assert_close(next_token_predictions[:-1], generated_ids[1:])
+    torch.testing.assert_close(aligned_predictions, generated_ids)
+
+
+def test_logit_lens_traces_generated_ids_without_retokenizing(gpt2_splitter, monkeypatch):
+    lens = LogitLens(gpt2_splitter, top_k=3)
+    model_inputs = gpt2_splitter.tokenizer("Interpreto helps", return_tensors="pt")
+    generated_ids = torch.tensor([1, 2])
+    sequence = torch.cat((model_inputs["input_ids"][0], generated_ids))
+    traced_inputs = []
+
+    monkeypatch.setattr(gpt2_splitter._model, "generate", lambda **_: sequence.unsqueeze(0))
+    monkeypatch.setattr(gpt2_splitter.tokenizer, "decode", lambda *_args, **_kwargs: "merged token")
+
+    def get_logits(inputs):
+        traced_inputs.append(inputs)
+        return torch.zeros(
+            len(gpt2_splitter.activation_names),
+            sequence.shape[0],
+            gpt2_splitter._model.config.vocab_size,
+        )
+
+    monkeypatch.setattr(lens, "_get_logits", get_logits)
+
+    generated_text, results = lens.generate("Interpreto helps", max_new_tokens=2)
+
+    assert generated_text == "merged token"
+    torch.testing.assert_close(traced_inputs[0], sequence.unsqueeze(0))
+    assert all(output["top_indices"].shape[1] == len(generated_ids) for output in results.values())
+
+
+def test_logit_lens_requires_a_positive_generation_length(gpt2_splitter):
+    with pytest.raises(ValueError, match="positive"):
+        LogitLens(gpt2_splitter).generate("Interpreto helps", max_new_tokens=0)
+
+
+def test_lenses_accept_a_repository_id(monkeypatch):
+    class Splitter:
+        def __init__(self, repo_id):
+            self.repo_id = repo_id
+            self._model = nn.Linear(4, 4)
+            self._model.config = SimpleNamespace(hidden_size=4)
+            self.split_points = ["model.layers.0"]
+
+    monkeypatch.setattr(logit_lens_module, "AllLayersSplitter", Splitter)
+
+    logit_lens = LogitLens("model-id")
+    tuned_lens = TunedLens("model-id")
+
+    assert logit_lens.splitter.repo_id == "model-id"
+    assert tuned_lens.splitter.repo_id == "model-id"
+    assert len(tuned_lens.translators) == 1
+
+
+def test_tuned_lens_starts_as_a_logit_lens(gpt2_splitter):
+    text = "Interpreto is useful."
+    logit_results = LogitLens(gpt2_splitter, top_k=3)(text)
+    tuned_lens = TunedLens(gpt2_splitter, top_k=3)
+    tuned_results = tuned_lens(text)
+
+    assert len(tuned_lens.translators) == len(gpt2_splitter.split_points)
+    for layer_name in gpt2_splitter.activation_names:
+        torch.testing.assert_close(
+            tuned_results[layer_name]["top_indices"],
+            logit_results[layer_name]["top_indices"],
+        )
+        torch.testing.assert_close(
+            tuned_results[layer_name]["top_scores"],
+            logit_results[layer_name]["top_scores"],
+        )
+
+
+def test_tuned_lens_initializes_lazy_models_on_the_activation_device(monkeypatch):
+    """Meta model parameters do not create meta-device translators."""
+
+    class LazyModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.weight = nn.Parameter(torch.empty(4, device="meta"))
+            self.config = SimpleNamespace(hidden_size=4)
+
+    splitter = SimpleNamespace(_model=LazyModel(), split_points=["model.layers.0"])
+    monkeypatch.setattr(logit_lens_module, "AllLayersSplitter", SimpleNamespace)
+    lens = TunedLens(splitter)
+    activations = torch.randn(2, 3, 4)
+
+    transformed = lens._transform(activations)
+
+    assert isinstance(lens, LogitLens)
+    assert lens.translators[0].weight.device == activations.device
+    assert transformed.device == activations.device
+
+
+def test_tuned_lens_fits_every_layer_together(gpt2_splitter, monkeypatch):
+    texts = ["Interpreto is useful.", "Lens methods expose intermediate predictions."]
+    lens = TunedLens(gpt2_splitter, top_k=3)
+    parameters_before_fit = [parameter.detach().clone() for parameter in lens.parameters()]
+    apply_head = gpt2_splitter.apply_head
+    head_depths = []
+
+    def record_head_input(activations):
+        head_depths.append(activations.shape[0])
+        return apply_head(activations)
+
+    monkeypatch.setattr(gpt2_splitter, "apply_head", record_head_input)
+    losses = lens.fit(texts, epochs=1, learning_rate=1e-2)
+
+    assert len(losses) == 1
+    assert torch.isfinite(torch.tensor(losses)).all()
+    assert head_depths == [len(gpt2_splitter.activation_names)] * len(texts)
+    assert any(
+        not torch.equal(before, after) for before, after in zip(parameters_before_fit, lens.parameters(), strict=True)
+    )
+
+    tuned_final = lens(texts[0])[gpt2_splitter.activation_names[-1]]
+    logit_final = LogitLens(gpt2_splitter, top_k=3)(texts[0])[gpt2_splitter.activation_names[-1]]
+    torch.testing.assert_close(tuned_final["top_indices"], logit_final["top_indices"])
+    torch.testing.assert_close(tuned_final["top_scores"], logit_final["top_scores"])
+
+
+def test_plot_lens_renders_every_layer(gpt2_splitter, monkeypatch):
+    text = "Interpreto is useful."
+    results = LogitLens(gpt2_splitter, top_k=3)(text)
+    token_ids = gpt2_splitter.tokenizer.encode(text)
+    targets = torch.tensor(token_ids[1:])
+    for output in results.values():
+        top_indices = output["top_indices"].clone()
+        top_indices[0, :, 0] = targets
+        output["top_indices"] = top_indices
+    displayed_html = []
+    monkeypatch.setattr(lens_visualizations, "HTML", lambda html: html)
+    monkeypatch.setattr(lens_visualizations, "display", displayed_html.append)
+
+    plot_lens(results, text, tokenizer=gpt2_splitter.tokenizer)
+
+    assert len(displayed_html) == 1
+    html = displayed_html[0]
+    assert all(layer_name in html for layer_name in gpt2_splitter.activation_names)
+    assert html.count("class='lens-layer-label'") == len(results) + 1
+    assert html.count("class='lens-prediction'") == len(results) * len(targets)
+    assert html.count("class='lens-token'") == len(targets)
+    assert html.count("class='lens-cell highlighted-word-style lens-correct'") == len(results) * len(targets)
+    assert html.index(f">{len(results) - 2}-out</div>") < html.index(">Embeddings</div>")
+    assert html.index(">Embeddings</div>") < html.index(">Input</div>")
+    assert "correct prediction" in html
+    assert "<details" not in html
+    assert "<table" not in html
+    assert "<script>" not in html
+
+
+def test_plot_lens_renders_unaligned_next_token_predictions(gpt2_splitter, monkeypatch):
+    text = "Interpreto is useful."
+    results = LogitLens(gpt2_splitter, top_k=3)(text, align=False)
+    token_ids = gpt2_splitter.tokenizer.encode(text)
+    next_tokens = torch.tensor([*token_ids[1:], token_ids[-1]])
+    for output in results.values():
+        top_indices = output["top_indices"].clone()
+        top_indices[0, :, 0] = next_tokens
+        output["top_indices"] = top_indices
+    displayed_html = []
+    monkeypatch.setattr(lens_visualizations, "HTML", lambda html: html)
+    monkeypatch.setattr(lens_visualizations, "display", displayed_html.append)
+
+    plot_lens(results, text, tokenizer=gpt2_splitter.tokenizer, align=False)
+
+    html = displayed_html[0]
+    assert html.count("class='lens-token'") == len(token_ids)
+    assert html.count("class='lens-cell highlighted-word-style lens-correct'") == len(results) * (len(token_ids) - 1)
+
+
+def test_plot_lens_displays_whitespace_tokens():
+    tokenizer = SimpleNamespace(decode=lambda *_args, **_kwargs: "\n")
+
+    assert lens_visualizations._decode(tokenizer, 0) == r"\n"
+
+
+def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
+    results = LogitLens(bert_splitter)("Interpreto is useful.")
+    displayed_html = []
+    monkeypatch.setattr(lens_visualizations, "HTML", lambda html: html)
+    monkeypatch.setattr(lens_visualizations, "display", displayed_html.append)
+
+    plot_lens(results, "Interpreto is useful.", tokenizer=bert_splitter.tokenizer, label_names={0: "no", 1: "yes"})
+
+    html = displayed_html[0]
+    assert "no" in html
+    assert "yes" in html
+    assert html.count("class='lens-prediction'") == len(results)
+    assert html.index(f">{len(results) - 2}-out</div>") < html.index(">Embeddings</div>")
+    assert ">Input</div>" not in html
+    assert "Relative confidence" in html
+
+
+def test_lens_notebook_is_executed_and_has_no_error_outputs():
+    notebook = json.loads((REPOSITORY_ROOT / "docs" / "notebooks" / "lens_notebook.ipynb").read_text())
+    code_cells = [cell for cell in notebook["cells"] if cell["cell_type"] == "code" and cell["source"]]
+
+    assert notebook["metadata"]["kernelspec"]["name"] == "python3"
+    assert code_cells
+    assert all(cell["execution_count"] is not None for cell in code_cells)
+    assert all(output.get("output_type") != "error" for cell in code_cells for output in cell.get("outputs", []))

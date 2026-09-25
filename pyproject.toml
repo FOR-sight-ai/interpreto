@@ -115,7 +115,7 @@ lint = [
   "networkx>=3.0.0",
   "numpy>=2.2.0",
 ]
-notebook = ["ipykernel>=6.29.2", "ipywidgets>=8.1.2"]
+notebook = ["datasets", "ipykernel>=6.29.2", "ipywidgets>=8.1.2"]
 
 [project.urls]
 homepage = "https://github.com/FOR-sight-ai/interpreto"
