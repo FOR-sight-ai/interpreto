@@ -84,15 +84,19 @@ def test_logit_lens_processes_all_layers_in_one_head_call(gpt2_splitter, monkeyp
 def test_logit_lens_final_output_matches_the_model(gpt2_splitter):
     text = "Interpreto is useful."
     results = LogitLens(gpt2_splitter, top_k=3)(text)
+    unaligned_results = LogitLens(gpt2_splitter, top_k=3)(text, align=False)
     model_inputs = gpt2_splitter.tokenizer(text, return_tensors="pt")
 
     with torch.no_grad():
         logits = gpt2_splitter._model(**model_inputs).logits
     expected_indices, expected_scores = _expected_top_k(logits, top_k=3)
-    final_output = results[gpt2_splitter.activation_names[-1]]
+    final_layer = gpt2_splitter.activation_names[-1]
+    final_output = results[final_layer]
 
-    torch.testing.assert_close(final_output["top_indices"], expected_indices)
-    torch.testing.assert_close(final_output["top_scores"], expected_scores)
+    torch.testing.assert_close(final_output["top_indices"], expected_indices[:, :-1])
+    torch.testing.assert_close(final_output["top_scores"], expected_scores[:, :-1])
+    torch.testing.assert_close(unaligned_results[final_layer]["top_indices"], expected_indices)
+    torch.testing.assert_close(unaligned_results[final_layer]["top_scores"], expected_scores)
 
 
 def test_logit_lens_uses_the_same_path_for_classification(bert_splitter):
@@ -114,8 +118,8 @@ def test_logit_lens_generation_uses_next_token_convention_and_can_align(gpt2_spl
     sequence = gpt2_splitter._model.generate(**model_inputs, max_new_tokens=3, do_sample=False)[0]
     generated_ids = sequence[model_inputs["input_ids"].shape[1] :]
 
-    generated_text, results = lens.generate(prompt, max_new_tokens=3)
-    aligned_text, aligned_results = lens.generate(prompt, max_new_tokens=3, align=True)
+    aligned_text, aligned_results = lens.generate(prompt, max_new_tokens=3)
+    generated_text, results = lens.generate(prompt, max_new_tokens=3, align=False)
 
     assert generated_text == gpt2_splitter.tokenizer.decode(
         generated_ids,
@@ -250,6 +254,12 @@ def test_tuned_lens_fits_every_layer_together(gpt2_splitter, monkeypatch):
 def test_plot_lens_renders_every_layer(gpt2_splitter, monkeypatch):
     text = "Interpreto is useful."
     results = LogitLens(gpt2_splitter, top_k=3)(text)
+    token_ids = gpt2_splitter.tokenizer.encode(text)
+    targets = torch.tensor(token_ids[1:])
+    for output in results.values():
+        top_indices = output["top_indices"].clone()
+        top_indices[0, :, 0] = targets
+        output["top_indices"] = top_indices
     displayed_html = []
     monkeypatch.setattr(lens_visualizations, "HTML", lambda html: html)
     monkeypatch.setattr(lens_visualizations, "display", displayed_html.append)
@@ -259,12 +269,36 @@ def test_plot_lens_renders_every_layer(gpt2_splitter, monkeypatch):
     assert len(displayed_html) == 1
     html = displayed_html[0]
     assert all(layer_name in html for layer_name in gpt2_splitter.activation_names)
-    assert html.count("class='lens-layer-label'") == len(results)
-    assert html.count("class='lens-prediction'") == len(results) * len(gpt2_splitter.tokenizer.encode(text))
-    assert html.index(f">Layer {len(results) - 2}</div>") < html.index(">Input</div>")
+    assert html.count("class='lens-layer-label'") == len(results) + 1
+    assert html.count("class='lens-prediction'") == len(results) * len(targets)
+    assert html.count("class='lens-token'") == len(targets)
+    assert html.count("class='lens-cell highlighted-word-style lens-correct'") == len(results) * len(targets)
+    assert html.index(f">{len(results) - 2}-out</div>") < html.index(">Embeddings</div>")
+    assert html.index(">Embeddings</div>") < html.index(">Input</div>")
+    assert "correct prediction" in html
     assert "<details" not in html
     assert "<table" not in html
     assert "<script>" not in html
+
+
+def test_plot_lens_renders_unaligned_next_token_predictions(gpt2_splitter, monkeypatch):
+    text = "Interpreto is useful."
+    results = LogitLens(gpt2_splitter, top_k=3)(text, align=False)
+    token_ids = gpt2_splitter.tokenizer.encode(text)
+    next_tokens = torch.tensor([*token_ids[1:], token_ids[-1]])
+    for output in results.values():
+        top_indices = output["top_indices"].clone()
+        top_indices[0, :, 0] = next_tokens
+        output["top_indices"] = top_indices
+    displayed_html = []
+    monkeypatch.setattr(lens_visualizations, "HTML", lambda html: html)
+    monkeypatch.setattr(lens_visualizations, "display", displayed_html.append)
+
+    plot_lens(results, text, tokenizer=gpt2_splitter.tokenizer, align=False)
+
+    html = displayed_html[0]
+    assert html.count("class='lens-token'") == len(token_ids)
+    assert html.count("class='lens-cell highlighted-word-style lens-correct'") == len(results) * (len(token_ids) - 1)
 
 
 def test_plot_lens_displays_whitespace_tokens():
@@ -285,7 +319,8 @@ def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
     assert "no" in html
     assert "yes" in html
     assert html.count("class='lens-prediction'") == len(results)
-    assert html.index(f">Layer {len(results) - 2}</div>") < html.index(">Input</div>")
+    assert html.index(f">{len(results) - 2}-out</div>") < html.index(">Embeddings</div>")
+    assert ">Input</div>" not in html
     assert "Relative confidence" in html
 
 

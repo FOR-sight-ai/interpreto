@@ -38,15 +38,31 @@ results = lens(text)
 plot_lens(results, text, tokenizer=lens.splitter.tokenizer)
 ```
 
-For a causal language model, each position predicts the following token. `generate()` follows this convention by default.
-Pass `align=True` to shift the predictions so the final-layer output matches the generated token displayed in each
-column:
+For causal language models, predictions are aligned with their observed target tokens by default. Each column therefore
+shows a target token, while the bottom `Input` row shows the preceding token that produced its prediction. Correct top
+predictions are outlined in green.
+
+`generate()` uses the same convention. Include the prompt when plotting so the visualization can display the input to
+the first generated prediction:
 
 ```python
 prompt = "Although the committee initially rejected the proposal,"
-generated_text, generated_results = lens.generate(prompt, max_new_tokens=10, align=True)
+generated_text, generated_results = lens.generate(prompt, max_new_tokens=10)
 
-plot_lens(generated_results, generated_text, tokenizer=lens.splitter.tokenizer)
+plot_lens(generated_results, prompt + generated_text, tokenizer=lens.splitter.tokenizer)
+```
+
+Set `align=False` on both calls for the conventional next-token view, where each column contains the prediction made
+after its displayed input token:
+
+```python
+generated_text, generated_results = lens.generate(prompt, max_new_tokens=10, align=False)
+plot_lens(
+    generated_results,
+    prompt + generated_text,
+    tokenizer=lens.splitter.tokenizer,
+    align=False,
+)
 ```
 
 ## `LogitLens`
@@ -67,8 +83,9 @@ plot_lens(generated_results, generated_text, tokenizer=lens.splitter.tokenizer)
 
 ## `plot_lens`
 
-`plot_lens` renders one compact row per model depth, from the final layer at the top to the input at the bottom. The
-visible cells contain only the top prediction and use color intensity to show relative confidence. Hover over a cell to
-inspect its numerical score and remaining top-k results.
+`plot_lens` renders model outputs from the final layer down to the embeddings, followed by the actual input tokens. The
+`Embeddings` row is the prediction head applied before the first transformer block; it is not the raw model input. The
+visible cells contain only the top prediction and use color intensity to show relative confidence. A green outline marks
+a correct prediction. Hover over a cell to inspect its numerical score and remaining top-k results.
 
 ::: interpreto.visualizations.plot_lens

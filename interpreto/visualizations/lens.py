@@ -49,6 +49,9 @@ _LENS_STYLES = """
 .lens-header { position: sticky; top: 0; z-index: 2; text-align: center; white-space: pre; }
 .lens-layer-label { position: sticky; left: 0; z-index: 1; white-space: nowrap; }
 .lens-cell { min-width: 3.5rem; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: pre; }
+.lens-correct { box-shadow: inset 0 0 0 2px #2ca02c; }
+.lens-correct-key { width: .65rem; height: .65rem; box-shadow: inset 0 0 0 2px #2ca02c; }
+.lens-token { background: var(--background-color); text-align: center; white-space: pre; }
 .lens-cell:hover { outline: 2px solid var(--text-color); z-index: 1; }
 """
 
@@ -71,13 +74,14 @@ def _score_bounds(results: LensResults) -> tuple[float, float]:
     return min(scores), max(scores)
 
 
-def _cell(label: str, score: float, title: str, score_bounds: tuple[float, float]) -> str:
+def _cell(label: str, score: float, title: str, score_bounds: tuple[float, float], correct: bool = False) -> str:
     minimum, maximum = score_bounds
     normalized = 0.6 if maximum == minimum else (score - minimum) / (maximum - minimum)
     intensity = 0.15 + 0.85 * min(max(normalized, 0.0), 1.0)
     text_color = "white" if intensity >= 0.55 else "var(--text-color)"
+    classes = "lens-cell highlighted-word-style lens-correct" if correct else "lens-cell highlighted-word-style"
     return (
-        "<div class='lens-cell highlighted-word-style' "
+        f"<div class='{classes}' "
         f"style='background-color: rgba(31, 119, 180, {intensity:.3f}); color: {text_color}' "
         f"title='{escape(title, quote=True)}'>"
         f"<span class='lens-prediction'>{escape(label)}</span>"
@@ -86,15 +90,17 @@ def _cell(label: str, score: float, title: str, score_bounds: tuple[float, float
 
 
 def _layer_label(index: int, layer_name: str) -> str:
-    label = "Input" if index == 0 else f"Layer {index - 1}"
+    label = "Embeddings" if index == 0 else f"{index - 1}-out"
     return f"<div class='lens-layer-label' title='{escape(layer_name, quote=True)}'>{label}</div>"
 
 
-def _legend() -> str:
+def _legend(show_correct: bool = False) -> str:
+    correct = "<span class='lens-correct-key'></span><span>correct prediction</span>" if show_correct else ""
     return (
         "<div class='lens-legend'>"
         "<span>Relative confidence</span><span>low</span>"
         "<span class='lens-gradient'></span><span>high</span>"
+        f"{correct}"
         "</div>"
     )
 
@@ -103,33 +109,52 @@ def _language_prediction(
     output: LensTopKOutput,
     index: int,
     tokenizer: PreTrainedTokenizerBase,
-) -> tuple[str, float, str]:
+) -> tuple[str, float, str, int]:
     indices = output["top_indices"][0, index].tolist()
     scores = output["top_scores"][0, index].tolist()
     labels = [_decode(tokenizer, token_id) for token_id in indices]
     title = "\n".join(f"{label}: {score:.3g}" for label, score in zip(labels, scores, strict=True))
-    return labels[0], scores[0], title
+    return labels[0], scores[0], title, indices[0]
 
 
-def _render_language_model(results: LensResults, inputs: str, tokenizer: PreTrainedTokenizerBase) -> str:
+def _render_language_model(
+    results: LensResults,
+    inputs: str,
+    tokenizer: PreTrainedTokenizerBase,
+    align: bool,
+) -> str:
     token_ids = tokenizer.encode(inputs)
+    position_count = next(iter(results.values()))["top_indices"].shape[1]
+    minimum_tokens = position_count + 1 if align else position_count
+    if len(token_ids) < minimum_tokens:
+        raise ValueError("`inputs` does not contain enough tokens for `results` and the selected alignment.")
+
+    target_ids = token_ids[-position_count:]
+    input_ids = token_ids[-position_count - 1 : -1] if align else target_ids
+    expected_ids = target_ids if align else [*target_ids[1:], None]
     score_bounds = _score_bounds(results)
     cells = [
-        _legend(),
+        _legend(show_correct=True),
         "<div class='lens-scroll'>",
-        f"<div class='lens-grid' style='grid-template-columns: max-content repeat({len(token_ids)}, minmax(4rem, max-content))'>",
+        f"<div class='lens-grid' style='grid-template-columns: max-content repeat({position_count}, minmax(4rem, max-content))'>",
         "<div class='lens-corner'>Layer</div>",
         *(
             f"<div class='lens-header' title='{escape(_decode(tokenizer, token_id), quote=True)}'>"
             f"{escape(_decode(tokenizer, token_id))}</div>"
-            for token_id in token_ids
+            for token_id in target_ids
         ),
     ]
     for layer_index, (layer_name, output) in reversed(list(enumerate(results.items()))):
         cells.append(_layer_label(layer_index, layer_name))
-        for token_index in range(len(token_ids)):
-            label, score, title = _language_prediction(output, token_index, tokenizer)
-            cells.append(_cell(label, score, f"{layer_name}\n{title}", score_bounds))
+        for token_index, expected_id in enumerate(expected_ids):
+            label, score, title, token_id = _language_prediction(output, token_index, tokenizer)
+            cells.append(_cell(label, score, f"{layer_name}\n{title}", score_bounds, token_id == expected_id))
+    cells.append("<div class='lens-layer-label'>Input</div>")
+    cells.extend(
+        f"<div class='lens-token' title='{escape(_decode(tokenizer, token_id), quote=True)}'>"
+        f"{escape(_decode(tokenizer, token_id))}</div>"
+        for token_id in input_ids
+    )
     cells.extend(["</div>", "</div>"])
     return "".join(cells)
 
@@ -176,19 +201,24 @@ def plot_lens(
     *,
     tokenizer: PreTrainedTokenizerBase,
     label_names: LabelNames | None = None,
+    align: bool = True,
     custom_css: str = "",
     save_path: str | os.PathLike[str] | None = None,
 ) -> None:
     """Display model-depth predictions from the final layer to the input.
 
     Color intensity shows relative confidence. Hover over a cell to see its
-    numerical score and the remaining top-k predictions.
+    numerical score and the remaining top-k predictions. Language-model plots
+    outline correct top predictions and end with the actual input tokens below
+    the embedding-state predictions.
 
     Args:
         results (LensResults): Output returned by `LogitLens.explain()` or `TunedLens.explain()`.
-        inputs (str): Text used to produce `results`.
+        inputs (str): Complete text used to produce `results`, including the
+            prompt when plotting a generated continuation.
         tokenizer (PreTrainedTokenizerBase): Tokenizer used by the lens splitter.
         label_names (LabelNames | None): Optional display names for classification labels.
+        align (bool): Whether causal predictions target the displayed column tokens.
         custom_css (str): Additional CSS appended to the visualization styles.
         save_path (str | os.PathLike[str] | None): Optional path for the rendered HTML.
 
@@ -196,7 +226,8 @@ def plot_lens(
         None: This function displays HTML and saves it when requested.
 
     Raises:
-        ValueError: If `results` is empty or has an unsupported output shape.
+        ValueError: If `results` is empty, has an unsupported output shape, or
+            lacks the preceding text required for alignment.
 
     Examples:
         >>> results = lens.explain("Interpreto is useful.")
@@ -207,7 +238,7 @@ def plot_lens(
 
     output_rank = next(iter(results.values()))["top_indices"].ndim
     if output_rank == 3:
-        body = _render_language_model(results, inputs, tokenizer)
+        body = _render_language_model(results, inputs, tokenizer, align)
     elif output_rank == 2:
         body = _render_classification(results, inputs, label_names)
     else:

@@ -95,30 +95,39 @@ class LogitLens(nn.Module):
         }
 
     @torch.inference_mode()
-    def explain(self, inputs: str) -> LensResults:
+    def explain(self, inputs: str, align: bool = True) -> LensResults:
         """Return top predictions at every transformer block boundary.
+
+        Causal language-model predictions are aligned with their observed next
+        tokens by default. Classification outputs are unchanged.
 
         Args:
             inputs (str): One text passed to the wrapped model.
+            align (bool): Whether causal predictions should target the token in
+                the corresponding column.
 
         Returns:
             LensResults: Top indices and normalized scores for each residual-stream state.
         """
-        return self._format_outputs(self._get_logits(inputs))
+        logits = self._get_logits(inputs)
+        if align and logits.ndim == 3:
+            if logits.shape[1] < 2:
+                raise ValueError("Aligned explanations require at least two tokens.")
+            logits = logits[:, :-1]
+        return self._format_outputs(logits)
 
     @torch.inference_mode()
     def generate(
         self,
         inputs: str,
         max_new_tokens: int = 10,
-        align: bool = False,
+        align: bool = True,
     ) -> tuple[str, LensResults]:
         """Generate a continuation and explain its tokens.
 
-        By default, each generated token is shown with the prediction made from
-        that position, following the same next-token convention as :meth:`explain`.
-        Set ``align=True`` to shift the positions so each prediction targets the
-        generated token displayed in the same column.
+        Predictions target the generated token displayed in the same column by
+        default. Set ``align=False`` to show the prediction made after each
+        generated token instead.
 
         Args:
             inputs (str): Prompt passed to the wrapped causal language model.
@@ -152,6 +161,6 @@ class LogitLens(nn.Module):
         logits = self._get_logits(sequence.unsqueeze(0))[:, start:stop]
         return generated_text, self._format_outputs(logits)
 
-    def forward(self, inputs: str) -> LensResults:
+    def forward(self, inputs: str, align: bool = True) -> LensResults:
         """Alias for :meth:`explain`."""
-        return self.explain(inputs)
+        return self.explain(inputs, align)
