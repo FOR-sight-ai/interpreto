@@ -38,21 +38,27 @@ from interpreto.typing import LabelNames, LensResults, LensTopKOutput
 from .commons import _build_html_header, _save_html
 
 _LENS_STYLES = """
+.lens-visualization {
+  --lens-background-color: var(--md-default-bg-color, var(--background-color));
+  --lens-text-color: var(--md-default-fg-color, var(--text-color));
+  background: var(--lens-background-color);
+  color: var(--lens-text-color);
+}
 .lens-input { margin: 0 0 .5rem; }
 .lens-legend { display: flex; align-items: center; gap: .4rem; margin: .25rem 0; font-size: .85em; }
 .lens-gradient { width: 7rem; height: .65rem; background: linear-gradient(90deg, rgba(31, 119, 180, .15), rgb(31, 119, 180)); }
 .lens-scroll { max-width: 100%; max-height: 36rem; overflow: auto; }
 .lens-grid { display: grid; width: max-content; gap: 1px; padding: 1px; background: rgba(127, 127, 127, .35); }
 .lens-grid > * { padding: .25rem .45rem; }
-.lens-corner, .lens-header, .lens-layer-label { background: var(--background-color); font-weight: 600; }
+.lens-corner, .lens-header, .lens-layer-label { background: var(--lens-background-color); color: var(--lens-text-color); font-weight: 600; }
 .lens-corner { position: sticky; top: 0; left: 0; z-index: 3; }
 .lens-header { position: sticky; top: 0; z-index: 2; text-align: center; white-space: pre; }
 .lens-layer-label { position: sticky; left: 0; z-index: 1; white-space: nowrap; }
 .lens-cell { min-width: 3.5rem; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: pre; }
 .lens-correct { box-shadow: inset 0 0 0 2px #2ca02c; }
 .lens-correct-key { width: .65rem; height: .65rem; box-shadow: inset 0 0 0 2px #2ca02c; }
-.lens-token { background: var(--background-color); text-align: center; white-space: pre; }
-.lens-cell:hover { outline: 2px solid var(--text-color); z-index: 1; }
+.lens-token { background: var(--lens-background-color); color: var(--lens-text-color); text-align: center; white-space: pre; }
+.lens-cell:hover { outline: 2px solid var(--lens-text-color); z-index: 1; }
 """
 
 
@@ -78,7 +84,7 @@ def _cell(label: str, score: float, title: str, score_bounds: tuple[float, float
     minimum, maximum = score_bounds
     normalized = 0.6 if maximum == minimum else (score - minimum) / (maximum - minimum)
     intensity = 0.15 + 0.85 * min(max(normalized, 0.0), 1.0)
-    text_color = "white" if intensity >= 0.55 else "var(--text-color)"
+    text_color = "white" if intensity >= 0.97 else "var(--lens-text-color)"
     classes = "lens-cell highlighted-word-style lens-correct" if correct else "lens-cell highlighted-word-style"
     return (
         f"<div class='{classes}' "
@@ -244,7 +250,10 @@ def plot_lens(
     else:
         raise ValueError("Lens outputs must contain language-model or classification predictions.")
 
-    html = _build_html_header(f"{_LENS_STYLES}\n{custom_css}", include_js=False) + body + "</body></html>"
+    html = (
+        _build_html_header(f"{_LENS_STYLES}\n{custom_css}", include_js=False)
+        + f"<div class='lens-visualization'>{body}</div></body></html>"
+    )
     if save_path is not None:
         _save_html(html, save_path)
     display(HTML(html))

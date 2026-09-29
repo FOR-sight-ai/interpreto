@@ -276,6 +276,8 @@ def test_plot_lens_renders_every_layer(gpt2_splitter, monkeypatch):
     assert html.index(f">{len(results) - 2}-out</div>") < html.index(">Embeddings</div>")
     assert html.index(">Embeddings</div>") < html.index(">Input</div>")
     assert "correct prediction" in html
+    assert "class='lens-visualization'" in html
+    assert "--lens-background-color: var(--md-default-bg-color, var(--background-color))" in html
     assert "<details" not in html
     assert "<table" not in html
     assert "<script>" not in html
@@ -305,6 +307,14 @@ def test_plot_lens_displays_whitespace_tokens():
     tokenizer = SimpleNamespace(decode=lambda *_args, **_kwargs: "\n")
 
     assert lens_visualizations._decode(tokenizer, 0) == r"\n"
+
+
+def test_plot_lens_uses_contrasting_prediction_text():
+    light_cell = lens_visualizations._cell("token", 0.5, "", (0.0, 1.0))
+    dark_cell = lens_visualizations._cell("token", 1.0, "", (0.0, 1.0))
+
+    assert "color: var(--lens-text-color)" in light_cell
+    assert "color: white" in dark_cell
 
 
 def test_plot_lens_renders_class_names(bert_splitter, monkeypatch):
