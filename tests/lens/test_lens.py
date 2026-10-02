@@ -33,12 +33,34 @@ from types import SimpleNamespace
 import pytest
 import torch
 from torch import nn
+from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification
 
 import interpreto.lens.logit_lens as logit_lens_module
 import interpreto.visualizations.lens as lens_visualizations
 from interpreto import AllLayersSplitter, LogitLens, TunedLens, plot_lens
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+SLOW_MODEL_CASES = [
+    pytest.param(model_name, AutoModelForSequenceClassification, id=model_name.rsplit("/", 1)[-1])
+    for model_name in [
+        "hf-internal-testing/tiny-random-distilbert",
+        "hf-internal-testing/tiny-random-ElectraModel",
+        "hf-internal-testing/tiny-random-roberta",
+        "hf-internal-testing/tiny-xlm-roberta",
+    ]
+] + [
+    pytest.param(model_name, AutoModelForCausalLM, id=model_name.rsplit("/", 1)[-1])
+    for model_name in [
+        "hf-internal-testing/tiny-random-gpt_neo",
+        "hf-internal-testing/tiny-random-gptj",
+        "hf-internal-testing/tiny-random-CodeGenForCausalLM",
+        "hf-internal-testing/tiny-random-FalconModel",
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+        "hf-internal-testing/tiny-random-MistralForCausalLM",
+        "hf-internal-testing/tiny-random-Starcoder2ForCausalLM",
+    ]
+]
 
 
 @pytest.fixture(scope="module")
@@ -60,6 +82,27 @@ def _expected_top_k(logits: torch.Tensor, top_k: int) -> tuple[torch.Tensor, tor
     top_logits, top_indices = logits.topk(top_k, dim=-1)
     top_scores = (top_logits - logits.logsumexp(dim=-1, keepdim=True)).exp()
     return top_indices, top_scores
+
+
+def _assert_logit_lens_matches_model(splitter: AllLayersSplitter) -> None:
+    text = "Interpreto is useful."
+    lens = LogitLens(splitter, top_k=2)
+    results = lens(text, align=False)
+    model_inputs = splitter.tokenizer(text, return_tensors="pt")
+
+    with torch.no_grad():
+        logits = splitter._model(**model_inputs).logits
+    expected_indices, expected_scores = _expected_top_k(logits, top_k=2)
+    final_output = results[splitter.activation_names[-1]]
+
+    assert list(results) == splitter.activation_names
+    torch.testing.assert_close(final_output["top_indices"], expected_indices)
+    torch.testing.assert_close(final_output["top_scores"], expected_scores)
+
+    if splitter._model.can_generate():
+        generated_text, generated_results = lens.generate(text, max_new_tokens=1)
+        assert isinstance(generated_text, str)
+        assert all(output["top_indices"].shape[1] == 1 for output in generated_results.values())
 
 
 def test_logit_lens_processes_all_layers_in_one_head_call(gpt2_splitter, monkeypatch):
@@ -106,6 +149,14 @@ def test_logit_lens_uses_the_same_path_for_classification(bert_splitter):
     assert all(output["top_indices"].shape == (1, 2) for output in results.values())
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize(("model_name", "automodel"), SLOW_MODEL_CASES)
+def test_logit_lens_supports_multiple_architectures(model_name, automodel):
+    splitter = AllLayersSplitter(model_name, automodel=automodel)
+
+    _assert_logit_lens_matches_model(splitter)
+
+
 def test_logit_lens_requires_a_positive_top_k(gpt2_splitter):
     with pytest.raises(ValueError, match="positive"):
         LogitLens(gpt2_splitter, top_k=0)
@@ -141,8 +192,13 @@ def test_logit_lens_traces_generated_ids_without_retokenizing(gpt2_splitter, mon
     generated_ids = torch.tensor([1, 2])
     sequence = torch.cat((model_inputs["input_ids"][0], generated_ids))
     traced_inputs = []
+    generation_calls = []
 
-    monkeypatch.setattr(gpt2_splitter._model, "generate", lambda **_: sequence.unsqueeze(0))
+    def generate(**kwargs):
+        generation_calls.append(kwargs)
+        return sequence.unsqueeze(0)
+
+    monkeypatch.setattr(gpt2_splitter._model, "generate", generate)
     monkeypatch.setattr(gpt2_splitter.tokenizer, "decode", lambda *_args, **_kwargs: "merged token")
 
     def get_logits(inputs):
@@ -158,6 +214,7 @@ def test_logit_lens_traces_generated_ids_without_retokenizing(gpt2_splitter, mon
     generated_text, results = lens.generate("Interpreto helps", max_new_tokens=2)
 
     assert generated_text == "merged token"
+    assert "streamer" in generation_calls[0]
     torch.testing.assert_close(traced_inputs[0], sequence.unsqueeze(0))
     assert all(output["top_indices"].shape[1] == len(generated_ids) for output in results.values())
 
@@ -165,6 +222,11 @@ def test_logit_lens_traces_generated_ids_without_retokenizing(gpt2_splitter, mon
 def test_logit_lens_requires_a_positive_generation_length(gpt2_splitter):
     with pytest.raises(ValueError, match="positive"):
         LogitLens(gpt2_splitter).generate("Interpreto helps", max_new_tokens=0)
+
+
+def test_logit_lens_rejects_generation_for_classification_models(bert_splitter):
+    with pytest.raises(ValueError, match="does not support generation"):
+        LogitLens(bert_splitter).generate("Interpreto helps")
 
 
 def test_lenses_accept_a_repository_id(monkeypatch):

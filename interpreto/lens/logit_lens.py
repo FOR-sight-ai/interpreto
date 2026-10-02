@@ -139,17 +139,21 @@ class LogitLens(nn.Module):
             tuple[str, LensResults]: Generated continuation and its layer predictions.
 
         Raises:
-            ValueError: If ``max_new_tokens`` is not positive.
+            ValueError: If ``max_new_tokens`` is not positive or the wrapped
+                model does not support generation.
         """
         if max_new_tokens < 1:
             raise ValueError("`max_new_tokens` must be positive.")
 
-        tokenizer = self.splitter.tokenizer
-        self.splitter.dispatch()
         model = self.splitter._model
-        model_inputs = tokenizer(inputs, return_tensors="pt").to(model.get_input_embeddings().weight.device)
-        sequence = model.generate(**model_inputs, max_new_tokens=max_new_tokens, do_sample=False)[0]
-        prompt_length = model_inputs["input_ids"].shape[1]
+        if not model.can_generate():
+            raise ValueError("The wrapped model does not support generation.")
+
+        tokenizer = self.splitter.tokenizer
+        prompt_length = tokenizer(inputs, return_tensors="pt")["input_ids"].shape[1]
+        with self.splitter.generate(inputs, max_new_tokens=max_new_tokens, do_sample=False) as tracer:
+            sequence = tracer.result.save()
+        sequence = sequence[0]
         generated_ids = sequence[prompt_length:]
         generated_text = tokenizer.decode(
             generated_ids,
