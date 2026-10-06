@@ -75,8 +75,10 @@ def _assert_activations_and_head(model, tokenizer, layer_path=None):
     assert all(activation.ndim == 3 and activation.shape == activations[0].shape for activation in activations)
 
     with torch.no_grad():
-        expected_logits = model(**tokenizer(text, return_tensors="pt")).logits
-    layer_logits = splitter.apply_head(torch.cat(activations))
+        # Session-scoped models may have been moved to CUDA by another test.
+        inputs = tokenizer(text, return_tensors="pt").to(model.device)
+        expected_logits = model(**inputs).logits
+    layer_logits = splitter.apply_head(torch.cat(activations).to(model.device))
     assert layer_logits.shape[0] == len(activations)
     torch.testing.assert_close(layer_logits[-1:], expected_logits)
 
