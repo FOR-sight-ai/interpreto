@@ -55,9 +55,10 @@ from .probes import (
     SqL2CentroidProbe,
     SVDDCentroidProbe,
 )
-from .splitters import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .splitters import AllLayersSplitter, ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 
 __all__ = [
+    "AllLayersSplitter",
     "BatchTopKSAEConcepts",
     "Cockatiel",
     "ConceptAutoEncoderExplainer",
