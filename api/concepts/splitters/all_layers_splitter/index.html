@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/attributions/methods/gradient_shap/">
+        <link rel="canonical" href="https://for-sight-ai.github.io/interpreto/api/concepts/splitters/all_layers_splitter/">
       
       
         <link rel="prev" href="../../overview/">
       
       
-        <link rel="next" href="../integrated_gradients/">
+        <link rel="next" href="../model_with_split_points/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>GradientShap - Interpreto</title>
+        <title>AllLayersSplitter - Interpreto</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#gradient-shap" class="md-skip">
+        <a href="#all-layers-splitter" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              GradientShap
+              AllLayersSplitter
             
           </span>
         </div>
@@ -283,7 +283,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../overview/" class="md-tabs__link">
+        <a href="../../../attributions/overview/" class="md-tabs__link">
           
   
   
@@ -943,10 +943,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -963,11 +961,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
         
           
           <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
@@ -988,7 +986,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_1">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1006,7 +1004,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../overview/" class="md-nav__link">
+      <a href="../../../attributions/overview/" class="md-nav__link">
         
   
   
@@ -1031,10 +1029,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1065,11 +1061,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
         
           
           <label class="md-nav__link" for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
@@ -1090,7 +1086,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_1_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1105,39 +1101,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m21 9-4-4v3h-7v2h7v3M7 11l-4 4 4 4v-3h7v-2H7z"/></svg>
-  
-  <span class="md-ellipsis">
-    
-  
-    GradientShap
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../attributions/methods/gradient_shap/" class="md-nav__link">
         
   
   
@@ -1155,158 +1122,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GradientShap
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;tokenizer
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;batch_size
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity_aggregation_strategy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;inference_mode
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;input_x_gradient
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;n_perturbations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;baseline
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;noise_std
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1319,7 +1134,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../integrated_gradients/" class="md-nav__link">
+      <a href="../../../attributions/methods/integrated_gradients/" class="md-nav__link">
         
   
   
@@ -1349,7 +1164,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kernelshap/" class="md-nav__link">
+      <a href="../../../attributions/methods/kernelshap/" class="md-nav__link">
         
   
   
@@ -1379,7 +1194,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../lime/" class="md-nav__link">
+      <a href="../../../attributions/methods/lime/" class="md-nav__link">
         
   
   
@@ -1409,7 +1224,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../occlusion/" class="md-nav__link">
+      <a href="../../../attributions/methods/occlusion/" class="md-nav__link">
         
   
   
@@ -1439,7 +1254,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../saliency/" class="md-nav__link">
+      <a href="../../../attributions/methods/saliency/" class="md-nav__link">
         
   
   
@@ -1469,7 +1284,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../smoothgrad/" class="md-nav__link">
+      <a href="../../../attributions/methods/smoothgrad/" class="md-nav__link">
         
   
   
@@ -1499,7 +1314,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../squaregrad/" class="md-nav__link">
+      <a href="../../../attributions/methods/squaregrad/" class="md-nav__link">
         
   
   
@@ -1529,7 +1344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sobol/" class="md-nav__link">
+      <a href="../../../attributions/methods/sobol/" class="md-nav__link">
         
   
   
@@ -1559,7 +1374,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vargrad/" class="md-nav__link">
+      <a href="../../../attributions/methods/vargrad/" class="md-nav__link">
         
   
   
@@ -1653,7 +1468,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../metrics/deletion/" class="md-nav__link">
+      <a href="../../../attributions/metrics/deletion/" class="md-nav__link">
         
   
   
@@ -1681,7 +1496,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../metrics/insertion/" class="md-nav__link">
+      <a href="../../../attributions/metrics/insertion/" class="md-nav__link">
         
   
   
@@ -1722,8 +1537,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -1746,11 +1563,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
         
           
           <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
@@ -1771,7 +1588,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1789,7 +1606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/overview/" class="md-nav__link">
+      <a href="../../overview/" class="md-nav__link">
         
   
   
@@ -1814,8 +1631,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -1834,11 +1653,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2_2" checked>
         
           
           <label class="md-nav__link" for="__nav_3_2_2" id="__nav_3_2_2_label" tabindex="0">
@@ -1859,7 +1678,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_2_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_2_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1874,10 +1693,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../concepts/splitters/all_layers_splitter/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AllLayersSplitter
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1893,6 +1739,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AllLayersSplitter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" AllLayersSplitter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(model_or_repo_id)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model_or_repo_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(automodel)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;automodel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(tokenizer)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;tokenizer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(config)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;config
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(device_map)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(layer_path)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;layer_path
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(**kwargs)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;**kwargs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter.activation_names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;activation_names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter.apply_head" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;apply_head
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter.get_activations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_activations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1905,7 +1898,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/splitters/model_with_split_points/" class="md-nav__link">
+      <a href="../model_with_split_points/" class="md-nav__link">
         
   
   
@@ -1935,7 +1928,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/splitters/splitter_for_classification/" class="md-nav__link">
+      <a href="../splitter_for_classification/" class="md-nav__link">
         
   
   
@@ -1965,7 +1958,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/splitters/splitter_for_generation/" class="md-nav__link">
+      <a href="../splitter_for_generation/" class="md-nav__link">
         
   
   
@@ -2003,7 +1996,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/probes/" class="md-nav__link">
+      <a href="../../probes/" class="md-nav__link">
         
   
   
@@ -2095,7 +2088,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/concept_spaces/base/" class="md-nav__link">
+      <a href="../../concept_spaces/base/" class="md-nav__link">
         
   
   
@@ -2125,7 +2118,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/concept_spaces/cockatiel/" class="md-nav__link">
+      <a href="../../concept_spaces/cockatiel/" class="md-nav__link">
         
   
   
@@ -2155,7 +2148,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/concept_spaces/neurons_as_concepts/" class="md-nav__link">
+      <a href="../../concept_spaces/neurons_as_concepts/" class="md-nav__link">
         
   
   
@@ -2185,7 +2178,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/concept_spaces/optim/" class="md-nav__link">
+      <a href="../../concept_spaces/optim/" class="md-nav__link">
         
   
   
@@ -2215,7 +2208,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/concept_spaces/sae/" class="md-nav__link">
+      <a href="../../concept_spaces/sae/" class="md-nav__link">
         
   
   
@@ -2313,7 +2306,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/interpretations/base/" class="md-nav__link">
+      <a href="../../interpretations/base/" class="md-nav__link">
         
   
   
@@ -2341,7 +2334,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/interpretations/topk_inputs/" class="md-nav__link">
+      <a href="../../interpretations/topk_inputs/" class="md-nav__link">
         
   
   
@@ -2371,7 +2364,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/interpretations/llm_labels/" class="md-nav__link">
+      <a href="../../interpretations/llm_labels/" class="md-nav__link">
         
   
   
@@ -2401,7 +2394,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/interpretations/concept_attributions/" class="md-nav__link">
+      <a href="../../interpretations/concept_attributions/" class="md-nav__link">
         
   
   
@@ -2501,7 +2494,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/overview/" class="md-nav__link">
+      <a href="../../metrics/overview/" class="md-nav__link">
         
   
   
@@ -2531,7 +2524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/consim/" class="md-nav__link">
+      <a href="../../metrics/consim/" class="md-nav__link">
         
   
   
@@ -2561,7 +2554,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/dictionary_metrics/" class="md-nav__link">
+      <a href="../../metrics/dictionary_metrics/" class="md-nav__link">
         
   
   
@@ -2591,7 +2584,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/reconstruction_metrics/" class="md-nav__link">
+      <a href="../../metrics/reconstruction_metrics/" class="md-nav__link">
         
   
   
@@ -2621,7 +2614,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../concepts/metrics/sparsity_metrics/" class="md-nav__link">
+      <a href="../../metrics/sparsity_metrics/" class="md-nav__link">
         
   
   
@@ -2858,29 +2851,41 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap" class="md-nav__link">
+  <a href="#interpreto.AllLayersSplitter" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;GradientShap
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AllLayersSplitter
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" AllLayersSplitter">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(model_or_repo_id)" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model_or_repo_id
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(automodel)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;model
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;automodel
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(tokenizer)" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;tokenizer
@@ -2889,103 +2894,86 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(config)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;batch_size
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;config
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(device_map)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device_map
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(layer_path)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;granularity_aggregation_strategy
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;layer_path
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter(**kwargs)" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;device
+        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;**kwargs
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter.activation_names" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;inference_mode
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;activation_names
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter.apply_head" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;input_x_gradient
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;apply_head
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#interpreto.AllLayersSplitter.get_activations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;n_perturbations
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_activations
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;baseline
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;noise_std
-      
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -3009,41 +2997,39 @@
   
 
 
-<h1 id="gradient-shap">Gradient Shap<a class="headerlink" href="#gradient-shap" title="Permanent link">&para;</a></h1>
+<h1 id="all-layers-splitter">All Layers Splitter<a class="headerlink" href="#all-layers-splitter" title="Permanent link">&para;</a></h1>
+<p><code>AllLayersSplitter</code> captures the residual stream before the first transformer block and after every block. It also
+applies the wrapped model's native normalization, pooling, and prediction head to one or more residual states.</p>
 
 
 <div class="doc doc-object doc-class">
 
 
 
-<a id="interpreto.attributions.methods.gradient_shap.GradientShap"></a>
-    <div class="doc doc-contents first">
-            <p class="doc doc-class-bases">
-              Bases: <code><span title="interpreto.attributions.base.MultitaskExplainerMixin">MultitaskExplainerMixin</span></code>, <code><span title="interpreto.attributions.base.AttributionExplainer">AttributionExplainer</span></code></p>
+<h2 id="interpreto.AllLayersSplitter" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">interpreto.AllLayersSplitter</span>
 
 
-
-        <p>GradientSHAP is a gradient-based Shapley value estimator that computes attributions
-by integrating model gradients along a path between a baseline (reference) and
-the input. It approximates Shapley values by averaging multiple stochastic
-integrated gradients across randomly sampled paths.</p>
-<p>By combining ideas from Integrated Gradients and Shapley value theory,
-GradientSHAP provides additive feature attributions with strong consistency
-guarantees, while capturing non-linear effects.</p>
-<p><strong>Reference:</strong>
-Lundberg and Lee (2017). <em>A Unified Approach to Interpreting Model Predictions.</em>
-<a href="https://arxiv.org/abs/1705.07874">Paper</a></p>
-
-
-<p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">interpreto</span><span class="w"> </span><span class="kn">import</span> <span class="n">GradientShap</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">method</span> <span class="o">=</span> <span class="n">GradientShap</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span>                      <span class="n">n_perturbations</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span>                      <span class="n">baseline</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span>                      <span class="n">noise_std</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,)</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">explanations</span> <span class="o">=</span> <span class="n">method</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<a href="#interpreto.AllLayersSplitter" class="headerlink" title="Permanent link">&para;</a></h2>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">AllLayersSplitter</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="model_or_repo_id (interpreto.AllLayersSplitter(model_or_repo_id))" href="#interpreto.AllLayersSplitter(model_or_repo_id)">model_or_repo_id</a></span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="automodel (interpreto.AllLayersSplitter(automodel))" href="#interpreto.AllLayersSplitter(automodel)">automodel</a></span><span class="o">=</span><span class="n"><span title="transformers.AutoModelForCausalLM">AutoModelForCausalLM</span></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="tokenizer (interpreto.AllLayersSplitter(tokenizer))" href="#interpreto.AllLayersSplitter(tokenizer)">tokenizer</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="config (interpreto.AllLayersSplitter(config))" href="#interpreto.AllLayersSplitter(config)">config</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="device_map (interpreto.AllLayersSplitter(device_map))" href="#interpreto.AllLayersSplitter(device_map)">device_map</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-internal" title="layer_path (interpreto.AllLayersSplitter(layer_path))" href="#interpreto.AllLayersSplitter(layer_path)">layer_path</a></span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n"><a class="autorefs autorefs-internal" title="**kwargs (interpreto.AllLayersSplitter(**kwargs))" href="#interpreto.AllLayersSplitter(**kwargs)">kwargs</a></span><span class="p">)</span>
 </code></pre></div>
 
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="nnsight.modeling.language.LanguageModel">LanguageModel</span></code></p>
+
+
+
+        <p>Extract the residual stream before and after every transformer block.</p>
+<p>The transformer blocks are inferred from the model configuration or selected
+explicitly with <code>layer_path</code>. Activations are returned in model order: the
+input to the first block followed by the output of every block. A model with
+<code>L</code> transformer blocks therefore returns <code>L + 1</code> tensors of shape
+<code>(1, sequence_length, model_width)</code>.</p>
+<p>This splitter is intended for methods that compare representations across
+model depths, such as Logit Lens and Tuned Lens. It does not implement the
+concept-specific <code>BaseSplitter</code> interface because there is no single split
+point or latent representation.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3059,14 +3045,15 @@ Lundberg and Lee (2017). <em>A Unified Approach to Interpreting Model Prediction
       <tbody>
           <tr class="doc-section-item">
             <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="doc doc-heading doc-heading-parameter">                  <code>model</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(model)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+<h3 id="interpreto.AllLayersSplitter(model_or_repo_id)" class="doc doc-heading doc-heading-parameter">                  <code>model_or_repo_id</code>
+<a href="#interpreto.AllLayersSplitter(model_or_repo_id)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="transformers.PreTrainedModel">PreTrainedModel</span></code>
+                  <code><span title="str">str</span> | <span title="transformers.PreTrainedModel">PreTrainedModel</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>model to explain</p>
+                <p>Hugging Face repository ID,
+local checkpoint path, or preloaded model.</p>
               </div>
             </td>
             <td>
@@ -3075,89 +3062,32 @@ Lundberg and Lee (2017). <em>A Unified Approach to Interpreting Model Prediction
           </tr>
           <tr class="doc-section-item">
             <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="doc doc-heading doc-heading-parameter">                  <code>tokenizer</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(tokenizer)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+<h3 id="interpreto.AllLayersSplitter(automodel)" class="doc doc-heading doc-heading-parameter">                  <code>automodel</code>
+<a href="#interpreto.AllLayersSplitter(automodel)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="transformers.PreTrainedTokenizer">PreTrainedTokenizer</span></code>
+                  <code><span title="type">type</span>[<span title="transformers.AutoModel">AutoModel</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Hugging Face tokenizer associated with the model</p>
+                <p>Hugging Face AutoClass used when loading a
+model from a repository ID or local path.</p>
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code><span title="transformers.AutoModelForCausalLM">AutoModelForCausalLM</span></code>
             </td>
           </tr>
           <tr class="doc-section-item">
             <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="doc doc-heading doc-heading-parameter">                  <code>batch_size</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(batch_size)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+<h3 id="interpreto.AllLayersSplitter(tokenizer)" class="doc doc-heading doc-heading-parameter">                  <code>tokenizer</code>
+<a href="#interpreto.AllLayersSplitter(tokenizer)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="int">int</span></code>
+                  <code><span title="transformers.PreTrainedTokenizerBase">PreTrainedTokenizerBase</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>batch size for the attribution method</p>
-              </div>
-            </td>
-            <td>
-                  <code>4</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="doc doc-heading doc-heading-parameter">                  <code>granularity</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="interpreto.commons.granularity.Granularity">Granularity</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The level of granularity for the explanation.
-Options are: <code>ALL_TOKENS</code>, <code>TOKEN</code>, <code>WORD</code>, or <code>SENTENCE</code>.
-Defaults to Granularity.WORD.
-To obtain it, <code>from interpreto import Granularity</code> then <code>Granularity.WORD</code>.</p>
-              </div>
-            </td>
-            <td>
-                  <code><span title="interpreto.commons.granularity.Granularity.WORD">WORD</span></code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="doc doc-heading doc-heading-parameter">                  <code>granularity_aggregation_strategy</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(granularity_aggregation_strategy)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="            interpreto.concepts.splitters.model_with_split_points.GranularityAggregationStrategy (interpreto.commons.granularity.GranularityAggregationStrategy)" href="../../../concepts/splitters/model_with_split_points/#interpreto.concepts.splitters.model_with_split_points.GranularityAggregationStrategy">GranularityAggregationStrategy</a></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>how to aggregate token-level attributions into granularity scores.
-Options are: MEAN, MAX, MIN, SUM, and SIGNED_MAX.
-Ignored for <code>granularity</code> set to <code>ALL_TOKENS</code> or <code>TOKEN</code>.</p>
-              </div>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="            MEAN
-
-
-  
-      class-attribute
-      instance-attribute
-   (interpreto.commons.granularity.GranularityAggregationStrategy.MEAN)" href="../../../concepts/splitters/model_with_split_points/#interpreto.concepts.splitters.model_with_split_points.GranularityAggregationStrategy.MEAN">MEAN</a></code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="doc doc-heading doc-heading-parameter">                  <code>device</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(device)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="torch.device">device</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>device on which the attribution method will be run</p>
+                <p>Tokenizer associated with a
+preloaded model.</p>
               </div>
             </td>
             <td>
@@ -3166,64 +3096,15 @@ Ignored for <code>granularity</code> set to <code>ALL_TOKENS</code> or <code>TOK
           </tr>
           <tr class="doc-section-item">
             <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="doc doc-heading doc-heading-parameter">                  <code>inference_mode</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(inference_mode)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+<h3 id="interpreto.AllLayersSplitter(config)" class="doc doc-heading doc-heading-parameter">                  <code>config</code>
+<a href="#interpreto.AllLayersSplitter(config)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="collections.abc.Callable">Callable</span>[[<span title="torch.Tensor">Tensor</span>], <span title="torch.Tensor">Tensor</span>]</code>
+                  <code><span title="transformers.PretrainedConfig">PretrainedConfig</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The mode used for inference.
-It can be either one of LOGITS, SOFTMAX, or LOG_SOFTMAX. Use InferenceModes to choose the appropriate mode.</p>
-              </div>
-            </td>
-            <td>
-                  <code><span title="interpreto.attributions.inference_wrappers.inference_wrapper.InferenceModes.LOGITS">LOGITS</span></code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="doc doc-heading doc-heading-parameter">                  <code>input_x_gradient</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(input_x_gradient)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>If True, multiplies the input embeddings with
-their gradients before aggregation. Defaults to <code>True</code>.</p>
-              </div>
-            </td>
-            <td>
-                  <code>True</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="doc doc-heading doc-heading-parameter">                  <code>n_perturbations</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(n_perturbations)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>the number of interpolations to generate</p>
-              </div>
-            </td>
-            <td>
-                  <code>10</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="doc doc-heading doc-heading-parameter">                  <code>baseline</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(baseline)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
-            <td>
-                  <code><span title="torch.Tensor">Tensor</span> | <span title="float">float</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>the baseline to use for the interpolations</p>
+                <p>Optional model configuration passed
+to the model loader.</p>
               </div>
             </td>
             <td>
@@ -3232,30 +3113,183 @@ their gradients before aggregation. Defaults to <code>True</code>.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-<h2 id="interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="doc doc-heading doc-heading-parameter">                  <code>noise_std</code>
-<a href="#interpreto.attributions.methods.gradient_shap.GradientShap(noise_std)" class="headerlink" title="Permanent link">&para;</a></h2>            </td>
+<h3 id="interpreto.AllLayersSplitter(device_map)" class="doc doc-heading doc-heading-parameter">                  <code>device_map</code>
+<a href="#interpreto.AllLayersSplitter(device_map)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
             <td>
-                  <code><span title="float">float</span></code>
+                  <code><span title="torch.device">device</span> | <span title="str">str</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>the standard deviation of the noise added to the baseline</p>
+                <p>Device map passed to the model
+loader.</p>
               </div>
             </td>
             <td>
-                  <code>0.1</code>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="interpreto.AllLayersSplitter(layer_path)" class="doc doc-heading doc-heading-parameter">                  <code>layer_path</code>
+<a href="#interpreto.AllLayersSplitter(layer_path)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to the transformer block <code>ModuleList</code>,
+relative to the Hugging Face model. Required when it cannot be
+identified unambiguously from <code>config.num_hidden_layers</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="interpreto.AllLayersSplitter(**kwargs)" class="doc doc-heading doc-heading-parameter">                  <code>**kwargs</code>
+<a href="#interpreto.AllLayersSplitter(**kwargs)" class="headerlink" title="Permanent link">&para;</a></h3>            </td>
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Additional arguments passed to NNsight's <code>LanguageModel</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>{}</code>
             </td>
           </tr>
       </tbody>
     </table>
 
 
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="interpreto.concepts.splitters.base_splitter.InitializationError">InitializationError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a preloaded model is provided without a tokenizer.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If a tokenizer cannot be inferred for a repository ID.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <blockquote>
+<blockquote>
+<blockquote>
+<p>from transformers import AutoModelForCausalLM
+from interpreto import AllLayersSplitter
+splitter = AllLayersSplitter("gpt2")
+activations = splitter.get_activations("Interpreto is useful.")
+len(activations) == len(splitter.split_points) + 1
+True</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</details>
 
 
 
 
 
 
+
+                  <details class="mkdocstrings-source">
+                    <summary>Source code in <code>interpreto/concepts/splitters/all_layers_splitter.py</code></summary>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-88"> 88</a></span>
+<span class="normal"><a href="#__codelineno-0-89"> 89</a></span>
+<span class="normal"><a href="#__codelineno-0-90"> 90</a></span>
+<span class="normal"><a href="#__codelineno-0-91"> 91</a></span>
+<span class="normal"><a href="#__codelineno-0-92"> 92</a></span>
+<span class="normal"><a href="#__codelineno-0-93"> 93</a></span>
+<span class="normal"><a href="#__codelineno-0-94"> 94</a></span>
+<span class="normal"><a href="#__codelineno-0-95"> 95</a></span>
+<span class="normal"><a href="#__codelineno-0-96"> 96</a></span>
+<span class="normal"><a href="#__codelineno-0-97"> 97</a></span>
+<span class="normal"><a href="#__codelineno-0-98"> 98</a></span>
+<span class="normal"><a href="#__codelineno-0-99"> 99</a></span>
+<span class="normal"><a href="#__codelineno-0-100">100</a></span>
+<span class="normal"><a href="#__codelineno-0-101">101</a></span>
+<span class="normal"><a href="#__codelineno-0-102">102</a></span>
+<span class="normal"><a href="#__codelineno-0-103">103</a></span>
+<span class="normal"><a href="#__codelineno-0-104">104</a></span>
+<span class="normal"><a href="#__codelineno-0-105">105</a></span>
+<span class="normal"><a href="#__codelineno-0-106">106</a></span>
+<span class="normal"><a href="#__codelineno-0-107">107</a></span>
+<span class="normal"><a href="#__codelineno-0-108">108</a></span>
+<span class="normal"><a href="#__codelineno-0-109">109</a></span>
+<span class="normal"><a href="#__codelineno-0-110">110</a></span>
+<span class="normal"><a href="#__codelineno-0-111">111</a></span>
+<span class="normal"><a href="#__codelineno-0-112">112</a></span>
+<span class="normal"><a href="#__codelineno-0-113">113</a></span>
+<span class="normal"><a href="#__codelineno-0-114">114</a></span>
+<span class="normal"><a href="#__codelineno-0-115">115</a></span>
+<span class="normal"><a href="#__codelineno-0-116">116</a></span>
+<span class="normal"><a href="#__codelineno-0-117">117</a></span>
+<span class="normal"><a href="#__codelineno-0-118">118</a></span>
+<span class="normal"><a href="#__codelineno-0-119">119</a></span>
+<span class="normal"><a href="#__codelineno-0-120">120</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-88" name="__codelineno-0-88"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-89" name="__codelineno-0-89"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-90" name="__codelineno-0-90"></a>    <span class="n">model_or_repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">PreTrainedModel</span><span class="p">,</span>
+<a id="__codelineno-0-91" name="__codelineno-0-91"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-92" name="__codelineno-0-92"></a>    <span class="n">automodel</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">AutoModel</span><span class="p">]</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="p">,</span>
+<a id="__codelineno-0-93" name="__codelineno-0-93"></a>    <span class="n">tokenizer</span><span class="p">:</span> <span class="n">PreTrainedTokenizerBase</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="n">config</span><span class="p">:</span> <span class="n">PretrainedConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-95" name="__codelineno-0-95"></a>    <span class="n">device_map</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-96" name="__codelineno-0-96"></a>    <span class="n">layer_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-97" name="__codelineno-0-97"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-99" name="__codelineno-0-99"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_or_repo_id</span><span class="p">,</span> <span class="n">PreTrainedModel</span><span class="p">)</span> <span class="ow">and</span> <span class="n">tokenizer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-100" name="__codelineno-0-100"></a>        <span class="k">raise</span> <span class="n">InitializationError</span><span class="p">(</span>
+<a id="__codelineno-0-101" name="__codelineno-0-101"></a>            <span class="s2">"Tokenizer is not set. When providing a model instance, the tokenizer must be set."</span>
+<a id="__codelineno-0-102" name="__codelineno-0-102"></a>        <span class="p">)</span>
+<a id="__codelineno-0-103" name="__codelineno-0-103"></a>
+<a id="__codelineno-0-104" name="__codelineno-0-104"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-105" name="__codelineno-0-105"></a>        <span class="n">model_or_repo_id</span><span class="p">,</span>
+<a id="__codelineno-0-106" name="__codelineno-0-106"></a>        <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+<a id="__codelineno-0-107" name="__codelineno-0-107"></a>        <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span>
+<a id="__codelineno-0-108" name="__codelineno-0-108"></a>        <span class="n">automodel</span><span class="o">=</span><span class="n">automodel</span><span class="p">,</span>
+<a id="__codelineno-0-109" name="__codelineno-0-109"></a>        <span class="n">device_map</span><span class="o">=</span><span class="n">device_map</span><span class="p">,</span>
+<a id="__codelineno-0-110" name="__codelineno-0-110"></a>        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+<a id="__codelineno-0-111" name="__codelineno-0-111"></a>    <span class="p">)</span>
+<a id="__codelineno-0-112" name="__codelineno-0-112"></a>
+<a id="__codelineno-0-113" name="__codelineno-0-113"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-114" name="__codelineno-0-114"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"`tokenizer` must be provided when it cannot be inferred from the model."</span><span class="p">)</span>
+<a id="__codelineno-0-115" name="__codelineno-0-115"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-116" name="__codelineno-0-116"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token</span>
+<a id="__codelineno-0-117" name="__codelineno-0-117"></a>
+<a id="__codelineno-0-118" name="__codelineno-0-118"></a>    <span class="n">layer_name</span><span class="p">,</span> <span class="n">layers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_layers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="n">layer_path</span><span class="p">)</span>
+<a id="__codelineno-0-119" name="__codelineno-0-119"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">split_points</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"model.</span><span class="si">{</span><span class="n">layer_name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">layers</span><span class="p">))]</span>
+<a id="__codelineno-0-120" name="__codelineno-0-120"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_block_output_arity</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+                  </details>
 
 
 
@@ -3267,8 +3301,283 @@ their gradients before aggregation. Defaults to <code>True</code>.</p>
 
 
 
+<div class="doc doc-object doc-attribute">
 
 
+
+<h3 id="interpreto.AllLayersSplitter.activation_names" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">activation_names</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+<a href="#interpreto.AllLayersSplitter.activation_names" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">activation_names</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Names of the residual states returned by :meth:<code>get_activations</code>.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="interpreto.AllLayersSplitter.apply_head" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">apply_head</span>
+
+
+<a href="#interpreto.AllLayersSplitter.apply_head" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">apply_head</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="activations (interpreto.AllLayersSplitter.apply_head(activations))" href="#interpreto.AllLayersSplitter.apply_head(activations)">activations</a></span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Apply the wrapped model's prediction head to residual activations.</p>
+<p>The transformer blocks are skipped and <code>activations</code> are used as
+their output. The wrapped model then executes its own downstream
+normalization, pooling, and prediction head. This avoids
+architecture-specific head names and preserves functional operations
+implemented in model <code>forward</code> methods.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="interpreto.AllLayersSplitter.apply_head(activations)" class="doc doc-heading doc-heading-parameter">                  <code>activations</code>
+<a href="#interpreto.AllLayersSplitter.apply_head(activations)" class="headerlink" title="Permanent link">&para;</a></h4>            </td>
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Residual activations with shape
+<code>(n, sequence_length, model_width)</code>. The leading dimension
+may represent several layer boundaries from the same input.
+Inputs are moved to the model device while preserving gradients.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="torch.Tensor">Tensor</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>torch.Tensor: Logits returned by the wrapped model for every
+activation in the leading dimension.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>interpreto/concepts/splitters/all_layers_splitter.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-231">231</a></span>
+<span class="normal"><a href="#__codelineno-0-232">232</a></span>
+<span class="normal"><a href="#__codelineno-0-233">233</a></span>
+<span class="normal"><a href="#__codelineno-0-234">234</a></span>
+<span class="normal"><a href="#__codelineno-0-235">235</a></span>
+<span class="normal"><a href="#__codelineno-0-236">236</a></span>
+<span class="normal"><a href="#__codelineno-0-237">237</a></span>
+<span class="normal"><a href="#__codelineno-0-238">238</a></span>
+<span class="normal"><a href="#__codelineno-0-239">239</a></span>
+<span class="normal"><a href="#__codelineno-0-240">240</a></span>
+<span class="normal"><a href="#__codelineno-0-241">241</a></span>
+<span class="normal"><a href="#__codelineno-0-242">242</a></span>
+<span class="normal"><a href="#__codelineno-0-243">243</a></span>
+<span class="normal"><a href="#__codelineno-0-244">244</a></span>
+<span class="normal"><a href="#__codelineno-0-245">245</a></span>
+<span class="normal"><a href="#__codelineno-0-246">246</a></span>
+<span class="normal"><a href="#__codelineno-0-247">247</a></span>
+<span class="normal"><a href="#__codelineno-0-248">248</a></span>
+<span class="normal"><a href="#__codelineno-0-249">249</a></span>
+<span class="normal"><a href="#__codelineno-0-250">250</a></span>
+<span class="normal"><a href="#__codelineno-0-251">251</a></span>
+<span class="normal"><a href="#__codelineno-0-252">252</a></span>
+<span class="normal"><a href="#__codelineno-0-253">253</a></span>
+<span class="normal"><a href="#__codelineno-0-254">254</a></span>
+<span class="normal"><a href="#__codelineno-0-255">255</a></span>
+<span class="normal"><a href="#__codelineno-0-256">256</a></span>
+<span class="normal"><a href="#__codelineno-0-257">257</a></span>
+<span class="normal"><a href="#__codelineno-0-258">258</a></span>
+<span class="normal"><a href="#__codelineno-0-259">259</a></span>
+<span class="normal"><a href="#__codelineno-0-260">260</a></span>
+<span class="normal"><a href="#__codelineno-0-261">261</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-231" name="__codelineno-0-231"></a><span class="k">def</span><span class="w"> </span><span class="nf">apply_head</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">activations</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a><span class="w">    </span><span class="sd">"""Apply the wrapped model's prediction head to residual activations.</span>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a>
+<a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="sd">    The transformer blocks are skipped and ``activations`` are used as</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="sd">    their output. The wrapped model then executes its own downstream</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">    normalization, pooling, and prediction head. This avoids</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="sd">    architecture-specific head names and preserves functional operations</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">    implemented in model ``forward`` methods.</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a><span class="sd">        activations (torch.Tensor): Residual activations with shape</span>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="sd">            ``(n, sequence_length, model_width)``. The leading dimension</span>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="sd">            may represent several layer boundaries from the same input.</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="sd">            Inputs are moved to the model device while preserving gradients.</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a><span class="sd">        torch.Tensor: Logits returned by the wrapped model for every</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a><span class="sd">            activation in the leading dimension.</span>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a><span class="sd">    """</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="c1"># NNsight's activation cache can reside on CPU even for a CUDA model.</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a>    <span class="c1"># Tensor.to preserves the gradient path back to the caller's activations.</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>    <span class="n">activations</span> <span class="o">=</span> <span class="n">activations</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="n">embedding_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">get_input_embeddings</span><span class="p">()</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a>    <span class="c1"># The embedding code still validates its input even though every block is skipped.</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="n">inputs_embeds</span> <span class="o">=</span> <span class="n">activations</span><span class="o">.</span><span class="n">new_zeros</span><span class="p">((</span><span class="o">*</span><span class="n">activations</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">embedding_width</span><span class="p">))</span>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">inputs_embeds</span><span class="o">=</span><span class="n">inputs_embeds</span><span class="p">):</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a>        <span class="k">for</span> <span class="n">split_point</span><span class="p">,</span> <span class="n">output_arity</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">split_points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_block_output_arity</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a>            <span class="n">replacement</span> <span class="o">=</span> <span class="n">activations</span> <span class="k">if</span> <span class="n">output_arity</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">activations</span><span class="p">,)</span> <span class="o">+</span> <span class="p">(</span><span class="kc">None</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="n">output_arity</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">split_point</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">"model."</span><span class="p">))</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a>        <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">logits</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="k">return</span> <span class="n">logits</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="interpreto.AllLayersSplitter.get_activations" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_activations</span>
+
+
+<a href="#interpreto.AllLayersSplitter.get_activations" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">get_activations</span><span class="p">(</span><span class="n"><a class="autorefs autorefs-internal" title="inputs (interpreto.AllLayersSplitter.get_activations(inputs))" href="#interpreto.AllLayersSplitter.get_activations(inputs)">inputs</a></span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Extract the residual stream for one text input.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="interpreto.AllLayersSplitter.get_activations(inputs)" class="doc doc-heading doc-heading-parameter">                  <code>inputs</code>
+<a href="#interpreto.AllLayersSplitter.get_activations(inputs)" class="headerlink" title="Permanent link">&para;</a></h4>            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Text passed to the wrapped model.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="list">list</span>[<span title="torch.Tensor">Tensor</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>list[torch.Tensor]: Input to the first transformer block followed by
+every transformer block output in <code>split_points</code> order.
+Each tensor has shape <code>(1, sequence_length, model_width)</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>interpreto/concepts/splitters/all_layers_splitter.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-218">218</a></span>
+<span class="normal"><a href="#__codelineno-0-219">219</a></span>
+<span class="normal"><a href="#__codelineno-0-220">220</a></span>
+<span class="normal"><a href="#__codelineno-0-221">221</a></span>
+<span class="normal"><a href="#__codelineno-0-222">222</a></span>
+<span class="normal"><a href="#__codelineno-0-223">223</a></span>
+<span class="normal"><a href="#__codelineno-0-224">224</a></span>
+<span class="normal"><a href="#__codelineno-0-225">225</a></span>
+<span class="normal"><a href="#__codelineno-0-226">226</a></span>
+<span class="normal"><a href="#__codelineno-0-227">227</a></span>
+<span class="normal"><a href="#__codelineno-0-228">228</a></span>
+<span class="normal"><a href="#__codelineno-0-229">229</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_activations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="w">    </span><span class="sd">"""Extract the residual stream for one text input.</span>
+<a id="__codelineno-0-220" name="__codelineno-0-220"></a>
+<a id="__codelineno-0-221" name="__codelineno-0-221"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a><span class="sd">        inputs (str): Text passed to the wrapped model.</span>
+<a id="__codelineno-0-223" name="__codelineno-0-223"></a>
+<a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-225" name="__codelineno-0-225"></a><span class="sd">        list[torch.Tensor]: Input to the first transformer block followed by</span>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a><span class="sd">            every transformer block output in ``split_points`` order.</span>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="sd">            Each tensor has shape ``(1, sequence_length, model_width)``.</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="sd">    """</span>
+<a id="__codelineno-0-229" name="__codelineno-0-229"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trace_activations</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
 
 
 
@@ -3283,9 +3592,6 @@ their gradients before aggregation. Defaults to <code>True</code>.</p>
 
 
 
-
-  
-  
 
 
 
@@ -3334,13 +3640,13 @@ their gradients before aggregation. Defaults to <code>True</code>.</p>
         
         
           
-          <a href="../integrated_gradients/" class="md-footer__link md-footer__link--next" aria-label="Next: IntegratedGradients">
+          <a href="../model_with_split_points/" class="md-footer__link md-footer__link--next" aria-label="Next: ModelWithSplitPoints">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                IntegratedGradients
+                ModelWithSplitPoints
               </div>
             </div>
             <div class="md-footer__button md-icon">
