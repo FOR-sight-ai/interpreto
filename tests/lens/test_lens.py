@@ -88,10 +88,10 @@ def _assert_logit_lens_matches_model(splitter: AllLayersSplitter) -> None:
     text = "Interpreto is useful."
     lens = LogitLens(splitter, top_k=2)
     results = lens(text, align=False)
-    model_inputs = splitter.tokenizer(text, return_tensors="pt")
+    model_inputs = splitter.tokenizer(text, return_tensors="pt").to(splitter._model.device)
 
     with torch.no_grad():
-        logits = splitter._model(**model_inputs).logits
+        logits = splitter._model(**model_inputs).logits.cpu()
     expected_indices, expected_scores = _expected_top_k(logits, top_k=2)
     final_output = results[splitter.activation_names[-1]]
 
@@ -128,10 +128,10 @@ def test_logit_lens_final_output_matches_the_model(gpt2_splitter):
     text = "Interpreto is useful."
     results = LogitLens(gpt2_splitter, top_k=3)(text)
     unaligned_results = LogitLens(gpt2_splitter, top_k=3)(text, align=False)
-    model_inputs = gpt2_splitter.tokenizer(text, return_tensors="pt")
+    model_inputs = gpt2_splitter.tokenizer(text, return_tensors="pt").to(gpt2_splitter._model.device)
 
     with torch.no_grad():
-        logits = gpt2_splitter._model(**model_inputs).logits
+        logits = gpt2_splitter._model(**model_inputs).logits.cpu()
     expected_indices, expected_scores = _expected_top_k(logits, top_k=3)
     final_layer = gpt2_splitter.activation_names[-1]
     final_output = results[final_layer]
@@ -165,9 +165,9 @@ def test_logit_lens_requires_a_positive_top_k(gpt2_splitter):
 def test_logit_lens_generation_uses_next_token_convention_and_can_align(gpt2_splitter):
     lens = LogitLens(gpt2_splitter, top_k=3)
     prompt = "Interpreto helps"
-    model_inputs = gpt2_splitter.tokenizer(prompt, return_tensors="pt")
+    model_inputs = gpt2_splitter.tokenizer(prompt, return_tensors="pt").to(gpt2_splitter._model.device)
     sequence = gpt2_splitter._model.generate(**model_inputs, max_new_tokens=3, do_sample=False)[0]
-    generated_ids = sequence[model_inputs["input_ids"].shape[1] :]
+    generated_ids = sequence[model_inputs["input_ids"].shape[1] :].cpu()
 
     aligned_text, aligned_results = lens.generate(prompt, max_new_tokens=3)
     generated_text, results = lens.generate(prompt, max_new_tokens=3, align=False)

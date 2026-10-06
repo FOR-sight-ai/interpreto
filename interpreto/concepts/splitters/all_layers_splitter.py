@@ -241,11 +241,15 @@ class AllLayersSplitter(LanguageModel):
             activations (torch.Tensor): Residual activations with shape
                 ``(n, sequence_length, model_width)``. The leading dimension
                 may represent several layer boundaries from the same input.
+                Inputs are moved to the model device while preserving gradients.
 
         Returns:
             torch.Tensor: Logits returned by the wrapped model for every
                 activation in the leading dimension.
         """
+        # NNsight's activation cache can reside on CPU even for a CUDA model.
+        # Tensor.to preserves the gradient path back to the caller's activations.
+        activations = activations.to(self._model.device)
         embedding_width = self._model.get_input_embeddings().weight.shape[-1]
         # The embedding code still validates its input even though every block is skipped.
         inputs_embeds = activations.new_zeros((*activations.shape[:-1], embedding_width))

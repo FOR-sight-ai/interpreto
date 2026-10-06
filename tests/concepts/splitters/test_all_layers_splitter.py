@@ -78,7 +78,7 @@ def _assert_activations_and_head(model, tokenizer, layer_path=None):
         # Session-scoped models may have been moved to CUDA by another test.
         inputs = tokenizer(text, return_tensors="pt").to(model.device)
         expected_logits = model(**inputs).logits
-    layer_logits = splitter.apply_head(torch.cat(activations).to(model.device))
+    layer_logits = splitter.apply_head(torch.cat(activations))
     assert layer_logits.shape[0] == len(activations)
     torch.testing.assert_close(layer_logits[-1:], expected_logits)
 
