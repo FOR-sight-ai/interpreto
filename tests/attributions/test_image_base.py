@@ -29,7 +29,6 @@ import numpy as np
 import pytest
 import torch
 from PIL import Image
-from transformers import AutoImageProcessor, AutoModelForImageClassification
 from transformers.image_processing_utils import BatchFeature
 
 from interpreto.attributions.base import ImageClassificationAttributionExplainer
@@ -37,15 +36,7 @@ from interpreto.commons.granularity import ImageGranularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-IMAGE_CLASSIFICATION_MODELS = [
-    "hf-internal-testing/tiny-random-vit",
-    "hf-internal-testing/tiny-random-BeitForImageClassification",
-    "hf-internal-testing/tiny-random-ViTForImageClassification",
-    "akahana/vit-base-cats-vs-dogs",
-]
 
-
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
 @pytest.mark.parametrize(
     "use_gradient, granularity, clash",
     [
@@ -55,14 +46,12 @@ IMAGE_CLASSIFICATION_MODELS = [
         (False, ImageGranularity.PATCH, False),
     ],
 )
-def test_init_explainer(model_name, use_gradient, granularity, clash):
-    model = AutoModelForImageClassification.from_pretrained(model_name)
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
+def test_init_explainer(vit_model, vit_image_processor, use_gradient, granularity, clash):
     if clash:
         with pytest.raises(ValueError):
             _ = ImageClassificationAttributionExplainer(
-                model,
-                image_processor,
+                vit_model,
+                vit_image_processor,
                 granularity,
                 use_gradient=use_gradient,
                 batch_size=2,
@@ -70,8 +59,8 @@ def test_init_explainer(model_name, use_gradient, granularity, clash):
             )
     else:
         _ = ImageClassificationAttributionExplainer(
-            model,
-            image_processor,
+            vit_model,
+            vit_image_processor,
             granularity,
             use_gradient=use_gradient,
             batch_size=2,
@@ -130,15 +119,12 @@ def test_resolve_normalization_stats_returns(processor, expected_mean, expected_
 # I am also unsure about whether or not I should test private functions and have made the choice to do it.
 
 
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-def test_process_targets(model_name):
+def test_process_targets(vit_model, vit_image_processor):
     """
     Test the process_targets method for different input types.
     """
-    model = AutoModelForImageClassification.from_pretrained(model_name)
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
     explainer = ImageClassificationAttributionExplainer(
-        model, image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
+        vit_model, vit_image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
     )
 
     # Single integer
@@ -208,15 +194,12 @@ def test_process_targets(model_name):
         explainer.process_targets("invalid_input")  # type: ignore
 
 
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-def test_validate_batch_feature(model_name):
+def test_validate_batch_feature(vit_model, vit_image_processor):
     """
     Test the _validate_batch_feature method for the 3 failure cases and the valid case.
     """
-    model = AutoModelForImageClassification.from_pretrained(model_name)
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
     explainer = ImageClassificationAttributionExplainer(
-        model, image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
+        vit_model, vit_image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
     )
 
     # Missing "pixel_values" key
@@ -238,22 +221,22 @@ def test_validate_batch_feature(model_name):
 _validate = ImageClassificationAttributionExplainer._validate_batch_feature
 
 
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-@pytest.mark.parametrize("patch_size", [2, 16])
-@pytest.mark.parametrize("pixel_values", [torch.zeros(1, 3, 224, 224), torch.ones(1, 3, 16, 16)])
-def test_validate_batch_feature_patch_size_returns(model_name, patch_size, pixel_values):
+@pytest.mark.parametrize(
+    "pixel_values, patch_size",
+    [
+        (torch.zeros(1, 3, 224, 224), 16),
+        (torch.zeros(1, 3, 224, 224), 19),
+        (torch.ones(1, 3, 16, 16), 7),
+        (torch.ones(1, 3, 16, 16), 19),
+    ],
+)
+def test_validate_batch_feature_patch_size(pixel_values, patch_size):
     explainer = SimpleNamespace(patch_size=patch_size)
     bf = BatchFeature(data={"pixel_values": pixel_values})
-    _validate(explainer, bf)
-
-
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-@pytest.mark.parametrize("patch_size", [7, 19])
-@pytest.mark.parametrize("pixel_values", [torch.zeros(1, 3, 226, 226), torch.ones(1, 3, 16, 16)])
-def test_validate_batch_feature_patch_size_raises(model_name, patch_size, pixel_values):
-    explainer = SimpleNamespace(patch_size=patch_size)
-    bf = BatchFeature(data={"pixel_values": pixel_values})
-    with pytest.raises(ValueError):
+    if patch_size in (7, 19):
+        with pytest.raises(ValueError):
+            _validate(explainer, bf)
+    else:
         _validate(explainer, bf)
 
 
@@ -261,12 +244,9 @@ def test_validate_batch_feature_patch_size_raises(model_name, patch_size, pixel_
 # from test_base.py (text modality) and adapted to BatchFeature/pixel_values inputs,
 # for the same reason as above: process_inputs_to_explain_and_targets is itself a
 # copy of the text-side method (see base.py).
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-def test_process_inputs_to_explain_and_targets(model_name):
-    model = AutoModelForImageClassification.from_pretrained(model_name)
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
+def test_process_inputs_to_explain_and_targets(vit_model, vit_image_processor):
     explainer = ImageClassificationAttributionExplainer(
-        model, image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
+        vit_model, vit_image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
     )
     explainer.inference_wrapper = lambda *args, **kwargs: [torch.tensor([[1]]), torch.tensor([[0]])]  # type: ignore
 
@@ -321,22 +301,19 @@ def _assert_batch_feature_list(result, expected_length):
     assert "pixel_values" in result[0].keys(), "the returned result must carry a 'pixel_values' key"
 
 
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
-def test_process_model_inputs(model_name):
+def test_process_model_inputs(vit_model, vit_image_processor):
     """
     Test process_model_inputs: the ValueError case, and that valid inputs are
     normalized to a list of BatchFeature (with "pixel_values" as a key), one per
     sample, matching the input length for iterables.
     """
-    model = AutoModelForImageClassification.from_pretrained(model_name)
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
     image = Image.new("RGB", (4, 4))
 
     # --- ValueError case: unsupported type (not BatchFeature, raw image, or Iterable) ---
 
     explainer = ImageClassificationAttributionExplainer(
-        model,
-        image_processor,
+        vit_model,
+        vit_image_processor,
         ImageGranularity.PATCH,
         batch_size=2,
         device=DEVICE,

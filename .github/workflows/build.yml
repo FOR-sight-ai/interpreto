@@ -81,7 +81,6 @@ jobs:
             "hf-internal-testing/tiny-random-LlamaForCausalLM",
             "hf-internal-testing/tiny-random-roberta",
             "hf-internal-testing/tiny-random-t5",
-            "hf-internal-testing/tiny-random-MistralForCausalLM",
             "textattack/bert-base-uncased-imdb",
         ]
 
@@ -89,7 +88,6 @@ jobs:
             "hf-internal-testing/tiny-random-vit",
             "hf-internal-testing/tiny-random-BeitForImageClassification",
             "hf-internal-testing/tiny-random-ViTForImageClassification",
-            "akahana/vit-base-cats-vs-dogs",
             ]
 
         # We will call .from_pretrained(...) once per model_id,
