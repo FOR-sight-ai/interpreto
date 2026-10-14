@@ -226,7 +226,7 @@ def plot_image_attribution(
     attribution_output: ImageAttributionOutput | Iterable[ImageAttributionOutput],
     target_idx: int | Iterable[int] | None = None,
     cmap: str = "coolwarm",
-    alpha: float = 0.5,
+    alpha: float = 0.7,
     clip_percentile: float | None = 0.1,
     absolute_value: bool = False,
     img_size: float = 3.0,
