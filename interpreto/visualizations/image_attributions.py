@@ -89,13 +89,6 @@ def _denormalize(attribution_output: ImageAttributionOutput, range_tolerance: fl
     return image.clamp(0.0, 1.0).permute(1, 2, 0).numpy()
 
 
-def _clip_percentile(arr: np.ndarray, percentile: float) -> np.ndarray:
-    """Clip at (percentile, 100-percentile) to suppress outliers in the heatmap."""
-    lo = np.percentile(arr, percentile)
-    hi = np.percentile(arr, 100.0 - percentile)
-    return np.clip(arr, lo, hi)
-
-
 def _prepare_heatmap(
     attribution_output: ImageAttributionOutput,
     target_idx: int,
@@ -129,47 +122,10 @@ def _prepare_heatmap(
     if absolute_value:
         heatmap = np.abs(heatmap)
     if clip_percentile is not None:
-        heatmap = _clip_percentile(heatmap, clip_percentile)
-
+        lo_clip = np.percentile(heatmap, clip_percentile)
+        hi_clip = np.percentile(heatmap, 100.0 - clip_percentile)
+        heatmap = np.clip(heatmap, lo_clip, hi_clip)
     return heatmap
-
-
-def _color_limits(heatmap: np.ndarray, center_zero: bool = True) -> tuple[float, float]:
-    """
-    Decide the colorbar range for one heatmap.
-
-    Attribution scores are signed: the sign tells whether a pixel pushes the target
-    logit up or down. Centering the range at 0 (`[-m, +m]`, m = max|score|) pins the
-    neutral color to "no contribution" and makes hue track sign, in every panel. A
-    non-negative map (VarGrad/SquareGrad, or any abs'd map) then uses only the upper
-    half of the scale.
-
-    `m` is per-heatmap, so a color means the same sign across methods but not the
-    same magnitude that is what each panel's colorbar is for.
-
-    Pass `center_zero=False` for a plain min/max range.
-
-    Returns (vmin, vmax).
-    """
-    lo, hi = float(heatmap.min()), float(heatmap.max())
-    if center_zero:
-        m = max(abs(lo), abs(hi)) or 1.0
-        return -m, m
-    return lo, hi
-
-
-def _to_grayscale(img_disp: np.ndarray) -> np.ndarray:
-    """
-    Collapse a displayable image to a 2D luminance map so it can be drawn under the
-    heatmap as a neutral backdrop (Rec. 601 weights). Already-2D images pass through.
-    """
-    if img_disp.ndim != 3:
-        raise ValueError("_to_grascale only supports 3D ndarrays (H,W,C)")
-    if img_disp.shape[-1] == 1:
-        return img_disp[..., 0]
-    if img_disp.shape[-1] != 3:
-        raise ValueError("the image should either be grayscale (C = 1) or RGB (C = 3)")
-    return img_disp[..., :3] @ np.array([0.2989, 0.587, 0.114], dtype=img_disp.dtype)
 
 
 def _draw_attribution_on_ax(
@@ -201,13 +157,28 @@ def _draw_attribution_on_ax(
     When `grayscale_background` is True the underlying image is drawn in grayscale so
     the colored heatmap stands out against a neutral backdrop.
     """
-    vmin, vmax = _color_limits(heatmap, center_zero)
+    vmin, vmax = float(heatmap.min()), float(heatmap.max())
+    if center_zero:
+        vmax = max(abs(vmin), abs(vmax)) or 1.0
+        vmin = -vmax
 
     H_img, W_img = img_disp.shape[:2]
     if grayscale_background:
-        ax.imshow(_to_grayscale(img_disp), cmap="gray", vmin=0.0, vmax=1.0)
+        if img_disp.shape[-1] == 1:
+            img_disp = img_disp[..., 0]
+        elif img_disp.shape[-1] == 2:
+            img_disp = np.concatenate([img_disp, np.zeros_like(img_disp[..., :1])], axis=-1)
+            img_disp = img_disp @ np.array([0.2989, 0.587, 0.114], dtype=img_disp.dtype)
+        elif img_disp.shape[-1] >= 3:
+            img_disp = img_disp[..., :3] @ np.array([0.2989, 0.587, 0.114], dtype=img_disp.dtype)
+        ax.imshow(img_disp, cmap="gray", vmin=0.0, vmax=1.0)
     else:
-        ax.imshow(img_disp)
+        if img_disp.shape[-1] == 2:
+            img_disp = np.concatenate([img_disp, np.zeros_like(img_disp[..., :1])], axis=-1)
+        elif img_disp.shape[-1] >= 3:
+            img_disp = img_disp[..., :3]
+        # cmap = "gray" does not display the image in grey, it just tells matplotlib that (H,W,1) is an image and not scalar data.
+        ax.imshow(img_disp, cmap="gray", vmin=0.0, vmax=1.0)
     im = ax.imshow(
         heatmap,
         extent=(0, W_img, H_img, 0),
