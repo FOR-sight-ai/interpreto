@@ -45,7 +45,8 @@ IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-vit",
     "hf-internal-testing/tiny-random-BeitForImageClassification",
     "hf-internal-testing/tiny-random-ViTForImageClassification",
-    "akahana/vit-base-cats-vs-dogs",
+    "bumblebee-testing/tiny-random-Dinov2Model-use_swiglu_ffn-True",
+    "optimum-intel-internal-testing/tiny-random-dinov-3",
 ]
 
 torch.manual_seed(0)
