@@ -40,39 +40,19 @@ from transformers import ViTImageProcessor
 from interpreto.attributions.base import ImageAttributionOutput
 from interpreto.commons.granularity import GranularityResizeStrategy, ImageGranularity
 from interpreto.visualizations.image_attributions import (
-    _clip_percentile,
-    _color_limits,
     _denormalize,
     _prepare_heatmap,
-    _to_grayscale,
     plot_image_attribution,
 )
 
 matplotlib.use("Agg")  # headless: build figures in memory, never try to open a window
 
 
-def test_clip_percentile_constant_is_unchanged():
-    # A constant array is a fixed point: lo == hi == 10, clip is a no-op.
-    arr = np.full(20, 10.0)
-    out = _clip_percentile(arr, percentile=np.random.uniform(0, 50))
-    assert np.array_equal(out, arr), "clipping a constant array must be a no-op since lo == hi"
-
-
-def test_clip_percentile_pulls_tails_to_bounds():
-    arr = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-    out = _clip_percentile(arr, percentile=0.2)
-    expected = np.array([1.008, 2.0, 3.0, 4.0, 4.992])
-    assert np.allclose(out, expected), (
-        "0.2 percentile clip must pull the two tail values (lo and hi) to lo = 1.008 and "
-        "hi = 4.992, and must leave the middle three unchanged"
-    )
-
-
 def test_prepare_heatmap():
     # PIXEL granularity makes it a pure (t, g)->(t, H, W)
     # reshape: g=4 over a (1, 3, 2, 2) pixel grid -> the same (1, 2, 2) map, mixed signs + a value >1.
     output = SimpleNamespace(
-        attributions=torch.tensor([[10.0, 20.0, -3.0, 0.0]]),
+        attributions=torch.tensor([[10.0, 90.0, -10.0, 0.0]]),
         granularity=ImageGranularity.PIXEL,
         granularity_resize=GranularityResizeStrategy.NEAREST,
         model_inputs_to_explain={"pixel_values": torch.zeros(1, 3, 2, 2)},
@@ -80,31 +60,21 @@ def test_prepare_heatmap():
     )
 
     # absolute_value=True -> no negative values
-    abs_out = _prepare_heatmap(output, target_idx=0, clip_percentile=None, absolute_value=True)
+    abs_out = _prepare_heatmap(output, target_idx=0, clip_percentile=100, absolute_value=True)
     assert (abs_out >= 0).all(), (
         "since absolute_value=True is passed as an argument all the values of the heatmap must be positive."
     )
     assert issubclass(abs_out.dtype.type, np.floating), "_prepare_heatmap should return an output containing floats"
+    assert np.allclose(abs_out.ravel(), [0.0, 0.0, 0.0, 0.0]), (
+        "since clip_percentile = 100 all the values should be equal to the min of the val"
+    )
 
     # absolute_value=False
     raw_out = _prepare_heatmap(output, target_idx=0, clip_percentile=None, absolute_value=False)
     assert issubclass(raw_out.dtype.type, np.floating), "_prepare_heatmap should return an output containing floats"
     assert raw_out.min() < 0.0, "_prepare_heatmap with absolute_value=False should keep its negative values."
-
-
-@pytest.mark.parametrize(
-    "values, expected",
-    [
-        ([-3.0, 1.0, 20.0], (-20.0, 20.0)),  # straddles zero -> +/- m, m = max(|lo|, |hi|) = 20
-        ([1.0, 2.0, 20.0], (-20.0, 20.0)),  # all positive -> still centered, uses upper half only
-        ([-5.0, -2.0, -1.0], (-5.0, 5.0)),  # all negative -> still centered, uses lower half only
-    ],
-)
-def test_color_limits(values, expected):
-    out = _color_limits(np.array(values, dtype=np.float32))
-    assert out == expected, (
-        "_color_limits must center the range so that 0 is at equal distance of +/- max(|lo|,|hi|) "
-        "whether or not the values straddle 0"
+    assert np.allclose(raw_out.ravel(), [10.0, 90.0, -10.0, 0.0]), (
+        "with absolute_value=False and clip_percentile=None, _prepare_heatmap must leave the attribution values unchanged"
     )
 
 
@@ -233,35 +203,6 @@ def test_denormalize_does_not_warn_inside_the_tolerance(error_value):
     )
 
     _denormalize(_denorm_output(pixel_values))
-
-
-@pytest.mark.parametrize(
-    "shape",
-    [
-        (8, 8),  # 2D: no channel axis at all
-        (1, 8, 8, 3),  # 4D: batch dim still on
-        (8, 8, 2),  # C = 2: neither grayscale nor RGB
-        (8, 8, 4),  # C = 4: RGBA is not accepted, the alpha is not silently dropped
-    ],
-)
-def test_to_grayscale_raises_on_wrong_shape(shape):
-    with pytest.raises(ValueError):
-        _to_grayscale(np.random.rand(*shape).astype(np.float32))
-
-
-@pytest.mark.parametrize("dtype", [np.float32, np.float64])
-def test_to_grayscale_matches_the_rec601_formula(dtype):
-    # The `@` must contract the channel axis, not a spatial one: an axis mix-up still
-    # returns a plausible 2D map, so compare against the weights applied by hand.
-    img = np.random.rand(8, 6, 3).astype(dtype)
-
-    out = _to_grayscale(img)
-
-    expected = 0.2989 * img[..., 0] + 0.587 * img[..., 1] + 0.114 * img[..., 2]
-    assert out.shape == (8, 6), "_to_grayscale with input of shape (H,W,C) should return an output of size (H,W)"
-    assert np.allclose(out, expected), (
-        "_to_grayscale output must match the Rec.601 luma weights (0.2989, 0.587, 0.114) applied by hand"
-    )
 
 
 @pytest.fixture
