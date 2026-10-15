@@ -131,7 +131,7 @@ FAST_METHOD_SPECS = [
         GranularityResizeStrategy.BICUBIC,
         torch.rand(3, 30, 30),
         1,
-        "hf-internal-testing/tiny-random-vit",
+        "bumblebee-testing/tiny-random-Dinov2Model-use_swiglu_ffn-True",
     ),
     (
         GradientShap,
@@ -141,7 +141,7 @@ FAST_METHOD_SPECS = [
         GranularityResizeStrategy.AREA,
         Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
         0,
-        "hf-internal-testing/tiny-random-BeitForImageClassification",
+        "optimum-intel-internal-testing/tiny-random-dinov-3",
     ),
 ]
 

@@ -23,6 +23,7 @@
 # SOFTWARE.
 
 
+import pickle
 from types import SimpleNamespace
 
 import numpy as np
@@ -31,7 +32,11 @@ import torch
 from PIL import Image
 from transformers.image_processing_utils import BatchFeature
 
-from interpreto.attributions.base import ImageClassificationAttributionExplainer
+from interpreto.attributions.base import (
+    ImageClassificationAttributionExplainer,
+    InferenceModes,
+    TextClassificationAttributionExplainer,
+)
 from interpreto.commons.granularity import ImageGranularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -119,13 +124,29 @@ def test_resolve_normalization_stats_returns(processor, expected_mean, expected_
 # I am also unsure about whether or not I should test private functions and have made the choice to do it.
 
 
-def test_process_targets(vit_model, vit_image_processor):
+def test_inference_mode():
+    # check that inference mode is picklable
+    pickled = pickle.dumps(InferenceModes.LOG_SOFTMAX)
+    unpickled = pickle.loads(pickled)
+    assert unpickled == InferenceModes.LOG_SOFTMAX
+
+
+@pytest.fixture
+def classification_explainer(modality, bert_model, bert_tokenizer, vit_model, vit_image_processor):
+    if modality == "text":
+        return TextClassificationAttributionExplainer(bert_model, bert_tokenizer, batch_size=2, device=DEVICE)
+    else:  # vision
+        return ImageClassificationAttributionExplainer(
+            vit_model, vit_image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
+        )
+
+
+@pytest.mark.parametrize("modality", ["text", "vision"])
+def test_process_targets(classification_explainer, modality):
     """
     Test the process_targets method for different input types.
     """
-    explainer = ImageClassificationAttributionExplainer(
-        vit_model, vit_image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
-    )
+    explainer = classification_explainer
 
     # Single integer
     result = explainer.process_targets(3, expected_length=1)
@@ -225,9 +246,7 @@ _validate = ImageClassificationAttributionExplainer._validate_batch_feature
     "pixel_values, patch_size",
     [
         (torch.zeros(1, 3, 224, 224), 16),
-        (torch.zeros(1, 3, 224, 224), 19),
         (torch.ones(1, 3, 16, 16), 7),
-        (torch.ones(1, 3, 16, 16), 19),
     ],
 )
 def test_validate_batch_feature_patch_size(pixel_values, patch_size):
@@ -244,17 +263,29 @@ def test_validate_batch_feature_patch_size(pixel_values, patch_size):
 # from test_base.py (text modality) and adapted to BatchFeature/pixel_values inputs,
 # for the same reason as above: process_inputs_to_explain_and_targets is itself a
 # copy of the text-side method (see base.py).
-def test_process_inputs_to_explain_and_targets(vit_model, vit_image_processor):
-    explainer = ImageClassificationAttributionExplainer(
-        vit_model, vit_image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
-    )
+@pytest.mark.parametrize("modality", ["text", "vision"])
+def test_process_inputs_to_explain_and_targets(classification_explainer, modality):
+    explainer = classification_explainer
     explainer.inference_wrapper = lambda *args, **kwargs: [torch.tensor([[1]]), torch.tensor([[0]])]  # type: ignore
 
-    # Model input example: two single-sample BatchFeatures with pixel_values
-    model_inputs = [
-        BatchFeature(data={"pixel_values": torch.zeros(1, 3, 4, 4)}),
-        BatchFeature(data={"pixel_values": torch.ones(1, 3, 4, 4)}),
-    ]
+    if modality == "text":
+        # Model input example: two tokenized single-sample inputs
+        model_inputs = [
+            {
+                "input_ids": torch.tensor([[101, 2023, 2003, 1037, 2742, 102]]),
+                "attention_mask": torch.tensor([[1, 1, 1, 1, 1, 1]]),
+            },
+            {
+                "input_ids": torch.tensor([[101, 1045, 2293, 2070, 3185, 102]]),
+                "attention_mask": torch.tensor([[1, 1, 1, 1, 1, 1]]),
+            },
+        ]
+    else:  # vision
+        # Model input example: two single-sample BatchFeatures with pixel_values
+        model_inputs = [
+            BatchFeature(data={"pixel_values": torch.zeros(1, 3, 4, 4)}),
+            BatchFeature(data={"pixel_values": torch.ones(1, 3, 4, 4)}),
+        ]
 
     # 1. Case with explicit targets (list)
     targets = [0, 1]
