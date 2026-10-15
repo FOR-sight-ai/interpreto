@@ -88,6 +88,8 @@ jobs:
             "hf-internal-testing/tiny-random-vit",
             "hf-internal-testing/tiny-random-BeitForImageClassification",
             "hf-internal-testing/tiny-random-ViTForImageClassification",
+            "bumblebee-testing/tiny-random-Dinov2Model-use_swiglu_ffn-True",
+            "optimum-intel-internal-testing/tiny-random-dinov-3",
             ]
 
         # We will call .from_pretrained(...) once per model_id,

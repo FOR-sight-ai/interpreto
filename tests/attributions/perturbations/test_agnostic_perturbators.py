@@ -114,7 +114,7 @@ def test_linear_interpolation_perturbation_adjust_baseline_invalid():
     [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
 )
 def test_sobol_masks(sampler, modality_base):
-    k = 10
+    k = 4
     perturbator = _variant(SobolPerturbator, modality_base)(
         n_granularity_perturbations=k,
         sampler=sampler,

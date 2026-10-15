@@ -67,8 +67,14 @@ def _denormalize(attribution_output: ImageAttributionOutput, range_tolerance: fl
     image = pixel_values.detach().cpu().to(torch.float32)
     if image.ndim != 4 or image.shape[0] != 1:
         raise ValueError(
-            f"expected pixel_values of shape (1, 3, H, W), got {tuple(image.shape)}. "
+            f"expected pixel_values of shape (1, C, H, W), got {tuple(image.shape)}. "
             "Explain images one at a time — `explain` returns one output per image."
+        )
+    if image.shape[1] > 3:
+        warnings.warn(
+            "The image you want to explain has more than 3 channels. We arbitrarily chose to display only "
+            "the first 3 channels but feel free to create your own visualization",
+            stacklevel=3,
         )
 
     image = image[0]
