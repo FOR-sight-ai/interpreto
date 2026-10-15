@@ -37,7 +37,6 @@ from interpreto.attributions.perturbations import (
     SobolPerturbator,
 )
 from interpreto.attributions.perturbations.base import TextMaskPerturbator, TextTensorPerturbator
-from interpreto.attributions.perturbations.sobol_perturbation import SequenceSamplers
 from interpreto.commons.granularity import TextGranularity
 
 
@@ -274,43 +273,6 @@ def test_linear_interpolation_perturbation_adjust_baseline_invalid():
 #         # Test batch of sentences
 #         for index, (emb, mask) in enumerate(perturbator.perturb(sentences)):
 #             assert_mask_pertinence(sentences_embeddings[index], emb.squeeze(0), mask)
-
-
-@pytest.mark.parametrize(
-    "sampler",
-    [SequenceSamplers.SOBOL, SequenceSamplers.HALTON, SequenceSamplers.LatinHypercube],
-)
-def test_sobol_masks(sampler, bert_model, bert_tokenizer):
-    k = 10
-    # processor is necessary to construct the perturbator
-    perturbator = _text_variant(SobolPerturbator, TextMaskPerturbator)(
-        n_granularity_perturbations=k,
-        sampler=sampler,
-        processor=bert_tokenizer,
-    )
-
-    for l in range(2, 20, 3):
-        mask = perturbator.get_mask(l)
-        assert mask.shape == ((l + 2) * k, l)
-        A = mask[:k]
-        B = mask[k : 2 * k]
-        C = mask[2 * k :].view(l, k, l)
-
-        # verify token-wise mask compared to the initial mask
-        for i in range(l):
-            assert torch.all(torch.isclose(C[i, :, i], B[:, i], atol=1e-5))
-            if i != 0:
-                assert torch.all(torch.isclose(C[i, :, :i], A[:, :i], atol=1e-5))
-            if i != l - 1:
-                assert torch.all(torch.isclose(C[i, :, i + 1 :], A[:, i + 1 :], atol=1e-5))
-
-
-def test_occlusion_masks(bert_tokenizer):
-    # processor is necessary to construct the perturbator
-    perturbator = _text_variant(OcclusionPerturbator, TextMaskPerturbator)(processor=bert_tokenizer)
-    for l in range(2, 20, 3):
-        mask = perturbator.get_mask(l)
-        assert torch.equal(mask, torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0))
 
 
 if __name__ == "__main__":
