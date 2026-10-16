@@ -282,9 +282,9 @@ class ImageTensorPerturbator(TensorPerturbator):
     """
     Image-side analog of `TextTensorPerturbator`.
 
-    Operates directly on `pixel_values` of shape `(1, 3, H, W)`.
+    Operates directly on `pixel_values` of shape `(1, C, H, W)`.
 
-    Subclasses override `perturb_tensor` to produce a `(p, 3, H, W)` batch.
+    Subclasses override `perturb_tensor` to produce a `(p, C, H, W)` batch.
 
     Used by gradient-style methods (Saliency, SmoothGrad, IntegratedGradient).
 
@@ -296,9 +296,9 @@ class ImageTensorPerturbator(TensorPerturbator):
             raise ValueError("model_inputs should contain 'pixel_values'")
 
         inputs = deepcopy(model_inputs)
-        pixel_values: Float[torch.Tensor, "1 3 H W"] = inputs["pixel_values"]
+        pixel_values: Float[torch.Tensor, "1 C H W"] = inputs["pixel_values"]
 
-        perturbed_pixels: Float[torch.Tensor, "p 3 H W"]
+        perturbed_pixels: Float[torch.Tensor, "p C H W"]
         mask: Float[torch.Tensor, "p g"] | None
         perturbed_pixels, mask = self.perturb_tensor(pixel_values)
 
@@ -306,15 +306,15 @@ class ImageTensorPerturbator(TensorPerturbator):
         return inputs, mask
 
     def perturb_tensor(
-        self, pixel_values: Float[torch.Tensor, "1 3 H W"]
-    ) -> tuple[Float[torch.Tensor, "p 3 H W"], Float[torch.Tensor, "p g"] | None]:
+        self, pixel_values: Float[torch.Tensor, "1 C H W"]
+    ) -> tuple[Float[torch.Tensor, "p C H W"], Float[torch.Tensor, "p g"] | None]:
         """
         Default no-op: subclasses override to apply noise / interpolation / etc.
 
         Args:
-            pixel_values: Shape (1, 3, H, W).
+            pixel_values: Shape (1, C, H, W).
         Returns:
-            perturbed_pixels: Shape (p, 3, H, W).
+            perturbed_pixels: Shape (p, C, H, W).
             mask: (p, g) or None.
         """
         return pixel_values, None
@@ -370,13 +370,13 @@ class ImageMaskPerturbator(MaskPerturbator):
             raise ValueError("model_inputs should contain 'pixel_values'")
 
         inputs = deepcopy(model_inputs)
-        pixel_values: Float[torch.Tensor, "1 3 H W"] = inputs["pixel_values"]
+        pixel_values: Float[torch.Tensor, "1 C H W"] = inputs["pixel_values"]
 
         if pixel_values.shape[0] != 1:
             raise ValueError(
                 "Inputs are treated one by one in the perturbator, "
                 f"but received pixel_values of shape {tuple(pixel_values.shape)} "
-                "- expected shape (1, 3, H, W)."
+                "- expected shape (1, C, H, W)."
             )
 
         _, c, h, w = pixel_values.shape
@@ -384,11 +384,11 @@ class ImageMaskPerturbator(MaskPerturbator):
 
         image_processor: PreTrainedTokenizerBase | BaseImageProcessor = self.processor
 
-        replace_tensor: Float[torch.Tensor, "1 c h w"] = torch.full_like(pixel_values, self.replace_value)
+        replace_tensor: Float[torch.Tensor, "1 C H W"] = torch.full_like(pixel_values, self.replace_value)
 
         # Since the image is processed, we process the replace_tensor the same way so that the replace value the user wanted to use has
         # the meaning the user wanted to give it.
-        processed_replace_tensor: Float[torch.Tensor, "1 c h w"] = image_processor(
+        processed_replace_tensor: Float[torch.Tensor, "1 C H W"] = image_processor(
             replace_tensor, input_data_format="channels_first", return_tensors="pt"
         )["pixel_values"]
 
@@ -419,16 +419,16 @@ class ImageMaskPerturbator(MaskPerturbator):
         ).reshape(p, l)
 
         # apply the mask in flattened spatial space, broadcasting across channels
-        flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
+        flat: Float[torch.Tensor, "1 C l"] = pixel_values.reshape(1, c, l)
         spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
 
         # reshape processed_replace_tensor so that it broadcasts correctly
         processed_replace_tensor = processed_replace_tensor.unsqueeze(dim=0).reshape(1, c, l)
 
-        perturbed_flat: Float[torch.Tensor, "p 3 l"] = (
+        perturbed_flat: Float[torch.Tensor, "p C l"] = (
             flat * (1 - spatial_mask) + processed_replace_tensor * spatial_mask
         )
-        perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
+        perturbed_pixel_values: Float[torch.Tensor, "p C H W"] = perturbed_flat.reshape(-1, c, h, w)
 
         inputs["pixel_values"] = perturbed_pixel_values
         return inputs, gran_mask

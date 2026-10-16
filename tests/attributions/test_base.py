@@ -30,6 +30,7 @@ import numpy as np
 import pytest
 import torch
 from PIL import Image
+from transformers import ViTConfig, ViTForImageClassification, ViTImageProcessor
 from transformers.image_processing_utils import BatchFeature
 
 from interpreto.attributions.base import (
@@ -217,7 +218,7 @@ def test_process_targets(classification_explainer, modality):
 
 def test_validate_batch_feature(vit_model, vit_image_processor):
     """
-    Test the _validate_batch_feature method for the 3 failure cases and the valid case.
+    Test the _validate_batch_feature method for the 4 failure cases and the valid case.
     """
     explainer = ImageClassificationAttributionExplainer(
         vit_model, vit_image_processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
@@ -237,6 +238,10 @@ def test_validate_batch_feature(vit_model, vit_image_processor):
 
     with pytest.raises(ValueError, match="must be 4 dimensional"):
         explainer._validate_batch_feature(BatchFeature(data={"pixel_values": torch.zeros(3, 4, 4)}))
+
+    # Any channel count is accepted, not only C in {1, 3}
+    bf = BatchFeature(data={"pixel_values": torch.zeros(1, 17, 4, 4)})
+    assert explainer._validate_batch_feature(bf) is bf, "a valid BatchFeature must be returned unchanged"
 
 
 _validate = ImageClassificationAttributionExplainer._validate_batch_feature
@@ -372,3 +377,40 @@ def test_process_model_inputs(vit_model, vit_image_processor):
     images = [image, image, image]
     result = explainer.process_model_inputs(images)
     _assert_batch_feature_list(result, expected_length=len(images))
+
+
+@pytest.mark.parametrize(
+    "height, width, num_channels, model_inputs, expected",
+    [
+        (6, 8, 4, torch.rand(4, 6, 8), (1, 4, 6, 8)),
+        (10, 10, 5, np.random.rand(10, 10, 5), (1, 5, 10, 10)),
+        (32, 28, 17, BatchFeature(data={"pixel_values": torch.rand(1, 32, 28, 17)}), (1, 17, 32, 28)),
+        (4, 4, 2, BatchFeature(data={"pixel_values": torch.rand(2, 4, 4)}), (1, 2, 4, 4)),
+    ],
+)
+def test_process_model_inputs_any_channel_count(height, width, num_channels, model_inputs, expected):
+    """Any channel count is accepted and the output follows the channels-first convention."""
+    model = ViTForImageClassification(
+        ViTConfig(
+            num_channels=num_channels,
+            image_size=(height, width),
+            patch_size=2,
+            hidden_size=8,
+            num_hidden_layers=1,
+            num_attention_heads=2,
+            intermediate_size=8,
+        )
+    )
+    processor = ViTImageProcessor(
+        image_mean=[0.5] * num_channels, image_std=[0.5] * num_channels, size={"height": height, "width": width}
+    )
+    explainer = ImageClassificationAttributionExplainer(
+        model, processor, ImageGranularity.PATCH, batch_size=2, device=DEVICE
+    )
+
+    result = explainer.process_model_inputs(model_inputs)
+
+    assert isinstance(result[0], BatchFeature), "process_model_inputs should return a BatchFeature"
+    assert result[0]["pixel_values"].shape == expected, (
+        "pixel_values must be of shape (1,C,H,W) (the channels first convention must be respected)"
+    )

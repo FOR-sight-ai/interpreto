@@ -43,6 +43,7 @@ from jaxtyping import Float, Int, jaxtyped
 from PIL.Image import Image as PILImage
 from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
+from transformers.image_utils import ChannelDimension, infer_channel_dimension_format
 
 from interpreto.attributions.aggregations.base import Aggregator
 from interpreto.attributions.inference_wrappers.image_classification_inference_wrapper import (
@@ -959,7 +960,7 @@ class ImageAttributionOutput:
 
         model_inputs_to_explain (TensorMapping):
             The output of `image_processor(image, return_tensors="pt")` (a `BatchFeature`,
-            satisfies `TensorMapping`). Holds `pixel_values` of shape `(1, 3, H, W)`.
+            satisfies `TensorMapping`). Holds `pixel_values` of shape `(1, C, H, W)`.
 
         image_mean (torch.Tensor | None):
             Per-channel mean used to normalize `pixel_values`. Together with `image_std`
@@ -1184,26 +1185,43 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         """
         Normalize image inputs to a list of `BatchFeature` mappings, one per sample.
 
-        The image processor runs on every input type: `PIL.Image`, `np.ndarray`,
-        `torch.Tensor`, and the `pixel_values` of a `BatchFeature` are all routed through
+        The image processor runs on every input type excepted `BatchFeature` (because it
+        has already been processed):
+        `PIL.Image`, `np.ndarray`,`torch.Tensor` are all routed through
         `self.image_processor`. Iterables of any of the above are flattened recursively.
 
-        Inputs should be raw. `explain(image_processor(img))` double-normalizes. Correct use
-        is to  pass the raw image and let interpreto process it.
+        Inputs should be raw, excepted for the BatchFeature which should be processed.
+
+        The returned outputs all obey the channel first convention that is then used
+        throughout the library.
 
         Mirrors text `process_model_inputs` with `BatchFeature` for `BatchEncoding`
         and `pixel_values` for `input_ids`.
         """
 
+        num_channels = getattr(self.inference_wrapper.model.config, "num_channels", None)
+
         if isinstance(model_inputs, BatchFeature):
-            if model_inputs["pixel_values"].ndim == 3:  # expand a single (3, H, W) to (1, 3, H, W)
+            if model_inputs["pixel_values"].ndim == 3:  # expand a single (C, H, W) to (1, C, H, W)
                 model_inputs["pixel_values"] = model_inputs["pixel_values"].unsqueeze(0)
-            processed = self.image_processor(model_inputs["pixel_values"], return_tensors="pt")
-            return [self._validate_batch_feature(processed)]
+            # Ensures that the BatchFeature is channels first.
+            if num_channels is not None:
+                input_data_format = infer_channel_dimension_format(
+                    model_inputs["pixel_values"], num_channels=num_channels
+                )
+                if input_data_format == ChannelDimension.LAST:
+                    model_inputs["pixel_values"] = model_inputs["pixel_values"].permute(0, 3, 1, 2).contiguous()
+            return [self._validate_batch_feature(model_inputs)]
 
         # Raw-image types.
         if isinstance(model_inputs, (PILImage, np.ndarray, torch.Tensor)):
-            processed = self.image_processor(model_inputs, return_tensors="pt")
+            input_data_format = None
+            # Since we accept images with number of channels (C) that are not in {1,3}, we must tell the
+            # processor what the number of channels is. PIL images are skipped since the format already
+            # forces C in {1,3}
+            if num_channels is not None and isinstance(model_inputs, (np.ndarray, torch.Tensor)):
+                input_data_format = infer_channel_dimension_format(model_inputs, num_channels=num_channels)
+            processed = self.image_processor(model_inputs, return_tensors="pt", input_data_format=input_data_format)
             return [self._validate_batch_feature(processed)]
 
         if isinstance(model_inputs, Iterable):
@@ -1214,7 +1232,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         )
 
     def _validate_batch_feature(self, bf: BatchFeature) -> BatchFeature:
-        """Sanity-check that a BatchFeature has a single-sample (1, 3, H, W) pixel_values tensor."""
+        """Sanity-check that a BatchFeature has a single-sample (1, C, H, W) pixel_values tensor."""
         if "pixel_values" not in bf.keys():
             raise ValueError(
                 "The BatchFeature must contain the key 'pixel_values' to be processed by the "
@@ -1228,12 +1246,10 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             )
         if bf["pixel_values"].ndim != 4 or bf["pixel_values"].shape[0] != 1:
             raise ValueError(
-                "The BatchFeature must hold a single-sample and must be 4 dimensional (1, 3, H, W) pixel_values tensor. "
+                "The BatchFeature must hold a single-sample and must be 4 dimensional (1, C, H, W) pixel_values tensor. "
                 "Pre-process images one by one, or pass an iterable. "
                 f"Got shape {tuple(bf['pixel_values'].shape)}."
             )
-        if bf["pixel_values"].shape[1] not in {1, 3}:
-            raise ValueError("The BatchFeature number of channels (C) should be either 1 or 3")
         # unconditional: a ViT cannot patchify a non-divisible image, whatever the method family
         h, w = bf["pixel_values"].shape[-2], bf["pixel_values"].shape[-1]
         if h % self.patch_size or w % self.patch_size:
@@ -1286,7 +1302,7 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             self.aggregator(score.detach(), mask) for score, mask in zip(scores, mask_generator, strict=True)
         )
 
-        # Collapse the 3 channels of gradient scores to a per-pixel value: (t, c, l) -> (t, l).
+        # Collapse the C channels of gradient scores to a per-pixel value: (t, c, l) -> (t, l).
         # Signed mean (no abs).
         contributions: Iterator[Float[torch.Tensor, "t l"] | Float[torch.Tensor, "t g"]] = (
             contribution.mean(dim=1) if self.inference_wrapper.gradients else contribution

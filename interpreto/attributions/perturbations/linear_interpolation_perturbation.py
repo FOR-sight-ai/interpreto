@@ -38,7 +38,7 @@ class LinearInterpolationPerturbator(TensorPerturbator):
     and the input tensor.
 
     It is combined with a modality base at runtime by the explainer, which is what decides
-    whether the tensor is `(1, l, d)` embeddings or `(1, 3, H, W)` pixel values.
+    whether the tensor is `(1, l, d)` embeddings or `(1, C, H, W)` pixel values.
 
     Serves as a base for the other interpolation-based perturbators (GradientShap), which
     override `_generate_baseline` and `_generate_alphas`.
@@ -49,7 +49,7 @@ class LinearInterpolationPerturbator(TensorPerturbator):
         Args:
             baseline (TensorBaseline, optional): The baseline value for the perturbation.
                 It can be a torch.Tensor, int, float, or None. Defaults to None. The tensor
-                baseline must match the shape of the input (l d for text and 3 H W for images)
+                baseline must match the shape of the input (l d for text and C H W for images)
 
         Raises:
             AssertionError: If the baseline is not a torch.Tensor, int, float, or None.
@@ -110,24 +110,24 @@ class LinearInterpolationPerturbator(TensorPerturbator):
 
     @jaxtyped(typechecker=beartype)
     def perturb_tensor(
-        self, processed_inputs: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 3 H W"]
-    ) -> tuple[Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p 3 H W"], None]:
+        self, processed_inputs: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 C H W"]
+    ) -> tuple[Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p C H W"], None]:
         """
         Applies linear interpolation perturbation between the baseline and the original input.
 
         Args:
             processed_inputs (torch.Tensor):
                 tensor to interpolate: either token embeddings or pixel values.
-                Shape: (1, l, d) for text, (1, 3, H, W) for images
+                Shape: (1, l, d) for text, (1, C, H, W) for images
         Returns:
             perturbed_inputs (torch.Tensor):
                 Perturbed inputs, one per interpolation step.
-                Shape: (p, l, d) for text, (p, 3, H, W) for images
+                Shape: (p, l, d) for text, (p, C, H, W) for images
             mask (None):
                 placeholder
         """
         # construct baselines and interpolation coefficients
-        baseline: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 3 H W"] = self._generate_baseline(
+        baseline: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 C H W"] = self._generate_baseline(
             processed_inputs
         )
         alphas: Float[torch.Tensor, "p 1 1"] | Float[torch.Tensor, "p 1 1 1"] = self._generate_alphas(
@@ -135,7 +135,7 @@ class LinearInterpolationPerturbator(TensorPerturbator):
         )
 
         # interpolate between the baseline and the input
-        perturbed_inputs: Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p 3 H W"] = (
+        perturbed_inputs: Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p C H W"] = (
             1 - alphas
         ) * processed_inputs + alphas * baseline
 

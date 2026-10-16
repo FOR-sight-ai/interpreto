@@ -99,12 +99,12 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
         Stack a list of per-sample image tensor mappings into a single batched mapping.
 
         Unlike the text path, no padding is required: image processors produce
-        fixed-shape tensors (3, H, W), so a plain `torch.stack` suffices.
+        fixed-shape tensors (C, H, W), so a plain `torch.stack` suffices.
 
         Args:
             inputs (list[TensorMapping]):
                 Per-sample tensor mappings; each holds at minimum a `pixel_values`
-                tensor of shape (3, H, W).
+                tensor of shape (C, H, W).
             for_gradients (bool, optional):
                 Whether the inputs will be differentiated through.
                 If True, `pixel_values` is detached and marked `requires_grad=True`.
@@ -113,9 +113,7 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
             TensorMapping: Batched inputs on the model device.
         """
         pv = inputs[0]["pixel_values"]
-        assert pv.ndim == 3 and pv.shape[0] == 3, (
-            f"expected per-sample pixel_values of shape (3, H, W), got {tuple(pv.shape)}"
-        )
+        assert pv.ndim == 3, f"expected per-sample pixel_values of shape (C, H, W), got {tuple(pv.shape)}"
 
         prepared = {key: torch.stack([elem[key] for elem in inputs]).to(self.device) for key in inputs[0].keys()}
         # key should always be pixel_values for ViT but we keep the more general form for later
@@ -134,13 +132,13 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
         Compute the gradients of the targeted logits with respect to `pixel_values`.
 
         Done target by target to save memory. Spatial dimensions are flattened to
-        `l = H*W`, but the 3 channels are kept as a `d` axis (signed, no abs):
-        `(c, 3, H, W) -> (c, 3=d, H*W=l)`.
+        `l = H*W`, but the channels are kept as a `d` axis (signed, no abs):
+        `(c, C, H, W) -> (c, C=d, H*W=l)`.
 
         Keeping channels signed and un-collapsed is what lets VarGrad/SquareGrad
         compute the correct formula.
 
-        For image `d=3` is tiny, so unlike the text wrapper there is no memory
+        For image `d=C` is small compared with 768 or 4096 for text, so unlike the text wrapper there is no memory
         reason to collapse early here.
 
         Args:
@@ -157,12 +155,12 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
 
         Returns:
             gradients_chunk (torch.Tensor):
-                Signed per-channel per-pixel gradients of shape `(c, t, 3, H*W)`.
+                Signed per-channel per-pixel gradients of shape `(c, t, C, H*W)`.
         """
         c = chunk_slice.stop - chunk_slice.start
         # We don't need masking compared with the text logic
-        pixel_values: Float[torch.Tensor, "b 3 h w"] = inputs["pixel_values"]  # type: ignore
-        pixel_values_chunk: Float[torch.Tensor, f"{c} 3 h w"] = pixel_values[chunk_slice]
+        pixel_values: Float[torch.Tensor, "b C h w"] = inputs["pixel_values"]  # type: ignore
+        pixel_values_chunk: Float[torch.Tensor, f"{c} C h w"] = pixel_values[chunk_slice]
 
         t = targeted_logits_chunk.shape[1]
         gradients_list = []
@@ -170,7 +168,7 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
             last_target = k == (t - 1)
             # same autograd.grad call as text, just with pixel_values as the leaf
             # instead of inputs_embeds; retain_graph follows the text pattern
-            target_wise_grads: Float[torch.Tensor, f"{c} 3 h w"] = torch.autograd.grad(
+            target_wise_grads: Float[torch.Tensor, f"{c} C h w"] = torch.autograd.grad(
                 outputs=targeted_logits_chunk[:, k].sum(),
                 inputs=pixel_values,  # type: ignore
                 retain_graph=not (last_target and last_chunk),
@@ -182,7 +180,7 @@ class ImageClassificationInferenceWrapper(InferenceWrapper):
             if self.input_x_gradient:
                 target_wise_grads = target_wise_grads * pixel_values_chunk
 
-            # Keep channels signed and un-collapsed: (c, 3, H, W) -> (c, 3=d, l=H*W).
+            # Keep channels signed and un-collapsed: (c, C, H, W) -> (c, C=d, l=H*W).
             # The l ordering (row-major over H, W) matches the mask path and resize_to_image's
             # reshape(t, H, W).
             target_wise_per_channel: Float[torch.Tensor, f"{c} d l"] = target_wise_grads.flatten(2, 3)

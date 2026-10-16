@@ -101,7 +101,7 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
             n_perturbations (int): the number of interpolations to generate
             baseline (torch.Tensor | float | None): the baseline to use for the interpolations.
                 A tensor baseline must match the shape of the tensor being interpolated, so it is
-                modality-dependent: `(l, d)` on the text side, `(3, H, W)` on the image side.
+                modality-dependent: `(l, d)` on the text side, `(C, H, W)` on the image side.
         """
         if granularity is None:
             granularity = self.default_tensor_granularity

@@ -85,7 +85,7 @@ def test_target_logits():
 
 def test_prepare_inputs_rejects_wrong_pixel_values_shape():
     fake_self = SimpleNamespace(device=torch.device("cpu"))
-    inputs = [{"pixel_values": torch.rand(4, 8, 8)}]  # wrong channel count
+    inputs = [{"pixel_values": torch.rand(1, 3, 8, 8)}]  # wrong ndim, (C, H, W) expected
 
     with pytest.raises(AssertionError):
         ImageClassificationInferenceWrapper._prepare_inputs(fake_self, inputs)
@@ -194,9 +194,9 @@ def test_image_classification_wrapper(model_name):
         grads_shape = (
             len(images[i]),
             expected_targets[i].shape[0],
-            3,
+            pixel_inputs[i]["pixel_values"].shape[1],
             pixel_inputs[i]["pixel_values"].shape[-2] * pixel_inputs[i]["pixel_values"].shape[-1],
-        )  # (b, n_targets, d=3, l=H*W)
+        )  # (b, n_targets, d=C, l=H*W)
         if test_gradients != "ignore":
             assert grads_shape == test_gradients[i].shape, "Classification gradients have wrong shape."
 

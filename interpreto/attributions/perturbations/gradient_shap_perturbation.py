@@ -49,8 +49,8 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
 
     @jaxtyped(typechecker=beartype)
     def _generate_baseline(
-        self, processed_inputs: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 3 H W"]
-    ) -> Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p 3 H W"]:
+        self, processed_inputs: Float[torch.Tensor, "1 l d"] | Float[torch.Tensor, "1 C H W"]
+    ) -> Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p C H W"]:
         """
         Generates multiple noisy baselines for GradientSHAP.
 
@@ -60,7 +60,7 @@ class GradientShapPerturbator(LinearInterpolationPerturbator):
         baseline = self.adjust_baseline(self.baseline, processed_inputs)
         baseline = baseline.to(processed_inputs.device)
 
-        baseline: Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p 3 H W"] = baseline.unsqueeze(0).repeat(
+        baseline: Float[torch.Tensor, "p l d"] | Float[torch.Tensor, "p C H W"] = baseline.unsqueeze(0).repeat(
             self.n_perturbations, *(1,) * (processed_inputs.ndim - 1)
         )
         baseline += torch.randn_like(baseline) * self.std  # noise
