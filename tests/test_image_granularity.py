@@ -64,14 +64,25 @@ def matrix():
     [
         (GranularityResizeStrategy.NEAREST, [[1, 0], [0, 3]]),
         (GranularityResizeStrategy.BILINEAR, [[30 / 49, 15 / 49], [15 / 49, 65 / 49]]),
-        (GranularityResizeStrategy.BICUBIC, [[0.981445, -0.278320], [-0.278320, 2.075195]]),  # from chatgpt
         (GranularityResizeStrategy.AREA, [[0.75, 0.0], [0.0, 1.75]]),
     ],
 )
 def test_resize(strategy, expected, matrix):
     resized = strategy.resize(matrix, (2, 2))
+    expected = torch.tensor([expected], dtype=resized.dtype)
     assert torch.allclose(resized, expected, atol=1e-5), (
-        f"{strategy} resize of the 4x4 diagonal matrix to 2x2 must match the analytically expected values within 1e-5"
+        f"GranularityResizeStrategy.{strategy}.resize(matrix, (2, 2)) of the 4x4 diagonal matrix to 2x2 must match the analytically expected values within 1e-5"
+    )
+
+
+def test_resize_bicubic(matrix):
+    """BICUBIC has no easy closed form, so compare against torch's interpolate directly."""
+    resized = GranularityResizeStrategy.BICUBIC.resize(matrix, (2, 2))
+    expected = torch.nn.functional.interpolate(
+        matrix.unsqueeze(0), size=(2, 2), mode="bicubic", align_corners=False, antialias=True
+    ).squeeze(0)
+    assert torch.allclose(resized, expected, atol=1e-5), (
+        "GranularityResizeStrategy.BICUBIC.resize(matrix, (2, 2)) must match torch.nn.functional.interpolate(mode='bicubic', antialias=True) within 1e-5"
     )
 
 
