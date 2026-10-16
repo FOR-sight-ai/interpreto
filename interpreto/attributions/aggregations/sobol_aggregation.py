@@ -49,17 +49,17 @@ class SobolAggregator(Aggregator):
 
     def __init__(
         self,
-        n_token_perturbations: int,
+        n_granularity_perturbations: int,
         sobol_indices_order: SobolIndicesOrders = SobolIndicesOrders.FIRST_ORDER,
     ):
         """
         Initialize the aggregator.
 
         Args:
-            n_token_perturbations (int): Number of token perturbations.
+           n_granularity_perturbations (int): Number of token perturbations.
             sobol_indices_order (SobolIndicesOrders): Sobol indices order, either `FIRST_ORDER` or `TOTAL_ORDER`.
         """
-        self.n_token_perturbations = n_token_perturbations
+        self.n_granularity_perturbations = n_granularity_perturbations
         self.sobol_indices_order = sobol_indices_order.value
 
     @jaxtyped(typechecker=beartype)
@@ -78,7 +78,7 @@ class SobolAggregator(Aggregator):
             token_importance (torch.Tensor): The Sobol attribution indices for each token. Shape: (l,)
         """
         # simplify typing
-        k = self.n_token_perturbations
+        k = self.n_granularity_perturbations
         l = (results.shape[0] // k) - 2
         t = results.shape[1]
 

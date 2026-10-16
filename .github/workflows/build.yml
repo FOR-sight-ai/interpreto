@@ -67,6 +67,8 @@ jobs:
             AutoModelForCausalLM,
             AutoModelForMaskedLM,
             AutoTokenizer,
+            AutoModelForImageClassification,
+            AutoImageProcessor
         )
 
         # A test also needs a real tokenizer
@@ -81,6 +83,13 @@ jobs:
             "hf-internal-testing/tiny-random-t5",
             "textattack/bert-base-uncased-imdb",
         ]
+
+        image_model_ids = [
+            "hf-internal-testing/tiny-random-vit",
+            "hf-internal-testing/tiny-random-BeitForImageClassification",
+            "hf-internal-testing/tiny-random-ViTForImageClassification",
+            "hf-internal-testing/tiny-random-Dinov2Model",
+            ]
 
         # We will call .from_pretrained(...) once per model_id,
         # and also download its tokenizer.  Because HF_HUB_TOKEN
@@ -105,7 +114,19 @@ jobs:
             # In any case, also grab the tokenizer:
             AutoTokenizer.from_pretrained(m)
             print(f"✔ cached {m}")
-        print("All models cached successfully.")
+        print("All text models cached successfully.")
+
+        for m in set(image_model_ids):
+            try:
+                AutoModelForImageClassification.from_pretrained(m)
+            except Exception as ee:
+                print(f"‐‐ failed to load model {m}: {ee}")
+                exit(1)
+            # In any case, also grab the image processor:
+            AutoImageProcessor.from_pretrained(m)
+            print(f"✔ cached {m}")
+        print("All image models cached successfully.")
+        print("All models cached successfully")
         EOF
 
     - name: Check memory before fast tests

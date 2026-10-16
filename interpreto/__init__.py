@@ -40,7 +40,8 @@ from .attributions import (
     VarGrad,
 )
 from .commons import (
-    Granularity,
+    ImageGranularity,
+    TextGranularity,
 )
 from .concepts import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
 from .visualizations import (
@@ -62,7 +63,8 @@ def get_version() -> str:
 
 __all__ = [
     "GradientShap",
-    "Granularity",
+    "TextGranularity",
+    "ImageGranularity",
     "IntegratedGradients",
     "KernelShap",
     "Lime",
