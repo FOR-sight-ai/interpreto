@@ -69,7 +69,7 @@ def matrix():
     ],
 )
 def test_resize(strategy, expected, matrix):
-    resized = strategy.resize(matrix)
+    resized = strategy.resize(matrix, (2, 2))
     assert torch.allclose(resized, expected, atol=1e-5), (
         f"{strategy} resize of the 4x4 diagonal matrix to 2x2 must match the analytically expected values within 1e-5"
     )

@@ -131,7 +131,7 @@ FAST_METHOD_SPECS = [
         GranularityResizeStrategy.BICUBIC,
         torch.rand(3, 30, 30),
         1,
-        "bumblebee-testing/tiny-random-Dinov2Model-use_swiglu_ffn-True",
+        "hf-internal-testing/tiny-random-Dinov2Model",
     ),
     (
         GradientShap,
@@ -141,7 +141,7 @@ FAST_METHOD_SPECS = [
         GranularityResizeStrategy.AREA,
         Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
         0,
-        "optimum-intel-internal-testing/tiny-random-dinov-3",
+        "hf-internal-testing/tiny-random-Dinov2Model",
     ),
 ]
 
@@ -618,7 +618,7 @@ SLOW_LIME_SPECS = [
         GranularityResizeStrategy.BICUBIC,
         torch.rand(3, 340, 270),
         1,
-        "bumblebee-testing/tiny-random-Dinov2Model-use_swiglu_ffn-True",
+        "hf-internal-testing/tiny-random-Dinov2Model",
     ),
     (
         5,
@@ -628,7 +628,7 @@ SLOW_LIME_SPECS = [
         GranularityResizeStrategy.NEAREST,
         np.random.rand(3, 340, 270).astype(np.float32),
         0,
-        "optimum-intel-internal-testing/tiny-random-dinov-3",
+        "hf-internal-testing/tiny-random-Dinov2Model",
     ),
 ]
 
