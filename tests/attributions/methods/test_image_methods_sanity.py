@@ -38,10 +38,9 @@ The processor rescales by 1/255 then normalizes with mean = std = 0.5, so painti
 background with `image_mean * 255` (~128) lands on a normalized 0.0 — the neutral baseline that
 carries no signal. The perturbed image is then handed to the explainer as a raw image.
 
-This test does NOT assert anything about *where* the attribution lands yet — it only runs every
-method end to end and saves both the perturbed input and the heatmaps to `sanity_check_outputs/`
-at the repo root so they can be eyeballed. A quantitative "attribution concentrates on the animal"
-check comes later.
+Each method must have more than `MIN_MASS_IN_BOX` of the absolute value of the attribution inside
+the part of the image that is not occluded. The heatmaps are saved under `sanity_check_outputs/` so
+that they can be examined.
 """
 
 from pathlib import Path
@@ -65,7 +64,7 @@ from interpreto.attributions import (
     SquareGrad,
     VarGrad,
 )
-from interpreto.visualizations.image_attributions import plot_image_attribution
+from interpreto.visualizations.image_attributions import _prepare_heatmap, plot_image_attribution
 
 plt.switch_backend("Agg")  # headless: render into a buffer, never open a window.
 
@@ -86,7 +85,19 @@ SANITY_CASES = [
     ("dog", DOG_BOX, 1),
 ]
 
-# All ten methods, constructed uniformly with default parameters (Sobol/LIME included).
+# Share of the absolute attribution mass that must fall inside the animal's box.
+MIN_MASS_IN_BOX = 0.8
+
+# Number of perturbations by methods
+METHOD_KWARGS = {
+    KernelShap: {"n_perturbations": 10000},
+    Sobol: {"n_granularity_perturbations": 32},
+    Lime: {"n_perturbations": 10000},
+    SmoothGrad: {"n_perturbations": 5000},
+    SquareGrad: {"n_perturbations": 5000},
+    VarGrad: {"n_perturbations": 5000},
+}
+
 SANITY_METHODS = [
     GradientShap,
     IntegratedGradients,
@@ -145,7 +156,7 @@ def test_image_methods_sanity(model_and_processor, raw_image, attribution_method
     masked_image = _keep_box_raw(raw_image, box, background)
     masked_image.save(OUTPUT_DIR / f"{label_name}_input.png")
 
-    explainer = attribution_method(model, processor)
+    explainer = attribution_method(model, processor, **METHOD_KWARGS.get(attribution_method, {}))
     output = explainer.explain(masked_image, target)
 
     # Basic checks.
@@ -158,3 +169,12 @@ def test_image_methods_sanity(model_and_processor, raw_image, attribution_method
     fig.suptitle(f"{attribution_method.__name__} — {label_name}")
     fig.savefig(OUTPUT_DIR / f"{label_name}_{attribution_method.__name__}.png", dpi=120, bbox_inches="tight")
     plt.close(fig)
+
+    heatmap = _prepare_heatmap(output[0], target_idx=0, clip_percentile=1, absolute_value=True)
+    height, width = heatmap.shape
+    r0, r1, c0, c1 = box
+    mass_in_box = heatmap[int(r0 * height) : int(r1 * height), int(c0 * width) : int(c1 * width)].sum() / heatmap.sum()
+    assert mass_in_box > MIN_MASS_IN_BOX, (
+        f"{attribution_method.__name__} puts only {mass_in_box:.1%} of its absolute attribution mass "
+        f"inside the {label_name} box (expected > {MIN_MASS_IN_BOX:.0%})"
+    )
