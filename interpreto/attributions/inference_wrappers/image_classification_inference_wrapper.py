@@ -31,7 +31,7 @@ from collections.abc import Callable
 
 import torch
 from beartype import beartype
-from jaxtyping import Float, jaxtyped
+from jaxtyping import Float, Int, jaxtyped
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes, InferenceWrapper
