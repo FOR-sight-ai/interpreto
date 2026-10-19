@@ -29,13 +29,11 @@ from .granularity import (
     GranularityAggregationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
-    TextGranularity,
 )
 
 __all__ = [
     "Granularity",
     "DistanceFunctions",
-    "TextGranularity",
     "GranularityAggregationStrategy",
     "GranularityResizeStrategy",
     "ImageGranularity",

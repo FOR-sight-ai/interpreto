@@ -263,14 +263,14 @@ class InsertionDeletionBase:
         Returns:
             GranularityAggregationStrategy: The granularity aggregation strategy.
         """
-        # TextGranularity
+        # Granularity
         grans = [a.granularity for a in attributions_outputs]
         if not all(g == grans[0] for g in grans):
             raise ValueError("All attributions must have the same granularity.")
         self.granularity = grans[0]
         self.perturbator.granularity = grans[0]
 
-        # TextGranularity Aggregation Strategy
+        # Granularity Aggregation Strategy
         gas = [a.granularity_aggregation_strategy for a in attributions_outputs]
         if not all(g == gas[0] for g in gas):
             raise ValueError("All attributions must have the same granularity aggregation strategy.")
@@ -520,7 +520,7 @@ class Insertion(MultitaskMetricMixin, InsertionDeletionBase):
         model (PreTrainedModel): model used to generate explanations
         tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
-        granularity (TextGranularity): granularity level of the perturbations (token, word, sentence, etc.)
+        granularity (Granularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run
         n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
             steps from which the AUC will be computed).
@@ -580,7 +580,7 @@ class Deletion(MultitaskMetricMixin, InsertionDeletionBase):
         model (PreTrainedModel): model used to generate explanations
         tokenizer (PreTrainedTokenizerBase): Hugging Face tokenizer associated with the model
         batch_size (int): batch size for the inference of the metric
-        granularity (TextGranularity): granularity level of the perturbations (token, word, sentence, etc.)
+        granularity (Granularity): granularity level of the perturbations (token, word, sentence, etc.)
         device (torch.device): device on which the attribution method will be run
         n_perturbations (int): number of perturbations from which the metric will be computed (i.e. the number of
             steps from which the AUC will be computed).

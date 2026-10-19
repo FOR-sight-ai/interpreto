@@ -32,7 +32,7 @@ from interpreto.attributions.aggregations.linear_regression_aggregation import (
 )
 from interpreto.attributions.base import AttributionOutput
 from interpreto.attributions.perturbations import ShapPerturbator
-from interpreto.commons.granularity import TextGranularity
+from interpreto.commons.granularity import Granularity
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -40,8 +40,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 @pytest.mark.parametrize(
     "granularity, n_perturbations",
     [
-        (TextGranularity.TOKEN, 5),
-        (TextGranularity.WORD, 100),
+        (Granularity.TOKEN, 5),
+        (Granularity.WORD, 100),
     ],
 )
 def test_kernel_shap_init_and_mask(bert_model, bert_tokenizer, granularity, n_perturbations):

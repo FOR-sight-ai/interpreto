@@ -41,6 +41,7 @@ from interpreto.commons import (
     Granularity,
     GranularityAggregationStrategy,
     GranularityResizeStrategy,
+    ImageGranularity,
     general_bad_argument,
 )
 from interpreto.concepts.base import ModelForInputsToConcepts
@@ -60,11 +61,11 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
     [Paper](https://link.springer.com/chapter/10.1007/978-3-319-10590-1_53)
 
     Examples:
-        >>> from interpreto import TextGranularity, Occlusion
+        >>> from interpreto import Granularity, Occlusion
         >>> from interpreto.attributions import InferenceModes
         >>> method = Occlusion(model, processor, batch_size=4,
         >>>                    inference_mode=InferenceModes.SOFTMAX,
-        >>>                    granularity=TextGranularity.WORD)
+        >>>                    granularity=Granularity.WORD)
         >>> explanations = method(text)
     """
 
@@ -72,7 +73,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
-        granularity: Granularity | None = None,
+        granularity: Granularity | ImageGranularity | None = None,
         combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
@@ -86,7 +87,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
             model (PreTrainedModel | ModelForInputsToConcepts): model to explain.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
                 processor associated with the model.
-            granularity (Granularity | None): the level of granularity for the explanation.
+            granularity (Granularity | ImageGranularity | None): the level of granularity for the explanation.
                 Defaults to the modality's `default_tensor_granularity`: `WORD` for text,
                 `PIXEL` for images.
             combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy | None): how per-token or

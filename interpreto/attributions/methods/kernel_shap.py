@@ -42,7 +42,12 @@ from interpreto.attributions.base import AttributionExplainer, MultitaskExplaine
 from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.attributions.perturbations import ShapPerturbator
 from interpreto.commons import general_bad_argument
-from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy, GranularityResizeStrategy
+from interpreto.commons.granularity import (
+    Granularity,
+    GranularityAggregationStrategy,
+    GranularityResizeStrategy,
+    ImageGranularity,
+)
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
@@ -61,12 +66,12 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
     [Paper](https://arxiv.org/abs/1705.07874)
 
     Examples:
-        >>> from interpreto import TextGranularity, KernelShap
+        >>> from interpreto import Granularity, KernelShap
         >>> from interpreto.attributions import InferenceModes
         >>> method = KernelShap(model, processor, batch_size=4,
         >>>                     inference_mode=InferenceModes.SOFTMAX,
         >>>                     n_perturbations=20,
-        >>>                     granularity=TextGranularity.WORD)
+        >>>                     granularity=Granularity.WORD)
         >>> explanations = method(inputs)
     """
 
@@ -74,7 +79,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
-        granularity: Granularity | None = None,
+        granularity: Granularity | ImageGranularity | None = None,
         combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
@@ -89,7 +94,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
             model (PreTrainedModel | ModelForInputsToConcepts): model to explain.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
                 processor associated with the model.
-            granularity (Granularity | None): the level of granularity for the explanation.
+            granularity (Granularity | ImageGranularity | None): the level of granularity for the explanation.
                 Defaults to the modality's default_mask_granularity: WORD for text,
                 PATCH for images.
             combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy | None): how per-token or

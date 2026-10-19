@@ -71,7 +71,6 @@ from interpreto.commons import (
     GranularityAggregationStrategy,
     GranularityResizeStrategy,
     ImageGranularity,
-    TextGranularity,
 )
 from interpreto.commons.generator_tools import split_iterator
 from interpreto.concepts.base import ModelForInputsToConcepts
@@ -318,7 +317,7 @@ class AttributionOutput:
                 - For single-class classification: tensor of shape `(1)`
                 - For multi-class classification: tensor of shape `(c)` where `c` is the number of classes
 
-        granularity (TextGranularity):
+        granularity (Granularity):
             The granularity level of the explanation.
 
         granularity_aggregation_strategy (GranularityAggregationStrategy):
@@ -335,7 +334,7 @@ class AttributionOutput:
     targets: torch.Tensor
     model_task: ModelTask
     classes: torch.Tensor | None = None
-    granularity: TextGranularity = TextGranularity.DEFAULT
+    granularity: Granularity = Granularity.DEFAULT
     granularity_aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN
     inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
 
@@ -369,7 +368,7 @@ class AttributionExplainer(ABC):
         perturbator: Perturbator | None = None,
         aggregator: Aggregator | None = None,
         device: torch.device | None = None,
-        granularity: Granularity = TextGranularity.DEFAULT,
+        granularity: Granularity = Granularity.DEFAULT,
         combination_strategy: GranularityAggregationStrategy
         | GranularityResizeStrategy = GranularityAggregationStrategy.MEAN,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,  # TODO: add to all classes
@@ -391,9 +390,9 @@ class AttributionExplainer(ABC):
             device (torch.device, optional): The device on which computations are performed.
                 If None, defaults to the device of the model.
             granularity (Granularity, optional): The level of granularity for the explanation.
-                Modality-specific: subclasses narrow it to `TextGranularity` or `ImageGranularity`.
-                Defaults to TextGranularity.DEFAULT (WORD).
-                To obtain it, `from interpreto import TextGranularity` then `TextGranularity.WORD`.
+                Modality-specific: subclasses narrow it to `Granularity` or `ImageGranularity`.
+                Defaults to Granularity.DEFAULT (WORD).
+                To obtain it, `from interpreto import Granularity` then `Granularity.WORD`.
             combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy, optional): The method used to combine
                 scores at the specified granularity, for gradient-based methods. Thus, it is ignored
                 for perturbation based methods.
@@ -726,8 +725,8 @@ class TextClassificationAttributionExplainer(AttributionExplainer):
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
     _model_task = ModelTask.CLASSIFICATION
-    default_mask_granularity = TextGranularity.WORD
-    default_tensor_granularity = TextGranularity.WORD
+    default_mask_granularity = Granularity.WORD
+    default_tensor_granularity = Granularity.WORD
     default_combination_strategy = GranularityAggregationStrategy.MEAN
 
     def process_targets(
@@ -788,8 +787,8 @@ class TextGenerationAttributionExplainer(AttributionExplainer):
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
     _model_task = ModelTask.GENERATION
-    default_mask_granularity = TextGranularity.WORD
-    default_tensor_granularity = TextGranularity.WORD
+    default_mask_granularity = Granularity.WORD
+    default_tensor_granularity = Granularity.WORD
     default_combination_strategy = GranularityAggregationStrategy.MEAN
 
     def normalize_target_ids_with_leading_space(self, target: torch.Tensor) -> torch.Tensor:
@@ -1368,8 +1367,8 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
     _model_task = ModelTask.CONCEPTS
     base_tensor_perturbator_class = TextTensorPerturbator
     base_mask_perturbator_class = TextMaskPerturbator
-    default_mask_granularity = TextGranularity.WORD
-    default_tensor_granularity = TextGranularity.WORD
+    default_mask_granularity = Granularity.WORD
+    default_tensor_granularity = Granularity.WORD
     default_combination_strategy = GranularityAggregationStrategy.MEAN
 
     def process_inputs_to_explain_and_targets(  # type: ignore

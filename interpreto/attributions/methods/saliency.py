@@ -37,7 +37,12 @@ from transformers.image_processing_utils import BaseImageProcessor
 from interpreto.attributions.base import AttributionExplainer, MultitaskExplainerMixin
 from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes
 from interpreto.commons import general_bad_argument
-from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy, GranularityResizeStrategy
+from interpreto.commons.granularity import (
+    Granularity,
+    GranularityAggregationStrategy,
+    GranularityResizeStrategy,
+    ImageGranularity,
+)
 
 
 @general_bad_argument
@@ -73,7 +78,7 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
         self,
         model: PreTrainedModel,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
-        granularity: Granularity | None = None,
+        granularity: Granularity | ImageGranularity | None = None,
         combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
@@ -87,7 +92,7 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
             model (PreTrainedModel): model to explain.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
                 processor associated with the model.
-            granularity (Granularity | None): the level of granularity for the explanation.
+            granularity (Granularity | ImageGranularity | None): the level of granularity for the explanation.
                 Defaults to the modality's `default_tensor_granularity`: `WORD` for text,
                 `PIXEL` for images.
             combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy | None): how per-token or

@@ -47,6 +47,7 @@ from interpreto.commons import (
     Granularity,
     GranularityAggregationStrategy,
     GranularityResizeStrategy,
+    ImageGranularity,
     general_bad_argument,
 )
 from interpreto.concepts.base import ModelForInputsToConcepts
@@ -66,12 +67,12 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
     [Paper](https://arxiv.org/abs/1602.04938)
 
     Examples:
-        >>> from interpreto import TextGranularity, Lime
+        >>> from interpreto import Granularity, Lime
         >>> from interpreto.attributions import InferenceModes
         >>> method = Lime(model, processor, batch_size=4,
         >>>               inference_mode=InferenceModes.LOG_SOFTMAX,
         >>>               n_perturbations=20,
-        >>>               granularity=TextGranularity.WORD,
+        >>>               granularity=Granularity.WORD,
         >>>               distance_function=Lime.distance_functions.HAMMING)
         >>> explanations = method(inputs)
     """
@@ -82,7 +83,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
-        granularity: Granularity | None = None,
+        granularity: Granularity | ImageGranularity | None = None,
         combination_strategy: GranularityAggregationStrategy | GranularityResizeStrategy | None = None,
         inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
         device: torch.device | None = None,
@@ -100,7 +101,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
             model (PreTrainedModel | ModelForInputsToConcepts): model to explain.
             processor (PreTrainedTokenizerBase | BaseImageProcessor): Hugging Face tokenizer or image
                 processor associated with the model.
-            granularity (Granularity | None): the level of granularity for the explanation.
+            granularity (Granularity | ImageGranularity | None): the level of granularity for the explanation.
                 Defaults to the modality's default_mask_granularity: WORD for text,
                 PATCH for images.
             combination_strategy (GranularityAggregationStrategy | GranularityResizeStrategy | None): how per-token

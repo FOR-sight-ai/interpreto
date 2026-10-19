@@ -61,7 +61,7 @@ class Perturbator(ABC):
         self,
         *,
         processor: PreTrainedTokenizerBase | BaseImageProcessor,
-        granularity: Granularity | None = None,
+        granularity: Granularity | ImageGranularity | None = None,
         n_perturbations: int = -1,
     ):
         self.processor = processor

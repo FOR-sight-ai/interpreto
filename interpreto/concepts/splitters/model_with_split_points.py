@@ -45,7 +45,7 @@ from transformers import (
     T5ForConditionalGeneration,
 )
 
-from interpreto.commons.granularity import GranularityAggregationStrategy, TextGranularity
+from interpreto.commons.granularity import Granularity, GranularityAggregationStrategy
 from interpreto.concepts.splitters.base_splitter import BaseSplitter, InitializationError  # noqa: F401
 from interpreto.typing import ConceptsActivations, LatentActivations
 
@@ -70,7 +70,7 @@ class ActivationGranularity(Enum):
         special tokens are removed and the remaining ones are aggregate by sentences.
         Then the activations are flattened.
         ``(n x g, d)`` where `g` is the number of sentences in the input.
-        The split is defined by `interpreto.commons.granularity.TextGranularity.SENTENCE`.
+        The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
 
     - ``TOKEN``:
         the raw activations are flattened, but the special tokens are removed.
@@ -81,15 +81,15 @@ class ActivationGranularity(Enum):
         the special tokens are removed and the remaining ones are aggregate by words.
         Then the activations are flattened.
         ``(n x g, d)`` where `g` is the number of words in the input.
-        The split is defined by `interpreto.commons.granularity.TextGranularity.WORD`.
+        The split is defined by `interpreto.commons.granularity.Granularity.WORD`.
     """
 
-    ALL_TOKENS = TextGranularity.ALL_TOKENS
+    ALL_TOKENS = Granularity.ALL_TOKENS
     CLS_TOKEN = "cls_token"
     SAMPLE = "sample"
-    SENTENCE = TextGranularity.SENTENCE
-    TOKEN = TextGranularity.TOKEN
-    WORD = TextGranularity.WORD
+    SENTENCE = Granularity.SENTENCE
+    TOKEN = Granularity.TOKEN
+    WORD = Granularity.WORD
 
 
 AG = ActivationGranularity
@@ -336,7 +336,7 @@ class ModelWithSplitPoints(BaseSplitter):
     ) -> list[list[list[int]]]:
         """Get the indices of the granularity level, might be None.
 
-        The indices correspond to how TextGranularity work in general in Interpreto.
+        The indices correspond to how Granularity work in general in Interpreto.
         Called by the `get_activations` and `_get_concept_output_gradients` methods.
         They are used to select the activations through the `_apply_selection_strategy` method.
         But also to put back the activations through the `_reintegrate_selected_activations` method.
@@ -416,13 +416,13 @@ class ModelWithSplitPoints(BaseSplitter):
         However, we do special cases to go faster for some granularities.
 
         The way activations indices are treated is far from trivial. Here is an example:
-        This indices are the same we defined in `TextGranularity`, lets take an example with the `WORD` granularity.
+        This indices are the same we defined in `Granularity`, lets take an example with the `WORD` granularity.
 
         >>> example:list[str] = [
         ...     "A BC DEF",
         ...     "abc de f"
         ... ]
-        >>> indices = TextGranularity.WORD.get_indices(example, tokenizer)
+        >>> indices = Granularity.WORD.get_indices(example, tokenizer)
         >>> indices
         [
              [ [0], [1, 2], [3, 4, 5] ],
@@ -741,7 +741,7 @@ class ModelWithSplitPoints(BaseSplitter):
                     special tokens are removed and the remaining ones are aggregate by sentences.
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of sentences in the input.
-                    The split is defined by `interpreto.commons.granularity.TextGranularity.SENTENCE`.
+                    The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
 
                 - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
                     the raw activations are flattened, but the special tokens are removed.
@@ -752,7 +752,7 @@ class ModelWithSplitPoints(BaseSplitter):
                     the special tokens are removed and the remaining ones are aggregate by words.
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of words in the input.
-                    The split is defined by `interpreto.commons.granularity.TextGranularity.WORD`.
+                    The split is defined by `interpreto.commons.granularity.Granularity.WORD`.
 
             aggregation_strategy (GranularityAggregationStrategy):
                 Strategy to aggregate token activations into larger inputs granularities.
@@ -1008,7 +1008,7 @@ class ModelWithSplitPoints(BaseSplitter):
                     special tokens are removed and the remaining ones are aggregate by sentences.
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of sentences in the input.
-                    The split is defined by `interpreto.commons.granularity.TextGranularity.SENTENCE`.
+                    The split is defined by `interpreto.commons.granularity.Granularity.SENTENCE`.
 
                 - ``ModelWithSplitPoints.activation_granularities.TOKEN``:
                     the raw activations are flattened, but the special tokens are removed.
@@ -1019,7 +1019,7 @@ class ModelWithSplitPoints(BaseSplitter):
                     the special tokens are removed and the remaining ones are aggregate by words.
                     Then the activations are flattened.
                     ``(n x g, d)`` where `g` is the number of words in the input.
-                    The split is defined by `interpreto.commons.granularity.TextGranularity.WORD`.
+                    The split is defined by `interpreto.commons.granularity.Granularity.WORD`.
 
             aggregation_strategy:
                 Strategy to aggregate token activations into larger inputs granularities.

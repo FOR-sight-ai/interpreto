@@ -37,7 +37,7 @@ from interpreto.attributions.perturbations import (
     SobolPerturbator,
 )
 from interpreto.attributions.perturbations.base import TextMaskPerturbator, TextTensorPerturbator
-from interpreto.commons.granularity import TextGranularity
+from interpreto.commons.granularity import Granularity
 
 
 def _text_variant(method_class: type, modality_base: type) -> type:
@@ -119,7 +119,7 @@ def test_token_perturbators(perturbator_class, sentences, bert_model, bert_token
     # dictated by the sequence length instead.
     perturbator = perturbator_class(
         processor=bert_tokenizer,
-        granularity=TextGranularity.ALL_TOKENS,
+        granularity=Granularity.ALL_TOKENS,
         replace_value=replace_token_id,
         n_perturbations=p,
     )

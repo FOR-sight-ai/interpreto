@@ -438,11 +438,11 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
 
                 - ``ModelWithSplitPoints.activation_granularities.WORD``:
                     aggregate by words following the split defined by
-                    :class:`~interpreto.commons.granularity.TextGranularity.WORD`.
+                    :class:`~interpreto.commons.granularity.Granularity.WORD`.
 
                 - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
                     aggregate by sentences following the split defined by
-                    :class:`~interpreto.commons.granularity.TextGranularity.SENTENCE`.
+                    :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.
 
             aggregation_strategy:
                 Strategy to aggregate token activations into larger inputs granularities.
