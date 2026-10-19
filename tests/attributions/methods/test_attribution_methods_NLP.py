@@ -435,6 +435,6 @@ if __name__ == "__main__":
         "Testing interpreto",
     ]
     test_attribution_output_size(bert_model, bert_processor, Occlusion, sentences)
-    test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
+    test_attribution_output_size(bert_model, bert_processor, VarGrad, sentences)
     test_attribution_methods_memory_management_classification(IntegratedGradients)
     test_attribution_methods_memory_management_generation(SmoothGrad)
