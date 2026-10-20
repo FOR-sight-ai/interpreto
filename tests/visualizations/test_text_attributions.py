@@ -1,7 +1,7 @@
 # MIT License
 #
-# Copyright (c) 2025 IRT Antoine de Saint Exupery et Universite Paul Sabatier Toulouse III - All
-# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupery,
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
 # CRIAQ and ANITI - https://www.deel.ai/.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy

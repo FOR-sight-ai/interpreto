@@ -41,8 +41,7 @@ from transformers import (
     BatchEncoding,
     PretrainedConfig,
     PreTrainedModel,
-    PreTrainedTokenizer,
-    PreTrainedTokenizerFast,
+    PreTrainedTokenizerBase,
     T5ForConditionalGeneration,
 )
 
@@ -141,7 +140,7 @@ class ModelWithSplitPoints(BaseSplitter):
         config (PretrainedConfig): Custom configuration for the loaded model.
             If not specified, it will be instantiated with the default configuration for the model.
 
-        tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): Custom tokenizer for the loaded model.
+        tokenizer (PreTrainedTokenizerBase | None): Custom tokenizer for the loaded model.
             If not specified, it will be instantiated with the default tokenizer for the model.
 
             :warning: If `model_or_repo_id` is a `transformers.PreTrainedModel` object, then `tokenizer` **must be defined**.
@@ -169,7 +168,10 @@ class ModelWithSplitPoints(BaseSplitter):
 
         repo_id (str): Either the model id in the HF Hub, or the path from which the model was loaded.
 
-        tokenizer (PreTrainedTokenizer): Tokenizer for the loaded model, either given by the user or loaded from the repo_id.
+        split_points (list[str]): Getter/setters for model paths corresponding to split points inside the loaded model.
+            Automatically handle validation, sorting and resolving int paths to strings.
+
+        tokenizer (PreTrainedTokenizerBase): Tokenizer for the loaded model, either given by the user or loaded from the repo_id.
 
         _model (transformers.PreTrainedModel): Huggingface transformers model wrapped by NNSight.
 
@@ -243,7 +245,7 @@ class ModelWithSplitPoints(BaseSplitter):
         *args: tuple[Any],
         split_points: str | int | list[str] | list[int] | tuple[str, ...] | tuple[int, ...] | None = None,
         automodel: type[AutoModel] | None = None,
-        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
+        tokenizer: PreTrainedTokenizerBase | None = None,
         config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,

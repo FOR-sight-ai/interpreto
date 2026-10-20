@@ -106,7 +106,7 @@ def test_classification_attribution_methods_detect_emotion_word(emotion_model, m
 
     texts = [text for text, _, _ in EXAMPLES]
 
-    explainer = method_class(model, tokenizer=tokenizer)
+    explainer = method_class(model, processor=tokenizer)
 
     set_seed()
     attribution_outputs = explainer.explain(texts)
@@ -341,7 +341,7 @@ def test_generation_attribution_methods_detect_copied_token(shift_copy_model, me
     model, tokenizer = shift_copy_model
     prompt_token_count = tokenizer(prompt, return_tensors="pt")["input_ids"].shape[-1]
 
-    explainer = method_class(model, tokenizer=tokenizer, granularity=Granularity.TOKEN, batch_size=1, device=DEVICE)
+    explainer = method_class(model, processor=tokenizer, granularity=Granularity.TOKEN, batch_size=1, device=DEVICE)
 
     set_seed()
     [attribution_output] = explainer.explain(prompt, target)

@@ -22,7 +22,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from .classification_inference_wrapper import ClassificationInferenceWrapper
-from .generation_inference_wrapper import GenerationInferenceWrapper
+from .image_classification_inference_wrapper import ImageClassificationInferenceWrapper
 from .inference_wrapper import InferenceWrapper
 from .inputs_to_concepts_inference_wrapper import InputsToConceptsInferenceWrapper
+from .text_classification_inference_wrapper import TextClassificationInferenceWrapper
+from .text_generation_inference_wrapper import TextGenerationInferenceWrapper

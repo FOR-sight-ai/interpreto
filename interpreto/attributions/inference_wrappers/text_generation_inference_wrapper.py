@@ -31,7 +31,7 @@ from jaxtyping import Float, Int, jaxtyped
 from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceWrapper
 
 
-class GenerationInferenceWrapper(InferenceWrapper):
+class TextGenerationInferenceWrapper(InferenceWrapper):
     """
     Inference wrapper for generation tasks.
     """
