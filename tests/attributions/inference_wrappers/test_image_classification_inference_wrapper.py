@@ -48,6 +48,23 @@ IMAGE_CLASSIFICATION_MODELS = [
     "hf-internal-testing/tiny-random-Dinov2Model",
 ]
 
+SLOW_IMAGE_CLASSIFICATION_MODELS = [
+    "hf-internal-testing/tiny-random-vit",
+    "hf-internal-testing/tiny-random-BeitForImageClassification",
+    "hf-internal-testing/tiny-random-ViTForImageClassification",
+    "hf-internal-testing/tiny-random-Dinov2Model",
+    "hf-internal-testing/tiny-random-CLIPForImageClassification",
+    "hf-internal-testing/tiny-random-SiglipForImageClassification",
+    "hf-internal-testing/tiny-random-DeiTForImageClassification",
+    "hf-internal-testing/tiny-random-Dinov2ForImageClassification",
+    "hf-internal-testing/tiny-random-SwinForImageClassification",
+    "hf-internal-testing/tiny-random-MobileViTForImageClassification",
+    "hf-internal-testing/tiny-random-ResNetForImageClassification",
+    "hf-internal-testing/tiny-random-ConvNextForImageClassification",
+    "hf-internal-testing/tiny-random-MobileNetV2ForImageClassification",
+    "hf-internal-testing/tiny-random-EfficientNetForImageClassification",
+]
+
 torch.manual_seed(0)
 
 
@@ -148,7 +165,7 @@ def test_image_classification_wrapper_fast():
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("model_name", IMAGE_CLASSIFICATION_MODELS)
+@pytest.mark.parametrize("model_name", SLOW_IMAGE_CLASSIFICATION_MODELS)
 def test_image_classification_wrapper(model_name):
     # images divided in two batches which we could see as different samples in interpreto
     # for each sample there are several perturbed images

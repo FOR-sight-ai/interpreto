@@ -476,7 +476,8 @@ def test_image_lime(
     )
 
 
-# Here we want to test if the methods still work on bigger input and on a real vit ('akahana/vit-base-cats-vs-dogs' trained to classify cats and dogs).
+# Here we want to test if the methods still work on bigger inputs, on other models
+# and on a real vit ('akahana/vit-base-cats-vs-dogs' trained to classify cats and dogs).
 # The raw tensor/ndarray are deliberately given a
 # real, non-square size (3, 340, 270) so the processor's resize/crop path is actually exercised.
 # attribution_method, perturbator, aggregator, granularity, resize_strategy, input, targets
@@ -489,6 +490,7 @@ SLOW_METHOD_SPECS = [
         GranularityResizeStrategy.BICUBIC,
         np.random.rand(3, 340, 270).astype(np.float32),
         [1],
+        "akahana/vit-base-cats-vs-dogs",
     ),
     (
         KernelShap,
@@ -498,6 +500,7 @@ SLOW_METHOD_SPECS = [
         GranularityResizeStrategy.BILINEAR,
         torch.rand(3, 340, 270),
         torch.tensor([0]),
+        "hf-internal-testing/tiny-random-ResNetForImageClassification",
     ),
     (
         Saliency,
@@ -507,6 +510,7 @@ SLOW_METHOD_SPECS = [
         GranularityResizeStrategy.AREA,
         [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[:2]],
         [0, 1],
+        "akahana/vit-base-cats-vs-dogs",
     ),
     (
         SmoothGrad,
@@ -516,6 +520,7 @@ SLOW_METHOD_SPECS = [
         GranularityResizeStrategy.AREA,
         Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
         0,
+        "hf-internal-testing/tiny-random-CLIPForImageClassification",
     ),
     (
         IntegratedGradients,
@@ -525,6 +530,7 @@ SLOW_METHOD_SPECS = [
         GranularityResizeStrategy.NEAREST,
         torch.rand(3, 340, 270),
         1,
+        "hf-internal-testing/tiny-random-SwinForImageClassification",
     ),
     (
         GradientShap,
@@ -534,13 +540,65 @@ SLOW_METHOD_SPECS = [
         GranularityResizeStrategy.BILINEAR,
         np.random.rand(3, 340, 270).astype(np.float32),
         torch.tensor([[0, 1]]),
+        "hf-internal-testing/tiny-random-MobileViTForImageClassification",
+    ),
+    (
+        Occlusion,
+        OcclusionPerturbator,
+        OcclusionAggregator,
+        ImageGranularity.PATCH,
+        GranularityResizeStrategy.NEAREST,
+        torch.rand(3, 340, 270),
+        0,
+        "hf-internal-testing/tiny-random-vit",
+    ),
+    (
+        Saliency,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.BICUBIC,
+        np.random.rand(3, 340, 270).astype(np.float32),
+        1,
+        "hf-internal-testing/tiny-random-SiglipForImageClassification",
+    ),
+    (
+        SmoothGrad,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.BILINEAR,
+        torch.rand(3, 340, 270),
+        0,
+        "hf-internal-testing/tiny-random-DeiTForImageClassification",
+    ),
+    (
+        KernelShap,
+        ShapPerturbator,
+        LinearRegressionAggregator,
+        ImageGranularity.PATCH,
+        GranularityResizeStrategy.AREA,
+        Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
+        1,
+        "hf-internal-testing/tiny-random-Dinov2ForImageClassification",
+    ),
+    (
+        IntegratedGradients,
+        ImageTensorPerturbator,
+        Aggregator,
+        ImageGranularity.PIXEL,
+        GranularityResizeStrategy.BICUBIC,
+        Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
+        0,
+        "hf-internal-testing/tiny-random-MobileNetV2ForImageClassification",
     ),
 ]
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets", SLOW_METHOD_SPECS
+    "attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets, model_name",
+    SLOW_METHOD_SPECS,
 )
 def test_vision_attribution_methods_slow(
     attribution_method,
@@ -550,8 +608,9 @@ def test_vision_attribution_methods_slow(
     resize_strategy,
     inputs,
     targets,
+    model_name,
 ):
-    model, processor = model_and_processor("akahana/vit-base-cats-vs-dogs")
+    model, processor = model_and_processor(model_name)
 
     explainer = attribution_method(
         model,
@@ -589,6 +648,15 @@ SLOW_SOBOL_SPECS = [
         Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
         1,
         "hf-internal-testing/tiny-random-ViTForImageClassification",
+    ),
+    (
+        5,
+        SobolIndicesOrders.FIRST_ORDER,
+        SequenceSamplers.SOBOL,
+        GranularityResizeStrategy.AREA,
+        np.random.rand(3, 340, 270).astype(np.float32),
+        1,
+        "hf-internal-testing/tiny-random-ConvNextForImageClassification",
     ),
 ]
 
@@ -629,6 +697,16 @@ SLOW_LIME_SPECS = [
         np.random.rand(3, 340, 270).astype(np.float32),
         0,
         "hf-internal-testing/tiny-random-Dinov2Model",
+    ),
+    (
+        5,
+        0.5,
+        DistancesFromMask.HAMMING,
+        1,
+        GranularityResizeStrategy.BILINEAR,
+        Image.open(sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[0]).convert("RGB"),
+        1,
+        "hf-internal-testing/tiny-random-EfficientNetForImageClassification",
     ),
 ]
 
