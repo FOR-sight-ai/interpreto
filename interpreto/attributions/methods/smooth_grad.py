@@ -47,7 +47,6 @@ from interpreto.commons.granularity import (
 )
 
 
-@general_bad_argument
 class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
     """
     SmoothGrad is an enhanced version of gradient-based interpretability methods, such as saliency maps.
@@ -73,6 +72,7 @@ class SmoothGrad(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method.explain(inputs)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel,

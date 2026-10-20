@@ -51,7 +51,6 @@ from interpreto.commons.granularity import (
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
-@general_bad_argument
 class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
     """
     KernelSHAP is a model‑agnostic Shapley value estimator that interprets predictions
@@ -75,6 +74,7 @@ class KernelShap(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method(inputs)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,

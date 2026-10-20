@@ -45,7 +45,6 @@ from interpreto.commons.granularity import (
 )
 
 
-@general_bad_argument
 class Saliency(MultitaskExplainerMixin, AttributionExplainer):
     """
     Saliency maps are a simple and widely used gradient-based method for interpreting
@@ -74,6 +73,7 @@ class Saliency(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method.explain(inputs)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel,

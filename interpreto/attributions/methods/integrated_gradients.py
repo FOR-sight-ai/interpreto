@@ -48,7 +48,6 @@ from interpreto.commons.granularity import (
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
-@general_bad_argument
 class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
     """
     Integrated Gradients (IG) is a gradient-based interpretability method that attributes
@@ -70,6 +69,7 @@ class IntegratedGradients(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method.explain(model_inputs=inputs)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,

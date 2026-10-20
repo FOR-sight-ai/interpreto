@@ -45,7 +45,6 @@ from interpreto.commons.granularity import (
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
-@general_bad_argument
 class GradientShap(MultitaskExplainerMixin, AttributionExplainer):
     """
     GradientSHAP is a gradient-based Shapley value estimator that computes attributions
@@ -70,6 +69,7 @@ class GradientShap(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method(inputs)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,

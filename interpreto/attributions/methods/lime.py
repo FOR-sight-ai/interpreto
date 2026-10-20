@@ -53,7 +53,6 @@ from interpreto.commons import (
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
-@general_bad_argument
 class Lime(MultitaskExplainerMixin, AttributionExplainer):
     """
     Local Interpretable Model-agnostic Explanations (LIME) is a perturbation‑based approach that explains individual predictions by
@@ -79,6 +78,7 @@ class Lime(MultitaskExplainerMixin, AttributionExplainer):
 
     distance_functions: type[Enum] = DistancesFromMask
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,

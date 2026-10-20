@@ -47,7 +47,6 @@ from interpreto.commons import (
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
-@general_bad_argument
 class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
     """
     The Occlusion method is a perturbation-based approach to interpret model behavior by analyzing
@@ -69,6 +68,7 @@ class Occlusion(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method(text)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,

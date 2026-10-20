@@ -50,8 +50,6 @@ from interpreto.commons.granularity import (
 from interpreto.concepts.base import ModelForInputsToConcepts
 
 
-@general_bad_argument
-@sobol_bad_argument
 class Sobol(MultitaskExplainerMixin, AttributionExplainer):
     """
     Sobol is a variance-based sensitivity analysis method used to quantify the contribution
@@ -80,6 +78,8 @@ class Sobol(MultitaskExplainerMixin, AttributionExplainer):
     samplers: type[Enum] = SequenceSamplers
     sobol_indices_orders: type[Enum] = SobolIndicesOrders
 
+    @general_bad_argument
+    @sobol_bad_argument
     def __init__(
         self,
         model: PreTrainedModel | ModelForInputsToConcepts,

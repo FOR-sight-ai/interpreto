@@ -47,7 +47,6 @@ from interpreto.commons.granularity import (
 )
 
 
-@general_bad_argument
 class SquareGrad(MultitaskExplainerMixin, AttributionExplainer):
     """
     SquareGrad is a gradient-based attribution method that computes the variance of input gradients
@@ -72,6 +71,7 @@ class SquareGrad(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method.explain(inputs)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel,

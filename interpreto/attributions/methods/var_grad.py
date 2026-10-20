@@ -47,7 +47,6 @@ from interpreto.commons.granularity import (
 )
 
 
-@general_bad_argument
 class VarGrad(MultitaskExplainerMixin, AttributionExplainer):
     """
     VarGrad is a gradient-based attribution method that computes the variance of input gradients
@@ -76,6 +75,7 @@ class VarGrad(MultitaskExplainerMixin, AttributionExplainer):
         >>> explanations = method.explain(inputs)
     """
 
+    @general_bad_argument
     def __init__(
         self,
         model: PreTrainedModel,
