@@ -2,6 +2,35 @@
 *   CSS styling for explanation visualizations
 */
 
+/* Query-to-image retrieval explanations */
+.image-retrieval-visualization .retrieval-token {
+  cursor: pointer;
+}
+
+.image-retrieval-visualization .retrieval-token:focus-visible {
+  outline: 2px solid var(--negative-color) !important;
+}
+
+.image-retrieval-visualization .retrieval-image {
+  position: relative;
+  width: fit-content;
+  max-width: min(100%, 512px);
+}
+
+.image-retrieval-visualization .retrieval-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.image-retrieval-visualization .retrieval-image .retrieval-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 /* Light mode */
 :root {
   --default-background-color: white;

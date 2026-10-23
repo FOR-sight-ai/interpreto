@@ -27,6 +27,7 @@ Definition of different granularity levels for explainers (tokens, words, senten
 
 from __future__ import annotations
 
+import math
 from enum import Enum
 
 import torch
@@ -1082,16 +1083,55 @@ class ImageGranularity(Granularity):
         Returns:
             torch.Tensor: Pixel-resolution map of shape `(t, H, W)`.
         """
-        t = contribution.shape[0]
-        h_in, w_in = int(inputs["pixel_values"].shape[-2]), int(inputs["pixel_values"].shape[-1])
-        match self:
-            case ImageGranularity.PIXEL:
-                # pixels are already the finest unit — row-major reshape, no interpolation
-                return contribution.reshape(t, h_in, w_in)
-            case ImageGranularity.PATCH:
-                # divisibility is guaranteed upstream by `_validate_batch_feature`
-                gh, gw = h_in // patch_size, w_in // patch_size
-                grid: Float[torch.Tensor, "t gh gw"] = contribution.reshape(t, gh, gw)
-                return resize_strategy.resize(grid, output_size=(h_in, w_in))
-            case _:
-                raise NotImplementedError(f"Granularity {self} not implemented for image resizing.")
+        """Expand attribution scores to the processed image resolution."""
+        t, g = contribution.shape
+        pixel_values = inputs["pixel_values"]
+
+        if pixel_values.ndim == 4:
+            # Spatial images: (1, C, H, W)
+            h, w = pixel_values.shape[-2:]
+
+            match self:
+                case ImageGranularity.PIXEL:
+                    gh, gw = h, w
+
+                case ImageGranularity.PATCH:
+                    if h % patch_size or w % patch_size:
+                        raise ValueError("Image dimensions must be divisible by patch_size.")
+
+                    gh, gw = h // patch_size, w // patch_size
+
+        elif pixel_values.ndim == 3:
+            # Patchified images: (1, P, D)
+            if "image_grid_thw" not in inputs:
+                raise ValueError("Cannot reconstruct the spatial grid of a patchified image without image_grid_thw.")
+
+            image_grid = inputs["image_grid_thw"].reshape(-1, 3)
+
+            if image_grid.shape[0] != 1 or int(image_grid[0, 0]) != 1:
+                raise ValueError("Expected a single image grid.")
+
+            _, gh, gw = map(int, image_grid[0].tolist())
+
+            # Full processed image resolution
+            h, w = gh * patch_size, gw * patch_size
+
+            # Infer the effective spatial merge size from the attribution count.
+            ratio, remainder = divmod(gh * gw, g)
+            merge_size = math.isqrt(ratio)
+
+            if remainder or merge_size == 0 or merge_size**2 != ratio or gh % merge_size or gw % merge_size:
+                raise ValueError(f"Cannot map {g} attribution values onto image grid ({gh}, {gw}).")
+
+            gh //= merge_size
+            gw //= merge_size
+
+        else:
+            raise ValueError(f"Unsupported pixel_values shape: {tuple(pixel_values.shape)}.")
+
+        if g != gh * gw:
+            raise ValueError(f"Expected {gh * gw} attribution values, got {g}.")
+
+        grid = contribution.reshape(t, gh, gw)
+
+        return resize_strategy.resize(grid, output_size=(h, w))

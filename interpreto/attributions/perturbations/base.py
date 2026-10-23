@@ -303,6 +303,13 @@ class ImageTensorPerturbator(TensorPerturbator):
         perturbed_pixels, mask = self.perturb_tensor(pixel_values)
 
         inputs["pixel_values"] = perturbed_pixels
+
+        # Repeat other keys in encoding for each perturbation
+        for k in model_inputs.keys():
+            if k != "pixel_values":
+                repeats = [1] * (model_inputs[k].dim())
+                repeats[0] = perturbed_pixels.shape[0]
+                inputs[k] = inputs[k].repeat(*repeats)
         return inputs, mask
 
     def perturb_tensor(
@@ -366,69 +373,65 @@ class ImageMaskPerturbator(MaskPerturbator):
         raise NotImplementedError()
 
     def perturb(self, model_inputs: TensorMapping) -> tuple[TensorMapping, torch.Tensor | None]:
-        if "pixel_values" not in model_inputs:
-            raise ValueError("model_inputs should contain 'pixel_values'")
-
         inputs = deepcopy(model_inputs)
-        pixel_values: Float[torch.Tensor, "1 3 H W"] = inputs["pixel_values"]
+        pixel_values = inputs["pixel_values"]
 
-        if pixel_values.shape[0] != 1:
-            raise ValueError(
-                "Inputs are treated one by one in the perturbator, "
-                f"but received pixel_values of shape {tuple(pixel_values.shape)} "
-                "- expected shape (1, 3, H, W)."
+        if pixel_values.ndim == 4:
+            # spatial image (1, C, H, W)
+            _, _, h, w = pixel_values.shape
+
+            # PATCH is set directly by the explainer by reading model.config.
+            if self.patch_size is None:  # type: ignore
+                raise ValueError(
+                    "patch_size is None. It must be set "
+                    "from the model config. Normally the explainer does this at construction. "
+                    "If using the perturbator standalone, pass patch_size explicitly."
+                )
+
+            gh, gw = h // self.patch_size, w // self.patch_size  # type: ignore
+
+            # granularity-wise mask from the subclass: (p, g) with g = gh * gw
+
+            gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(gh * gw)
+
+            # expand to pixel space by resizing the (gh, gw) grid up to (h, w): (p, l)
+            # TODO: For now, we have chosen to fix the resize of the mask to the NEAREST
+            # strategy to keep clarity and simplify the API. This will need to be changed
+            # in the future if we want to implement methods such as RISE that require soft
+            # masks and would thus require a BILINEAR upsampling strategy rather than NEAREST
+            real_mask: Float[torch.Tensor, "p 1 h w"] = GranularityResizeStrategy.NEAREST.resize(
+                gran_mask.reshape(-1, gh, gw),
+                output_size=(h, w),
+            ).unsqueeze(1)
+
+        elif pixel_values.ndim == 3:
+            merge_size = (
+                getattr(getattr(self.processor, "image_processor", None), "merge_size", 1)
+                if self.spatial_merge  # type: ignore  # Only for models with spatial merge like Qwen
+                else 1
             )
+            if pixel_values.shape[1] % merge_size**2 != 0:
+                raise ValueError(
+                    f"pixel_values.shape[1] ({pixel_values.shape[1]}) is not divisible by merge_size**2 ({merge_size**2}). "
+                    "This is a requirement for spatial merge models like Qwen."
+                )
+            mask_dim = pixel_values.shape[1] // merge_size**2
 
-        _, c, h, w = pixel_values.shape
-        l = h * w
+            # patchified image (1, l, d) (with l the number of tokens)
+            gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(mask_dim)
+            real_mask: Float[torch.Tensor, "p l 1"] = gran_mask.repeat_interleave(merge_size**2, dim=1).unsqueeze(-1)
+        else:
+            raise ValueError(f"pixel_values should have 3 or 4 dimensions, got {pixel_values.shape}")
 
-        image_processor: PreTrainedTokenizerBase | BaseImageProcessor = self.processor
+        real_mask = real_mask.to(pixel_values)
 
-        replace_tensor: Float[torch.Tensor, "1 c h w"] = torch.full_like(pixel_values, self.replace_value)
+        # Repeat other keys in encoding for each perturbation
+        inputs = {
+            key: value.repeat(real_mask.shape[0], *([1] * (value.ndim - 1)))
+            for key, value in model_inputs.items()
+            if key != "pixel_values"
+        }
 
-        # Since the image is processed, we process the replace_tensor the same way so that the replace value the user wanted to use has
-        # the meaning the user wanted to give it.
-        processed_replace_tensor: Float[torch.Tensor, "1 c h w"] = image_processor(
-            replace_tensor, input_data_format="channels_first", return_tensors="pt"
-        )["pixel_values"]
-
-        # PATCH is set directly by the explainer by reading model.config.
-        if self.patch_size is None:
-            raise ValueError(
-                "patch_size is None. It must be set "
-                "from the model config. Normally the explainer does this at construction. "
-                "If using the perturbator standalone, pass patch_size explicitly."
-            )
-
-        gh, gw = h // self.patch_size, w // self.patch_size
-
-        # granularity-wise mask from the subclass: (p, g) with g = gh * gw
-
-        gran_mask: Float[torch.Tensor, "p g"] = self.get_mask(gh * gw)
-        p = gran_mask.shape[0]
-
-        # expand to pixel space by resizing the (gh, gw) grid up to (h, w): (p, l)
-        # TODO: For now, we have chosen to fix the resize of the mask to the NEAREST
-        # strategy to keep clarity and simplify the API. This will need to be changed
-        # in the future if we want to implement methods such as RISE that require soft
-        # masks and would thus require a BILINEAR upsampling strategy rather than NEAREST
-        grid: Float[torch.Tensor, "p gh gw"] = gran_mask.reshape(p, gh, gw)
-        real_mask: Float[torch.Tensor, "p l"] = GranularityResizeStrategy.NEAREST.resize(
-            grid,
-            output_size=(h, w),
-        ).reshape(p, l)
-
-        # apply the mask in flattened spatial space, broadcasting across channels
-        flat: Float[torch.Tensor, "1 3 l"] = pixel_values.reshape(1, c, l)
-        spatial_mask: Float[torch.Tensor, "p 1 l"] = real_mask.unsqueeze(1)
-
-        # reshape processed_replace_tensor so that it broadcasts correctly
-        processed_replace_tensor = processed_replace_tensor.unsqueeze(dim=0).reshape(1, c, l)
-
-        perturbed_flat: Float[torch.Tensor, "p 3 l"] = (
-            flat * (1 - spatial_mask) + processed_replace_tensor * spatial_mask
-        )
-        perturbed_pixel_values: Float[torch.Tensor, "p 3 H W"] = perturbed_flat.reshape(-1, c, h, w)
-
-        inputs["pixel_values"] = perturbed_pixel_values
+        # perturb the pixel_values
+        inputs["pixel_values"] = pixel_values * (1 - real_mask) + self.replace_value.to(pixel_values) * real_mask
         return inputs, gran_mask

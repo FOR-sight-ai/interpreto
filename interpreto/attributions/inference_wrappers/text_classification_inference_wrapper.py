@@ -39,7 +39,7 @@ class TextClassificationInferenceWrapper(InferenceWrapper):
     padding_side = "right"
 
     @jaxtyped(typechecker=beartype)
-    def _extract_targets_from_logits(self, logits: Float[torch.Tensor, "b c"]) -> Int[torch.Tensor, "b 1"]:
+    def _extract_targets_from_logits(self, logits: Float[torch.Tensor, "b c"], chunk) -> Int[torch.Tensor, "b 1"]:
         """
         In classification, if no targets are specified, we explain the predicted class.
         The predicted class corresponds to the highest logits.
@@ -48,7 +48,7 @@ class TextClassificationInferenceWrapper(InferenceWrapper):
         return logits.argmax(dim=-1, keepdim=True)
 
     def _target_logits(
-        self, logits: Float[torch.Tensor, "b c"], targets: Int[torch.Tensor, "t"]
+        self, logits: Float[torch.Tensor, "b c"], targets: Int[torch.Tensor, "t"], chunk
     ) -> Float[torch.Tensor, "b t"]:
         """
         For each sample, the targets specify which logits to extract.

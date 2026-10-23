@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import itertools
 from abc import ABC, ABCMeta, abstractmethod
+from collections import UserDict
 from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from copy import deepcopy
 from dataclasses import dataclass
@@ -40,22 +41,21 @@ import numpy as np
 import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
+from PIL import Image
 from PIL.Image import Image as PILImage
 from transformers import BatchEncoding, PreTrainedModel, PreTrainedTokenizerBase
 from transformers.image_processing_utils import BaseImageProcessor, BatchFeature
 
 from interpreto.attributions.aggregations.base import Aggregator
-from interpreto.attributions.inference_wrappers.image_classification_inference_wrapper import (
+from interpreto.attributions.inference_wrappers import (
     ImageClassificationInferenceWrapper,
-)
-from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceModes, InferenceWrapper
-from interpreto.attributions.inference_wrappers.inputs_to_concepts_inference_wrapper import (
+    ImageRetrievalInferenceWrapper,
+    InferenceModes,
+    InferenceWrapper,
     InputsToConceptsInferenceWrapper,
-)
-from interpreto.attributions.inference_wrappers.text_classification_inference_wrapper import (
     TextClassificationInferenceWrapper,
+    TextGenerationInferenceWrapper,
 )
-from interpreto.attributions.inference_wrappers.text_generation_inference_wrapper import TextGenerationInferenceWrapper
 from interpreto.attributions.perturbations.base import (
     ImageMaskPerturbator,
     ImageTensorPerturbator,
@@ -261,8 +261,9 @@ class ModelTask(Enum):
     """
 
     CLASSIFICATION = "classification"
-    GENERATION = "generation"
     CONCEPTS = "concepts"
+    GENERATION = "generation"
+    RETRIEVAL = "retrieval"
 
 
 def clone_tensor_mapping(tm: TensorMapping, detach: bool = False) -> TensorMapping:
@@ -409,6 +410,7 @@ class AttributionExplainer(ABC):
         # set pad and mask tokens
         setup_token_ids(model, processor)
         self.tokenizer = processor
+        padding_side = getattr(processor, "padding_side", None)
 
         self.inference_wrapper = self._associated_inference_wrapper(
             model,  # type: ignore
@@ -417,6 +419,7 @@ class AttributionExplainer(ABC):
             batch_size=batch_size,
             device=device,
             mode=inference_mode,
+            padding_side=padding_side,
         )  # type: ignore
         self.perturbator = perturbator
         self.aggregator = aggregator or Aggregator()
@@ -541,6 +544,16 @@ class AttributionExplainer(ABC):
                     "Samples should be tokenized one by one or passed as list of texts directly. "
                     f"Got {model_inputs['input_ids'].shape[0]} samples."  # type: ignore
                 )
+            if "attention_mask" in model_inputs:
+                # filter out useless padding tokens
+                valid = model_inputs["attention_mask"][0]
+                if isinstance(valid, torch.Tensor) and valid.numel() and not bool(valid.all()):
+                    nz = valid.nonzero().flatten()
+                    s, e = int(nz[0]), int(nz[-1]) + 1
+                    for k in list(model_inputs.keys()):
+                        v = model_inputs[k]
+                        if isinstance(v, torch.Tensor) and v.shape[0] == 1 and v.shape[1] == valid.shape[0]:
+                            model_inputs[k] = v[:, s:e]
             return [model_inputs]
         if isinstance(model_inputs, Iterable):
             return list(itertools.chain(*[self.process_model_inputs(item) for item in model_inputs]))
@@ -932,6 +945,147 @@ class TextGenerationAttributionExplainer(AttributionExplainer):
         return contribution
 
 
+class ImageProcessingMixin:
+    processor: BaseImageProcessor
+
+    def _process_image(self, image, processor):
+        """
+        Processes the image and returns a `BatchFeature` mapping.
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    def process_model_inputs(
+        self, model_inputs: PILImage | np.ndarray | torch.Tensor, processor=None
+    ) -> list[TensorMapping]:
+        """
+        Normalize image inputs to a list of `BatchFeature` mappings, one per sample.
+
+        The image processor runs on every input type: `PIL.Image`, `np.ndarray`,
+        `torch.Tensor`, and the `pixel_values` of a `BatchFeature` are all routed through
+        `self.image_processor`. Iterables of any of the above are flattened recursively.
+
+        Inputs should be raw. `explain(image_processor(img))` double-normalizes. Correct use
+        is to  pass the raw image and let interpreto process it.
+
+        Mirrors text `process_model_inputs` with `BatchFeature` for `BatchEncoding`
+        and `pixel_values` for `input_ids`.
+        """
+
+        # Raw-image types
+        if isinstance(model_inputs, (PILImage, np.ndarray, torch.Tensor)):
+            processed = self._process_image(model_inputs, processor)
+            return [self._validate_batch_feature(processed)]
+
+        if isinstance(model_inputs, Iterable):
+            return list(itertools.chain(*[self.process_model_inputs(item, processor) for item in model_inputs]))
+
+        raise ValueError(
+            f"type {type(model_inputs)} not supported for method process_model_inputs in class {self.__class__.__name__}"
+        )
+
+    def _validate_batch_feature(self, processed: BatchFeature) -> BatchFeature:
+        """Sanity-check that a BatchFeature has a single-sample (1, 3, H, W) pixel_values tensor."""
+        if "pixel_values" not in processed:
+            raise ValueError(
+                f"The processor did not return 'pixel_values' in its keys. Got keys: {list(processed.keys())}."
+            )
+        if not isinstance(processed["pixel_values"], torch.Tensor):
+            raise ValueError(
+                "The processor returned 'pixel_values' as a torch.Tensor. "
+                "Use `image_processor(image, return_tensors='pt')`. "
+                f"Got type {type(processed['pixel_values'])}."
+            )
+        if processed["pixel_values"].ndim == 2:
+            processed["pixel_values"] = processed["pixel_values"].unsqueeze(dim=0)
+
+        if processed["pixel_values"].shape[0] != 1:
+            raise ValueError(
+                "The processor returned a single-sample 'pixel_values' tensor. "
+                "Samples should be tokenized one by one or passed as list of texts directly. "
+                f"Got shape {processed['pixel_values'].shape} - expected shape: (1, 3, H, W)."
+            )
+
+        return processed
+
+    def _setup_replace_value(
+        self,
+        model: PreTrainedModel,
+        processor=None,
+        replace_value: int | float | None = None,
+    ) -> torch.Tensor:
+        """Prepare a compressed, normalized image baseline."""
+
+        processor = getattr(self, "processor", processor)
+        image_processor = getattr(processor, "image_processor", processor)
+        vision_config = getattr(model.config, "vision_config", model.config)
+
+        # Determine the model's expected number of channels.
+        num_channels = getattr(vision_config, "num_channels", None)
+
+        if num_channels is None:
+            image_mean = getattr(image_processor, "image_mean", None)
+            num_channels = len(image_mean) if isinstance(image_mean, (list, tuple)) else None
+
+        if num_channels not in (1, 3):
+            raise ValueError(f"Unsupported or unknown number of image channels: {num_channels}")
+
+        mode = "L" if num_channels == 1 else "RGB"
+
+        # Use a placeholder compatible with patchification.
+        patch_size = getattr(image_processor, "patch_size", None) or getattr(vision_config, "patch_size", 16)
+        merge_size = getattr(image_processor, "merge_size", 1)
+        side = 8 * patch_size * merge_size
+
+        # Raw 8-bit pixel intensity (0 = black, 255 = white).
+        value = 0 if replace_value is None else replace_value
+
+        if not 0 <= value <= 255:
+            raise ValueError("replace_value must be between 0 and 255.")
+
+        placeholder = Image.new(mode, (side, side), color=round(value))
+
+        # Classification and retrieval use their respective preprocessing.
+        baseline = self.process_model_inputs(placeholder, processor)[0]["pixel_values"]
+
+        # Compress dimensions that contain repeated baseline values.
+        if baseline.ndim == 4:
+            # (1, C, H, W) -> (1, C, 1, 1)
+            compressed = baseline[:, :, :1, :1]
+
+        elif baseline.ndim == 3:
+            # (1, P, D) -> (1, 1, D)
+            compressed = baseline[:, :1, :]
+
+        else:
+            raise ValueError(f"Unsupported pixel_values shape: {baseline.shape}")
+
+        if not torch.allclose(baseline, compressed.expand_as(baseline)):
+            raise ValueError("The processed baseline is not spatially constant.")
+
+        return compressed.contiguous()
+
+    def _resolve_normalization_stats(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Returns the normalization statistics used by the image_processor so that they may be
+        given to the visualization module.
+
+        If the image_processor does not have a do_normalize step then the function returns
+        0.0 and 1.0 (Since the do_normalize step does x * image_std + image_mean, 0.0 and 1.0
+        is equivalent to the identity function).
+        """
+        processor = getattr(self.processor, "image_processor", self.processor)
+        if not getattr(processor, "do_normalize", False):
+            image_mean, image_std = 0.0, 1.0
+        else:
+            image_mean = processor.image_mean
+            image_std = processor.image_std
+
+        return (
+            torch.as_tensor(image_mean, dtype=torch.float32).view(-1, 1, 1),
+            torch.as_tensor(image_std, dtype=torch.float32).view(-1, 1, 1),
+        )
+
+
 @dataclass(slots=True)
 class ImageAttributionOutput:
     """
@@ -1004,7 +1158,7 @@ class ImageAttributionOutput:
     inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
 
 
-class ImageClassificationAttributionExplainer(AttributionExplainer):
+class ImageClassificationAttributionExplainer(ImageProcessingMixin, AttributionExplainer):
     """
     Attribution explainer for image-classification models (ViT-family).
 
@@ -1087,47 +1241,9 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
             self.perturbator.patch_size = self.patch_size
             self.perturbator.granularity_combination_strategy = self.resize_strategy
 
-    def _setup_replace_value(
-        self,
-        model: PreTrainedModel,
-        processor: PreTrainedTokenizerBase | BaseImageProcessor,
-        replace_value: int | float | None = None,
-    ) -> int | float:
-        """
-        Returns the pixel baseline written into masked positions.
-
-        Args:
-            model (PreTrainedModel): unused, kept for signature compatibility.
-            processor (BaseImageProcessor): unused, kept for signature compatibility.
-            replace_value (int | float | None): user-supplied baseline, or None for the default.
-
-        Returns:
-            int | float: `replace_value`, or 0.0 — the per-channel mean after standard ViT
-                normalization, i.e. a neutral grey.
-        """
-        if replace_value:
-            return replace_value
-        return 0.0
-
-    def _resolve_normalization_stats(self) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Returns the normalization statistics used by the image_processor so that they may be
-        given to the visualization module.
-
-        If the image_processor does not have a do_normalize step then the function returns
-        0.0 and 1.0 (Since the do_normalize step does x * image_std + image_mean, 0.0 and 1.0
-        is equivalent to the identity function).
-        """
-        if not getattr(self.image_processor, "do_normalize", False):
-            image_mean, image_std = 0.0, 1.0
-        else:
-            image_mean = self.image_processor.image_mean
-            image_std = self.image_processor.image_std
-
-        return (
-            torch.as_tensor(image_mean, dtype=torch.float32).view(-1, 1, 1),
-            torch.as_tensor(image_std, dtype=torch.float32).view(-1, 1, 1),
-        )
+    def _process_image(self, image, processor=None):
+        processor = processor or self.image_processor
+        return processor(image, return_tensors="pt")
 
     def process_targets(
         self, targets: ClassificationTarget, expected_length: int | None = None
@@ -1180,69 +1296,6 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
 
         return model_inputs, sanitized_targets
 
-    def process_model_inputs(self, model_inputs: ModelInputs) -> list[TensorMapping]:
-        """
-        Normalize image inputs to a list of `BatchFeature` mappings, one per sample.
-
-        The image processor runs on every input type: `PIL.Image`, `np.ndarray`,
-        `torch.Tensor`, and the `pixel_values` of a `BatchFeature` are all routed through
-        `self.image_processor`. Iterables of any of the above are flattened recursively.
-
-        Inputs should be raw. `explain(image_processor(img))` double-normalizes. Correct use
-        is to  pass the raw image and let interpreto process it.
-
-        Mirrors text `process_model_inputs` with `BatchFeature` for `BatchEncoding`
-        and `pixel_values` for `input_ids`.
-        """
-
-        if isinstance(model_inputs, BatchFeature):
-            if model_inputs["pixel_values"].ndim == 3:  # expand a single (3, H, W) to (1, 3, H, W)
-                model_inputs["pixel_values"] = model_inputs["pixel_values"].unsqueeze(0)
-            processed = self.image_processor(model_inputs["pixel_values"], return_tensors="pt")
-            return [self._validate_batch_feature(processed)]
-
-        # Raw-image types.
-        if isinstance(model_inputs, (PILImage, np.ndarray, torch.Tensor)):
-            processed = self.image_processor(model_inputs, return_tensors="pt")
-            return [self._validate_batch_feature(processed)]
-
-        if isinstance(model_inputs, Iterable):
-            return list(itertools.chain(*[self.process_model_inputs(item) for item in model_inputs]))
-
-        raise ValueError(
-            f"type {type(model_inputs)} not supported for method process_model_inputs in class {self.__class__.__name__}"
-        )
-
-    def _validate_batch_feature(self, bf: BatchFeature) -> BatchFeature:
-        """Sanity-check that a BatchFeature has a single-sample (1, 3, H, W) pixel_values tensor."""
-        if "pixel_values" not in bf.keys():
-            raise ValueError(
-                "The BatchFeature must contain the key 'pixel_values' to be processed by the "
-                f"image attribution explainer. Got {list(bf.keys())}."
-            )
-        if not isinstance(bf["pixel_values"], torch.Tensor):
-            raise ValueError(
-                "The BatchFeature must hold a torch.Tensor for 'pixel_values'. "
-                "Use `image_processor(image, return_tensors='pt')`. "
-                f"Got {type(bf['pixel_values'])}."
-            )
-        if bf["pixel_values"].ndim != 4 or bf["pixel_values"].shape[0] != 1:
-            raise ValueError(
-                "The BatchFeature must hold a single-sample and must be 4 dimensional (1, 3, H, W) pixel_values tensor. "
-                "Pre-process images one by one, or pass an iterable. "
-                f"Got shape {tuple(bf['pixel_values'].shape)}."
-            )
-        if bf["pixel_values"].shape[1] not in {1, 3}:
-            raise ValueError("The BatchFeature number of channels (C) should be either 1 or 3")
-        # unconditional: a ViT cannot patchify a non-divisible image, whatever the method family
-        h, w = bf["pixel_values"].shape[-2], bf["pixel_values"].shape[-1]
-        if h % self.patch_size or w % self.patch_size:
-            raise ValueError(
-                f"The image sides must both be multiples of the model's patch_size "
-                f"({self.patch_size}). Got ({h}, {w})."
-            )
-        return bf
-
     def explain(
         self,
         model_inputs: ModelInputs,
@@ -1275,22 +1328,15 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         mask_generator: Iterator[Int[torch.Tensor, "p g"] | None]
         pert_generator, mask_generator = split_iterator(self.perturbator.perturb(m) for m in model_inputs_to_explain)
 
-        # Gradient methods yield signed, per-channel scores (p, t, c, l); mask methods yield (p, t).
-        scores: Iterator[Float[torch.Tensor, "p t c l"] | Float[torch.Tensor, "p t"]] = self.inference_wrapper(
+        # Gradient methods yield signed, per-channel scores (p, t, l); mask methods yield (p, t).
+        scores: Iterator[Float[torch.Tensor, "p t l"] | Float[torch.Tensor, "p t"]] = self.inference_wrapper(
             pert_generator, sanitized_targets
         )
 
-        # Aggregate over perturbations: (p, t, c, l) -> (t, c, l) for gradient methods.
+        # Aggregate over perturbations: (p, t, l) -> (t, l) for gradient methods.
         #   (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw.
-        aggregated: Iterator[Float[torch.Tensor, "t c l"] | Float[torch.Tensor, "t g"]] = (
+        contributions: Iterator[Float[torch.Tensor, "t c l"] | Float[torch.Tensor, "t g"]] = (
             self.aggregator(score.detach(), mask) for score, mask in zip(scores, mask_generator, strict=True)
-        )
-
-        # Collapse the 3 channels of gradient scores to a per-pixel value: (t, c, l) -> (t, l).
-        # Signed mean (no abs).
-        contributions: Iterator[Float[torch.Tensor, "t l"] | Float[torch.Tensor, "t g"]] = (
-            contribution.mean(dim=1) if self.inference_wrapper.gradients else contribution
-            for contribution in aggregated
         )
 
         image_mean, image_std = self._resolve_normalization_stats()
@@ -1409,6 +1455,335 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
         return contribution
 
 
+@dataclass(slots=True)
+class ImageRetrievalAttributionOutput:
+    """
+    Class to store the output of an image-attribution method.
+
+    Mirrors `AttributionOutput` with two changes for the image modality:
+    `granularity` is typed as `ImageGranularity` (required), and instead of the
+    text `elements` token labels it carries `patch_size`, enough for the visualization
+    to reconstruct a display-ready pixel-resolution `(t, H, W)` map on demand from the
+    canonical `(t, g)` `attributions` (see `ImageGranularity.resize_to_image`). The map
+    is no longer stored: it is pure derived state and duplicated the largest tensor.
+
+    Attributes:
+        attributions (SingleAttribution):
+            Canonical per-unit attribution scores of shape `(t, g)`, where `g = H*W` (PIXEL)
+            or `g = num_patches` (PATCH). This is the lossless numeric output — one scalar per
+            granularity unit. Stored FLAT; patch `(row, col)` coordinates are derivable on demand
+            from `model_inputs_to_explain["pixel_values"].shape[-2:]` and `patch_size`.
+            t is the number of tokens in the query.
+
+        patch_size (int):
+            Patch side length, used to lay out PATCH-granularity scores on the pixel grid
+            (`gh, gw = H // patch_size, W // patch_size`). Stored so the visualization can
+            rebuild the display-ready `(t, H, W)` map from `attributions` via `resize_to_image`.
+            Ignored for PIXEL granularity, where `g == H*W` and the expansion is a pure reshape.
+
+        model_inputs_to_explain (TensorMapping):
+            The output of `image_processor(image, return_tensors="pt")` (a `BatchFeature`,
+            satisfies `TensorMapping`). Holds `pixel_values` of shape `(1, 3, H, W)`.
+
+        input_image (PILImage | np.ndarray | torch.Tensor | None):
+            The raw input image *before* processor preprocessing (no resize, crop
+            or normalization), kept for display so the visualization can show the
+            original aspect instead of the model's resized grid. Set by `explain`;
+            hand-built outputs may leave it `None`, in which case the
+            visualization falls back to the de-normalized `pixel_values`.
+
+        image_mean (torch.Tensor | None):
+            Per-channel mean used to normalize `pixel_values`. Together with `image_std`
+            it is the affine that de-normalizes the image for visualization purposes:
+            `x * image_std + image_mean`. Sourced from the explainer's `image_processor`.
+            Identity `0` when no normalization was applied.
+
+            Defaults to `None` so that an output built without it fails loudly at display
+            time; an identity default would instead show a normalized image as if it were
+            raw. `explain` always sets it.
+
+        image_std (torch.Tensor | None):
+            Per-channel standard deviation used to normalize `pixel_values`. See
+            `image_mean`. Identity `1` when no normalization was applied.
+
+        targets (list[str]):
+            List of str tokens in the query.
+
+        classes (torch.Tensor | None):
+            Optional tensor of class labels.
+
+        granularity (ImageGranularity):
+            The granularity level of the explanation. Required: it is fixed by the method
+            family (`PIXEL` for gradient-based, `PATCH` for perturbation-based).
+
+        granularity_resize (GranularityResizeStrategy):
+            The interpolation strategy used to resize per-pixel scores to the specified granularity.
+
+        inference_mode (Callable[[torch.Tensor], torch.Tensor]):
+            The mode used for inference (LOGITS, SOFTMAX, LOG_SOFTMAX). See `InferenceModes`.
+    """
+
+    attributions: SingleAttribution
+    model_inputs_to_explain: TensorMapping
+    targets: list[str]
+    similarities: torch.Tensor
+    granularity: ImageGranularity
+    patch_size: int = 16
+    image_mean: torch.Tensor | None = None
+    image_std: torch.Tensor | None = None
+    classes: torch.Tensor | None = None
+    granularity_resize: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR
+    inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS
+    input_image: PILImage | np.ndarray | torch.Tensor | None = None
+
+
+def reduce_gradients(contribution, model_input):
+    # contribution: (T, D, P)
+    contribution = contribution.mean(dim=1)  # (T, P)
+
+    if model_input["pixel_values"].ndim == 3 and self.spatial_merge:
+        m = getattr(self.processor.image_processor, "merge_size", 1)
+        contribution = contribution.reshape(contribution.shape[0], -1, m**2).mean(dim=-1)
+
+    return contribution
+
+
+class RetrievalAttributionExplainer(ImageProcessingMixin, AttributionExplainer):
+    """
+    Attribution explainer for multimodel multi vector embedding models (Col-family).
+    """
+
+    _associated_inference_wrapper = ImageRetrievalInferenceWrapper
+    base_tensor_perturbator_class = ImageTensorPerturbator
+    base_mask_perturbator_class = ImageMaskPerturbator
+    default_mask_granularity = ImageGranularity.PATCH
+    default_tensor_granularity = ImageGranularity.PIXEL
+    default_combination_strategy = GranularityResizeStrategy.BILINEAR
+    _model_task = ModelTask.RETRIEVAL
+
+    def __init__(
+        self,
+        model: PreTrainedModel,
+        processor: "BaseVisualRetrieverProcessor",
+        granularity: ImageGranularity,
+        batch_size: int = 4,
+        perturbator: Perturbator | None = None,
+        aggregator: Aggregator | None = None,
+        device: torch.device | None = None,
+        combination_strategy: GranularityResizeStrategy = GranularityResizeStrategy.BILINEAR,
+        inference_mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
+        use_gradient: bool = False,
+        input_x_gradient: bool = True,
+    ) -> None:
+        """
+        Args mirror `AttributionExplainer.__init__` with `tokenizer` -> `image_processor`
+        and `granularity` typed as `ImageGranularity`. See parent for shared semantics.
+
+        The given image must be the raw image as the preprocessing is done by interpreto
+        using the image_processor given as argument.
+        """
+        # does not call setup_token_id because there is no need for a PAD token
+
+        # Granularity is a strict function of the method family, so the two arguments cannot
+        # be chosen independently. Gradient methods differentiate with respect to every pixel and only
+        # afterwards resize the field, so PIXEL is their native unit; perturbation methods
+        # encode granularity in the masks themselves so PATCH is the smallest meaningful unit
+        if use_gradient and granularity is ImageGranularity.PATCH:
+            raise ValueError(
+                "granularity=PATCH is invalid for a gradient-based method: gradients are "
+                "computed per pixel, so PIXEL is the granularity these methods explain at. Use PIXEL"
+                "computed per pixel, so PIXEL is the granularity these methods explain at. Use PIXEL"
+            )
+        if not use_gradient and granularity is ImageGranularity.PIXEL:
+            raise ValueError(
+                "granularity=PIXEL is invalid for a perturbation-based method: masking single "
+                "pixels is intractable. Use PATCH."
+                "pixels is intractable. Use PATCH."
+            )
+
+        setup_token_ids(model, processor.tokenizer)
+        self.processor = processor
+        padding_side = getattr(processor.tokenizer, "padding_side", None)
+
+        self.inference_wrapper = self._associated_inference_wrapper(
+            model,
+            gradients=use_gradient,
+            input_x_gradient=input_x_gradient,
+            batch_size=batch_size,
+            device=device,
+            padding_side=padding_side,
+        )  # type: ignore
+        self.perturbator = perturbator or ImageTensorPerturbator(processor=self.processor.image_processor)
+        self.aggregator = aggregator or Aggregator()
+        self.granularity = granularity
+        self.resize_strategy = combination_strategy
+        # patch_size is sourced from the model config; required by ImageGranularity.PATCH
+        self.patch_size = int(getattr(model.config, "patch_size", 16))
+        # The explainer is the single source of truth for patch_size.
+
+        # Might be moved into a more general Granularity argument/object later
+        if isinstance(self.perturbator, ImageMaskPerturbator):
+            self.perturbator.patch_size = self.patch_size
+            self.perturbator.granularity_combination_strategy = self.resize_strategy
+
+        # Some model, after pathifying images in the processor, apply a spatial merge
+        # We need to know beforehand to correctly perturb or aggregate gradients
+        # TODO: do it for ImageClassification also
+        vision_config = getattr(model.config, "vision_config", None)
+        if vision_config is None:
+            vision_config = getattr(
+                getattr(model.config, "thinker_config", None),
+                "vision_config",
+                None,
+            )
+        self.perturbator.spatial_merge = getattr(vision_config, "spatial_merge_size", None) is not None  # type: ignore
+
+    def _process_image(self, image, processor=None):
+        processor = processor or self.processor
+        return processor.process_images([image])
+
+    def process_inputs_to_explain_and_targets(
+        self,
+        model_inputs: list[TensorMapping],
+        targets: list[str] | list[TensorMapping],
+    ) -> tuple[list[TensorMapping], list[Int[torch.Tensor, "t d"]], list[list[str]]]:
+        """
+        Pre-processes the targets (query) to its embeddings.
+
+        TODO
+        """
+        if len(set(map(type, targets))) > 1:
+            raise TypeError("All elements of the list must be of the same type.")
+
+        if isinstance(targets, str):
+            raise TypeError("Unsupported type for targets: str. please provide `[targets]` instead.")
+
+        if isinstance(targets[0], str):
+            targets = [self.processor.process_queries([target]) for target in targets]
+
+        tokens = [self.processor.tokenizer.convert_ids_to_tokens(target["input_ids"][0]) for target in targets]
+
+        if isinstance(targets[0], (UserDict, dict)):  # BatchEncoding and BatchFeature are UserDict
+            sanitized_targets = list(self.inference_wrapper(targets))  # type: ignore
+        else:
+            raise TypeError(f"Unsupported type for targets: {type(targets[0])}")
+
+        return model_inputs, sanitized_targets, tokens  # type: ignore
+
+    @staticmethod
+    def _flatten_raw_images(model_inputs: ModelInputs) -> list[PILImage | np.ndarray | torch.Tensor]:
+        """
+        Flatten raw image inputs to one element per sample, in the same order as
+        `process_model_inputs` traverses them, so each processed `BatchFeature`
+        can be paired with the raw image it came from.
+
+        Only `PIL.Image`, `np.ndarray` and `torch.Tensor` leaves are supported —
+        the same types `process_model_inputs` accepts — so the two traversals
+        always stay aligned.
+        """
+        if isinstance(model_inputs, (PILImage, np.ndarray, torch.Tensor)):
+            return [model_inputs]
+
+        if isinstance(model_inputs, Iterable):
+            return list(
+                itertools.chain(*[RetrievalAttributionExplainer._flatten_raw_images(item) for item in model_inputs])
+            )
+
+        raise ValueError(
+            f"type {type(model_inputs)} not supported for method process_model_inputs in class RetrievalAttributionExplainer"
+        )
+
+    def explain(
+        self,
+        model_inputs: ModelInputs,
+        targets: list[str] | list[TensorMapping],
+    ) -> list[ImageRetrievalAttributionOutput]:
+        """
+        Compute attributions for image-classification models.
+
+        Mirrors `AttributionExplainer.explain` with image-side substitutions:
+        - `granularity_resize` (the image counterpart of text's `granularity_score_aggregation`)
+          is called with `patch_size` instead of `tokenizer`, and spatially interpolates the
+          per-pixel field rather than reducing each unit to a scalar.
+        - `get_decomposition` uses `return_coordinates=True` (image equivalent of `return_text`).
+        - The `attention_mask` post-processing block is dropped (no attention_mask for ViT).
+        - The output is `ImageRetrievalAttributionOutput` instead of `AttributionOutput`.
+        - The generation `aggregate_targets` branch is dropped (image MVP is classification-only).
+        """
+        # Materialize one-shot iterables (e.g. generators) so the raw-image and
+        # processed traversals below both see the full input sequence.
+        if isinstance(model_inputs, Iterator):
+            model_inputs = list(model_inputs)
+        raw_images = self._flatten_raw_images(model_inputs)
+        sanitized_model_inputs: list[TensorMapping] = self.process_model_inputs(model_inputs)
+
+        model_inputs_to_explain: list[TensorMapping]
+        sanitized_targets: list[Int[torch.Tensor, "t"]]
+        model_inputs_to_explain, sanitized_targets, sample_tokens = self.process_inputs_to_explain_and_targets(
+            sanitized_model_inputs,
+            targets,  # type: ignore
+        )
+
+        images_embeddings = list(self.inference_wrapper(model_inputs_to_explain))
+
+        # Perturbations + scores: same flow as text. The default Perturbator() yields
+        # the input unchanged with a None mask, which is what gradient methods need.
+        pert_generator: Iterator[TensorMapping]
+        mask_generator: Iterator[Int[torch.Tensor, "p g"] | None]
+        pert_generator, mask_generator = split_iterator(self.perturbator.perturb(m) for m in model_inputs_to_explain)
+
+        # Gradient methods yield signed, per-channel scores (p, t, l); mask methods yield (p, t).
+        scores: Iterator[Float[torch.Tensor, "p t ..."]] = self.inference_wrapper(pert_generator, sanitized_targets)
+
+        # Aggregate over perturbations: (p, t, g) -> (t, g) for gradient methods.
+        #   (p, t), (p, g) -> (t, g) for masking methods where g = gh * gw.
+        contributions: Iterator[Float[torch.Tensor, "t g"]] = (
+            self.aggregator(score.detach(), mask) for score, mask in zip(scores, mask_generator, strict=True)
+        )
+
+        # Reconstruct the (t, h, w) map from the (t, g) attributions.
+        if self.inference_wrapper.gradients and self.perturbator.spatial_merge:  # type: ignore
+            # The merge size is only used for models with patchified images post processor and a spatial merge
+            merge_size = getattr(self.processor.image_processor, "merge_size", 1)
+
+            contributions: Iterator[Float[torch.Tensor, "t h w"]] = (
+                contribution.reshape(contribution.shape[0], -1, merge_size**2).mean(dim=-1)
+                for contribution in contributions
+            )
+
+        image_mean, image_std = self._resolve_normalization_stats()
+
+        results: list[ImageRetrievalAttributionOutput] = []
+        for contribution, model_input, raw_image, query_embedding, image_embedding, query_tokens in zip(
+            contributions,
+            model_inputs_to_explain,
+            raw_images,
+            sanitized_targets,
+            images_embeddings,
+            sample_tokens,
+            strict=True,
+        ):
+            # TODO: extract query tokens (this should come from the post process to include potentially added tokens).
+            similarities = query_embedding @ image_embedding.T
+            max_sim = similarities.max(dim=1).values
+
+            attribution_output = ImageRetrievalAttributionOutput(
+                attributions=contribution.cpu(),
+                model_inputs_to_explain=model_input,
+                targets=query_tokens,
+                similarities=max_sim,
+                image_mean=image_mean,
+                image_std=image_std,
+                granularity=self.granularity,
+                patch_size=self.patch_size,
+                granularity_resize=self.resize_strategy,
+                inference_mode=self.inference_wrapper.mode,
+                input_image=raw_image,
+            )
+            results.append(attribution_output)
+        return results
+
+
 class FactoryGeneratedMeta(ABCMeta):
     """
     Metaclass to distinguish classes generated by the MultitaskExplainerMixin.
@@ -1440,6 +1815,9 @@ class MultitaskExplainerMixin:
             t = FactoryGeneratedMeta(
                 "InputsToConcepts" + cls.__name__, (cls, InputsToConceptsAttributionsExplainer), {}
             )
+            return t.__new__(t, model, *args, **kwargs)  # type: ignore
+        if model.__class__.__name__.startswith("Col"):
+            t = FactoryGeneratedMeta("Retrieval" + cls.__name__, (cls, RetrievalAttributionExplainer), {})
             return t.__new__(t, model, *args, **kwargs)  # type: ignore
         raise NotImplementedError(
             "Model type not supported for Explainer. Use a ModelForSequenceClassification, a ModelForCausalLM model or a LMHeadModel model."

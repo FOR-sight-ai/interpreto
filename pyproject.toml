@@ -117,6 +117,7 @@ lint = [
   "numpy>=2.2.0",
 ]
 notebook = ["ipykernel>=6.29.2", "ipywidgets>=8.1.2"]
+retrieval = ["colpali-engine>=0.3.0,<0.4.0"]
 
 [project.urls]
 homepage = "https://github.com/FOR-sight-ai/interpreto"

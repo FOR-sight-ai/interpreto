@@ -24,4 +24,5 @@
 
 from .concepts import plot_concepts
 from .image_attributions import plot_image_attribution
+from .image_retrieval_attributions import plot_image_retrieval_attribution
 from .text_attributions import AttributionVisualization, plot_attributions

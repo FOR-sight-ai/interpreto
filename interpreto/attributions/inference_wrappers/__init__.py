@@ -23,7 +23,8 @@
 # SOFTWARE.
 
 from .image_classification_inference_wrapper import ImageClassificationInferenceWrapper
-from .inference_wrapper import InferenceWrapper
+from .image_retrieval_inference_wrapper import ImageRetrievalInferenceWrapper
+from .inference_wrapper import InferenceModes, InferenceWrapper
 from .inputs_to_concepts_inference_wrapper import InputsToConceptsInferenceWrapper
 from .text_classification_inference_wrapper import TextClassificationInferenceWrapper
 from .text_generation_inference_wrapper import TextGenerationInferenceWrapper

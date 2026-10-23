@@ -28,7 +28,6 @@ Matplotlib visualization for `ImageAttributionOutput`.
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Iterable
 from math import ceil
 
@@ -37,56 +36,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from interpreto.attributions.base import ImageAttributionOutput
-
-
-def _denormalize(attribution_output: ImageAttributionOutput, range_tolerance: float = 1e-3) -> np.ndarray:
-    """
-    Recover a denormalized image from the pre-processed `pixel_values`.
-
-    `x * image_std + image_mean` inverts the processor's normalization exactly. However,
-    the denormalized image may not fall within the [0, 1] range required by
-    _draw_attribution_on_ax if it wasn't in the [0, 1] range initially.
-
-    If this happens a warning is printed because the image is clamped to [0, 1] and thus
-    may look wrong.
-
-    Args:
-        range_tolerance: slack on the [0, 1] range check, to absorb float error in
-            `x * std + mean` rather than warn about a display that is fine. Wide enough to stay
-            quiet on rounding, far too tight to hide a genuine scale mismatch (those land orders
-            of magnitude out).
-    """
-    if attribution_output.image_mean is None or attribution_output.image_std is None:
-        raise ValueError(
-            "ImageAttributionOutput carries no image_mean/image_std, so pixel_values cannot be "
-            "de-normalized for display. `explain` always sets them; an output built by hand must "
-            "pass them too (image_mean=0, image_std=1 if no normalization was applied)."
-        )
-
-    pixel_values = attribution_output.model_inputs_to_explain["pixel_values"]
-    image = pixel_values.detach().cpu().to(torch.float32)
-    if image.ndim != 4 or image.shape[0] != 1:
-        raise ValueError(
-            f"expected pixel_values of shape (1, 3, H, W), got {tuple(image.shape)}. "
-            "Explain images one at a time — `explain` returns one output per image."
-        )
-
-    image = image[0]
-
-    image = image * attribution_output.image_std + attribution_output.image_mean
-
-    lo, hi = float(image.min()), float(image.max())
-    if lo < -range_tolerance or hi > 1.0 + range_tolerance:
-        warnings.warn(
-            f"De-normalized image spans [{lo:.3f}, {hi:.3f}], outside the displayable [0, 1]; "
-            "it will be clamped and may look wrong. This may be because of a problem with the "
-            "pre-processing pipeline or because your image was not in [0, 1] before "
-            "normalization. If this is the case, consider changing the rescale factor of the "
-            "image_processor so that the rescaled image falls within the [0, 1] range.",
-            stacklevel=3,
-        )
-
-    return image.clamp(0.0, 1.0).permute(1, 2, 0).numpy()
+from interpreto.visualizations.image_utils import _denormalize
 
 
 def _clip_percentile(arr: np.ndarray, percentile: float) -> np.ndarray:

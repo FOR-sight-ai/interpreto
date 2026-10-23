@@ -73,7 +73,7 @@ class InputsToConceptsInferenceWrapper(InferenceWrapper):
             )
         super().__init__(model, gradients=gradients, batch_size=batch_size, device=device, **kwargs)
 
-    def _extract_targets_from_logits(self, logits):
+    def _extract_targets_from_logits(self, logits, chunk):
         raise NotImplementedError(
             "InputsToConceptsInferenceWrapper does not support computing targets from logits. "
             "Concept targets should be provided explicitly."
@@ -81,7 +81,7 @@ class InputsToConceptsInferenceWrapper(InferenceWrapper):
 
     @jaxtyped(typechecker=beartype)
     def _target_logits(
-        self, logits: Float[torch.Tensor, "b c"], targets: Int[torch.Tensor, "t"]
+        self, logits: Float[torch.Tensor, "b c"], targets: Int[torch.Tensor, "t"], chunk
     ) -> Float[torch.Tensor, "b t"]:
         """
         For each sample, the targets specify which logits to extract.

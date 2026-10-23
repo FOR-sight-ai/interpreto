@@ -39,6 +39,7 @@ def _load_js_files() -> str:
         os.path.join("js", "visualizations", "concepts_classification_local.js"),
         os.path.join("js", "visualizations", "attribution_classification.js"),
         os.path.join("js", "visualizations", "attribution_generation.js"),
+        os.path.join("js", "visualizations", "attribution_image_retrieval.js"),
     ]
 
     js_content = ""

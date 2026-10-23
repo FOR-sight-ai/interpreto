@@ -38,13 +38,13 @@ from collections.abc import Callable, Iterable, Iterator, MutableMapping
 from contextlib import nullcontext
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Literal
 
 import torch
 import torch.nn.functional as F
 from beartype import beartype
 from jaxtyping import Bool, Float, Int, jaxtyped
 from torch.nn.utils.rnn import pad_sequence
-from transformers.modeling_outputs import BaseModelOutput
 from transformers.modeling_utils import PreTrainedModel
 
 from interpreto.typing import IncompatibilityError, TensorMapping
@@ -80,6 +80,13 @@ class ChunkMetadata:
     batch_start: int
     batch_end: int
     last_group_chunk: bool
+
+    sequence_start: int = 0
+    sequence_end: int | None = None
+
+    @property
+    def sequence_slice(self) -> slice:
+        return slice(self.sequence_start, self.sequence_end)
 
 
 class Batch:
@@ -121,18 +128,44 @@ class Batch:
         chunk_targets: torch.Tensor | None,
         group_id: int,
         last_group_chunk: bool = False,
-    ):
-        # the metadata links the group chunks to batches it to the batch
+        *,
+        sequence_key: str | None = None,
+        padding_side: Literal["left", "right"] = "right",
+    ) -> None:
+        """Add a chunk and record its original sequence extent.
+
+        Samples in a chunk must share the same input geometry.
+
+        `sequence_key` identifies the input field whose sequence padding must
+        be removed from gradients. None means no sequence trimming.
+
+        The recorded slice removes padding introduced during batching; it
+        does not identify padding already present in the original inputs.
+        """
+        sequence_start = 0
+        sequence_end = None
+
+        if sequence_key is not None:
+            sequence_length = chunk_inputs[0][sequence_key].shape[0]
+
+            if padding_side == "left" and sequence_length > 0:
+                # Negative indexing remains valid whatever the final batch length.
+                sequence_start = -sequence_length
+            else:
+                # Also represents an empty sequence correctly: slice(0, 0).
+                sequence_end = sequence_length
+
         self.chunks.append(
             ChunkMetadata(
                 group_id=group_id,
                 batch_start=len(self.inputs),
                 batch_end=len(self.inputs) + len(chunk_inputs),
                 last_group_chunk=last_group_chunk,
+                sequence_start=sequence_start,
+                sequence_end=sequence_end,
             )
         )
 
-        # add chunk inputs and targets to the batch
         self.inputs.extend(chunk_inputs)
         self.targets.append(chunk_targets)
 
@@ -167,7 +200,10 @@ def _split_group(  # TODO: check attributions.base there is also a splitting the
 
     for key in keys[1:]:
         if grouped_inputs[key].shape[0] != n_samples:
-            raise ValueError(f"All fields must have the same number of samples, but {key!r} does not.")
+            # TODO: rather than raising an error, we could extend each tensor to the same length
+            # This is currently duplicated in several perturbators
+            keys_samples = {k: grouped_inputs[k].shape[0] for k in keys}
+            raise ValueError(f"All fields must have the same number of samples, but received {keys_samples}.")
 
     # split inputs dict into list of input dict
     split_inputs: list[TensorMapping] = [{key: grouped_inputs[key][i] for key in keys} for i in range(n_samples)]
@@ -202,9 +238,11 @@ class InferenceWrapper(ABC):
         padding_side (str):
             The padding side to use for batching inputs.
             It should be either "right" or "left".
+            This is used only for text. Image require padding only when patchified, and in this case, most use right padding.
     """
 
-    padding_side: str
+    padding_side: Literal["left", "right"]
+    grad_key: str = "inputs_embeds"
 
     def __init__(
         self,
@@ -214,6 +252,7 @@ class InferenceWrapper(ABC):
         batch_size: int = 4,
         device: torch.device | None = None,
         mode: Callable[[torch.Tensor], torch.Tensor] = InferenceModes.LOGITS,
+        padding_side: Literal["left", "right"] | None = None,
     ):
         self.model = model
         self.model.eval()
@@ -221,15 +260,13 @@ class InferenceWrapper(ABC):
         self.input_x_gradient = input_x_gradient
         self.pad_token_id = model.config.pad_token_id
 
-        if device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        if not (getattr(model, "is_loaded_in_8bit", False) or getattr(model, "is_loaded_in_4bit", False)):
-            self.model.to(device)  # type: ignore
+        self.to(device=device)
         self.batch_size = batch_size
 
         assert callable(mode), "mode should be a callable function from `InferenceModes`"
         self.mode = mode
+        if padding_side is not None:
+            self.padding_side = padding_side
 
     @property
     def device(self) -> torch.device:
@@ -249,14 +286,40 @@ class InferenceWrapper(ABC):
         """
         self.model.to(device)  # type: ignore
 
-    def to(self, device: torch.device, dtype: torch.dtype | None = None):
+    def to(
+        self,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype | None = None,
+    ) -> None:
         """
         Move the model to the specified device.
 
         Args:
-            device (torch.device): The device to which the model should be moved.
+            device: The device to which the model should be moved.
+            dtype: The dtype to which the model should be moved.
         """
-        self.model.to(device=device, dtype=dtype)  # type: ignore
+        # guard against sharded models
+        device_map = getattr(self.model, "hf_device_map", None)
+        if device_map and len(set(map(str, device_map.values()))) > 1:
+            if device is not None or dtype is not None:
+                raise ValueError(
+                    "Cannot move or cast a sharded model. Please use `device=None` and manage the device manually."
+                )
+            return
+
+        current = self.model.device
+        device = torch.device(device) if isinstance(device, str) else (device or current)
+
+        if device.type == "cuda" and device.index is None and current.type == "cuda":
+            device = current
+
+        if device.type == "meta":
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        if device == current and (dtype is None or dtype == self.model.dtype):
+            return
+
+        self.model.to(device=device, dtype=dtype)
 
     @property
     def dtype(self):
@@ -267,7 +330,7 @@ class InferenceWrapper(ABC):
         self.model.to(dtype=dtype)  # type: ignore
 
     @abstractmethod
-    def _extract_targets_from_logits(self, logits: torch.Tensor):
+    def _extract_targets_from_logits(self, logits: torch.Tensor, chunk: ChunkMetadata):
         """
         Extract the targets from a tensor of logits.
         """
@@ -275,8 +338,11 @@ class InferenceWrapper(ABC):
 
     @abstractmethod
     def _target_logits(
-        self, logits: Float[torch.Tensor, "b ..."], targets: Int[torch.Tensor, "t"]
-    ) -> Float[torch.Tensor, "b t"]:
+        self,
+        logits: Float[torch.Tensor, "c ..."],
+        targets: Int[torch.Tensor, "t"],
+        chunk: ChunkMetadata,
+    ) -> Float[torch.Tensor, "c t"]:
         """
         Get the targeted logits from the model output logits and the given targets.
 
@@ -302,7 +368,7 @@ class InferenceWrapper(ABC):
         self,
         inputs: TensorMapping,
         targeted_logits_chunk: Float[torch.Tensor, "c t"],
-        chunk_slice: slice,
+        chunk: ChunkMetadata,
         last_chunk: bool,
     ) -> Float[torch.Tensor, "c t l"]:
         """
@@ -318,8 +384,8 @@ class InferenceWrapper(ABC):
                 Which means that they all have the same attention mask.
             targeted_logits_chunk (torch.Tensor):
                 The targeted logits associated to the input mappings.
-            chunk_slice (slice):
-                The slice of the batch corresponding to the chunk.
+            chunk (ChunkMetadata):
+                The metadata of the chunk, including its slice in the batch.
             last_chunk (bool):
                 Whether the chunk is the last one of the batch.
                 If True, the graph are not retained for the next iteration.
@@ -328,14 +394,11 @@ class InferenceWrapper(ABC):
             gradients_chunk (torch.Tensor):
                 The gradients associated with the targeted logits for the chunk.
         """
-        c = chunk_slice.stop - chunk_slice.start
+        c = chunk.batch_end - chunk.batch_start
+        chunk_batch_slice = slice(chunk.batch_start, chunk.batch_end)
         # outputs are gradients
-        inputs_embeds: Float[torch.Tensor, "b l d"] = inputs["inputs_embeds"]  # type: ignore
-        inputs_embeds_chunk: Float[torch.Tensor, f"{c} l d"] = inputs_embeds[chunk_slice]
-
-        # embeddings have been padded, so we need to select a subset of tokens
-        # this subset is the same for the whole group
-        tokens_mask: Bool[torch.Tensor, "l"] = inputs["attention_mask"][chunk_slice][0].bool()
+        inputs_full: Float[torch.Tensor, "b ..."] = inputs[self.grad_key]
+        inputs_chunks: Float[torch.Tensor, f"{c} ..."] = inputs_full[chunk_batch_slice, chunk.sequence_slice].detach()
 
         # iterate on targets for memory efficiency
         t = targeted_logits_chunk.shape[1]
@@ -343,25 +406,31 @@ class InferenceWrapper(ABC):
         for k in range(t):
             last_target = k == (t - 1)
             # we compute gradients one target at a time to save memory and avoid jacobian computations
-            target_wise_grads: Float[torch.Tensor, f"{c} l d"] = torch.autograd.grad(
+            target_wise_grads: Float[torch.Tensor, f"{c} ..."] = torch.autograd.grad(
                 # sum the targeted logits to get a scalar output for the backward pass, but this does not change the gradients as the targeted logits are independent between each others
                 outputs=targeted_logits_chunk[:, k].sum(),
-                inputs=inputs_embeds,  # type: ignore
+                inputs=inputs_full,  # type: ignore
                 # we retain the graph for all but the last iteration to avoid unnecessary recomputation of the forward pass
                 retain_graph=not (last_target and last_chunk),
                 # we do not create a new graph as we do not need higher order gradients
                 create_graph=False,
-            )[0][chunk_slice].detach()
+            )[0][chunk_batch_slice, chunk.sequence_slice].detach()
 
             if self.input_x_gradient:
                 # we multiply the input embeddings with their gradients before reducing them
-                target_wise_grads: Float[torch.Tensor, f"{c} l d"] = target_wise_grads * inputs_embeds_chunk
-            # we average the gradients over the model width dimension of input_embeds to save memory
-            # TODO: this aggregation is arbitrary and hardcoded, it should be discussed
-            target_wise_mean_grads: Float[torch.Tensor, f"{c} l"] = target_wise_grads.abs().mean(dim=-1)
+                target_wise_grads: Float[torch.Tensor, f"{c} ..."] = target_wise_grads * inputs_chunks.detach()
 
-            # we select only the gradients corresponding to the non-pad tokens
-            gradients_list.append(target_wise_mean_grads[:, tokens_mask])
+            if target_wise_grads.ndim == 4:
+                # spatial images: (chunk, channels, h, w) -> (chunk, h*w, channels) renamed (c, l, d)
+                target_wise_grads: Float[torch.Tensor, f"{c} l d"] = target_wise_grads.flatten(2).transpose(1, 2)
+
+            if target_wise_grads.ndim == 3:  # for images and text, this is always true
+                # language sequence, patchified images, and flattened spatial images: (c, l, d) -> (c, l)
+                # we average the gradients over the model width dimension of input_embeds to save memory
+                # TODO: this aggregation is arbitrary and hardcoded, it should be discussed
+                target_wise_grads: Float[torch.Tensor, f"{c} l"] = target_wise_grads.mean(dim=-1)
+
+            gradients_list.append(target_wise_grads)
 
         # stack target-wise gradients
         # TODO: check when everything should be moved to CPU
@@ -386,33 +455,62 @@ class InferenceWrapper(ABC):
         Returns:
             TensorMapping: The padded inputs.
         """
-        # for each key we pad the values and aggregate them
-        padded_inputs = {}
-        for key in inputs[0].keys():
-            padded_inputs[key] = pad_sequence(
-                [elem[key] for elem in inputs],
-                batch_first=True,
-                padding_value=self.pad_token_id if key == "input_ids" else 0,
-                padding_side=self.padding_side,
-            ).to(self.device)
+        prepared = {}
+        image_sequence_keys = {"pixel_attention_mask"}
+        text_sequence_keys = {
+            "input_ids",
+            "inputs_embeds",
+            "attention_mask",
+            "token_type_ids",
+            "mm_token_type_ids",
+        }
 
-        padded_inputs.pop("offset_mapping", None)
+        for key in inputs[0]:
+            if key == "offset_mapping":
+                continue
+
+            tensors = [sample[key] for sample in inputs]
+
+            if (key == "pixel_values" and tensors[0].ndim == 2) or key in image_sequence_keys:
+                # Patchified images: (P, D) -> (B, P_max, D)
+                batched = pad_sequence(
+                    tensors,
+                    batch_first=True,
+                    padding_value=0,
+                    padding_side="right",
+                )
+
+            elif key in text_sequence_keys:
+                # Text and multimodal token sequences: (L,) -> (B, L_max)
+                batched = pad_sequence(
+                    tensors,
+                    batch_first=True,
+                    padding_value=self.pad_token_id if key == "input_ids" else 0,
+                    padding_side=self.padding_side,
+                )
+
+            else:
+                # Spatial images (C, H, W), image_grid_thw (3,), etc.
+                batched = torch.stack(tensors)
+
+            prepared[key] = batched.to(self.device)
 
         if for_gradients:
-            # remove the input_ids key as we cannot provide it together with inputs_embeds
-            padded_inputs.pop("input_ids", None)
+            if self.grad_key == "inputs_embeds":
+                # remove the input_ids key as we cannot provide it together with inputs_embeds
+                prepared.pop("input_ids", None)
 
             # ensure inputs_embeds are present and set requires_grad to True
-            if "inputs_embeds" not in padded_inputs:
+            if self.grad_key not in prepared:
                 raise ValueError(
                     "The `model_inputs` should have been embedded when requesting gradients. "
                     "The 'inputs_embeds' key is missing. "
                     "This should never happen, please raise an issue in GitHub."
                 )
-            padded_inputs["inputs_embeds"] = padded_inputs["inputs_embeds"].detach().requires_grad_(True)  # type: ignore
-        return padded_inputs
+            prepared[self.grad_key] = prepared[self.grad_key].detach().requires_grad_(True)  # type: ignore
+        return prepared
 
-    def _model_forward(self, **inputs) -> BaseModelOutput:
+    def _model_forward(self, **inputs) -> torch.Tensor:
         """
         Forward pass through the model.
 
@@ -422,11 +520,11 @@ class InferenceWrapper(ABC):
             **inputs: The inputs to be passed to the model.
 
         Returns:
-            BaseModelOutput: The output of the model.
+            torch.Tensor: The output of the model.
         """
         try:
             # try model forward
-            return self.model(**inputs)
+            return self.mode(self.model(**inputs).logits)
         except NotImplementedError as e:
             key_shapes = {k: v.shape for k, v in inputs.items()}
             raise IncompatibilityError(
@@ -463,7 +561,7 @@ class InferenceWrapper(ABC):
         # torch.no_grad activated only if gradients not necessary
         with torch.no_grad() if not self.gradients else nullcontext():
             # call model forward
-            logits: Float[torch.Tensor, "b ..."] = self.mode(self._model_forward(**inputs).logits)  # type: ignore
+            logits: Float[torch.Tensor, "b ..."] = self._model_forward(**inputs)  # type: ignore
 
             # apply output processing chunk by chunk
             # because generation outputs have different size depending on the initial source sample
@@ -475,7 +573,9 @@ class InferenceWrapper(ABC):
                 if chunk_targets is not None:
                     # select logits through targets indexing
                     targeted_logits_chunk: Float[torch.Tensor, "c t"] = self._target_logits(
-                        logits_chunk, chunk_targets.to(self.device)
+                        logits_chunk,
+                        chunk_targets.to(self.device),
+                        chunk,
                     )
 
                     if self.gradients:
@@ -483,7 +583,7 @@ class InferenceWrapper(ABC):
                         outputs_chunk = self._compute_gradients(
                             inputs=inputs,  # type: ignore
                             targeted_logits_chunk=targeted_logits_chunk,
-                            chunk_slice=chunk_slice,
+                            chunk=chunk,
                             last_chunk=(chunk_id == (len(batch.chunks) - 1)),
                         )
                     else:
@@ -491,8 +591,8 @@ class InferenceWrapper(ABC):
                         outputs_chunk = targeted_logits_chunk
                 else:
                     # outputs are targets
-                    # (b, t) compute targets from logits
-                    outputs_chunk = self._extract_targets_from_logits(logits_chunk).cpu()
+                    # (c, t) compute targets from logits
+                    outputs_chunk = self._extract_targets_from_logits(logits_chunk, chunk).cpu()
 
                 outputs_buffer[chunk.group_id].append(outputs_chunk)
 
@@ -581,12 +681,24 @@ class InferenceWrapper(ABC):
                     n - start,  # or the full group
                 )
 
+                # elements for slicing, it keeps relevant element indices
+                sample = split_inputs[start]
+                sequence_key, padding_side = None, self.padding_side
+                if "inputs_embeds" in sample:
+                    sequence_key = "inputs_embeds"
+                elif "pixel_values" in sample and sample["pixel_values"].ndim == 2:
+                    sequence_key, padding_side = "pixel_values", "right"
+                elif "input_ids" in sample:
+                    sequence_key = "input_ids"
+
                 # add chunk to the batch
                 current_batch.add_chunk(
                     chunk_inputs=split_inputs[start : start + take],
                     chunk_targets=group_targets,
                     group_id=group_id,
                     last_group_chunk=(start + take == n),
+                    sequence_key=sequence_key,
+                    padding_side=padding_side,
                 )
 
                 # count number of elements from the group already chunked into the batches

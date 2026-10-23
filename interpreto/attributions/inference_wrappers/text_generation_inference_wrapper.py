@@ -28,7 +28,7 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, Int, jaxtyped
 
-from interpreto.attributions.inference_wrappers.inference_wrapper import InferenceWrapper
+from interpreto.attributions.inference_wrappers.inference_wrapper import ChunkMetadata, InferenceWrapper
 
 
 class TextGenerationInferenceWrapper(InferenceWrapper):
@@ -58,7 +58,7 @@ class TextGenerationInferenceWrapper(InferenceWrapper):
         padded_inputs["position_ids"] = position_ids
         return padded_inputs
 
-    def _extract_targets_from_logits(self, logits):
+    def _extract_targets_from_logits(self, logits, chunk):
         raise NotImplementedError(
             "GenerationInferenceWrapper does not support computing targets from logits."
             "Text generation is left to the user, the generated text should then be provided as targets."
@@ -66,8 +66,11 @@ class TextGenerationInferenceWrapper(InferenceWrapper):
 
     @jaxtyped(typechecker=beartype)
     def _target_logits(
-        self, logits: Float[torch.Tensor, "b l v"], targets: Int[torch.Tensor, "t"]
-    ) -> Float[torch.Tensor, "b t"]:
+        self,
+        logits: Float[torch.Tensor, "c l v"],
+        targets: Int[torch.Tensor, "t"],
+        chunk: ChunkMetadata,
+    ) -> Float[torch.Tensor, "c t"]:
         """
         For each output token of a chunk (as defined by `_call_batch`),
         select the logits corresponding to the initially generated text.
@@ -77,12 +80,14 @@ class TextGenerationInferenceWrapper(InferenceWrapper):
 
         Args:
             logits (torch.Tensor):
-                The output logits of a generation model. (batch, seq_len, vocabulary).
+                The output logits of a generation model. (chunk, seq_len, vocabulary).
                 The seq_len corresponds here to the initial inputs and targets concatenated.
             targets (torch.Tensor):
                 Indices of the generated tokens in the vocabulary,
                 serves to extract the pertinent logits from the model's output.
                 It thus corresponds to the t last tokens of the logits.
+            chunk (ChunkMetadata):
+                Metadata for the chunk, including the last non-padding index.
 
         Returns:
             targeted_logits (torch.Tensor):
@@ -90,11 +95,11 @@ class TextGenerationInferenceWrapper(InferenceWrapper):
         """
         t = targets.shape[0]
 
-        # Select the t last logits
-        # We shift the select output by one to the left as we used concatenated our targets to the inputs.
-        # Therefore, the last logit vector correspond to the token generated after our target.
-        # We can thus ignore it. TODO: see if we should do this modification before the forward
-        last_logits: Float[torch.Tensor, f"b {t} v"] = logits[:, -(t + 1) : -1]
+        # Index of the last non-padding token
+        last = getattr(chunk, "sequence_end", logits.shape[1])
+
+        # Select the logits preceding each target token (causal shift).
+        preceding_logits = logits[:, last - t : last]
 
         # apply indexing
-        return last_logits[:, torch.arange(t), targets]
+        return preceding_logits[:, torch.arange(t), targets]
