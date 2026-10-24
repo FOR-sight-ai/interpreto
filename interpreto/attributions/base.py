@@ -1408,21 +1408,6 @@ class InputsToConceptsAttributionsExplainer(AttributionExplainer):
             sanitized_targets = [input_wise_targets] * len(model_inputs)  # type: ignore
         return model_inputs, sanitized_targets  # type: ignore
 
-    def post_processing(self, contribution: Float[torch.Tensor, "t l"]):
-        """
-        Concepts specific post-processing of the attribution scores.
-
-        No post-processing is required for concept attributions.
-
-        Args:
-            contribution (Float[torch.Tensor, "t l"]): The contribution values.
-
-        Returns:
-            model_task (ModelTask): The model task.
-            contribution (Float[torch.Tensor, "t l"]): The post-processed contribution values.
-        """
-        return contribution
-
 
 class FactoryGeneratedMeta(ABCMeta):
     """
