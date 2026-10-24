@@ -177,12 +177,13 @@ def test_attribution_methods_with_text_long(model_inputs, attribution_explainer)
         attribution_explainer,
         granularity=Granularity.TOKEN,
         aggregation_strategy=None,
+        all_input_formats=True,
     )
 
 
 @pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-@pytest.mark.parametrize("granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE])
+@pytest.mark.parametrize("granularity", [Granularity.ALL_TOKENS, Granularity.WORD, Granularity.SENTENCE])
 def test_attribution_methods_granularity(model_inputs, attribution_explainer, granularity):
     evaluate_attribution_methods_with_text(
         *model_inputs,
@@ -193,7 +194,9 @@ def test_attribution_methods_granularity(model_inputs, attribution_explainer, gr
 
 
 @pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
-@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
+# Cover both gradient aggregation and perturbation integration, rather than
+# repeating identical reducer checks for every attribution algorithm.
+@pytest.mark.parametrize("attribution_explainer", [IntegratedGradients, Occlusion])
 @pytest.mark.parametrize("granularity", [Granularity.WORD, Granularity.SENTENCE])
 @pytest.mark.parametrize(
     "aggregation_strategy",
@@ -215,8 +218,19 @@ def test_attribution_methods_granularity_aggregation_strategy(
     )
 
 
-def evaluate_attribution_methods_with_text(model, processor, attribution_explainer, granularity, aggregation_strategy):
-    """Validate attribution outputs using already loaded models and tokenizers."""
+@pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
+@pytest.mark.parametrize("attribution_explainer", [Saliency, Occlusion])
+def test_attribution_input_formats(model_inputs, attribution_explainer):
+    """Exercise all original input/target forms through both inference paths."""
+    evaluate_attribution_methods_with_text(
+        *model_inputs, attribution_explainer, Granularity.TOKEN, None, all_input_formats=True
+    )
+
+
+def evaluate_attribution_methods_with_text(
+    model, processor, attribution_explainer, granularity, aggregation_strategy, *, all_input_formats=False
+):
+    """Validate outputs on a minimal example, or the dedicated input-format matrix."""
 
     # To be changed according to the final form of the explainer:
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
@@ -234,6 +248,10 @@ def evaluate_attribution_methods_with_text(model, processor, attribution_explain
         "Interpreto is",
         "This is two sentences. The goal is",
     ]
+    if not all_input_formats:
+        # Two short sentences make sentence grouping nontrivial as well as word
+        # grouping; use a short generation target to limit autoregressive work.
+        list_texts = ["Hi dog. Go cat."]
     list_tokenized_texts = [
         processor(text, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
         for text in list_texts
@@ -241,6 +259,8 @@ def evaluate_attribution_methods_with_text(model, processor, attribution_explain
 
     if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
         list_targets = ["video", "and I like it.", ["nice", "good"], "a great library", "to test."]
+        if not all_input_formats:
+            list_targets = ["hi"]
         list_tokenized_targets = [
             processor(target, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
             for target in list_targets
@@ -251,6 +271,10 @@ def evaluate_attribution_methods_with_text(model, processor, attribution_explain
         list_targets = [None, 1, [0, 1], None, torch.tensor([[0, 1]])]
         list_texts_complete = list_texts + list_tokenized_texts
         list_targets_complete = list_targets + list_targets
+
+    if not all_input_formats:
+        list_texts_complete = list_texts
+        list_targets_complete = list_targets[:1]
 
     for input_text, target in zip(list_texts_complete, list_targets_complete, strict=False):
         if isinstance(input_text, BatchEncoding) and input_text["input_ids"].shape[0] > 1:
