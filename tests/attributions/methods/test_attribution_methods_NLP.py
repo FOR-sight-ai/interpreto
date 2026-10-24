@@ -200,7 +200,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
     assert processor is not None, f"Tokenizer failed to load for {model_name}"
 
     # To be changed according to the final form of the explainer:
-    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {})
+    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
     if aggregation_strategy is not None:
         explainer_kwargs["combination_strategy"] = aggregation_strategy
     explainer = attribution_explainer(
