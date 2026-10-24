@@ -91,6 +91,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+vision = ["torchvision"]
 docs = [
   "mkdocs>=1.6.1,<2",
   "mkdocs-material>=9.5.34",

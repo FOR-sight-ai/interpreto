@@ -51,7 +51,7 @@ jobs:
     - name: Install dependencies
       run: |
         source .venv/bin/activate
-        uv pip install ".[docs,lint,notebook]"
+        uv pip install ".[docs,lint,notebook,vision]"
 
 
     - name: Export HF_HUB_TOKEN
