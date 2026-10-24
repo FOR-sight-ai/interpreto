@@ -125,11 +125,42 @@ def loaded_model(request):
     return SLOW_MODEL_LOADERS[model_name].from_pretrained(model_name), AutoTokenizer.from_pretrained(model_name)
 
 
+@pytest.fixture
+def model_inputs(loaded_model):
+    """Restore wrapper-mutated configuration without copying model weights.
+
+    Wrappers enter eval mode and normalize padding. Gradients are computed with
+    autograd.grad, so parameter gradients and module hooks must remain untouched.
+    Keep weights on their current device to avoid transfers between test cases.
+    """
+    model, tokenizer = loaded_model
+    modes = [(module, module.training) for module in model.modules()]
+    hooks = [(module, dict(module._forward_hooks), dict(module._backward_hooks)) for module in model.modules()]
+    gradients = [parameter.grad for parameter in model.parameters()]
+    pad_token = tokenizer.pad_token
+    pad_id = model.config.pad_token_id
+    generation_config = getattr(model, "generation_config", None)
+    generation_pad_id = generation_config.pad_token_id if generation_config is not None else None
+    try:
+        yield model, tokenizer
+        for module, forward, backward in hooks:
+            assert module._forward_hooks == forward
+            assert module._backward_hooks == backward
+        assert all(parameter.grad is grad for parameter, grad in zip(model.parameters(), gradients, strict=True))
+    finally:
+        for module, training in modes:
+            module.training = training
+        tokenizer.pad_token = pad_token
+        model.config.pad_token_id = pad_id
+        if generation_config is not None:
+            generation_config.pad_token_id = generation_pad_id
+
+
 @pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-def test_attribution_methods_with_text_short(loaded_model, attribution_explainer):
+def test_attribution_methods_with_text_short(model_inputs, attribution_explainer):
     evaluate_attribution_methods_with_text(
-        *loaded_model, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
+        *model_inputs, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
     )
 
 
@@ -140,9 +171,9 @@ def test_attribution_methods_with_text_short(loaded_model, attribution_explainer
     indirect=True,
 )
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-def test_attribution_methods_with_text_long(loaded_model, attribution_explainer):
+def test_attribution_methods_with_text_long(model_inputs, attribution_explainer):
     evaluate_attribution_methods_with_text(
-        *loaded_model,
+        *model_inputs,
         attribution_explainer,
         granularity=Granularity.TOKEN,
         aggregation_strategy=None,
@@ -152,9 +183,9 @@ def test_attribution_methods_with_text_long(loaded_model, attribution_explainer)
 @pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 @pytest.mark.parametrize("granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE])
-def test_attribution_methods_granularity(loaded_model, attribution_explainer, granularity):
+def test_attribution_methods_granularity(model_inputs, attribution_explainer, granularity):
     evaluate_attribution_methods_with_text(
-        *loaded_model,
+        *model_inputs,
         attribution_explainer=attribution_explainer,
         granularity=granularity,
         aggregation_strategy=None,
@@ -174,10 +205,10 @@ def test_attribution_methods_granularity(loaded_model, attribution_explainer, gr
     ],
 )
 def test_attribution_methods_granularity_aggregation_strategy(
-    loaded_model, attribution_explainer, granularity, aggregation_strategy
+    model_inputs, attribution_explainer, granularity, aggregation_strategy
 ):
     evaluate_attribution_methods_with_text(
-        *loaded_model,
+        *model_inputs,
         attribution_explainer=attribution_explainer,
         granularity=granularity,
         aggregation_strategy=aggregation_strategy,
@@ -350,8 +381,8 @@ def test_attribution_methods_memory_management_classification(attribution_explai
 @pytest.mark.slow
 @pytest.mark.parametrize("loaded_model", ["gpt2"], indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-def test_attribution_methods_memory_management_generation(attribution_explainer, loaded_model):
-    model, processor = loaded_model
+def test_attribution_methods_memory_management_generation(attribution_explainer, model_inputs):
+    model, processor = model_inputs
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
     explainer = attribution_explainer(
         model,
