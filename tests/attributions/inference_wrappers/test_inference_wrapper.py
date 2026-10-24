@@ -253,16 +253,43 @@ def test_batching_management(task: str):
 
 
 BAB_CONFIGS = [
-    BitsAndBytesConfig(load_in_8bit=True),
-    BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_type=torch.float16),
-    BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="fp4", bnb_4bit_compute_type=torch.float16),
-    BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold=6.0),
-    BitsAndBytesConfig(load_in_8bit=True, llm_int8_skip_modules=["lm_head", "output"]),
+    pytest.param(
+        BitsAndBytesConfig(load_in_8bit=True),
+        id="int8",
+    ),
+    pytest.param(
+        BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+        ),
+        id="nf4",
+    ),
+    pytest.param(
+        BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="fp4",
+            bnb_4bit_compute_dtype=torch.float16,
+        ),
+        marks=pytest.mark.slow,
+        id="fp4",
+    ),
+    pytest.param(
+        BitsAndBytesConfig(
+            load_in_8bit=True,
+            llm_int8_skip_modules=["lm_head", "output"],
+        ),
+        marks=pytest.mark.slow,
+        id="int8-skip",
+    ),
 ]
 
 QUANTIZED_MODELS = [
     "hf-internal-testing/tiny-random-gpt2",
-    "hf-internal-testing/tiny-random-LlamaForCausalLM",
+    pytest.param(
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+        marks=pytest.mark.slow,
+    ),
 ]
 
 
