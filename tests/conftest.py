@@ -28,7 +28,14 @@ Common fixtures for all tests
 
 import torch
 from pytest import fixture
-from transformers import AutoModelForCausalLM, AutoModelForMaskedLM, AutoModelForSequenceClassification, AutoTokenizer
+from transformers import (
+    AutoImageProcessor,
+    AutoModelForCausalLM,
+    AutoModelForImageClassification,
+    AutoModelForMaskedLM,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
 
 from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 from interpreto.typing import LatentActivations
@@ -37,7 +44,7 @@ from interpreto.typing import LatentActivations
 @fixture(scope="session")
 def sentences():
     return [
-        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
+        "Interpreto is the latin for to interpret. But it also sounds like a spell from the Harry Potter books.",
         "Interpreto is magical",
         "Testing interpreto",
     ]
@@ -84,18 +91,18 @@ def bert_tokenizer():
 
 
 @fixture(scope="session")
+def vit_model():
+    return AutoModelForImageClassification.from_pretrained("hf-internal-testing/tiny-random-vit")
+
+
+@fixture(scope="session")
+def vit_image_processor():
+    return AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
+
+
+@fixture(scope="session")
 def real_bert_tokenizer():
     return AutoTokenizer.from_pretrained("bert-base-uncased")
-
-
-@fixture(scope="session")
-def bert_imdb_model():
-    return AutoModelForSequenceClassification.from_pretrained("textattack/bert-base-uncased-imdb")
-
-
-@fixture(scope="session")
-def bert_imdb_tokenizer():
-    return AutoTokenizer.from_pretrained("textattack/bert-base-uncased-imdb")
 
 
 @fixture(scope="session")

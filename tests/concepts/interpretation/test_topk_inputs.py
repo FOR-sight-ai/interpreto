@@ -161,7 +161,7 @@ def test_topk_inputs_from_activations(splitted_encoder_ml: ModelWithSplitPoints)
     ],
 )
 def test_topk_inputs_granularity(
-    splitted_encoder_ml: ModelWithSplitPoints, huge_text: list[str], activation_granularity: ActivationGranularity
+    splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str], activation_granularity: ActivationGranularity
 ):
     """
     Test that the `interpret` method works as expected for different activation granularities
@@ -173,7 +173,7 @@ def test_topk_inputs_granularity(
     concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
 
     # getting the activations
-    activations, _ = splitted_encoder_ml.get_activations(huge_text, activation_granularity=activation_granularity)
+    activations, _ = splitted_encoder_ml.get_activations(sentences, activation_granularity=activation_granularity)
 
     # initializing the interpreter
     interpretation_method = TopKInputs(
@@ -184,11 +184,11 @@ def test_topk_inputs_granularity(
 
     topk_inputs = interpretation_method.interpret(
         concepts_indices=[0, 5, 13],
-        inputs=huge_text,
+        inputs=sentences,
         latent_activations=activations,
     )
 
-    flattened_huge_text = ". ".join(huge_text).replace("\n", " ")
+    flattened_sentences = ". ".join(sentences).replace("\n", " ")
 
     assert isinstance(topk_inputs, dict) and len(topk_inputs) == 3
     for c in [0, 5, 13]:
@@ -196,7 +196,7 @@ def test_topk_inputs_granularity(
         assert len(topk_inputs[c]) == 2
         for key in topk_inputs[c].keys():
             new_key = key[2:] if key.startswith("##") else key
-            assert new_key.lower().replace("\n", " ") in flattened_huge_text.lower()
+            assert new_key.lower().replace("\n", " ") in flattened_sentences.lower()
 
 
 def test_topk_inputs_concepts_selection(splitted_encoder_ml: ModelWithSplitPoints):

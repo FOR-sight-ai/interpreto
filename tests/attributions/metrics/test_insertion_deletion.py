@@ -144,7 +144,11 @@ def test_insertion_deletion_generation(gpt2_model, gpt2_tokenizer, method_class,
     metric_on_method_model_pair(gpt2_model, gpt2_tokenizer, method_class, metric_class, sentences, targets)
 
 
-def test_qualitative_classification(bert_imdb_model, bert_imdb_tokenizer):
+@pytest.mark.slow
+def test_qualitative_classification():
+    bert_imdb_model = AutoModelForSequenceClassification.from_pretrained("textattack/bert-base-uncased-imdb")
+    bert_imdb_tokenizer = AutoTokenizer.from_pretrained("textattack/bert-base-uncased-imdb")
+
     torch.manual_seed(0)
     sentences = ["What a great movie! Too bad it is long."]
     expected_attribution = torch.tensor([[0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0]])

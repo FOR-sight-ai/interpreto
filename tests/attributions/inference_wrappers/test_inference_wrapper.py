@@ -1,3 +1,27 @@
+# MIT License
+#
+# Copyright (c) 2025 IRT Antoine de Saint Exupéry et Université Paul Sabatier Toulouse III - All
+# rights reserved. DEEL and FOR are research programs operated by IVADO, IRT Saint Exupéry,
+# CRIAQ and ANITI - https://www.deel.ai/.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from __future__ import annotations
 
 import math
@@ -11,13 +35,15 @@ from torch import nn
 from transformers import AutoModelForCausalLM
 from transformers.utils.quantization_config import BitsAndBytesConfig
 
-from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
-from interpreto.attributions.inference_wrappers.generation_inference_wrapper import GenerationInferenceWrapper
 from interpreto.attributions.inference_wrappers.inference_wrapper import Batch
+from interpreto.attributions.inference_wrappers.text_classification_inference_wrapper import (
+    TextClassificationInferenceWrapper,
+)
+from interpreto.attributions.inference_wrappers.text_generation_inference_wrapper import TextGenerationInferenceWrapper
 
 TASK_INFERENCE_WRAPPERS = {
-    "classification": ClassificationInferenceWrapper,
-    "generation": GenerationInferenceWrapper,
+    "classification": TextClassificationInferenceWrapper,
+    "generation": TextGenerationInferenceWrapper,
 }
 
 TARGET_MAX = 3
@@ -227,16 +253,43 @@ def test_batching_management(task: str):
 
 
 BAB_CONFIGS = [
-    BitsAndBytesConfig(load_in_8bit=True),
-    BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_type=torch.float16),
-    BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="fp4", bnb_4bit_compute_type=torch.float16),
-    BitsAndBytesConfig(load_in_8bit=True, llm_int8_threshold=6.0),
-    BitsAndBytesConfig(load_in_8bit=True, llm_int8_skip_modules=["lm_head", "output"]),
+    pytest.param(
+        BitsAndBytesConfig(load_in_8bit=True),
+        id="int8",
+    ),
+    pytest.param(
+        BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+        ),
+        id="nf4",
+    ),
+    pytest.param(
+        BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="fp4",
+            bnb_4bit_compute_dtype=torch.float16,
+        ),
+        marks=pytest.mark.slow,
+        id="fp4",
+    ),
+    pytest.param(
+        BitsAndBytesConfig(
+            load_in_8bit=True,
+            llm_int8_skip_modules=["lm_head", "output"],
+        ),
+        marks=pytest.mark.slow,
+        id="int8-skip",
+    ),
 ]
 
 QUANTIZED_MODELS = [
     "hf-internal-testing/tiny-random-gpt2",
-    "hf-internal-testing/tiny-random-LlamaForCausalLM",
+    pytest.param(
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+        marks=pytest.mark.slow,
+    ),
 ]
 
 
@@ -256,7 +309,7 @@ def test_inference_wrapper_with_quantized_models(model_name, bab_config):
             pytest.skip(f"bitsandbytes runtime is not available in this environment: {error}")
         raise
 
-    wrapped_model = GenerationInferenceWrapper(quantized_model)
+    wrapped_model = TextGenerationInferenceWrapper(quantized_model)
 
     input_ids = torch.arange(0, nb_inputs + nb_outputs, dtype=torch.long).view((1, -1))
     attention_mask = torch.ones_like(input_ids)

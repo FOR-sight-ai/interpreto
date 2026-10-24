@@ -91,6 +91,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+vision = ["torchvision"]
 docs = [
   "mkdocs>=1.6.1,<2",
   "mkdocs-material>=9.5.34",
@@ -226,6 +227,7 @@ ignore = [
   "PLR0913", # too many arguments
   "PLR0917", # too many positional arguments; existing public APIs preserve positional compatibility
   "PLR0915", # too many statements
+  "PLR0917", # too many positional arguments
   "UP037",   # invalid type annotation (incompatible with single dimension jaxtyping)
   "W191",    # indentation contains tabs (handled by format)
 ]

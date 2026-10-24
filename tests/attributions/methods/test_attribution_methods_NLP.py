@@ -23,7 +23,6 @@
 # SOFTWARE.
 
 import math
-import os
 
 import pytest
 import torch
@@ -88,21 +87,19 @@ attribution_method_kwargs = {
         "inference_mode": InferenceModes.LOG_SOFTMAX,
     },
     Lime: {"n_perturbations": 3},
-    Sobol: {"n_token_perturbations": 3},
+    Sobol: {"n_granularity_perturbations": 3},
 }
 
 
-ALL_MODEL_LOADERS = {
+SLOW_MODEL_LOADERS = {
     "hf-internal-testing/tiny-random-albert": AutoModelForSequenceClassification,
     "hf-internal-testing/tiny-random-bart": AutoModelForSequenceClassification,
-    "hf-internal-testing/tiny-random-bert": AutoModelForSequenceClassification,
     # "hf-internal-testing/tiny-random-DebertaV2Model": AutoModelForSequenceClassification,
     "hf-internal-testing/tiny-random-distilbert": AutoModelForSequenceClassification,
     "hf-internal-testing/tiny-random-ElectraModel": AutoModelForSequenceClassification,
     "hf-internal-testing/tiny-random-roberta": AutoModelForSequenceClassification,
     "hf-internal-testing/tiny-random-t5": AutoModelForSequenceClassification,
     "hf-internal-testing/tiny-xlm-roberta": AutoModelForSequenceClassification,
-    "hf-internal-testing/tiny-random-gpt2": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-gpt_neo": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-gptj": AutoModelForCausalLM,
     "hf-internal-testing/tiny-random-CodeGenForCausalLM": AutoModelForCausalLM,
@@ -113,56 +110,93 @@ ALL_MODEL_LOADERS = {
     "hf-internal-testing/tiny-random-Starcoder2ForCausalLM": AutoModelForCausalLM,
 }
 
-# A small subset to run on CI:
-CI_MODEL_LOADERS = [
-    "hf-internal-testing/tiny-random-bert",
-    "hf-internal-testing/tiny-random-gpt2",
-    "hf-internal-testing/tiny-random-roberta",
-    "hf-internal-testing/tiny-random-t5",
-]
+FAST_MODEL_FIXTURES = ["bert", "gpt2"]
 
 
-def is_ci() -> bool:
-    return os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+@pytest.fixture(scope="module")
+def loaded_model(request):
+    """Resolve existing session fixtures; cache one additional slow model at a time."""
+    model_name = request.param
+    if model_name in FAST_MODEL_FIXTURES:
+        return (
+            request.getfixturevalue(f"{model_name}_model"),
+            request.getfixturevalue(f"{model_name}_tokenizer"),
+        )
+    return SLOW_MODEL_LOADERS[model_name].from_pretrained(model_name), AutoTokenizer.from_pretrained(model_name)
 
 
-@pytest.mark.parametrize("model_name", CI_MODEL_LOADERS)
+@pytest.fixture
+def model_inputs(loaded_model):
+    """Restore wrapper-mutated configuration without copying model weights.
+
+    Wrappers enter eval mode and normalize padding. Gradients are computed with
+    autograd.grad, so parameter gradients and module hooks must remain untouched.
+    Keep weights on their current device to avoid transfers between test cases.
+    """
+    model, tokenizer = loaded_model
+    modes = [(module, module.training) for module in model.modules()]
+    hooks = [(module, dict(module._forward_hooks), dict(module._backward_hooks)) for module in model.modules()]
+    gradients = [parameter.grad for parameter in model.parameters()]
+    pad_token = tokenizer.pad_token
+    pad_id = model.config.pad_token_id
+    generation_config = getattr(model, "generation_config", None)
+    generation_pad_id = generation_config.pad_token_id if generation_config is not None else None
+    try:
+        yield model, tokenizer
+        for module, forward, backward in hooks:
+            assert module._forward_hooks == forward
+            assert module._backward_hooks == backward
+        assert all(parameter.grad is grad for parameter, grad in zip(model.parameters(), gradients, strict=True))
+    finally:
+        for module, training in modes:
+            module.training = training
+        tokenizer.pad_token = pad_token
+        model.config.pad_token_id = pad_id
+        if generation_config is not None:
+            generation_config.pad_token_id = generation_pad_id
+
+
+@pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-def test_attribution_methods_with_text_short(model_name, attribution_explainer):
+def test_attribution_methods_with_text_short(model_inputs, attribution_explainer):
     evaluate_attribution_methods_with_text(
-        model_name, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
+        *model_inputs, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
     )
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("model_name", [k for k in ALL_MODEL_LOADERS.keys() if k not in CI_MODEL_LOADERS])
+@pytest.mark.parametrize(
+    "loaded_model",
+    list(SLOW_MODEL_LOADERS),
+    indirect=True,
+)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-def test_attribution_methods_with_text_long(model_name, attribution_explainer):
+def test_attribution_methods_with_text_long(model_inputs, attribution_explainer):
     evaluate_attribution_methods_with_text(
-        model_name, attribution_explainer, granularity=Granularity.TOKEN, aggregation_strategy=None
+        *model_inputs,
+        attribution_explainer,
+        granularity=Granularity.TOKEN,
+        aggregation_strategy=None,
+        all_input_formats=True,
     )
 
 
-@pytest.mark.parametrize(
-    "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
-)
+@pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-@pytest.mark.parametrize(
-    "granularity", [Granularity.ALL_TOKENS, Granularity.TOKEN, Granularity.WORD, Granularity.SENTENCE]
-)
-def test_attribution_methods_granularity(model_name, attribution_explainer, granularity):
+@pytest.mark.parametrize("granularity", [Granularity.ALL_TOKENS, Granularity.WORD, Granularity.SENTENCE])
+def test_attribution_methods_granularity(model_inputs, attribution_explainer, granularity):
     evaluate_attribution_methods_with_text(
-        model_name=model_name,
+        *model_inputs,
         attribution_explainer=attribution_explainer,
         granularity=granularity,
         aggregation_strategy=None,
     )
 
 
-@pytest.mark.parametrize(
-    "model_name", ["hf-internal-testing/tiny-random-bert", "hf-internal-testing/tiny-random-gpt2"]
-)
-@pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
+@pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
+# Cover both gradient aggregation and perturbation integration, rather than
+# repeating identical reducer checks for every attribution algorithm.
+@pytest.mark.parametrize("attribution_explainer", [IntegratedGradients, Occlusion])
 @pytest.mark.parametrize("granularity", [Granularity.WORD, Granularity.SENTENCE])
 @pytest.mark.parametrize(
     "aggregation_strategy",
@@ -174,37 +208,36 @@ def test_attribution_methods_granularity(model_name, attribution_explainer, gran
     ],
 )
 def test_attribution_methods_granularity_aggregation_strategy(
-    model_name, attribution_explainer, granularity, aggregation_strategy
+    model_inputs, attribution_explainer, granularity, aggregation_strategy
 ):
     evaluate_attribution_methods_with_text(
-        model_name=model_name,
+        *model_inputs,
         attribution_explainer=attribution_explainer,
         granularity=granularity,
         aggregation_strategy=aggregation_strategy,
     )
 
 
-def evaluate_attribution_methods_with_text(model_name, attribution_explainer, granularity, aggregation_strategy):
-    """Tests all combinations of models and loaders with an attribution method"""
+@pytest.mark.parametrize("loaded_model", FAST_MODEL_FIXTURES, indirect=True)
+@pytest.mark.parametrize("attribution_explainer", [Saliency, Occlusion])
+def test_attribution_input_formats(model_inputs, attribution_explainer):
+    """Exercise all original input/target forms through both inference paths."""
+    evaluate_attribution_methods_with_text(
+        *model_inputs, attribution_explainer, Granularity.TOKEN, None, all_input_formats=True
+    )
 
-    # Test are too memory heavy for the CI, hence we only run them on a subset of models:
-    if is_ci() and model_name not in CI_MODEL_LOADERS:
-        pytest.skip(f"Model {model_name} not available on CI")
 
-    model_loader = ALL_MODEL_LOADERS[model_name]
-
-    model = model_loader.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-    assert model is not None, f"Model loading failed {model_name}"
-    assert tokenizer is not None, f"Tokenizer failed to load for {model_name}"
+def evaluate_attribution_methods_with_text(
+    model, processor, attribution_explainer, granularity, aggregation_strategy, *, all_input_formats=False
+):
+    """Validate outputs on a minimal example, or the dedicated input-format matrix."""
 
     # To be changed according to the final form of the explainer:
-    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {})
+    explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
     if aggregation_strategy is not None:
-        explainer_kwargs["granularity_aggregation_strategy"] = aggregation_strategy
+        explainer_kwargs["combination_strategy"] = aggregation_strategy
     explainer = attribution_explainer(
-        model, tokenizer=tokenizer, batch_size=3, device=DEVICE, granularity=granularity, **explainer_kwargs
+        model, processor=processor, batch_size=3, device=DEVICE, granularity=granularity, **explainer_kwargs
     )
 
     # we need to test both type of inputs: text, list_text, tokenized_text, tokenized_list_text:
@@ -215,15 +248,21 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
         "Interpreto is",
         "This is two sentences. The goal is",
     ]
+    if not all_input_formats:
+        # Two short sentences make sentence grouping nontrivial as well as word
+        # grouping; use a short generation target to limit autoregressive work.
+        list_texts = ["Hi dog. Go cat."]
     list_tokenized_texts = [
-        tokenizer(text, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+        processor(text, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
         for text in list_texts
     ]
 
     if model.__class__.__name__.endswith("ForCausalLM") or model.__class__.__name__.endswith("LMHeadModel"):
         list_targets = ["video", "and I like it.", ["nice", "good"], "a great library", "to test."]
+        if not all_input_formats:
+            list_targets = ["hi"]
         list_tokenized_targets = [
-            tokenizer(target, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
+            processor(target, return_tensors="pt", padding=True, truncation=True, return_offsets_mapping=True)
             for target in list_targets
         ]
         list_texts_complete = list_texts + list_tokenized_texts + list_texts
@@ -232,6 +271,10 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
         list_targets = [None, 1, [0, 1], None, torch.tensor([[0, 1]])]
         list_texts_complete = list_texts + list_tokenized_texts
         list_targets_complete = list_targets + list_targets
+
+    if not all_input_formats:
+        list_texts_complete = list_texts
+        list_targets_complete = list_targets[:1]
 
     for input_text, target in zip(list_texts_complete, list_targets_complete, strict=False):
         if isinstance(input_text, BatchEncoding) and input_text["input_ids"].shape[0] > 1:
@@ -296,7 +339,7 @@ def evaluate_attribution_methods_with_text(model_name, attribution_explainer, gr
 
 @pytest.mark.parametrize("method_class", [Lime, VarGrad])
 def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sentences):
-    explainer = method_class(model=bert_model, tokenizer=bert_tokenizer, batch_size=3, device=DEVICE)
+    explainer = method_class(model=bert_model, processor=bert_tokenizer, batch_size=3, device=DEVICE)
 
     attr_output = explainer.explain(sentences)
 
@@ -323,17 +366,18 @@ def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sente
 
 @pytest.mark.slow
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-def test_attribution_methods_memory_management_classification(attribution_explainer):
-    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
+def test_attribution_methods_memory_management_classification(attribution_explainer, bert_model, bert_tokenizer):
+    processor = bert_tokenizer
+    # This stress test needs a separate, much larger classification head.
     model = AutoModelForSequenceClassification.from_pretrained(
-        "hf-internal-testing/tiny-random-bert",
+        bert_model.name_or_path,
         num_labels=2048,
         ignore_mismatched_sizes=True,
     )
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
     explainer = attribution_explainer(
         model,
-        tokenizer=tokenizer,
+        processor=processor,
         batch_size=16,
         device=DEVICE,
         granularity=Granularity.ALL_TOKENS,
@@ -359,14 +403,14 @@ def test_attribution_methods_memory_management_classification(attribution_explai
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize("loaded_model", ["gpt2"], indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
-def test_attribution_methods_memory_management_generation(attribution_explainer):
-    tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-gpt2")
-    model = AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+def test_attribution_methods_memory_management_generation(attribution_explainer, model_inputs):
+    model, processor = model_inputs
     explainer_kwargs = attribution_method_kwargs.get(attribution_explainer, {}).copy()
     explainer = attribution_explainer(
         model,
-        tokenizer=tokenizer,
+        processor=processor,
         batch_size=16,
         device=DEVICE,
         granularity=Granularity.ALL_TOKENS,
@@ -396,45 +440,3 @@ def test_attribution_methods_memory_management_generation(attribution_explainer)
 # TODO: test batch size management with very different inputs, tensor mappings of shape: [(1, 10), (5, 10), (100, 10), (2, 10)...].
 #       test that the output shapes are correct for each case.
 #       There should be a counter wrapped around a model to verify that the number of calls to the model is correct.
-
-if __name__ == "__main__":
-    test_attribution_methods_with_text_short(
-        model_name="hf-internal-testing/tiny-random-t5",
-        attribution_explainer=IntegratedGradients,
-    )
-    test_attribution_methods_with_text_short(
-        model_name="hf-internal-testing/tiny-random-gpt2",
-        attribution_explainer=Lime,
-    )
-    test_attribution_methods_granularity(
-        model_name="hf-internal-testing/tiny-random-bert",
-        attribution_explainer=Occlusion,
-        granularity=Granularity.WORD,
-    )
-    test_attribution_methods_granularity(
-        model_name="hf-internal-testing/tiny-random-gpt2",
-        attribution_explainer=VarGrad,
-        granularity=Granularity.WORD,
-    )
-    test_attribution_methods_granularity(
-        model_name="hf-internal-testing/tiny-random-bert",
-        attribution_explainer=Saliency,
-        granularity=Granularity.ALL_TOKENS,
-    )
-    test_attribution_methods_granularity_aggregation_strategy(
-        model_name="hf-internal-testing/tiny-random-gpt2",
-        attribution_explainer=GradientShap,
-        granularity=Granularity.SENTENCE,
-        aggregation_strategy=GranularityAggregationStrategy.SIGNED_MAX,
-    )
-    bert_model = AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
-    bert_tokenizer = AutoTokenizer.from_pretrained("hf-internal-testing/tiny-random-bert")
-    sentences = [
-        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
-        "Interpreto is magical",
-        "Testing interpreto",
-    ]
-    test_attribution_output_size(bert_model, bert_tokenizer, Occlusion, sentences)
-    test_attribution_output_size(bert_model, bert_tokenizer, VarGrad, sentences)
-    test_attribution_methods_memory_management_classification(IntegratedGradients)
-    test_attribution_methods_memory_management_generation(SmoothGrad)
