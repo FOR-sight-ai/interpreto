@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import pytest
 import torch
-from transformers import AutoModelForMaskedLM
 
 from interpreto import ModelWithSplitPoints
 from interpreto.commons.llm_interface import LLMInterface, Role
