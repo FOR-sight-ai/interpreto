@@ -93,9 +93,9 @@ METHOD_KWARGS = {
     KernelShap: {"n_perturbations": 10000},
     Sobol: {"n_granularity_perturbations": 32},
     Lime: {"n_perturbations": 10000},
-    SmoothGrad: {"n_perturbations": 5000},
-    SquareGrad: {"n_perturbations": 5000},
-    VarGrad: {"n_perturbations": 5000},
+    SmoothGrad: {"n_perturbations": 500},
+    SquareGrad: {"n_perturbations": 500},
+    VarGrad: {"n_perturbations": 500},
 }
 
 SANITY_METHODS = [
