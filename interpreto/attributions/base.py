@@ -1078,8 +1078,10 @@ class ImageClassificationAttributionExplainer(AttributionExplainer):
         self.aggregator = aggregator or Aggregator()
         self.granularity = granularity
         self.resize_strategy = combination_strategy
-        # patch_size is sourced from the model config; required by ImageGranularity.PATCH
-        self.patch_size = int(getattr(model.config, "patch_size", 16))
+        # Multimodal models such as CLIP and SigLIP nest their patch geometry
+        # under vision_config; ordinary vision models expose it directly.
+        vision_config = getattr(model.config, "vision_config", model.config)
+        self.patch_size = int(getattr(vision_config, "patch_size", 16))
         # The explainer is the single source of truth for patch_size.
 
         # Might be moved into a more general Granularity argument/object later
