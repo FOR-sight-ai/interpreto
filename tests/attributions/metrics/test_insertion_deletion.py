@@ -25,6 +25,7 @@
 
 import pytest
 import torch
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from interpreto import Granularity, IntegratedGradients, KernelShap, Occlusion, SmoothGrad
 from interpreto.attributions.metrics import Deletion, Insertion
