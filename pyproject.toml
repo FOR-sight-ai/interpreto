@@ -157,6 +157,8 @@ addopts = [
   "--strict-markers",
   "--tb=short",
   "--doctest-modules",
+  # Load fixtures normally, but do not re-import conftests as doctest modules.
+  "--ignore-glob=*/conftest.py",
   "--doctest-continue-on-failure",
   "--disable-pytest-warnings",
   "--color=yes",

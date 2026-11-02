@@ -24,6 +24,9 @@
 
 """
 Common fixtures for all tests
+
+Keep these model fixtures free of NNsight instrumentation. Concept tests override
+the text model fixtures in tests/concepts/conftest.py with independent instances.
 """
 
 import torch
@@ -32,13 +35,11 @@ from transformers import (
     AutoImageProcessor,
     AutoModelForCausalLM,
     AutoModelForImageClassification,
-    AutoModelForMaskedLM,
     AutoModelForSequenceClassification,
     AutoTokenizer,
 )
 
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
-from interpreto.typing import LatentActivations
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 @fixture(scope="session")
@@ -51,38 +52,8 @@ def sentences():
 
 
 @fixture(scope="session")
-def multi_splitter() -> ModelWithSplitPoints:
-    return ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_point="bert.encoder.layer.1",
-        automodel=AutoModelForMaskedLM,  # type: ignore
-        batch_size=4,
-    )
-
-
-@fixture(scope="session")
-def splitted_encoder_ml() -> ModelWithSplitPoints:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    return ModelWithSplitPoints(
-        "hf-internal-testing/tiny-random-bert",
-        split_point="bert.encoder.layer.1.output",
-        automodel=AutoModelForSequenceClassification,  # type: ignore
-        batch_size=4,
-        device_map=device,
-    )
-
-
-@fixture(scope="session")
-def activations(splitted_encoder_ml: ModelWithSplitPoints, sentences: list[str]) -> LatentActivations:
-    latent_activations, _ = splitted_encoder_ml.get_activations(
-        sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.TOKEN
-    )
-    return latent_activations
-
-
-@fixture(scope="session")
 def bert_model():
-    return AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    return AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert").to(DEVICE)
 
 
 @fixture(scope="session")
@@ -92,7 +63,7 @@ def bert_tokenizer():
 
 @fixture(scope="session")
 def vit_model():
-    return AutoModelForImageClassification.from_pretrained("hf-internal-testing/tiny-random-vit")
+    return AutoModelForImageClassification.from_pretrained("hf-internal-testing/tiny-random-vit").to(DEVICE)
 
 
 @fixture(scope="session")
@@ -107,7 +78,7 @@ def real_bert_tokenizer():
 
 @fixture(scope="session")
 def gpt2_model():
-    return AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+    return AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2").to(DEVICE)
 
 
 @fixture(scope="session")
