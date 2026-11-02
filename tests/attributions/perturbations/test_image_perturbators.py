@@ -202,16 +202,20 @@ def test_image_mask_perturbator(perturbator_class, vit_model, vit_image_processo
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("model_name", SLOW_MODELS)
+@pytest.mark.parametrize("model_name", SLOW_MODELS, scope="module")
 @pytest.mark.parametrize("perturbator_class", image_embedding_perturbators)
-def test_slow_image_embedding_perturbator(perturbator_class, model_name, images):
-    _check_image_embedding_perturbator(perturbator_class, AutoImageProcessor.from_pretrained(model_name), images)
+def test_slow_image_embedding_perturbator(perturbator_class, slow_image_processor, images):
+    _check_image_embedding_perturbator(perturbator_class, slow_image_processor, images)
+
+
+@pytest.fixture(scope="module")
+def slow_image_processor(model_name):
+    """Reuse processor metadata across embedding and mask perturbator cases."""
+    return AutoImageProcessor.from_pretrained(model_name)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("model_name", SLOW_MODELS)
+@pytest.mark.parametrize("model_name", SLOW_MODELS, scope="module")
 @pytest.mark.parametrize("perturbator_class", image_mask_perturbators)
-def test_slow_image_mask_perturbator(perturbator_class, model_name, images):
-    _check_image_mask_perturbator(
-        perturbator_class, model_name, AutoImageProcessor.from_pretrained(model_name), images
-    )
+def test_slow_image_mask_perturbator(perturbator_class, model_name, slow_image_processor, images):
+    _check_image_mask_perturbator(perturbator_class, model_name, slow_image_processor, images)

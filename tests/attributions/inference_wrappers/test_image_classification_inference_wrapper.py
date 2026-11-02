@@ -159,14 +159,24 @@ def test_compute_gradients_input_x_gradient_zero():
     )
 
 
-def test_image_classification_wrapper_fast():
+def test_image_classification_wrapper_fast(vit_model, vit_image_processor):
     """Test classification wrapper with a single model for fast tests."""
-    test_image_classification_wrapper("hf-internal-testing/tiny-random-vit")
+    _check_image_classification_wrapper(vit_model, vit_image_processor)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", SLOW_IMAGE_CLASSIFICATION_MODELS)
 def test_image_classification_wrapper(model_name):
+    model = AutoModelForImageClassification.from_pretrained(model_name)
+    image_processor = AutoImageProcessor.from_pretrained(model_name)
+    if model_name == "hf-internal-testing/tiny-random-SiglipForImageClassification":
+        # This tiny checkpoint incorrectly specifies shortest-edge resizing without a crop.
+        size = model.config.vision_config.image_size
+        image_processor.size = {"height": size, "width": size}
+    _check_image_classification_wrapper(model, image_processor)
+
+
+def _check_image_classification_wrapper(model, image_processor):
     # images divided in two batches which we could see as different samples in interpreto
     # for each sample there are several perturbed images
     dog = Image.open(IMAGES_DIR / "dog.jpg").convert("RGB")
@@ -177,12 +187,6 @@ def test_image_classification_wrapper(model_name):
     ]
 
     # Model preparation
-    model = AutoModelForImageClassification.from_pretrained(model_name)
-    image_processor = AutoImageProcessor.from_pretrained(model_name)
-    if model_name == "hf-internal-testing/tiny-random-SiglipForImageClassification":
-        # This tiny checkpoint incorrectly specifies shortest-edge resizing without a crop.
-        size = model.config.vision_config.image_size
-        image_processor.size = {"height": size, "width": size}
     model.eval()
     inference_wrapper = ImageClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
 

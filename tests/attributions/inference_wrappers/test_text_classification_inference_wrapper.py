@@ -45,14 +45,20 @@ CLASSIFICATION_MODELS = [
 ]
 
 
-def test_classification_wrapper_fast():
+def test_classification_wrapper_fast(bert_model, bert_tokenizer):
     """Test classification wrapper with a single model for fast tests."""
-    test_classification_wrapper("hf-internal-testing/tiny-random-bert")
+    _check_classification_wrapper(bert_model, bert_tokenizer)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
 def test_classification_wrapper(model_name):
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    _check_classification_wrapper(model, tokenizer)
+
+
+def _check_classification_wrapper(model, tokenizer):
     # sentences divided in two batches which we could see as different samples in interpreto
     # for each sample there are several perturbed sentences
     sentences = [
@@ -61,8 +67,6 @@ def test_classification_wrapper(model_name):
     ]
 
     # Model preparation
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
     setup_token_ids(model, tokenizer)
     model.eval()
     embedder = model.get_input_embeddings()

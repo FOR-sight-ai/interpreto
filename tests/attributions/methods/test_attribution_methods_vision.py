@@ -74,7 +74,9 @@ FIXTURE_IMAGES_DIR = Path(__file__).parent.parent.parent / "fixtures" / "images"
 torch.manual_seed(0)
 
 
+@pytest.fixture(scope="module")
 def model_and_processor(model_name: str):
+    """Share one model/processor per parametrized repository within this module."""
     model = AutoModelForImageClassification.from_pretrained(model_name)
     processor = AutoImageProcessor.from_pretrained(model_name)
     if model_name == "hf-internal-testing/tiny-random-SiglipForImageClassification":
@@ -242,11 +244,12 @@ def _assert_explains_and_plots(
 @pytest.mark.parametrize(
     "attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets, model_name",
     FAST_METHOD_SPECS,
+    scope="module",
 )
 def test_vision_attribution_methods_fast(
-    attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets, model_name
+    attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets, model_and_processor
 ):
-    model, processor = model_and_processor(model_name)
+    model, processor = model_and_processor
 
     if attribution_method in (Occlusion, Saliency):
         explainer = attribution_method(
@@ -298,10 +301,10 @@ def _assert_image_sobol(
     resize_strategy,
     inputs,
     targets,
-    model_name,
+    model_and_processor,
 ):
     """Shared body of the fast and slow Sobol tests."""
-    model, processor = model_and_processor(model_name)
+    model, processor = model_and_processor
     explainer = Sobol(
         model,
         processor,
@@ -347,7 +350,9 @@ def _assert_image_sobol(
 
 
 @pytest.mark.parametrize(
-    "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name", SOBOL_SPECS
+    "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name",
+    SOBOL_SPECS,
+    scope="module",
 )
 def test_image_sobol(
     n_granularity_perturbations,
@@ -356,9 +361,11 @@ def test_image_sobol(
     resize_strategy,
     inputs,
     targets,
-    model_name,
+    model_and_processor,
 ):
-    _assert_image_sobol(n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name)
+    _assert_image_sobol(
+        n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_and_processor
+    )
 
 
 # LIME carries its own machinery (random masking + distance weighing function), so
@@ -386,10 +393,10 @@ def _assert_image_lime(
     resize_strategy,
     inputs,
     targets,
-    model_name,
+    model_and_processor,
 ):
     """Shared body of the fast and slow LIME tests: they only differ by the model they run on."""
-    model, processor = model_and_processor(model_name)
+    model, processor = model_and_processor
     explainer = Lime(
         model,
         processor,
@@ -457,6 +464,7 @@ def _assert_image_lime(
 @pytest.mark.parametrize(
     "n_perturbations, perturb_probability, distance_function, kernel_width, resize_strategy, inputs, targets, model_name",
     LIME_SPECS,
+    scope="module",
 )
 def test_image_lime(
     n_perturbations,
@@ -466,7 +474,7 @@ def test_image_lime(
     resize_strategy,
     inputs,
     targets,
-    model_name,
+    model_and_processor,
 ):
     _assert_image_lime(
         n_perturbations,
@@ -476,7 +484,7 @@ def test_image_lime(
         resize_strategy,
         inputs,
         targets,
-        model_name,
+        model_and_processor,
     )
 
 
@@ -603,6 +611,7 @@ SLOW_METHOD_SPECS = [
 @pytest.mark.parametrize(
     "attribution_method, perturbator, aggregator, granularity, resize_strategy, inputs, targets, model_name",
     SLOW_METHOD_SPECS,
+    scope="module",
 )
 def test_vision_attribution_methods_slow(
     attribution_method,
@@ -612,9 +621,9 @@ def test_vision_attribution_methods_slow(
     resize_strategy,
     inputs,
     targets,
-    model_name,
+    model_and_processor,
 ):
-    model, processor = model_and_processor(model_name)
+    model, processor = model_and_processor
 
     explainer = attribution_method(
         model,
@@ -667,7 +676,9 @@ SLOW_SOBOL_SPECS = [
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name", SLOW_SOBOL_SPECS
+    "n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name",
+    SLOW_SOBOL_SPECS,
+    scope="module",
 )
 def test_image_sobol_slow(
     n_granularity_perturbations,
@@ -676,9 +687,11 @@ def test_image_sobol_slow(
     resize_strategy,
     inputs,
     targets,
-    model_name,
+    model_and_processor,
 ):
-    _assert_image_sobol(n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_name)
+    _assert_image_sobol(
+        n_granularity_perturbations, order, sampler, resize_strategy, inputs, targets, model_and_processor
+    )
 
 
 SLOW_LIME_SPECS = [
@@ -719,6 +732,7 @@ SLOW_LIME_SPECS = [
 @pytest.mark.parametrize(
     "n_perturbations, perturb_probability, distance_function, kernel_width, resize_strategy, inputs, targets, model_name",
     SLOW_LIME_SPECS,
+    scope="module",
 )
 def test_image_lime_slow(
     n_perturbations,
@@ -728,7 +742,7 @@ def test_image_lime_slow(
     resize_strategy,
     inputs,
     targets,
-    model_name,
+    model_and_processor,
 ):
     _assert_image_lime(
         n_perturbations,
@@ -738,5 +752,5 @@ def test_image_lime_slow(
         resize_strategy,
         inputs,
         targets,
-        model_name,
+        model_and_processor,
     )
