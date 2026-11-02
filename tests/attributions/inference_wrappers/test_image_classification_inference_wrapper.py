@@ -179,6 +179,10 @@ def test_image_classification_wrapper(model_name):
     # Model preparation
     model = AutoModelForImageClassification.from_pretrained(model_name)
     image_processor = AutoImageProcessor.from_pretrained(model_name)
+    if model_name == "hf-internal-testing/tiny-random-SiglipForImageClassification":
+        # This tiny checkpoint incorrectly specifies shortest-edge resizing without a crop.
+        size = model.config.vision_config.image_size
+        image_processor.size = {"height": size, "width": size}
     model.eval()
     inference_wrapper = ImageClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
 

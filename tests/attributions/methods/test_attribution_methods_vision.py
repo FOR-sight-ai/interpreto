@@ -77,6 +77,10 @@ torch.manual_seed(0)
 def model_and_processor(model_name: str):
     model = AutoModelForImageClassification.from_pretrained(model_name)
     processor = AutoImageProcessor.from_pretrained(model_name)
+    if model_name == "hf-internal-testing/tiny-random-SiglipForImageClassification":
+        # This tiny checkpoint incorrectly specifies shortest-edge resizing without a crop.
+        size = model.config.vision_config.image_size
+        processor.size = {"height": size, "width": size}
     return model, processor
 
 
