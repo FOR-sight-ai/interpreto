@@ -28,7 +28,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "interpreto"
-version = "0.5.1"
+version = "0.6.0dev0"
 description = "Interpretability toolbox for LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -152,7 +152,11 @@ doctest_optionflags = [
   "NORMALIZE_WHITESPACE",
   "IGNORE_EXCEPTION_DETAIL",
 ]
-markers = ["slow", "require_cuda_gpu", "gpu_heavy: heavy sanity and memory stress tests grouped on one xdist worker"]
+markers = [
+  "slow",
+  "require_cuda_gpu",
+  "gpu_heavy: heavy sanity and memory stress tests grouped on one xdist worker",
+]
 addopts = [
   "--strict-markers",
   "--tb=short",
