@@ -11,8 +11,8 @@ help:
 	@echo "fix-style       : run checks on files and potentially modifies them."
 	@echo "check-style     : run checks on files without modifying them."
 	@echo "lint            : run linting on all files"
-	@echo "test            : run all tests."
-	@echo "test-cpu        : run all tests that do not depend on Torch GPU support."
+	@echo "test            : run regular tests (excludes gpu_heavy)."
+	@echo "heavy-tests     : run heavy sanity and memory stress tests serially."
 	@echo "fast-test       : run all quick tests."
 	@echo "build-docs      : build mkdocs documentation."
 	@echo "serve-docs      : serve documentation locally."
@@ -51,7 +51,7 @@ install:
 install-dev:
 	if [ ! -f .venv/bin/python ]; then uv venv; fi && \
 		source .venv/bin/activate && \
-		uv pip install -e ".[docs,lint,notebook]" && \
+		uv pip install -e ".[docs,lint,notebook,vision]" && \
 		pre-commit install
 
 #* Linting
@@ -71,11 +71,12 @@ lint: fix-style
 #* Testing
 .PHONY: test
 test:
-	$(PYTHON) -m pytest -n auto -c pyproject.toml -v
+	$(PYTHON) -m pytest -n auto --dist loadgroup -c pyproject.toml -v -m "not gpu_heavy"
 
-.PHONY: test-cpu
-test-cpu:
-	$(PYTHON) -m pytest -n auto -c pyproject.toml -v -m "not require_cuda_gpu"
+# Optional standalone run; the full suite groups these tests on one worker.
+.PHONY: heavy-tests
+heavy-tests:
+	$(PYTHON) -m pytest -n 0 -c pyproject.toml -v -m "gpu_heavy"
 
 .PHONY: fast-test
 fast-test:

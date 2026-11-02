@@ -27,7 +27,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from interpreto.attributions.base import setup_token_ids
-from interpreto.attributions.inference_wrappers.generation_inference_wrapper import GenerationInferenceWrapper
+from interpreto.attributions.inference_wrappers.text_generation_inference_wrapper import TextGenerationInferenceWrapper
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 GENERATION_MODELS = [
@@ -41,14 +41,20 @@ GENERATION_MODELS = [
 ]
 
 
-def test_generation_wrapper_fast():
+def test_generation_wrapper_fast(gpt2_model, gpt2_tokenizer):
     """Test generation wrapper with a single model for fast tests."""
-    test_generation_wrapper("hf-internal-testing/tiny-random-gpt2")
+    _check_generation_wrapper(gpt2_model, gpt2_tokenizer)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", GENERATION_MODELS)
 def test_generation_wrapper(model_name):
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    _check_generation_wrapper(model, tokenizer)
+
+
+def _check_generation_wrapper(model, tokenizer):
     # sentences divided in two batches which we could see as different samples in interpreto
     # for each sample there are several perturbed sentences
     sentences = [
@@ -57,12 +63,10 @@ def test_generation_wrapper(model_name):
     ]
 
     # Model preparation
-    model = AutoModelForCausalLM.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
     setup_token_ids(model, tokenizer)
     model.eval()
     embedder = model.get_input_embeddings()
-    inference_wrapper = GenerationInferenceWrapper(model, batch_size=3, device=DEVICE)
+    inference_wrapper = TextGenerationInferenceWrapper(model, batch_size=3, device=DEVICE)
 
     # Construct inputs
     with torch.no_grad():

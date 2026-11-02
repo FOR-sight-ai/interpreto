@@ -27,7 +27,9 @@ import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from interpreto.attributions.base import setup_token_ids
-from interpreto.attributions.inference_wrappers.classification_inference_wrapper import ClassificationInferenceWrapper
+from interpreto.attributions.inference_wrappers.text_classification_inference_wrapper import (
+    TextClassificationInferenceWrapper,
+)
 from interpreto.typing import IncompatibilityError
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,14 +45,20 @@ CLASSIFICATION_MODELS = [
 ]
 
 
-def test_classification_wrapper_fast():
+def test_classification_wrapper_fast(bert_model, bert_tokenizer):
     """Test classification wrapper with a single model for fast tests."""
-    test_classification_wrapper("hf-internal-testing/tiny-random-bert")
+    _check_classification_wrapper(bert_model, bert_tokenizer)
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize("model_name", CLASSIFICATION_MODELS)
 def test_classification_wrapper(model_name):
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    _check_classification_wrapper(model, tokenizer)
+
+
+def _check_classification_wrapper(model, tokenizer):
     # sentences divided in two batches which we could see as different samples in interpreto
     # for each sample there are several perturbed sentences
     sentences = [
@@ -59,12 +67,10 @@ def test_classification_wrapper(model_name):
     ]
 
     # Model preparation
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
     setup_token_ids(model, tokenizer)
     model.eval()
     embedder = model.get_input_embeddings()
-    inference_wrapper = ClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
+    inference_wrapper = TextClassificationInferenceWrapper(model, batch_size=3, device=DEVICE)
 
     # Construct inputs
     with torch.no_grad():
