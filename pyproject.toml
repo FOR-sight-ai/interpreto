@@ -152,7 +152,7 @@ doctest_optionflags = [
   "NORMALIZE_WHITESPACE",
   "IGNORE_EXCEPTION_DETAIL",
 ]
-markers = ["slow", "require_cuda_gpu"]
+markers = ["slow", "require_cuda_gpu", "gpu_heavy: heavy sanity and memory stress tests grouped on one xdist worker"]
 addopts = [
   "--strict-markers",
   "--tb=short",

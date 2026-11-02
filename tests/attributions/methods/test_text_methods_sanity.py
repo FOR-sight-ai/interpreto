@@ -91,6 +91,7 @@ def emotion_model():
 
 
 @pytest.mark.slow
+@pytest.mark.gpu_heavy
 @pytest.mark.parametrize(
     "method_class",
     ATTRIBUTION_METHODS,

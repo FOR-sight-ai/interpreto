@@ -29,6 +29,7 @@ Keep these model fixtures free of NNsight instrumentation. Concept tests overrid
 the text model fixtures in tests/concepts/conftest.py with independent instances.
 """
 
+import pytest
 import torch
 from pytest import fixture
 from transformers import (
@@ -40,6 +41,20 @@ from transformers import (
 )
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Serialize heavy tests on one worker when using xdist's loadgroup scheduler.
+
+    Run before xdist consumes group markers and encodes them into worker node IDs.
+    Ordinary tests share a worker per file so module fixtures are reused.
+    """
+    for item in items:
+        if item.get_closest_marker("gpu_heavy") is not None:
+            item.add_marker(pytest.mark.xdist_group("gpu_heavy"))
+        else:
+            item.add_marker(pytest.mark.xdist_group(item.nodeid.split("::", 1)[0]))
 
 
 @fixture(scope="session")

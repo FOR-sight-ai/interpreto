@@ -365,6 +365,7 @@ def test_attribution_output_size(bert_model, bert_tokenizer, method_class, sente
 
 
 @pytest.mark.slow
+@pytest.mark.gpu_heavy
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_memory_management_classification(attribution_explainer, bert_model, bert_tokenizer):
     processor = bert_tokenizer
@@ -403,6 +404,7 @@ def test_attribution_methods_memory_management_classification(attribution_explai
 
 
 @pytest.mark.slow
+@pytest.mark.gpu_heavy
 @pytest.mark.parametrize("loaded_model", ["gpt2"], indirect=True)
 @pytest.mark.parametrize("attribution_explainer", attribution_method_kwargs.keys())
 def test_attribution_methods_memory_management_generation(attribution_explainer, model_inputs):

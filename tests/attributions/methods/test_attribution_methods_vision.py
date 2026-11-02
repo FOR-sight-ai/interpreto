@@ -494,7 +494,7 @@ def test_image_lime(
 # real, non-square size (3, 340, 270) so the processor's resize/crop path is actually exercised.
 # attribution_method, perturbator, aggregator, granularity, resize_strategy, input, targets
 SLOW_METHOD_SPECS = [
-    (
+    pytest.param(
         Occlusion,
         OcclusionPerturbator,
         OcclusionAggregator,
@@ -503,6 +503,7 @@ SLOW_METHOD_SPECS = [
         np.random.rand(3, 340, 270).astype(np.float32),
         [1],
         "akahana/vit-base-cats-vs-dogs",
+        marks=pytest.mark.gpu_heavy,
     ),
     (
         KernelShap,
@@ -514,7 +515,7 @@ SLOW_METHOD_SPECS = [
         torch.tensor([0]),
         "hf-internal-testing/tiny-random-ResNetForImageClassification",
     ),
-    (
+    pytest.param(
         Saliency,
         ImageTensorPerturbator,
         Aggregator,
@@ -523,6 +524,7 @@ SLOW_METHOD_SPECS = [
         [Image.open(p).convert("RGB") for p in sorted(FIXTURE_IMAGES_DIR.glob("*.jpg"))[:2]],
         [0, 1],
         "akahana/vit-base-cats-vs-dogs",
+        marks=pytest.mark.gpu_heavy,
     ),
     (
         SmoothGrad,

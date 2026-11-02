@@ -259,6 +259,7 @@ def bert_train_test(bert_splitter: ModelWithSplitPoints):
 
 
 @pytest.mark.slow
+@pytest.mark.gpu_heavy
 @pytest.mark.parametrize(
     "name,probe_cls,probe_kwargs",
     PROBE_CONFIGS,

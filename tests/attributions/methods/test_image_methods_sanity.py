@@ -147,6 +147,7 @@ def _keep_box_raw(image: Image.Image, box: tuple[float, float, float, float], ba
 
 
 @pytest.mark.slow
+@pytest.mark.gpu_heavy
 @pytest.mark.parametrize("attribution_method", SANITY_METHODS)
 @pytest.mark.parametrize("label_name, box, target", SANITY_CASES)
 def test_image_methods_sanity(model_and_processor, raw_image, attribution_method, label_name, box, target):
