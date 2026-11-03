@@ -32,14 +32,14 @@ from typing import Literal, NamedTuple
 
 import torch
 from jaxtyping import Float
+from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
-from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.commons.llm_interface import LLMInterface, Role
+from interpreto.commons.llm_interface import LLMInterface, _resolve_llm_interface
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.text_tokens_splitter import TokenPooling
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -110,16 +110,19 @@ class LLMLabels(BaseConceptInterpretationMethod):
         concept_explainer (ConceptEncoderExplainer):
             The fitted concept explainer used for encoding activations.
 
-        activation_granularity (ActivationGranularity):
-            The granularity of the activations to use for the interpretation.
-            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+        token_pooling (TokenPooling):
+            Optional pooling applied to token activations before interpretation.
 
-        aggregation_strategy (GranularityAggregationStrategy):
-            The aggregation strategy to use for the activations.
-            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
-
-        llm_interface (LLMInterface):
-            The LLM interface to use for the interpretation.
+        llm_interface:
+            The model used to label concepts. Its behavior depends on the
+            provided value:
+            - **`str`**: Hugging Face repository ID. The model and tokenizer
+              are loaded from the Hub.
+            - **`tuple[PreTrainedModel, PreTrainedTokenizerBase]`**: Preloaded
+              model and tokenizer, used directly.
+            - **`LLMInterface`**: Existing LLM interface, used directly.
+            - **`None`**: Uses the concept explainer's splitter when it is
+              generation-capable.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -133,11 +136,8 @@ class LLMLabels(BaseConceptInterpretationMethod):
         k_context (int):
             The number of context tokens to use around the concept tokens.
             In the prompt, in the examples, the k context tokens before and after the concept token are selected.
-            It is recommended to set it to between 5 and 10 for TOKEN and WORD granularities.
-            However, if the granularity is CLS_TOKEN or SAMPLE,
-            or `use_unique_words=True` or `use_vocab=True`,
-            it will be forced to 0.
-            Indeed, in these cases the context do not make sense.
+            It is forced to 0 for pooled representations, `use_unique_words=True`,
+            or `use_vocab=True`, where token context does not make sense.
 
         use_vocab (bool):
             If True, the interpretation will be computed from the vocabulary of the model.
@@ -165,9 +165,8 @@ class LLMLabels(BaseConceptInterpretationMethod):
         self,
         *,
         concept_explainer: ConceptEncoderExplainer,
-        activation_granularity: ActivationGranularity | None = None,
-        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
-        llm_interface: LLMInterface,
+        token_pooling: TokenPooling = None,
+        llm_interface: str | tuple[PreTrainedModel, PreTrainedTokenizerBase] | LLMInterface | None = None,
         concept_encoding_batch_size: int = 1024,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
         k_examples: int = 30,
@@ -180,31 +179,23 @@ class LLMLabels(BaseConceptInterpretationMethod):
     ):
         super().__init__(
             concept_explainer=concept_explainer,
-            activation_granularity=activation_granularity,
-            aggregation_strategy=aggregation_strategy,
+            token_pooling=token_pooling,
             concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
             unique_words_kwargs=unique_words_kwargs,
         )
 
-        if k_context > 0 and (
-            use_vocab
-            or use_unique_words
-            or self.activation_granularity
-            in [
-                ActivationGranularity.SAMPLE,
-                ActivationGranularity.CLS_TOKEN,
-            ]
-        ):
+        if k_context > 0 and (use_vocab or use_unique_words or self._is_pooled_mode()):
             k_context = 0
             warnings.warn(
-                "k_context is set to 0 because use_vocab or use_unique_words or activation_granularity is SAMPLE or CLS_TOKEN."
-                "With these granularities, it is not possible to provide context around the granular inputs.",
+                "k_context is set to 0 because context is unavailable for vocabulary, unique-word, "
+                "or pooled interpretation examples.",
                 stacklevel=2,
             )
 
-        self.llm_interface = llm_interface
+        fallback_model = concept_explainer.splitter if llm_interface is None else None
+        self.llm_interface = _resolve_llm_interface(llm_interface, fallback_model=fallback_model)
         self.sampling_method = sampling_method
         self.k_examples = k_examples
         self.k_context = k_context
@@ -224,11 +215,11 @@ class LLMLabels(BaseConceptInterpretationMethod):
         inputs: list[str] | None = None,
         latent_activations: LatentActivations | None = None,
         concepts_activations: ConceptsActivations | None = None,
-    ) -> Mapping[int, str | None]:
+    ) -> Mapping[int, str]:
         """
         Give the interpretation of the concepts dimensions in the latent space into a human-readable format.
         The interpretation is a mapping between the concepts indices and a short textual description.
-        The granularity of input examples is determined by the `activation_granularity` class attribute.
+        Input examples are whole samples for pooled representations and individual tokens otherwise.
 
 
         Args:
@@ -248,7 +239,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 it is computed from the inputs or latent activations.
 
         Returns:
-            Mapping[int, str | None]: The textual labels of the concepts indices.
+            Mapping[int, str]: The textual labels of the concepts indices.
         """
         sure_concepts_indices: list[int]
         granular_inputs: list[str]
@@ -266,7 +257,7 @@ class LLMLabels(BaseConceptInterpretationMethod):
             concepts_activations=concepts_activations,
         )
 
-        labels: Mapping[int, str | None] = {}
+        example_prompts: list[str] = []
         for concept_idx in sure_concepts_indices:
             example_idx = self.sampling_method.sample_examples(
                 concept_activations=sure_concepts_activations[:, concept_idx],
@@ -280,15 +271,10 @@ class LLMLabels(BaseConceptInterpretationMethod):
                 sample_ids=granular_sample_ids,
                 k_context=self.k_context,
             )
-            example_prompt = _build_example_prompt(examples)
-            prompt: list[tuple[Role, str]] = [
-                (Role.SYSTEM, self.system_prompt),
-                (Role.USER, example_prompt),
-                (Role.ASSISTANT, ""),
-            ]
-            label = self.llm_interface.generate(prompt)
-            labels[concept_idx] = label
-        return labels
+            example_prompts.append(_build_example_prompt(examples))
+
+        labels = self.llm_interface.batch_generate(self.system_prompt, example_prompts)
+        return dict(zip(sure_concepts_indices, labels, strict=True))
 
 
 def _sample_top(
@@ -379,7 +365,8 @@ def _sample_quantile(
     quantile_size = non_zero_samples.size(0) // k_quantile
     samples_per_quantile = k_examples // k_quantile
 
-    sorted_indexes = torch.argsort(concept_activations, descending=True)[: non_zero_samples.size(0)]
+    sorted_nonzero_positions = torch.argsort(concept_activations[non_zero_samples], descending=True)
+    sorted_indexes = non_zero_samples[sorted_nonzero_positions]
     sample_indices: list[int] = []
     for i in range(k_quantile):
         if i == k_quantile - 1:
@@ -524,35 +511,34 @@ def _build_example_prompt(examples: list[Example]) -> str:
 
 
 # From https://github.com/EleutherAI/delphi/blob/article_version/sae_auto_interp/explainers/default/prompts.py
-SYSTEM_PROMPT_WITH_CONTEXT = """Your role is to label the concepts/patterns present in the different examples.
+SYSTEM_PROMPT_WITH_CONTEXT = """You assign a short label to a concept from examples.
 
-You will be given a list of text examples on which special tokens are selected and between delimiters like <<this>>.
-How important each token is for the behavior is listed after each example in parentheses, with importance from 0 to 10.
+Each example contains highlighted text between `<< >>`. The highlighted text is the main evidence for the concept. Activation scores range from 0 to 10; higher scores provide stronger evidence.
 
-Hard rules:
-- The label should summarize the concept linking the examples together. Give a single label describing all examples highlighted tokens.
-- The label should be between 1 and 5 words long.
-- The shorter the label the better. The best is a word.
-- Do not make a sentence.
-- The label should be the most precise possible. The goal is to be able to differentiate between concepts.
-- The label should encompass most examples. But you can ignore the non-informative ones.
-- Do not mention the marker tokens (<< >>) in your explanation. Nor refer to the importance.
-- Only focus on the content and the label.
-- Never ever give labels with more than 5 words, they would be cut out.
+Infer the most specific concept shared by the strongest examples.
 
-Some examples: 'blue', 'positive sentiment and enthusiasm', 'legal entities', 'medical places', 'hate', 'noun phrase', 'ion or iou sounds', 'questions' final words'...
+Output exactly one noun phrase of 1 to 5 words.
+
+Output only the label.
+Do not explain your answer.
+Do not summarize the examples.
+Do not mention activations, examples, tokens, or markers.
+Do not write a sentence.
+Do not use quotes, bullets, Markdown, or a prefix such as "Label:".
 """
 
-SYSTEM_PROMPT_WITHOUT_CONTEXT = """You are a meticulous AI researcher conducting an important investigation into patterns found in language.
-Your task is to analyze text and provide an explanation that thoroughly encapsulates possible patterns found in it.
-Guidelines:
+SYSTEM_PROMPT_WITHOUT_CONTEXT = """You assign a short label to a concept from text examples.
 
-You will be given a list of text examples.
-How important each text is for the behavior is listed after each example in parentheses, with importance from 0 to 10.
+Each example has an activation score from 0 to 10. Higher scores provide stronger evidence for the concept.
 
-- Try to produce a concise final description. Simply describe the text features that are common in the examples, and what patterns you found.
-- If the examples are uninformative, you don't need to mention them. Don't focus on giving examples, but try to summarize the patterns found in the examples.
-- Do not make lists of possible explanations. Find a single concept that best describes the examples.
-- Strike the balance between being concise and informative. From 1 to 5 words. 5 is an absolute maximum.
-- Refrain from including uninformative elements like "patterns found include ...", "the examples show ...", or "text contains ...".
+Infer the most specific concept generally applicable to the examples.
+
+Output exactly one noun phrase of 1 to 5 words.
+
+Output only the label.
+Do not explain your answer.
+Do not summarize the examples.
+Do not mention the examples or activation scores.
+Do not write a sentence.
+Do not use quotes, bullets, Markdown, or a prefix such as "Label:".
 """

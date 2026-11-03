@@ -37,8 +37,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import RidgeClassifier
 from sklearn.svm import SVC
 
+from interpreto import SplitterForClassification
 from interpreto.concepts.probes.sklearn import SklearnProbe, SklearnProbeExplainer
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 # ---------------------------------------------------------------------------
 # Sklearn classifier configs: (name, sklearn_class, sklearn_kwargs)
@@ -63,7 +63,7 @@ SKLEARN_CONFIGS = [
     ids=[c[0] for c in SKLEARN_CONFIGS],
 )
 def test_sklearn_probe_explainer_fit_and_encode(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     name: str,
     sklearn_class: type,
@@ -102,7 +102,7 @@ def test_sklearn_probe_explainer_fit_and_encode(
     ids=[c[0] for c in SKLEARN_CONFIGS],
 )
 def test_sklearn_probe_explainer_encode_before_fit(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     name: str,
     sklearn_class: type,
@@ -120,7 +120,7 @@ def test_sklearn_probe_explainer_encode_before_fit(
 
 
 def test_sklearn_probe_explainer_with_tensor_activations(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
 ):
     """Fit accepts latent activation tensors returned by get_activations."""
@@ -166,7 +166,7 @@ def test_sklearn_probe_explainer_separation(
     perm = torch.randperm(n)
     X, y = X[perm], y[perm]
 
-    # Fit directly on the SklearnProbe (no need for ModelWithSplitPoints)
+    # Fit directly on the SklearnProbe (no need for a splitter)
     probe = SklearnProbe(sklearn_class, sklearn_kwargs)
     probe.fit(X, y)
 
@@ -179,3 +179,15 @@ def test_sklearn_probe_explainer_separation(
     mean_neg = scores[neg_mask, 0].mean()
 
     assert mean_pos > mean_neg, f"{name}: positive mean ({mean_pos:.4f}) should exceed negative mean ({mean_neg:.4f})"
+
+
+def test_sklearn_probe_accepts_low_precision():
+    """Sklearn probes normalize unsupported low-precision activations."""
+    activations = torch.randn(20, 4, dtype=torch.bfloat16)
+    labels = torch.tensor([0, 1] * 10)
+    probe = SklearnProbe(SVC, {"kernel": "linear"})
+
+    probe.fit(activations, labels)
+    scores = probe.encode(activations)
+
+    assert scores.shape == (20, 1)

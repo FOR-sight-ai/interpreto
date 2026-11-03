@@ -28,6 +28,7 @@ import pytest
 import torch
 
 from interpreto import SplitterForGeneration as SFG
+from interpreto.concepts.splitters import TokenPooling
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 REPO_ID = "hf-internal-testing/tiny-random-gpt2"
@@ -48,8 +49,9 @@ def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_toke
     """Generation splitters can be loaded from repos or causal LM instances only."""
     split_point_module = "transformer.h.1"
 
-    with pytest.raises(ValueError):
-        SFG(gpt2_model, split_point=SPLIT_POINT)
+    with pytest.warns(DeprecationWarning, match="SplitterForGeneration is deprecated"):
+        resolved = SFG(gpt2_model, split_point=SPLIT_POINT)
+    assert resolved.tokenizer is not None
 
     with pytest.raises(TypeError, match="not a causal language model"):
         SFG(bert_model, split_point=SPLIT_POINT, tokenizer=bert_tokenizer)
@@ -66,7 +68,7 @@ def test_loading_possibilities(gpt2_model, gpt2_tokenizer, bert_model, bert_toke
 def test_get_latent_shape(split_gen: SFG):
     """``get_latent_shape`` returns the traced split-point hidden-state shape."""
     shape = split_gen.get_latent_shape()
-    expected_hidden = split_gen._model.config.hidden_size
+    expected_hidden = split_gen.config.hidden_size
 
     assert len(shape) == 3, f"Latent shape should be 3D, got {shape}"
     assert shape[0] == 1, f"Latent shape should include the scan batch dimension, got {shape}"
@@ -80,41 +82,50 @@ def test_get_activations_returns_flattened_tokens_by_default(split_gen: SFG, sen
     assert predictions is None, "Generation splitters should not return predicted classes"
     assert isinstance(activations, torch.Tensor), "Flattened activations should be returned as a tensor"
     assert activations.ndim == 2, f"Expected flattened token activations with shape (ng, d), got {activations.shape}"
-    assert activations.shape[-1] == split_gen._model.config.hidden_size
+    assert activations.shape[-1] == split_gen.config.hidden_size
     assert activations.dtype == torch.float32
 
 
-def test_get_activations_casts_bfloat16_model_outputs_to_float32(sentences: list[str]):
-    """Public activations are float32 even when the generation model runs in bfloat16."""
+def test_bfloat16_model_outputs_preserve_dtype(sentences: list[str]):
+    """Activations and concept gradients preserve the model dtype."""
     splitter = SFG(
         REPO_ID,
         split_point=SPLIT_POINT,
         batch_size=2,
-        device_map="cpu",
+        device_map=DEVICE,
+        dtype=torch.bfloat16,
     )
-    splitter._model.to(torch.bfloat16)
 
     activations, predictions = splitter.get_activations(sentences[:2])
 
     assert predictions is None, f"Expected predictions to be None, got {predictions}"
     assert isinstance(activations, torch.Tensor), f"Expected activations to be a tensor, got {type(activations)}"
-    assert activations.dtype == torch.float32, f"Expected activations to be float32, got {activations.dtype}"
+    assert activations.dtype == torch.bfloat16
+
+    identity = torch.eye(splitter.config.hidden_size, device=DEVICE, dtype=torch.bfloat16)
+    gradients = splitter._get_concept_output_gradients(
+        sentences[:1],
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=[0],
+    )
+    assert gradients[0].dtype == torch.bfloat16
 
 
-@pytest.mark.parametrize("include_all_tokens", [False, True])
+@pytest.mark.parametrize("include_special_tokens", [False, True])
 def test_flatten_activations_matches_sample_wise_activations(
     split_gen: SFG,
     sentences: list[str],
-    include_all_tokens: bool,
+    include_special_tokens: bool,
 ):
     """Flattened activations should be the concatenation of the sample-wise activations."""
     flattened_acts, flattened_predictions = split_gen.get_activations(
         sentences,
-        include_all_tokens=include_all_tokens,
+        include_special_tokens=include_special_tokens,
     )
     sample_wise_acts, sample_wise_predictions = split_gen.get_activations(
         sentences,
-        include_all_tokens=include_all_tokens,
+        include_special_tokens=include_special_tokens,
         flatten_activations=False,
     )
 
@@ -137,9 +148,49 @@ def test_flatten_activations_matches_sample_wise_activations(
     )
 
 
+@pytest.mark.parametrize("pooling", ["mean", "max", "min", "signed_max", "first", "last"])
+def test_token_pooling(split_gen: SFG, sentences: list[str], pooling: TokenPooling):
+    """Token pooling reduces each sample's retained tokens into one vector."""
+    pooled, _ = split_gen.get_activations(sentences, token_pooling=pooling)
+    batch_pooled = split_gen.inputs_to_activations(sentences, token_pooling=pooling)
+    per_sample, _ = split_gen.get_activations(sentences, flatten_activations=False)
+
+    assert pooled.shape == (len(sentences), split_gen.config.hidden_size)
+    assert torch.allclose(pooled, batch_pooled, atol=1e-5)
+    for pooled_acts, sample_acts in zip(pooled, per_sample, strict=True):
+        if pooling == "mean":
+            expected = sample_acts.mean(dim=0)
+        elif pooling == "max":
+            expected = sample_acts.amax(dim=0)
+        elif pooling == "min":
+            expected = sample_acts.amin(dim=0)
+        elif pooling == "signed_max":
+            expected = sample_acts.gather(0, sample_acts.abs().max(dim=0).indices.unsqueeze(0)).squeeze(0)
+        elif pooling == "first":
+            expected = sample_acts[0]
+        else:
+            expected = sample_acts[-1]
+        assert torch.allclose(pooled_acts, expected, atol=1e-5)
+
+
+def test_token_pooling_ignores_padding(split_gen: SFG):
+    """Pooling runs after padding removal."""
+    texts = ["Hi", "Interpreto is the latin for 'to interpret' and much longer"]
+    pooled, _ = split_gen.get_activations(texts, token_pooling="mean")
+    solo, _ = split_gen.get_activations(texts[:1], token_pooling="mean")
+
+    assert torch.allclose(pooled[0], solo[0], atol=1e-5)
+
+
+def test_token_pooling_rejects_unknown_modes(split_gen: SFG, sentences: list[str]):
+    """Unknown pooling modes fail explicitly."""
+    with pytest.raises(ValueError, match="Unknown token_pooling"):
+        split_gen.get_activations(sentences, token_pooling="median")  # type: ignore[arg-type]
+
+
 def test_get_activation_and_gradient(split_gen: SFG, sentences: list[str]):
     """Activation and concept-output gradient shapes follow the generation splitter contract."""
-    hidden = split_gen._model.config.hidden_size
+    hidden = split_gen.config.hidden_size
     nb_concepts = 2 * hidden
     initial = torch.randn(nb_concepts, hidden)
     decoder_weights = torch.linalg.qr(initial)[0].to(DEVICE)
@@ -171,7 +222,7 @@ def test_get_activation_and_gradient(split_gen: SFG, sentences: list[str]):
 
 def test_get_concept_output_gradients_with_explicit_targets(split_gen: SFG, sentences: list[str]):
     """Explicit generation targets control the first gradient dimension."""
-    hidden = split_gen._model.config.hidden_size
+    hidden = split_gen.config.hidden_size
     identity = torch.eye(hidden).to(DEVICE)
     targets = [0, 1]
 
@@ -186,6 +237,60 @@ def test_get_concept_output_gradients_with_explicit_targets(split_gen: SFG, sent
     assert grads_list[0].ndim == 3, f"Expected gradients with shape (t, g, c), got {grads_list[0].shape}"
     assert grads_list[0].shape[0] == len(targets)
     assert grads_list[0].shape[-1] == hidden
+
+
+def test_concept_output_gradients_are_sample_relative(split_gen: SFG, sentences: list[str]):
+    """Gradient targets and values do not depend on a sample's batch companions."""
+    hidden = split_gen.config.hidden_size
+    identity = torch.eye(hidden, device=DEVICE)
+
+    joint = split_gen._get_concept_output_gradients(
+        sentences,
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=None,
+        concepts_x_gradients=False,
+    )
+    isolated = split_gen._get_concept_output_gradients(
+        sentences[:1],
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=None,
+        concepts_x_gradients=False,
+    )
+
+    for text, gradients in zip(sentences, joint, strict=True):
+        tokenized = split_gen.tokenizer(text)
+        assert gradients.shape[0] == len(tokenized["input_ids"])
+    assert torch.allclose(joint[0], isolated[0], atol=1e-5)
+
+
+def test_concept_output_gradients_identity_reference(split_gen: SFG, sentences: list[str]):
+    """Identity concept gradients match direct split-point activation gradients."""
+    hidden = split_gen.config.hidden_size
+    identity = torch.eye(hidden, device=DEVICE)
+    text = sentences[0]
+    tokenized, tokens_mask = split_gen._tokenize_and_get_mask([text], False)
+
+    with split_gen.trace(tokenized):
+        raw_activations, _ = split_gen._extract_hidden_state(split_gen.split_module.output, split_gen.split_point)
+        reference_full = torch.autograd.grad(
+            split_gen.output.logits[0, 0].max(),
+            raw_activations,
+        )[0].save()
+
+    reference = reference_full[0, tokens_mask[0]]
+    gradients = split_gen._get_concept_output_gradients(
+        [text],
+        activations_to_concepts=lambda x: x @ identity,
+        concepts_to_activations=lambda x: x @ identity,
+        targets=[0],
+        concepts_x_gradients=False,
+    )[0]
+
+    assert reference.abs().sum() > 0
+    assert gradients.shape == (1, reference.shape[0], hidden)
+    assert torch.allclose(gradients[0], reference.cpu(), atol=1e-5)
 
 
 def test_batching(split_gen: SFG, huge_text: list[str]):

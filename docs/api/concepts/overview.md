@@ -6,91 +6,83 @@
 
 ## Common API
 
-This code snippet will not work in practice as some of the parameters are not defined.
-Nonetheless, it shows the common API for all concept-based explainers.
+The following abbreviated example shows the common workflow for concept-based
+explainers. Replace the model, dataset, and concept-model parameters for your
+use case.
 
 ```python
-from interpreto import ModelWithSplitPoints
-from interpreto.concepts import ICAConcepts  # Many other possibilities here
+from interpreto import SplitterForClassification
+from interpreto.concepts import ICAConcepts
 from interpreto.concepts.interpretations import TopKInputs
 
-# 1. Load and split your model
-model_with_split_points = ModelWithSplitPoints(
-    "your_model_id", split_point="your_split_point", automodel="your_automodel", nb_concepts=50, device_map="cuda"
-)
+# 1. Load and split the model.
+splitter = SplitterForClassification("your_model_id", device_map="cuda")
 
-# 2. Compute the model activations on the split_point
-activations, predictions = model_with_split_points.get_activations(dataset)
+# 2. Extract one latent representation per input.
+activations, predictions = splitter.get_activations(dataset)
 
-# 3. Instantiate and fit the concept-based explainer on the activations
-concept_explainer = ICAConcepts(model_with_split_points)
+# 3. Fit a concept model.
+concept_explainer = ICAConcepts(splitter, nb_concepts=50)
 concept_explainer.fit(activations)
 
-# 4. Interpret the obtained concepts
-interpretation = TopKInputs(concept_explainer).interpret(dataset)
+# 4. Interpret the concepts.
+interpretation = TopKInputs(concept_explainer=concept_explainer).interpret(inputs=dataset)
 
-# 5. Evaluate concepts' contributions to the output
+# 5. Estimate concept contributions to model outputs.
 concept_gradients = concept_explainer.concept_output_gradient(inputs=dataset)
 ```
 
-The API has five steps:
+## Step 1: Select a Splitter
 
-### Step 1: Load and split your model with a splitter
-
-Determine from which point of your model the activations should be extracted.
-
-There are three splitters depending on you use-case:
-
-> **For classification models:** Use [`SplitterForClassification`](./splitters/splitter_for_classification.md)
+> **For simple text classification:** Use [`SplitterForClassification`](./splitters/splitter_for_classification.md)
 > It automatically detects the classification head of your classifier in most cases.
 > Then, it considers the [CLS] token (the input of this head as the activations).
 > Which means that there is one activation vector for each sample. (n, d)
 > Thus `inputs_to_activations` is the encoder and `activations_to_outputs` is the head.
 
-> **For causal language models:** Use [`SplitterForGeneration`](./splitters/splitter_for_generation.md)
+> **For other text models:** Use [`TextTokensSplitter`](./splitters/text_tokens_splitter.md)
+> It can be used for any text model, but its main objective is generation models.
 > Here you need to specify split point manually. It can, be the number of the layer
 > or the name of the layer.
-> Then we consider each token latent activations as activations. (n * l, d).
+> It extracts one activation per retained token (by default, it filters out special tokens).
+> It can pool these activations into one representation per sample with `token_pooling`.
 
-> **For more complex cases:** Use [`ModelWithSplitPoints`](./splitters/model_with_split_points.md)
-> It is more versatile, but also more complex.
-> One needs to specify a split point manually and consider the granularity (see below).
-> Thus it covers the two other splitter cases but less optimally.
-> This can be useful for word-level probing for example.
-> Or to split classifiers elsewhere.
+`SplitterForGeneration` remains as a deprecated compatibility class for
+`TextTokensSplitter(..., task="text-generation")`.
+`ModelWithSplitPoints` has been removed; its compatibility symbol raises a
+migration error directing callers to one of these supported splitters.
 
-### Step 2: Compute the model activations on the split_point
+## Step 2: Extract Activations
 
-This step rely on the `.get_activations` method of the splitter.
-The idea is to compute a dataset of activations.
-To latter fit the concept model on.
+Call the splitter's `get_activations()` method to build the activation dataset
+used to fit a concept model.
 
 !!! tip
-    The larger the activations dataset, the more accurate the concept model will be.
-    However, the more expensive it is to compute.
+    Larger and more representative activation datasets generally produce more
+    useful concept spaces, but cost more to extract and fit.
 
 !!! warning
-    The dataset used has a huge impact on the resulting concepts.
+    The source dataset has a strong effect on the concepts that are discovered.
 
-### Step 3: Instantiate the concept-based explainer
+## Step 3: Create a Concept Explainer
 
-The concept-based explainer is an object use to define the concept space.
+### Unsupervised Methods
 
-#### Unsupervised methods
+Interpreto supports several unsupervised concept explainers through
+`overcomplete`. See [SAEs](./concept_spaces/sae.md),
+[Dictionary Learning](./concept_spaces/optim.md),
+[Cockatiel](./concept_spaces/cockatiel.md), and
+[Neurons as Concepts](./concept_spaces/neurons_as_concepts.md).
 
-Interpreto supports many **unsupervised** concept-based explainers by wrapping over `overcomplete`.
-See the following documentation for more details: [SAEs](./concept_spaces/sae.md);
-[Dictionary Learning](./concept_spaces/optim.md); [Cockatiel](./concept_spaces/cockatiel.md); and [Neurons as concepts](./concept_spaces/neurons_as_concepts.md).
+Their common parameters include:
 
-They has few key parameters:
+- `splitter`: the model wrapper and selected split point.
+- `nb_concepts`: the size of the concept space.
+- `device`: the device used by trainable concept models.
 
-- `model_with_split_points`: the model wrapper with a split point.
-- `nb_concepts`: the number of concepts to use.
-- `device`: the device for training and inference for SAEs
+### Supervised Methods (Probes)
 
-#### Supervised methods (Probes)
-
-Interpreto also supports **supervised** concept methods via [Probes](./probes.md).
+Interpreto also supports supervised concept methods via [Probes](./probes.md).
 Probes require labeled data (binary concept annotations) and learn a mapping from
 activations to concept scores. They are useful when you already know which concepts
 you want to test for.
@@ -99,48 +91,41 @@ you want to test for.
 from interpreto.concepts import ProbeExplainer
 from interpreto.concepts.probes import LinearRegressionProbe
 
-probe = LinearRegressionProbe(nb_concepts=3, input_size=768)
-concept_explainer = ProbeExplainer(model_with_split_points, concept_model=probe)
-concept_explainer.fit(activations, y=labels)
+probe = LinearRegressionProbe()
+concept_explainer = ProbeExplainer(splitter, concept_model=probe)
+concept_explainer.fit(activations, labels)
 ```
 
-See the [Probes (Supervised)](./probes.md) documentation for the full list of available probes.
+## Step 4: Fit the Concept Explainer
 
-### Step 4: Fit the concept-based explainer on the activations
+Fitting defines directions or regions in the model's latent space. Runtime
+depends on the activation dataset, concept-space size, and method.
 
-The goal is to define the concept space. Each concept correspond to a direction or polytope in the latent space.
-This may take quite a long time depending on the number of concepts and the size of the activations.
+## Step 5: Interpret Concepts
 
-### Step 5: Interpret the obtained concepts (unsupervised methods only)
+### TopKInputs
 
-After the fit, concepts are abstract directions in the middle of the model.
-To interpret the concepts, we need to communicate what they correspond to to the user.
-There are several interpretation methods available:
-
-#### TopKInputs (global interpretation)
-
-[TopKInputs](./interpretations/topk_inputs.md) associates each concept to the top-k inputs that activate it the most.
-These inputs can be tokens, words, sentences, or samples.
+[TopKInputs](./interpretations/topk_inputs.md) associates each concept with
+its most activating examples. Classification and pooled text representations
+use whole inputs; unpooled text representations use retained tokens.
 
 ```python
 from interpreto.concepts.interpretations import TopKInputs
 
-topk = TopKInputs(concept_explainer, k=5)
-topk_words = topk.interpret(inputs=dataset, concepts_indices="all")
+topk = TopKInputs(concept_explainer=concept_explainer, k=5)
+topk_examples = topk.interpret(inputs=dataset, concepts_indices="all")
 ```
 
-#### LLM Labels
+### LLMLabels
 
-[LLM Labels](./interpretations/llm_labels.md) uses a large language model to generate natural-language labels
-for each concept based on its top-k activating inputs.
+[LLMLabels](./interpretations/llm_labels.md) asks a language model to produce
+natural-language labels from activating examples.
 
-#### Input-to-concept attributions (local interpretation)
+### Input-to-concept Attributions
 
-[Concept Attributions](./interpretations/concept_attributions.md) reveal which **tokens in a specific input**
-are responsible for activating a given concept. This provides a **local** (per-sample) interpretation,
-complementing the global view offered by TopKInputs.
-
-This is done by combining the concept framework with perturbation-based attribution methods:
+[Concept Attributions](./interpretations/concept_attributions.md) identify
+which tokens in an input activate a concept. They combine the concept pipeline
+with perturbation-based attribution methods:
 
 ```python
 from interpreto import Occlusion
@@ -148,35 +133,26 @@ from interpreto import Occlusion
 # Get the bridge model that maps inputs → concept activations
 explainer = Occlusion(
     concept_explainer.get_inputs_to_concepts_model(),
-    model_with_split_points.tokenizer,
+    splitter.tokenizer,
     batch_size=256,
 )
 
-# Explain all concepts (or pass targets=torch.arange(5) for specific concepts)
+# Explain all concepts (or pass targets for specific concepts)
 results = explainer.explain(inputs)
 ```
 
-> **Note:** Only perturbation-based methods (Occlusion, Lime, KernelShap, Sobol) are supported.
-> Gradient-based methods are not compatible with the input-to-concept pipeline.
+Only perturbation-based methods (`Occlusion`, `Lime`, `KernelShap`, and
+`Sobol`) support this bridge model.
 
-For classification models, use [`SplitterForClassification`](./splitters/splitter_for_classification.md)
-instead of `ModelWithSplitPoints` for a simpler setup.
+## Step 6: Estimate Concept Contributions
 
-More details in the [Concept Attributions documentation](./interpretations/concept_attributions.md).
+`concept_output_gradient()` computes gradients from concept activations to
+model outputs. Important parameters include:
 
-### Step 6: Evaluate concepts' contributions to the output (unsupervised methods only)
+- `targets`: class indices for classification or output positions for generation.
+- `concepts_x_gradients`: multiply gradients by the concept activations when `True`. Defaults to `True`.
+- `batch_size`: the requested model batch size; generation gradients execute sample by sample.
 
-There are often a lot of concepts, but only few are contributing to the output.
-This is often less than the number of activated concepts.
-To do so, we apply contribution methods from the concept space to the model output.
-
-For now only the gradient of the concept to output function is implemented.
-Use the `concept_output_gradient` method to compute the gradient of the concept to output function.
-
-There are few important parameters:
-
-- `targets`: specify which outputs of the model should be used to compute the gradients.
-- `activation_granularity`: use the same as step 2.
-- `aggregation_strategy`: use the same as step 2.
-- `concepts_x_gradients`: set to `True` to multiply the gradient by the concepts activations.
-- `batch_size`: Batch size for the model. As this function computes gradients, it will be smaller than the batch size used in the `get_activations` method.
+When `targets=None`, generation computes gradients for all real output
+positions in each sample. Floating-point activations are normalized to the
+concept model's dtype and device without detaching the gradient path.

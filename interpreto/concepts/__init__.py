@@ -55,7 +55,7 @@ from .probes import (
     SqL2CentroidProbe,
     SVDDCentroidProbe,
 )
-from .splitters import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration
+from .splitters import ModelWithSplitPoints, SplitterForClassification, SplitterForGeneration, TextTokensSplitter
 
 __all__ = [
     "BatchTopKSAEConcepts",
@@ -86,6 +86,7 @@ __all__ = [
     "SqL2CentroidProbe",
     "SVDConcepts",
     "SVDDCentroidProbe",
+    "TextTokensSplitter",
     "TopKInputs",
     "TopKSAEConcepts",
     "VanillaSAEConcepts",

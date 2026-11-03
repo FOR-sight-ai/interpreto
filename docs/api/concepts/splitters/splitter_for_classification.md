@@ -6,19 +6,21 @@ icon: material/code-json
 
 `SplitterForClassification` is a specialized version of `BaseSplitter` designed for
 `*ForSequenceClassification` HuggingFace models. It simplifies the setup by automatically identifying the
-classification head as the split point and the granularity as the [CLS] token.
+classification head as the split point and exposing the single representation consumed by that head as activations:
+an already-pooled vector, the first sequence token (for example, RoBERTa), or the last
+non-padding token for decoder-style token-wise `score` heads (for example, Llama/GPT classifiers).
 
 ## When to Use
 
-Use `SplitterForClassification` instead of `ModelWithSplitPoints` when:
+Use `SplitterForClassification` when:
 
 - Your model is a Hugging Face `*ForSequenceClassification` model.
-- You want to extract CLS-token activations without manually specifying a split point.
+- You want to extract classification representations without manually specifying a split point.
 - You want a cleaner, faster concept pipeline for classification tasks.
 
 ## Additional Gain
 
-It unlocks the inputs-to-concepts attributions workflow, which is not possible with `ModelWithSplitPoints`.
+It also supports the inputs-to-concepts attribution workflow.
 
 ## Quick Example
 

@@ -33,12 +33,11 @@ from typing import Any, Literal
 
 import torch
 
-from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
+from interpreto.concepts.splitters.text_tokens_splitter import TokenPooling
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -58,15 +57,10 @@ class TopKInputs(BaseConceptInterpretationMethod):
 
     Arguments:
         concept_explainer (ConceptEncoderExplainer):
-            The concept explainer built on top of a `ModelWithSplitPoints`.
+            The fitted concept explainer used to encode activations.
 
-        activation_granularity (ActivationGranularity):
-            The granularity of the activations to use for the interpretation.
-            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
-
-        aggregation_strategy (GranularityAggregationStrategy):
-            The aggregation strategy to use for the activations.
-            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+        token_pooling (TokenPooling):
+            Optional pooling applied to token activations before interpretation.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -89,134 +83,76 @@ class TopKInputs(BaseConceptInterpretationMethod):
             Possible arguments are `count_min_threshold`, `lemmatize`, `words_to_ignore`.
 
     Examples:
-        **Minimal example**, finding the topk tokens activating a neuron:
-        >>> from transformers import AutoModelForCausalLM
-        >>>
-        >>> from interpreto import ModelWithSplitPoints
+        **Vocabulary examples** rank every token in the model vocabulary:
+        >>> from interpreto import TextTokensSplitter
         >>> from interpreto.concepts import NeuronsAsConcepts, TopKInputs
         >>>
-        >>> # load and split the the GPT2 model
-        >>> mwsp = ModelWithSplitPoints(
+        >>> splitter = TextTokensSplitter(
         ...     "gpt2",
-        ...     split_point=11,           # split at the 12th layer
-        ...     automodel=AutoModelForCausalLM,
+        ...     split_point=11,
         ...     device_map="auto",
-        ...     batch_size=2048,
         ... )
-        >>>
-        >>> # Use `NeuronsAsConcepts` to use the concept-based pipeline with neurons
-        >>> concept_explainer = NeuronsAsConcepts(mwsp)
-        >>>
         >>> method = TopKInputs(
-        ...     concept_explainer=concept_explainer,
-        ...     use_vocab=True,             # use the vocabulary of the model and test all tokens (50257 with GPT2)
-        ...     k=10,                       # get the top 10 tokens for each neuron
+        ...     concept_explainer=NeuronsAsConcepts(splitter),
+        ...     use_vocab=True,
+        ...     k=5,
         ... )
-        >>>
-        >>> topk_tokens = method.interpret(
-        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
-        ... )
-        >>>
-        >>> print(list(topk_tokens[1].keys()))
-        ['hostages', 'choke', 'infring', 'herpes', 'nuns', 'phylogen', 'watched', 'alitarian', 'tattoos', 'fisher']
-        >>> # Results are not interpretable, due to superposition and such.
-        >>> # This is why we use dictionary to find concept direction!
+        >>> topk_tokens = method.interpret(concepts_indices=[0, 1])
 
-        **Classification example**, we should fit concepts on the [CLS] token activations,
-        then use `TopKInputs` with `use_unique_words=True` and `activation_granularity=CSL_TOKEN`:
-        >>> from datasets import load_dataset
-        >>> from transformers import AutoModelForSequenceClassification
+        **Classification examples** use independently encoded words or n-grams
+        because the splitter exposes one pooled representation per input:
+        >>> from interpreto import SplitterForClassification
+        >>> from interpreto.concepts import NeuronsAsConcepts, TopKInputs
         >>>
-        >>> from interpreto import ModelWithSplitPoints
-        >>> from interpreto.concepts import ICAConcepts, TopKInputs
-        >>>
-        >>> CLS_TOKEN = ModelWithSplitPoints.activation_granularities.CLS_TOKEN
-        >>>
-        >>> # load and split an IMDB classification model
-        >>> mwsp = ModelWithSplitPoints(
+        >>> classifier = SplitterForClassification(
         ...     "textattack/bert-base-uncased-imdb",
-        ...     split_point=11,              # split at the last layer
-        ...     automodel=AutoModelForSequenceClassification,
-        ...     device_map="cuda",
-        ...     batch_size=64,
+        ...     device_map="auto",
         ... )
-        >>>
-        >>> # load the IMDB dataset and compute a dataset of [CLS] token activations
-        >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
-        >>> activations, _ = mwsp.get_activations(imdb, activation_granularity=CLS_TOKEN)
-        >>>
-        >>> # Load an fit a concept-based explainer
-        >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=20)
-        >>> concept_explainer.fit(activations)
-        >>>
+        >>> reviews = ["A remarkably good film", "A predictable story"]
         >>> method = TopKInputs(
-        ...     concept_explainer=concept_explainer,
-        ...     activation_granularity=CLS_TOKEN,
-        ...     k=5,                            # get the top 10 tokens for each concept
-        ...     use_unique_words=True,          # necessary to get topk words on the [CLS] token
+        ...     concept_explainer=NeuronsAsConcepts(classifier),
+        ...     k=5,
+        ...     use_unique_words=3,            # include up to 3-grams in the interpretation
         ...     unique_words_kwargs={
         ...         "count_min_threshold": 5,   # only consider words that appear at least 5 times in the dataset
         ...         "lemmatize": True,          # group words by their lemma (e.g., "bad" and "badly" are grouped together)
         ...     }
         ... )
-        >>>
         >>> topk_words = method.interpret(
-        ...     inputs=imdb,
-        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
-        ... )
-        >>>
-        >>> print(list(topk_words[1].keys()))
-        ['bad', 'bad.', 'hackneyed', 'clichéd', 'cannibal']
+            inputs=reviews,
+            concepts_indices="all",             # interpret all neurons at the [CLS] token position
+        )
 
-        **Generation example**, use either `TOKEN` or `WORD` granularity for activations.
-        `WORD` allows to select the topk words for each concept without recomputing the activations.
-        >>> from datasets import load_dataset
-        >>> from transformers import AutoModelForCausalLM
+        **Precomputed activations** can be passed directly,
+        ensure the interpretation token_pooling matches the activations one (if used):
+        >>> from interpreto import TextTokensSplitter
+        >>> from interpreto.concepts import NeuronsAsConcepts, TopKInputs
         >>>
-        >>> from interpreto import ModelWithSplitPoints
-        >>> from interpreto.concepts import ICAConcepts, TopKInputs
-        >>>
-        >>> WORD = ModelWithSplitPoints.activation_granularities.WORD
-        >>>
-        >>> # load and split the the GPT2 model
-        >>> mwsp = ModelWithSplitPoints(
-        ...     "Qwen/Qwen3-0.6B",
-        ...     split_point=9,              # split at the 10th layer
-        ...     automodel=AutoModelForCausalLM,
+        >>> splitter = TextTokensSplitter(
+        ...     "gpt2",
+        ...     split_point=11,
         ...     device_map="auto",
-        ...     batch_size=16,
         ... )
-        >>>
-        >>> # load the IMDB dataset and compute a dataset of words activations
-        >>> imdb = load_dataset("stanfordnlp/imdb", split="train")["text"][:1000]
-        >>> activations, _ = mwsp.get_activations(imdb, activation_granularity=WORD)
-        >>>
-        >>> # Load an fit a concept-based explainer
-        >>> concept_explainer = ICAConcepts(mwsp, nb_concepts=10)
-        >>> concept_explainer.fit(activations)
-        >>>
+        >>> texts = ["Interpreto explains models", "Concepts reveal patterns"]
+        >>> pooled_activations, _ = splitter.get_activations(texts, token_pooling="mean")
         >>> method = TopKInputs(
-        ...     concept_explainer=concept_explainer,
-        ...     activation_granularity=WORD,    # we want the topk words for each concept
-        ...     k=10,                           # get the top 10 words for each concept
+        ...     concept_explainer=NeuronsAsConcepts(splitter),
+        ...     token_pooling="mean",
+        ...     k=2,
         ... )
-        >>>
-        >>> topk_tokens = method.interpret(
-        ...     concepts_indices="all",     # interpret the three first neurons of the 7th layer
-        ...     inputs=imdb,
-        ...     latent_activations=activations, # use previously computed activations (same granularity)
+        >>> topk_texts = method.interpret(
+        ...     inputs=texts,
+        ...     latent_activations=pooled_activations,
+        ...     concepts_indices=[0, 1],
         ... )
 
     """
-
-    activation_granularities = ActivationGranularity
 
     def __init__(
         self,
         *,
         concept_explainer: ConceptEncoderExplainer,
-        activation_granularity: ActivationGranularity | None = None,
-        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        token_pooling: TokenPooling = None,
         concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
@@ -225,8 +161,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
     ):
         super().__init__(
             concept_explainer=concept_explainer,
-            activation_granularity=activation_granularity,
-            aggregation_strategy=aggregation_strategy,
+            token_pooling=token_pooling,
             concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
@@ -245,7 +180,7 @@ class TopKInputs(BaseConceptInterpretationMethod):
         """
         Give the interpretation of the concepts dimensions in the latent space into a human-readable format.
         The interpretation is a mapping between the concepts indices and a list of inputs allowing to interpret them.
-        The granularity of input examples is determined by the `activation_granularity` class attribute.
+        Input examples are whole samples for pooled representations and individual tokens otherwise.
 
         The returned inputs are the most activating inputs for the concepts.
 

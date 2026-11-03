@@ -29,9 +29,9 @@ from enum import Enum
 from typing import NamedTuple
 
 import torch
-from tqdm import tqdm
+from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
-from interpreto.commons.llm_interface import LLMInterface, Role
+from interpreto.commons.llm_interface import LLMInterface, _resolve_llm_interface
 from interpreto.concepts.base import ConceptAutoEncoderExplainer
 from interpreto.concepts.splitters.base_splitter import BaseSplitter
 
@@ -168,15 +168,14 @@ class ConSim:
         splitter: BaseSplitter
             The model to explain. Is is a wrapper around a model and a tokenizer to easily get activations.
 
-        user_llm: LLMInterface | None
-            The LLM interface that will serve as the meta-predictor.
-            If not provided the user will have to call the ConSim prompts manually.
-            If your preferred LLM API is not supported, you can implement your own LLM interface.
-            You just have to implement the `generate` method.
-
-            The format of the prompt is:
-
-            `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
+        user_llm:
+            The LLM meta-predictor. Its behavior depends on the
+            provided value:
+            - **`str`**: Hugging Face repository ID. The model and tokenizer
+              are loaded from the Hub.
+            - **`tuple[PreTrainedModel, PreTrainedTokenizerBase]`**: Preloaded
+              model and tokenizer, used directly.
+            - **`LLMInterface`**: Existing LLM interface, used directly.
 
         classes: list[str] | None
             The names of classes of the dataset.
@@ -199,9 +198,7 @@ class ConSim:
             If your preferred LLM API is not supported, you can implement your own LLM interface.
             You just have to implement the `generate` method.
 
-            The format of the prompt is:
-
-            `[(Role.SYSTEM, "system prompt"), (Role.USER, "user prompt"), (Role.ASSISTANT, "assistant prompt")]`
+            The interface receives separate system and user prompt strings.
 
     TODO:
         validate example in practice
@@ -215,8 +212,6 @@ class ConSim:
         >>> # Load a model and wrap it
         >>> splitter = SplitterForClassification(
         ...     "textattack/bert-base-uncased-ag-news",
-        ...     split_point="bert.encoder.layer.10.output",
-        ...     model_autoclass=AutoModelForSequenceClassification,  # type: ignore
         ...     batch_size=4,
         ... )
         >>>
@@ -258,54 +253,15 @@ class ConSim:
     def __init__(
         self,
         splitter: BaseSplitter,
-        user_llm: LLMInterface | None,
+        user_llm: str | tuple[PreTrainedModel, PreTrainedTokenizerBase] | LLMInterface,
         classes: list[str] | None = None,
     ):
         """
         Initialize the ConSim metric.
         """
         self.splitter = splitter
-        self.user_llm: LLMInterface | None = user_llm
+        self.user_llm: LLMInterface = _resolve_llm_interface(user_llm)
         self.classes: list[str] | None = classes
-
-    def _get_predictions(
-        self, inputs: list[str], batch_size: int = 64, device: torch.device | str | None = None, tqdm_bar: bool = False
-    ) -> torch.Tensor:
-        """
-        Get the predictions of the model on a list of inputs.
-        Called by `select_examples`.
-
-        Arguments:
-            inputs: list[str]
-                The inputs to predict.
-            batch_size: int
-                The batch size to use for the predictions.
-            device: torch.device | str
-                The device to use for the predictions.
-            tqdm_bar: bool
-                Whether to show a tqdm bar.
-
-        Returns:
-            predictions: torch.Tensor
-                The predictions of the model on the inputs.
-        """
-        device = device if device is not None else self.splitter.device
-        all_predictions = []
-        for batch_index in tqdm(
-            range(0, len(inputs), batch_size),
-            desc="Computing predictions",
-            unit="batch",
-            total=len(inputs),
-            disable=not tqdm_bar,
-        ):
-            batch_inputs = inputs[batch_index : batch_index + batch_size]
-            batch_tokens = self.splitter.tokenizer(
-                batch_inputs, return_tensors="pt", padding=True, truncation=True
-            ).to(device)  # type: ignore
-            logits = self.splitter._model(batch_tokens["input_ids"], batch_tokens["attention_mask"]).logits
-            predictions = torch.argmax(logits, dim=-1)
-            all_predictions.append(predictions)
-        return torch.cat(all_predictions)
 
     def _extract_interesting_elements(
         self,
@@ -444,7 +400,6 @@ class ConSim:
         nb_ep_samples: int = 20,
         seed: int = 0,
         batch_size: int = 64,
-        device: torch.device | str | None = None,
     ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
         """
         Select examples for the ConSim metric. It first computes the models' predictions on the inputs.
@@ -471,9 +426,6 @@ class ConSim:
                 The seed to use for the random selection.
             batch_size: int
                 The batch size to use for the predictions.
-            device: torch.device | str | None
-                The device to use for the predictions.
-
         Returns:
             interesting_samples: list[str]
                 The interesting samples.
@@ -482,7 +434,7 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the interesting samples.
         """
-        predictions = self._get_predictions(inputs, batch_size=batch_size, device=device)
+        _, predictions = self.splitter.get_activations(inputs, batch_size=batch_size)
         return self._extract_interesting_elements(
             inputs=inputs,
             labels=labels,
@@ -878,7 +830,7 @@ class ConSim:
         prompt_type: PromptTypes = PromptTypes.E3_global_and_local_concepts_with_lp,
         anonymize_classes: bool = False,
         importance_threshold: float = 0.05,
-    ) -> tuple[list[tuple[Role, str]], list[str]]:
+    ) -> tuple[tuple[str, str], list[str]]:
         """
         Create prompts for the user-llm or meta-predictor.
 
@@ -925,8 +877,8 @@ class ConSim:
                 The threshold correspond to the cumulative importance of the concepts to keep.
 
         Returns:
-            prompt: list[tuple[Role, str]]
-                The prompts for the LLM, the format matches the `LLMInterface` API.
+            prompt: tuple[str, str]
+                The system and user prompts for the LLM.
             literal_model_predictions: list[str]
                 The model predictions as a list of strings, it allows easier comparison with the `user_llm` answers.
         """
@@ -997,14 +949,7 @@ class ConSim:
             local_importances=processed_local_importances,
         )
 
-        # convert the prompt to match the `LLMInterface` API
-        prompt: list[tuple[Role, str]] = [
-            (Role.SYSTEM, system_prompt),
-            (Role.USER, user_prompt),
-            (Role.ASSISTANT, ""),
-        ]
-
-        return prompt, literal_model_predictions
+        return (system_prompt, user_prompt), literal_model_predictions
 
     @staticmethod
     def _extract_predictions_from_response(response: str | None, expected_length: int) -> list[str] | None:
@@ -1151,7 +1096,7 @@ class ConSim:
         prompt_type: PromptTypes = PromptTypes.E3_global_and_local_concepts_with_lp,
         anonymize_classes: bool = False,
         importance_threshold: float = 0.05,
-    ) -> float | None | tuple[list[tuple[Role, str]], list[str]]:
+    ) -> float | None | tuple[tuple[str, str], list[str]]:
         """
         Evaluate the ConSim metric, thus the accuracy of the `user_llm` predictions with respect to the model predictions.
 
@@ -1221,7 +1166,7 @@ class ConSim:
                 The threshold correspond to the cumulative importance of the concepts to keep.
 
         Returns:
-            score or prompts and model predictions: float | None | tuple[list[tuple[Role, str]], list[str]]
+            score or prompts and model predictions: float | None | tuple[tuple[str, str], list[str]]
                 Possible outputs:
 
                 - score (float): The score of the ConSim metric. (The nominal behavior)
@@ -1229,9 +1174,9 @@ class ConSim:
                     It was chosen to return None,
                     because ConSim should be called a lot of times for statistically significant results.
                     Therefore, having a None score once in a while is better than the script crashing.
-                - prompts and model predictions (tuple[list[tuple[Role, str]], list[str]]):
+                - prompts and model predictions (tuple[tuple[str, str], list[str]]):
                     If no user_llm is provided, returns the prompts and the model predictions.
-                    The prompt is the first element of the tuple (list[tuple[Role, str]]).
+                    The system/user prompt pair is the first element of the tuple.
                     The predictions are the second element of the tuple (list[str]).
                     The user will have to call the ConSim prompts manually.
                     The response of the LLM on the prompts should be compared to the model predictions.
@@ -1277,7 +1222,7 @@ class ConSim:
         if self.user_llm is None:
             return prompts, literal_model_predictions
 
-        user_llm_response = self.user_llm.generate(prompts)
+        user_llm_response = self.user_llm.generate(*prompts)
 
         # raise warnings if the response is empty or the format is not respected
         return self._compute_score(

@@ -23,35 +23,34 @@
 # SOFTWARE.
 
 """
-Simplified model splitter for causal language models (generation).
+Token-level model splitter for causal and encoder text models.
 
-``SplitterForGeneration`` wraps a HuggingFace generation model and splits
-it at a specified layer. Activations are the per-token hidden states at the
-split point, with special tokens optionally filtered out.
+``TextTokensSplitter`` wraps a Hugging Face text model and extracts hidden
+states at a specified layer. Special tokens can optionally be retained, and
+the resulting token representations can be pooled per input.
 
-This class is designed for the concept pipeline on generative models.
-It supports only two token-selection modes:
+It supports two token-selection modes:
 
 - **tokens** (default): returns only non-special tokens (padding, BOS, EOS, etc. removed).
 - **all_tokens**: returns all token activations including special tokens but not padding.
 
-No word/sentence aggregation is performed — that complexity lives in ``ModelWithSplitPoints``.
+No word/sentence grouping is performed. Retained tokens can optionally be pooled
+into one representation per sample.
 """
 
 from __future__ import annotations
 
 import gc
+import warnings
 from collections.abc import Callable
 from math import ceil
-from typing import Any
+from typing import Any, Literal
 
 import torch
 from jaxtyping import Bool, Float
+from nnsight import save as nnsight_save
 from tqdm import tqdm
 from transformers import (
-    AutoModel,
-    AutoModelForCausalLM,
-    PretrainedConfig,
     PreTrainedModel,
     PreTrainedTokenizer,
     PreTrainedTokenizerFast,
@@ -60,38 +59,44 @@ from transformers import (
 from interpreto.concepts.splitters.base_splitter import BaseSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations, TensorMapping
 
+TokenPooling = Literal[None, "mean", "max", "min", "signed_max", "first", "last"]
+TextTokensTask = Literal["feature-extraction", "text-generation"]
 
-class SplitterForGeneration(BaseSplitter):
-    """A BaseSplitter specialization for causal language models (generation).
 
-    Wraps a ``ForCausalLM`` model, splits it at a user-specified layer, and
-    provides activation extraction with simple token-level granularity.
+class TextTokensSplitter(BaseSplitter):
+    """A BaseSplitter specialization for token representations from text models.
 
-    Compared to ``ModelWithSplitPoints`` this class:
-    - Only supports two activation modes: ``include_special_tokens=True/False``.
+    Wraps a causal or encoder text model, splits it at a user-specified layer,
+    and provides token-level or pooled activation extraction.
+
+    This class:
+    - Supports two token-selection modes: ``include_special_tokens=True/False``.
+    - Can pool retained token activations into one representation per sample.
     - Does not depend on ``interpreto.commons.granularity.Granularity``.
-    - Uses ``tokenizer.all_special_ids`` directly for special-token filtering.
 
     Arguments:
-        model_or_repo_id (str | PreTrainedModel): A HuggingFace model ID or a
-            pre-loaded CausalLM instance.
+        model_or_repo_id (str | PreTrainedModel): A Hugging Face model ID or a
+            pre-loaded text model.
         split_point (str | int): The split location inside the model.
+        task (TextTokensTask): NNsight loading task. Either ``"feature-extraction"`` or ``"text-generation"``.
+            Use ``"text-generation"`` for causal language models and
+            ``"feature-extraction"`` for encoder models.
         tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): Tokenizer.
-            Required when providing a model instance.
-        config (PretrainedConfig | None): Model configuration.
+            If None, NNsight resolves it automatically when possible.
         batch_size (int): Batch size for batched operations.
         device_map (torch.device | str | None): Device on which to load the model.
         **kwargs (dict[str, Any]): Additional keyword arguments forwarded to ``BaseSplitter.__init__`` and used for NNsight model loading.
 
     Example:
         ```python
-        from interpreto import SplitterForGeneration
+        from interpreto import TextTokensSplitter
 
-        splitter = SplitterForGeneration(
+        splitter = TextTokensSplitter(
             "gpt2",
-            split_point=10,
+            split_point=10,          # layer index
+            task="text-generation",  # task can be automatically inferred by nnsight
             batch_size=8,
-            device_map="auto",
+            device_map="auto",       # let nnsight decide
         )
         activations, _ = splitter.get_activations(
             ["Hello world!", "Interpreto is magic"],
@@ -104,44 +109,54 @@ class SplitterForGeneration(BaseSplitter):
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | int,
         *,
-        automodel: type[AutoModel] | None = None,
+        task: TextTokensTask | None = None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
-        config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
         **kwargs,
     ):
-        """Initialize a SplitterForGeneration model wrapper.
-
-        Raises:
-            TypeError: If ``model_or_repo_id`` is a PreTrainedModel that is not a CausalLM.
-        """
-        if isinstance(model_or_repo_id, PreTrainedModel):
-            class_name = model_or_repo_id.__class__.__name__
-            if "ForCausalLM" not in class_name and "LMHeadModel" not in class_name:
-                raise TypeError(
-                    "The provided model is not a causal language model. "
-                    "Please provide a model that inherits from `transformers.*ForCausalLM` "
-                    "or `*LMHeadModel`."
-                )
-
         super().__init__(
             model_or_repo_id,
             split_point,
-            config=config,
+            task=task,
             tokenizer=tokenizer,
-            automodel=automodel if automodel is not None else AutoModelForCausalLM,  # type: ignore
             batch_size=batch_size,
             device_map=device_map,
             **kwargs,
         )
 
-        # Ensure a pad token is available
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-
     # ------------------------------------------------------------------
     # Activation extraction
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _pool_activation(
+        activation: LatentActivations,
+        token_pooling: TokenPooling,
+    ) -> LatentActivations:
+        """Optionally pool one sample's activations over its sequence dimension."""
+        match token_pooling:
+            case None:
+                pooled_activation = activation
+            case "mean":
+                pooled_activation = activation.mean(dim=0, keepdim=True)
+            case "max":
+                pooled_activation = activation.amax(dim=0, keepdim=True)
+            case "min":
+                pooled_activation = activation.amin(dim=0, keepdim=True)
+            case "signed_max":
+                indices = activation.abs().max(dim=0).indices.unsqueeze(0)
+                pooled_activation = activation.gather(0, indices)
+            case "first":
+                pooled_activation = activation[:1]
+            case "last":
+                pooled_activation = activation[-1:]
+            case _:
+                raise ValueError(
+                    f"Unknown token_pooling: {token_pooling!r}. Expected None, 'mean', 'max', 'min', "
+                    "'signed_max', 'first' or 'last'."
+                )
+        return pooled_activation
 
     def _tokenize_and_get_mask(
         self,
@@ -185,7 +200,7 @@ class SplitterForGeneration(BaseSplitter):
 
             # just filters out padding
             if include_special_tokens:
-                return tokenized, attention_mask  # type: ignore
+                return tokenized, attention_mask.bool()  # type: ignore
 
             # filter out  padding and special tokens
             tokens_mask = attention_mask.bool() & ~tokenized.pop("special_tokens_mask").bool()
@@ -199,6 +214,7 @@ class SplitterForGeneration(BaseSplitter):
         *,
         include_special_tokens: bool = False,
         flatten_activations: bool = True,
+        token_pooling: TokenPooling = None,
         forward_kwargs: dict[str, Any] = {},
     ) -> list[LatentActivations] | LatentActivations:
         """Extract activations from raw inputs.
@@ -209,24 +225,27 @@ class SplitterForGeneration(BaseSplitter):
                 (including special tokens but not padding).  If False (default),
                 filter out special tokens using ``tokenizer.all_special_ids``.
             flatten_activations (bool): Whether to flatten the activations into a single tensor of shape (n*g, d).
+            token_pooling (TokenPooling): Optional pooling applied to the retained
+                tokens of each sample.
             forward_kwargs (dict[str, Any]): Additional keyword arguments passed to the model forward pass.
 
         Returns:
-            list[LatentActivations] | LatentActivations: Sample-wise list of activations or a single flattened tensor.
+            list[LatentActivations] | LatentActivations: Sample-wise activations
+                or a single flattened tensor. Pooled samples contain one row each.
         """
         tokenized, tokens_mask = self._tokenize_and_get_mask(inputs, include_special_tokens)
 
         # forward till the split point
         with self.trace(tokenized, **forward_kwargs) as tracer:
-            outputs = getattr(self, self.split_point).save()
+            outputs = self.split_module.output.save()
             tracer.stop()
 
         # manage the output tuple and extract the (n, l, d) activations from it
-        full_activations: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(outputs, self.split_point)
+        full_activations, _ = self._extract_hidden_state(outputs, self.split_point)
 
-        # filter out special tokens and expose public activations as float32.
+        # Filter out special tokens and move public activations to CPU.
         granular_activations = [
-            acts[mask].detach().to(device="cpu", dtype=torch.float32, copy=True)
+            self._pool_activation(acts[mask], token_pooling).detach().cpu().clone()
             for acts, mask in zip(full_activations, tokens_mask, strict=True)
         ]
 
@@ -241,6 +260,7 @@ class SplitterForGeneration(BaseSplitter):
         inputs: list[str],
         include_special_tokens: bool = False,
         flatten_activations: bool = True,
+        token_pooling: TokenPooling = None,
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
         **kwargs,
@@ -258,6 +278,9 @@ class SplitterForGeneration(BaseSplitter):
             flatten_activations (bool): If True (default), flatten the activations.
                 Into a single tensor (n*g, d). Where g varies if all tokens are included or not.
                 If False, returns a list of sample-wise activations.
+            token_pooling (TokenPooling): Optional pooling applied to the retained
+                tokens of each sample. Supported values are ``"mean"``, ``"max"``,
+                ``"min"``, ``"signed_max"``, ``"first"``, and ``"last"``.
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional kwargs for the model forward pass.
             **kwargs (dict[str, Any]): Unused, kept for API compatibility.
@@ -266,6 +289,7 @@ class SplitterForGeneration(BaseSplitter):
             activations (list[LatentActivations] | LatentActivations):
                 list[LatentActivations]: A list of tensors (one per sample, shape ``(l_i, d)``) and
                 LatentActivations: A single tensor (n*g, d) if ``flatten_activations=True``.
+                With token pooling, each sample contributes one row.
             predictions (None): ``None`` (placeholder, no predicted classes for generation models).
         """
         n_batches = ceil(len(inputs) / self.batch_size)
@@ -277,28 +301,21 @@ class SplitterForGeneration(BaseSplitter):
             disable=not tqdm_bar,
         )
 
-        sp_module = self.get(self._split_point)
-        output_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
-
         all_activations: list[LatentActivations] = []
 
         with torch.no_grad():
             for start in batch_iter:
                 batch_texts = inputs[start : min(start + self.batch_size, len(inputs))]
 
-                # extract non-special tokens mask
-                tokenized, tokens_mask = self._tokenize_and_get_mask(batch_texts, include_special_tokens)
-
-                # forward till the split point
-                with self.trace(tokenized, **forward_kwargs) as tracer:
-                    batch_outputs = getattr(sp_module, output_name).save()
-                    tracer.stop()
-
-                batch_acts: Float[torch.Tensor, "n l d"] = self._manage_output_tuple(batch_outputs, self._split_point)
-
-                # filter out special tokens and expose public activations as float32.
-                for acts, mask in zip(batch_acts, tokens_mask, strict=True):
-                    all_activations.append(acts[mask].detach().to(device="cpu", dtype=torch.float32, copy=True))
+                batch_activations = self.inputs_to_activations(
+                    batch_texts,
+                    include_special_tokens=include_special_tokens,
+                    flatten_activations=False,
+                    token_pooling=token_pooling,
+                    forward_kwargs=forward_kwargs,
+                )
+                assert isinstance(batch_activations, list)
+                all_activations.extend(batch_activations)
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -315,38 +332,34 @@ class SplitterForGeneration(BaseSplitter):
     def _reintegrate_activations(
         self,
         sp_module,
-        module_out_name: str,
         layer_outputs: tuple[torch.Tensor] | torch.Tensor,
-        raw_activations: Float[torch.Tensor, "ng d"],
+        raw_activations: Float[torch.Tensor, "b l d"],
         decoded_activations: Float[torch.Tensor, "ng d"],
         tokens_mask: torch.Tensor,
+        tuple_index: int | None,
     ):
         """Reintegrate activations back into the full sequence.
 
         Args:
             sp_module: The module containing the activations.
-            module_out_name (str): The name of the module output attribute to update.
             layer_outputs (tuple[torch.Tensor] | torch.Tensor): Original layer outputs, potentially tuple.
-            raw_activations (Float[torch.Tensor, "ng d"]): Raw activations before decoding.
+            raw_activations (Float[torch.Tensor, "b l d"]): Raw activations before decoding.
             decoded_activations (Float[torch.Tensor, "ng d"]): Decoded activations to reintegrate.
             tokens_mask (torch.Tensor | None): Mask indicating which positions to keep.
+            tuple_index (int | None): Hidden-state index for tuple outputs.
         """
         # Reintegrate decoded activations back into the full sequence and unflatten
         reconstructed = raw_activations.clone()
-        index = 0
-        for i, mask in enumerate(tokens_mask):
-            reconstructed[i, mask] = decoded_activations[index : index + mask.sum()]
-            index += mask.sum()
+        reconstructed[tokens_mask] = decoded_activations
 
         # Put activations back in their tuple
         if isinstance(layer_outputs, tuple):
             layer_outputs = list(layer_outputs)  # type: ignore
-            layer_outputs[self.output_tuple_index] = reconstructed  # type: ignore
-        else:
-            layer_outputs = reconstructed
+            layer_outputs[tuple_index] = reconstructed  # type: ignore[index]
+            reconstructed = tuple(layer_outputs)  # type: ignore[assignment]
 
         # Assign reconstructed activations back to the module output
-        setattr(sp_module, module_out_name, layer_outputs)  # type: ignore
+        sp_module.output = reconstructed  # type: ignore
 
     def _get_concept_output_gradients(
         self,
@@ -363,23 +376,26 @@ class SplitterForGeneration(BaseSplitter):
     ) -> list[Float[torch.Tensor, "t g c"]]:
         """Compute gradients of model outputs w.r.t. concept activations for generation.
 
+        Only available for ``"text-generation"`` tasks.
+
         For each input, extracts full token-level activations,
         encodes them into concept space, decodes back, reintegrates, and computes the
         gradient of the logits with respect to the concept activations.
 
-        For generation, logits have shape ``(n, l, vocab)``; we take the max over vocab
-        to get ``(n, l)`` then sum over samples.
+        For generation, logits have shape ``(1, l, vocab)``; we take the max over
+        vocab to get one score per output position.
 
         Args:
             inputs (list[str]): Raw text inputs.
             activations_to_concepts: Function mapping latent activations to concept space.
             concepts_to_activations: Function mapping concept activations back to latent space.
             targets (list[int] | None): Target token positions for which to compute gradients.
-                If None, gradients are computed for all positions in the (summed) logits.
+                If None, gradients are computed for all positions in each input.
             include_special_tokens (bool): Whether to include special tokens in the activation selection.
             concepts_x_gradients (bool): If True, multiply gradients by concept activations.
             tqdm_bar (bool): Whether to display a progress bar.
-            batch_size (int | None): Override the instance batch size.
+            batch_size (int | None): Accepted for API compatibility; gradients
+                are computed sample-wise.
             forward_kwargs (dict[str, Any]): Additional kwargs for the forward pass.
             **kwargs: Unused, kept for API compatibility.
 
@@ -387,49 +403,33 @@ class SplitterForGeneration(BaseSplitter):
             list[Float[torch.Tensor, "t g c"]]: A list of gradient tensors,
                 one per sample, each of shape ``(n_targets, g_i, n_concepts)``.
         """
-        grad_batch_size = batch_size or self.batch_size
+        if self.task != "text-generation":
+            raise NotImplementedError(
+                "Concept-to-output gradients are only supported for causal language models "
+                f"(task='text-generation'), got task={self.task!r}."
+            )
 
-        n_batches = ceil(len(inputs) / grad_batch_size)
-        batch_iter = tqdm(
-            range(0, len(inputs), grad_batch_size),
-            desc="Computing gradients",
-            unit="batch",
-            total=n_batches,
-            disable=not tqdm_bar,
-        )
-        sp_module = self.get(self._split_point)
-        module_out_name = "nns_output" if hasattr(sp_module, "nns_output") else "output"
-
+        sp_module = self.split_module
         gradients_list: list[Float[torch.Tensor, "t g c"]] = []
 
-        for start in batch_iter:
-            end = min(start + grad_batch_size, len(inputs))
-            batch_texts = inputs[start:end]
-
-            # extract non-special tokens mask
-            tokens_mask: Bool[torch.Tensor, "n l"]
-            tokenized, tokens_mask = self._tokenize_and_get_mask(batch_texts, include_special_tokens)
+        for text in tqdm(inputs, desc="Computing gradients", unit="sample", disable=not tqdm_bar):
+            tokenized, tokens_mask = self._tokenize_and_get_mask([text], include_special_tokens)
+            current_targets = range(tokenized["input_ids"].shape[1]) if targets is None else targets
 
             # Forward with NNsight tracing + gradient computation
             with self.trace(tokenized, **forward_kwargs):
                 # Get raw activations at split point
-                layer_outputs = getattr(sp_module, module_out_name)
-                raw_activations: Float[torch.Tensor, "b l d"] = self._manage_output_tuple(
-                    layer_outputs, self._split_point
-                )
-                b, l, d = raw_activations.shape
-
-                # Flatten and select activations of interest
-                activations: Float[torch.Tensor, "bg d"] = raw_activations.flatten(0, 1)[tokens_mask.flatten()]
+                layer_outputs = sp_module.output
+                raw_activations, tuple_index = self._extract_hidden_state(layer_outputs, self._split_point)
+                # Select activations of interest
+                activations: Float[torch.Tensor, "g d"] = raw_activations[0, tokens_mask[0]]
 
                 # Encode activations into concepts
-                concept_activations: Float[torch.Tensor, "bg c"] = activations_to_concepts(
-                    activations.to(dtype=torch.float32)
-                )
-                del activations
+                concept_activations: Float[torch.Tensor, "g c"] = activations_to_concepts(activations)
+                concept_activations.requires_grad_(True)
 
-                # Decode concepts back into activations (n, l, d)
-                decoded_activations: Float[torch.Tensor, "bg d"] = concepts_to_activations(concept_activations).to(
+                # Decode concepts back into activations
+                decoded_activations: Float[torch.Tensor, "g d"] = concepts_to_activations(concept_activations).to(
                     device=raw_activations.device,
                     dtype=raw_activations.dtype,
                 )
@@ -437,45 +437,33 @@ class SplitterForGeneration(BaseSplitter):
                 # Reintegrate decoded activations back into the full sequence and into the model
                 self._reintegrate_activations(
                     sp_module,
-                    module_out_name,
                     layer_outputs,
                     raw_activations,
                     decoded_activations,
                     tokens_mask,
+                    tuple_index,
                 )
-                del decoded_activations, raw_activations
 
-                # Get logits: (b, l, vocab) -> max over vocab -> (b, l) -> sum over samples -> (l,)
-                logits = self.output.logits.max(dim=-1)[0].sum(dim=0)
+                # Get one score per output position by taking the max over the vocabulary
+                logits = self.output.logits[0].max(dim=-1)[0]
 
-                # Determine targets
-                if targets is None:
-                    current_targets = range(logits.shape[0])
-                else:
-                    current_targets = targets
-
-                # Compute gradients for each target
                 targets_gradients_list = []
-                for t in current_targets:
-                    with logits[t].backward(retain_graph=True):  # type: ignore
-                        concept_grad = concept_activations.grad.clone()  # type: ignore
-                        concept_activations.grad.zero_()  # type: ignore
-                        if concepts_x_gradients:
-                            concept_grad = concept_grad * concept_activations
+                for target_index, t in enumerate(current_targets):
+                    concept_grad = torch.autograd.grad(
+                        outputs=logits[t],
+                        inputs=concept_activations,
+                        retain_graph=target_index < len(current_targets) - 1,
+                    )[0]
+                    if concepts_x_gradients:
+                        concept_grad = concept_grad * concept_activations
                     targets_gradients_list.append(concept_grad)
 
-                targets_gradients: Float[torch.Tensor, "bg t c"] = (
-                    torch.stack(targets_gradients_list, dim=1).detach().cpu().save()  # type: ignore
+                targets_gradients: Float[torch.Tensor, "t g c"] = (
+                    torch.stack(targets_gradients_list).detach().cpu().save()  # type: ignore
                 )
-                del targets_gradients_list, concept_activations, logits
 
-                # Split gradients per sample
-                index = 0
-                for mask in tokens_mask:
-                    gradients_list.append(targets_gradients[index : index + mask.sum()].transpose(0, 1))
-                    index += mask.sum()
-
-                gc.collect()
+            gradients_list.append(targets_gradients)
+            gc.collect()
 
         torch.cuda.empty_cache()  # TODO: see if it should be moved inside the loop
 
@@ -496,14 +484,43 @@ class SplitterForGeneration(BaseSplitter):
             torch.Size: Shape of the activations at the split point (typically ``(1, l, d)``).
         """
         with self.trace("scan") as tracer:
-            curr_module = self.get(self._split_point)
-            module_out_name = "nns_output" if hasattr(curr_module, "nns_output") else "output"
-            module = getattr(curr_module, module_out_name)
-            if isinstance(module, tuple):
-                for candidate in module:
-                    if candidate.dim() == 3:
-                        module = candidate
-                        break
-            shape = module.shape.save()  # type: ignore
+            activations, _ = self._extract_hidden_state(self.split_module.output, self._split_point)
+            shape = nnsight_save(activations.shape)  # type: ignore
             tracer.stop()
         return shape
+
+
+class SplitterForGeneration(TextTokensSplitter):
+    def __init__(
+        self,
+        model_or_repo_id: str | PreTrainedModel,
+        split_point: str | int,
+        *,
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
+        batch_size: int = 1,
+        device_map: torch.device | str | None = None,
+        **kwargs,
+    ):
+        warnings.warn(
+            "SplitterForGeneration is deprecated, use TextTokensSplitter instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if isinstance(model_or_repo_id, PreTrainedModel):
+            class_name = model_or_repo_id.__class__.__name__
+            if "ForCausalLM" not in class_name and "LMHeadModel" not in class_name:
+                raise TypeError(
+                    "The provided model is not a causal language model. "
+                    "Please provide a model that inherits from `transformers.*ForCausalLM` "
+                    "or `*LMHeadModel`."
+                )
+
+        super().__init__(
+            model_or_repo_id,
+            split_point,
+            task="text-generation",
+            tokenizer=tokenizer,
+            batch_size=batch_size,
+            device_map=device_map,
+            **kwargs,
+        )

@@ -40,7 +40,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
 import torch
 from jaxtyping import Float
 from sklearn.svm import SVC
@@ -71,14 +70,15 @@ class SklearnProbe:
 
     def fit(self, X: Float[torch.Tensor, "n d"], y: Float[torch.Tensor, "n"]):
         """Fit the concept model."""
-        np_X, np_y = np.array(X), np.array(y)
+        np_X = X.detach().to(torch.float32).cpu().numpy()
+        np_y = y.detach().cpu().numpy()
         self.model.fit(np_X, np_y)
         self.fitted = True
 
     @assert_fitted
     def encode(self, X: Float[torch.Tensor, "n d"]) -> Float[torch.Tensor, "n 1"]:
         """Encode the given activations using the concept model."""
-        np_X = np.array(X)
+        np_X = X.detach().to(torch.float32).cpu().numpy()
         np_y = self.model.decision_function(np_X)
         return torch.from_numpy(np_y).unsqueeze(1)
 

@@ -42,12 +42,11 @@ from jaxtyping import Float, jaxtyped
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 
-from interpreto.commons.granularity import GranularityAggregationStrategy
 from interpreto.concepts.base import ConceptEncoderExplainer
-from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity
 from interpreto.concepts.splitters.splitter_for_classification import (
     SplitterForClassification,
 )
+from interpreto.concepts.splitters.text_tokens_splitter import TextTokensSplitter, TokenPooling
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -178,24 +177,16 @@ def verify_concepts_indices(
 def verify_granular_inputs(
     granular_inputs: list[str],
     sure_concepts_activations: ConceptsActivations,
-    latent_activations: LatentActivations | None = None,
-    concepts_activations: ConceptsActivations | None = None,
+    mode: str,
 ):
-    if len(granular_inputs) != len(sure_concepts_activations):
-        if latent_activations is not None and len(granular_inputs) != len(latent_activations):
-            raise ValueError(
-                f"The lengths of the granulated inputs do not match the number of provided latent activations {len(granular_inputs)} != {len(latent_activations)}"
-                "If you provide latent activations, make sure they have the same granularity as the inputs."
-                "This might happen if you use `use_vocab=True` and `use_unique_words=True` and provide `latent_activations`."
-            )
-        if concepts_activations is not None and len(granular_inputs) != len(concepts_activations):
-            raise ValueError(
-                f"The lengths of the granulated inputs do not match the number of provided concepts activations {len(granular_inputs)} != {len(concepts_activations)}"
-                "If you provide concepts activations, make sure they have the same granularity as the inputs."
-                "This might happen if you use `use_vocab=True` and `use_unique_words=True` and provide `concepts_activations`."
-            )
+    """Validate that granular inputs and concept activation rows agree."""
+    if len(granular_inputs) != sure_concepts_activations.shape[0]:
         raise ValueError(
-            f"The lengths of the granulated inputs do not match the number of concepts activations {len(granular_inputs)} != {len(sure_concepts_activations)}"
+            f"The number of granular inputs ({len(granular_inputs)}) does not match the number of "
+            f"concept activation rows ({sure_concepts_activations.shape[0]}) for {mode}. "
+            "Precomputed activations must match the selected interpretation mode: use token-level "
+            "activations for token-level text splitters, and one pooled activation per input when "
+            "`token_pooling` is set."
         )
 
 
@@ -209,21 +200,16 @@ class BaseConceptInterpretationMethod(ABC):
         concept_explainer (ConceptEncoderExplainer):
             The concept explainer used to compute the concept activations.
 
-        activation_granularity (ActivationGranularity):
-            The granularity of the activations to use for the interpretation.
-            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
-
-        aggregation_strategy (GranularityAggregationStrategy):
-            The aggregation strategy to use for the activations.
-            See :method:`interpreto.concepts.splitters.model_with_split_points.ModelWithSplitPoints.get_activations` for more details.
+        token_pooling (TokenPooling):
+            Optional pooling applied to token activations. With pooling,
+            interpretation examples are whole inputs rather than tokens.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
 
         use_vocab (bool):
-            Whether to use the vocabulary to extract the granular inputs.
-            If True, the granular inputs are extracted from the vocabulary.
-            If False, the granular inputs are extracted from the inputs.
+            Whether to use the vocabulary to extract granular inputs.
+            If False, granular inputs are extracted from the inputs.
 
         use_unique_words (bool):
             If True, the interpretation will be computed from the unique words of the inputs.
@@ -241,40 +227,33 @@ class BaseConceptInterpretationMethod(ABC):
     def __init__(
         self,
         concept_explainer: ConceptEncoderExplainer,
-        activation_granularity: ActivationGranularity | None = None,
-        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
+        token_pooling: TokenPooling = None,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
         use_unique_words: bool | int = 0,
         unique_words_kwargs: dict = {},
     ):
-        if activation_granularity is None:
-            if isinstance(concept_explainer.splitter, SplitterForClassification):
-                activation_granularity = ActivationGranularity.CLS_TOKEN
-            else:
-                activation_granularity = ActivationGranularity.TOKEN
-        elif activation_granularity not in (
-            ActivationGranularity.CLS_TOKEN,
-            ActivationGranularity.TOKEN,
-            ActivationGranularity.WORD,
-            ActivationGranularity.SENTENCE,
-            ActivationGranularity.SAMPLE,
-        ):
-            raise ValueError(
-                f"The granularity {activation_granularity} is not supported. "
-                "Supported `activation_granularities`: CLS_TOKEN, TOKEN, WORD, SENTENCE, and SAMPLE"
-            )
-
         if use_unique_words and use_vocab:
             raise ValueError("Cannot use both `use_unique_words` and `use_vocab`. Please use only one of them.")
 
         self.concept_explainer: ConceptEncoderExplainer = concept_explainer
-        self.activation_granularity: ActivationGranularity = activation_granularity
-        self.aggregation_strategy: GranularityAggregationStrategy = aggregation_strategy
+        self.token_pooling: TokenPooling = token_pooling
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
         self.use_unique_words: int = int(use_unique_words)
         self.unique_words_kwargs: dict = unique_words_kwargs
+
+    def _is_pooled_mode(self) -> bool:
+        """Whether the splitter exposes one representation per input."""
+        return isinstance(self.concept_explainer.splitter, SplitterForClassification) or self.token_pooling is not None
+
+    def _mode_description(self) -> str:
+        """Describe the representation mode for alignment errors."""
+        if isinstance(self.concept_explainer.splitter, SplitterForClassification):
+            return "classification (one pooled representation per input)"
+        if self.token_pooling is not None:
+            return f"pooled text representations (token_pooling={self.token_pooling!r})"
+        return "token-level text representations"
 
     @abstractmethod
     def interpret(
@@ -349,11 +328,12 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if inputs is not None:
+            extraction_kwargs: dict[str, Any] = {}
+            if isinstance(self.concept_explainer.splitter, TextTokensSplitter):
+                extraction_kwargs["token_pooling"] = self.token_pooling
             latent_activations, _ = self.concept_explainer.splitter.get_activations(
                 inputs,
-                activation_granularity=self.activation_granularity,
-                aggregation_strategy=self.aggregation_strategy,
-                forward_kwargs={"truncation": True},
+                **extraction_kwargs,
             )
             return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
@@ -368,6 +348,10 @@ class BaseConceptInterpretationMethod(ABC):
         """
         Computes the concepts activations for each token of the vocabulary
 
+        Each vocabulary ID is passed as one input. Classification splitters add
+        their tokenizer's model-specific formatting; token splitters process
+        the ID directly.
+
         Returns:
             tuple[list[str], Float[torch.Tensor, "nl cpt"]]:
                 - The list of tokens in the vocabulary
@@ -375,48 +359,15 @@ class BaseConceptInterpretationMethod(ABC):
         """
         # extract and sort the vocabulary
         vocab_dict: dict[str, int] = self.concept_explainer.splitter.tokenizer.get_vocab()
-        inputs, input_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
-        inputs: list[str] = list(inputs)  # type: ignore
+        inputs, vocab_ids = zip(*vocab_dict.items(), strict=True)  # type: ignore
+        inputs = list(inputs)
 
-        # unsqueeze for all ids to be considered as a single sample
-        input_ids: Float[torch.Tensor, "v 1"] = torch.tensor(list(input_ids)).unsqueeze(1)
-        vocab_size = input_ids.shape[0]
-
-        if self.activation_granularity != ActivationGranularity.CLS_TOKEN:
-            # compute the vocabulary's latent activations
-            latent_activations, _ = self.concept_explainer.splitter.get_activations(
-                input_ids,
-                activation_granularity=ActivationGranularity.ALL_TOKENS,
-                forward_kwargs={"truncation": True},
-            )
+        splitter = self.concept_explainer.splitter
+        if isinstance(splitter, TextTokensSplitter):
+            model_inputs = torch.tensor(vocab_ids).unsqueeze(1)
         else:
-            # we need to add the CLS token and maybe the EOS token to the ids
-            # so that we can get correct CLS activations
-
-            # first step extract the template
-            template_ids = self.concept_explainer.splitter.tokenizer("a", return_tensors="pt")["input_ids"]
-
-            # if we are not in a template [CLS] a [EOS]
-            if len(template_ids) != 3:  # type: ignore
-                warnings.warn(
-                    "When tokenizing a single character, the provided model does not output 3 token ids. "
-                    "Our implementation assumes that the model outputs is [CLS] a [EOS]. "
-                    "Indeed, when `aggregation_strategy` is `CLS_TOKEN`, the first token is considered as the CLS token. "
-                    "If the [CLS] token is still the first token, you can ignore this warning. "
-                    "Otherwise, either choose another model or contact the developers to find a workaround.",
-                    stacklevel=2,
-                )
-
-            # repeat the template and replace "a" token ids by the vocabulary ids
-            repeated_template_ids = template_ids.repeat(vocab_size, 1)  # type: ignore
-            repeated_template_ids[:, 1] = input_ids[:, 0]
-
-            # compute the vocabulary's latent activations
-            latent_activations, _ = self.concept_explainer.splitter.get_activations(
-                repeated_template_ids,
-                activation_granularity=self.activation_granularity,
-                forward_kwargs={"truncation": True},
-            )
+            model_inputs = vocab_ids
+        latent_activations, _ = splitter.get_activations(model_inputs)
 
         # compute the vocabulary's concepts activations
         with torch.no_grad():
@@ -427,54 +378,37 @@ class BaseConceptInterpretationMethod(ABC):
     def get_granular_inputs(
         self,
         inputs: list[str],  # (n)
-    ) -> tuple[list[str], list[int]]:  # (ng,)
-        """Split texts from the inputs based on the target granularity
-        (for instance into tokens, words, sentences, ...)
+    ) -> tuple[list[str], list[int]]:
+        """Return display units matching the splitter's representation rows.
 
         Args:
             inputs (list[str]): n text samples
 
         Returns:
-            granular_flattened_texts (list[str]):
-                The granular texts elements from the inputs, flattened.
+            granular_inputs (list[str]):
+                The granular inputs extracted from the inputs, flattened.
                 [Example1_Tok1, Example1_Tok2, ... Example2_Tok1, Example2_Tok2, ...]
 
-            granular_flattened_sample_id (list[int]):
-                The sample id for each granular text, to keep track of which sample the text belongs to.
-                It should have the same length as `granular_flattened_texts`.
-                It elements indicates the sample if for the corresponding granular text in `granular_flattened_texts`.
+            granular_sample_ids (list[int]):
+                The sample id for each granular input.
                 [0, 0, ... 1, 1, ...]
         """
-        if self.activation_granularity in (
-            ActivationGranularity.SAMPLE,
-            ActivationGranularity.CLS_TOKEN,
-        ):
-            # no activation_granularity is needed
+        if self._is_pooled_mode():
             return inputs, list(range(len(inputs)))
 
-        if self.activation_granularity == ActivationGranularity.TOKEN:
-            # we can use the tokenizer to split the inputs into tokens
-            granular_texts: list[list[str]] = [
-                self.concept_explainer.splitter.tokenizer.tokenize(text) for text in inputs
-            ]
-        else:
-            # Get granular texts from the inputs
-            tokens = self.concept_explainer.splitter.tokenizer(
-                inputs,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                return_offsets_mapping=True,
-            )
-            granular_texts: list[list[str]] = self.activation_granularity.value.get_decomposition(  # type: ignore  (sure list[list[str]] with return_text=True)
-                tokens,
-                tokenizer=self.concept_explainer.splitter.tokenizer,
-                return_text=True,
-            )
+        splitter = self.concept_explainer.splitter
+        if not isinstance(splitter, TextTokensSplitter):
+            raise TypeError("Token-level interpretation requires a TextTokensSplitter.")
 
-        granular_flattened_texts = [text for sample_texts in granular_texts for text in sample_texts]
-        granular_flattened_sample_id = [i for i, sample_texts in enumerate(granular_texts) for _ in sample_texts]
-        return granular_flattened_texts, granular_flattened_sample_id
+        tokenized, tokens_mask = splitter._tokenize_and_get_mask(inputs, include_special_tokens=False)
+        input_ids = tokenized["input_ids"]
+        granular_inputs: list[str] = []
+        granular_sample_ids: list[int] = []
+        for sample_index, (ids_row, mask_row) in enumerate(zip(input_ids, tokens_mask, strict=True)):  # type: ignore
+            tokens = splitter.tokenizer.convert_ids_to_tokens(ids_row[mask_row].tolist())
+            granular_inputs.extend(tokens)
+            granular_sample_ids.extend([sample_index] * len(tokens))
+        return granular_inputs, granular_sample_ids
 
     def get_granular_inputs_and_concept_activations(
         self,
@@ -508,15 +442,12 @@ class BaseConceptInterpretationMethod(ABC):
 
             granular_inputs (list[str]):
                 The granular inputs for the specified concepts.
-                Each element of the list is a single granular input, such as a word.
 
             sure_concepts_activations (Float[torch.Tensor, "nl cpt"]):
                 The concepts activations matching the granular inputs.
 
             granular_sample_ids (list[int]):
-                The granular sample ids for the specified concepts.
-                Each element of the list is the index of the input sample from which the corresponding granular input was extracted.
-                It has the same length as `granular_inputs`.
+                The input sample index for each granular input.
 
         """
         if concepts_indices == "all":
@@ -539,15 +470,10 @@ class BaseConceptInterpretationMethod(ABC):
                 # ----------------------------------------------------------------------------------
                 # Case 2: use_unique_words >= 1
                 # first list unique words/ngrams from the inputs and compute the activations from them
-                if self.activation_granularity not in [
-                    ActivationGranularity.CLS_TOKEN,
-                    ActivationGranularity.SAMPLE,
-                ]:
+                if not self._is_pooled_mode():
                     raise ValueError(
-                        f"`use_unique_words` requires `activation_granularity=CLS_TOKEN`, "
-                        f"got `{self.activation_granularity}`. "
-                        "Ngram-based interpretation relies on the CLS token activation "
-                        "to represent each ngram as a single unit."
+                        "`use_unique_words` requires pooled representations. "
+                        "Use SplitterForClassification or set `token_pooling` on TextTokensSplitter."
                     )
                 granular_inputs: list[str] = extract_ngrams(
                     inputs=inputs,
@@ -591,8 +517,7 @@ class BaseConceptInterpretationMethod(ABC):
         verify_granular_inputs(
             granular_inputs=granular_inputs,
             sure_concepts_activations=sure_concepts_activations,
-            latent_activations=latent_activations,
-            concepts_activations=concepts_activations,
+            mode=self._mode_description(),
         )
 
         return (
