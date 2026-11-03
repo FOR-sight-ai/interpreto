@@ -71,7 +71,7 @@ attribution_method_kwargs = {
     Occlusion: {},
     KernelShap: {"n_perturbations": 3},
     Lime: {"n_perturbations": 3},
-    Sobol: {"n_token_perturbations": 3},
+    Sobol: {"n_granularity_perturbations": 3},
 }
 
 # Cycle over repo_id, concept_explainer_class, attribution_explainer_class at least once
@@ -92,14 +92,21 @@ REPRESENTATIVE_CASES = [
 ]
 
 
-def test_inputs_to_concepts_attributions_fast(sentences):
+@pytest.fixture(scope="module")
+def splitter(repo_id):
+    """Reuse transformer weights; each test still fits its own concept explainer."""
+    return SSC(repo_id, device_map=DEVICE)
+
+
+@pytest.mark.parametrize("repo_id", ["hf-internal-testing/tiny-random-bert"], scope="module")
+def test_inputs_to_concepts_attributions_fast(splitter, sentences):
     """
     Test using the input-to-concepts model in an attribution explainer.
 
     This test is fast because it only test with one model and explainer.
     While the other tests are slow because they test with multiple models and explainers.
     """
-    inputs_to_concepts_attributions("hf-internal-testing/tiny-random-bert", PCAConcepts, KernelShap, sentences)
+    inputs_to_concepts_attributions(splitter, PCAConcepts, KernelShap, sentences)
 
 
 def test_inputs_to_concepts_model_preserves_lazy_splitter():
@@ -120,9 +127,11 @@ def test_inputs_to_concepts_model_preserves_lazy_splitter():
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("repo_id, concepts_explainer_class, attribution_explainer_class", REPRESENTATIVE_CASES)
+@pytest.mark.parametrize(
+    "repo_id, concepts_explainer_class, attribution_explainer_class", REPRESENTATIVE_CASES, scope="module"
+)
 def test_inputs_to_concepts_attributions_slow(
-    repo_id, concepts_explainer_class, attribution_explainer_class, sentences
+    splitter, concepts_explainer_class, attribution_explainer_class, sentences
 ):
     """
     Test using the input-to-concepts model in an attribution explainer.
@@ -131,11 +140,11 @@ def test_inputs_to_concepts_attributions_slow(
 
     Not all combinations are tested, there are far too many, but we cycle over the REPRESENTATIVE_CASES.
     """
-    inputs_to_concepts_attributions(repo_id, concepts_explainer_class, attribution_explainer_class, sentences)
+    inputs_to_concepts_attributions(splitter, concepts_explainer_class, attribution_explainer_class, sentences)
 
 
 def inputs_to_concepts_attributions(
-    repo_id: str,
+    splitter: SSC,
     concepts_explainer_class: type[ConceptAutoEncoderExplainer],
     attribution_explainer_class: type[AttributionExplainer],
     sentences: list[str],
@@ -145,9 +154,6 @@ def inputs_to_concepts_attributions(
     """
     # extract kwargs
     attribution_kwargs = attribution_method_kwargs[attribution_explainer_class]
-
-    # Split the model
-    splitter = SSC(repo_id, device_map=DEVICE)
 
     # Fit the explainer
     if concepts_explainer_class != NeuronsAsConcepts:
@@ -175,8 +181,8 @@ def inputs_to_concepts_attributions(
 
 
 if __name__ == "__main__":
-    test_inputs_to_concepts_attributions_slow(
-        "hf-internal-testing/tiny-random-gpt2",
+    inputs_to_concepts_attributions(
+        SSC("hf-internal-testing/tiny-random-gpt2", device_map=DEVICE),
         SemiNMFConcepts,
         Sobol,
         sentences=["Hello world!", "Can you hear me?", "Yes, who is it?", "It's me!"],

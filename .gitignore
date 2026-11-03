@@ -182,6 +182,7 @@ codex.patch
 data/
 quick_test.py
 quick_test.ipynb
+sanity_check_outputs/
 
 # requirements are for the github workflow, people should use the pyproject.toml
 requirements.txt

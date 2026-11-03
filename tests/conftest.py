@@ -24,56 +24,51 @@
 
 """
 Common fixtures for all tests
+
+Keep these model fixtures free of NNsight instrumentation. Concept tests override
+the text model fixtures in tests/concepts/conftest.py with independent instances.
 """
 
+import pytest
 import torch
 from pytest import fixture
-from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
+from transformers import (
+    AutoImageProcessor,
+    AutoModelForCausalLM,
+    AutoModelForImageClassification,
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
 
-from interpreto import SplitterForClassification, TextTokensSplitter
-from interpreto.typing import LatentActivations
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Serialize heavy tests on one worker when using xdist's loadgroup scheduler.
+
+    Run before xdist consumes group markers and encodes them into worker node IDs.
+    Ordinary tests share a worker per file so module fixtures are reused.
+    """
+    for item in items:
+        if item.get_closest_marker("gpu_heavy") is not None:
+            item.add_marker(pytest.mark.xdist_group("gpu_heavy"))
+        else:
+            item.add_marker(pytest.mark.xdist_group(item.nodeid.split("::", 1)[0]))
 
 
 @fixture(scope="session")
 def sentences():
     return [
-        "Interpreto is the latin for 'to interpret'. But it also sounds like a spell from the Harry Potter books.",
+        "Interpreto is the latin for to interpret. But it also sounds like a spell from the Harry Potter books.",
         "Interpreto is magical",
         "Testing interpreto",
     ]
 
 
 @fixture(scope="session")
-def splitted_encoder_ml() -> SplitterForClassification:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    return SplitterForClassification(
-        "hf-internal-testing/tiny-random-bert",
-        batch_size=4,
-        device_map=device,
-    )
-
-
-@fixture(scope="session")
-def text_tokens_splitter() -> TextTokensSplitter:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    return TextTokensSplitter(
-        "hf-internal-testing/tiny-random-gpt2",
-        split_point=1,
-        task="text-generation",
-        batch_size=8,
-        device_map=device,
-    )
-
-
-@fixture(scope="session")
-def activations(splitted_encoder_ml: SplitterForClassification, sentences: list[str]) -> LatentActivations:
-    latent_activations, _ = splitted_encoder_ml.get_activations(sentences)
-    return latent_activations
-
-
-@fixture(scope="session")
 def bert_model():
-    return AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert")
+    return AutoModelForSequenceClassification.from_pretrained("hf-internal-testing/tiny-random-bert").to(DEVICE)
 
 
 @fixture(scope="session")
@@ -82,23 +77,23 @@ def bert_tokenizer():
 
 
 @fixture(scope="session")
+def vit_model():
+    return AutoModelForImageClassification.from_pretrained("hf-internal-testing/tiny-random-vit").to(DEVICE)
+
+
+@fixture(scope="session")
+def vit_image_processor():
+    return AutoImageProcessor.from_pretrained("hf-internal-testing/tiny-random-vit")
+
+
+@fixture(scope="session")
 def real_bert_tokenizer():
     return AutoTokenizer.from_pretrained("bert-base-uncased")
 
 
 @fixture(scope="session")
-def bert_imdb_model():
-    return AutoModelForSequenceClassification.from_pretrained("textattack/bert-base-uncased-imdb")
-
-
-@fixture(scope="session")
-def bert_imdb_tokenizer():
-    return AutoTokenizer.from_pretrained("textattack/bert-base-uncased-imdb")
-
-
-@fixture(scope="session")
 def gpt2_model():
-    return AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2")
+    return AutoModelForCausalLM.from_pretrained("hf-internal-testing/tiny-random-gpt2").to(DEVICE)
 
 
 @fixture(scope="session")

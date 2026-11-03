@@ -32,43 +32,23 @@ import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
-from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import IdsPerturbator
-from interpreto.commons.granularity import Granularity
+from interpreto.attributions.perturbations.base import MaskPerturbator
 
 
-class ShapTokenPerturbator(IdsPerturbator):
-    def __init__(
-        self,
-        tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
-        replace_token_id: int = 0,
-        n_perturbations: int = 1000,
-        device: torch.device | None = None,
-    ):
-        """
-        Initialize the perturbator.
+class ShapPerturbator(MaskPerturbator):
+    """
+    Perturbator sampling masks according to the Shapley kernel, used by KernelShap.
 
-        Args:
-            tokenizer (PreTrainedTokenizer): Hugging Face tokenizer associated with the model
-            inputs_embedder (torch.nn.Module | None): optional inputs embedder
-            replace_token_id (int): the token id to use for replacing the masked tokens
-            n_perturbations (int): the number of perturbations to generate
-            device (torch.device): device on which the perturbator will be run
-        """
-        super().__init__(
-            tokenizer=tokenizer,
-            n_perturbations=n_perturbations,
-            replace_token_id=replace_token_id,
-            granularity=granularity,
-        )
-        self.device = device  # type: ignore
+    Carries no fields of its own. It is combined with a modality base at runtime by the
+    KernelShap method.
+    """
 
     @jaxtyped(typechecker=beartype)
     def get_mask(self, mask_dim: int) -> Float[Tensor, "p {mask_dim}"]:
         """
-        Generates a binary mask for each token in the sequence.
+        Sample binary masks weighted by the Shapley kernel. The sampling is modality-agnostic
+        and operates only on the number of units `mask_dim`.
 
         The perturbed instances are sampled that way:
          - We choose a number of selected features k, considering the distribution
@@ -84,14 +64,12 @@ class ShapTokenPerturbator(IdsPerturbator):
         This trick is the one used in the Captum library: https://github.com/pytorch/captum
 
         Args:
-            mask_dim (int): Length of the input sequence.
+            mask_dim (int): number of granularity units `g`.
 
         Returns:
-            masks (torch.Tensor):
-                A tensor of shape ``(self.n_perturbations, mask_dim)``.
-                Might be ``(2**mask_dim, mask_dim)`` if self.n_perturbations is too big.
+            torch.Tensor: shape `(n_perturbations, g)`, clamped to `(2**g, g)`
+                when `n_perturbations` exceeds the number of distinct masks.
         """
-        # Simplify typing
         p, l = self.n_perturbations, mask_dim
 
         if l < 1:
@@ -100,22 +78,22 @@ class ShapTokenPerturbator(IdsPerturbator):
         # If the requested number of perturbations is greater than the possible number of perturbations
         # we set it to the maximum possible number of perturbations
         # This solves the issue 68, which arise when l = 2 and p at least greater than 30
+        # For images l < 20 is very unlikely
         if l < 20 and p > 2**l:
             p = 2**l
 
         if l == 1:
             return (torch.rand(p, l, dtype=torch.float) < 0.5).float()
 
-        # Generate a random number of selected features k for each perturbation
+        # number of selected units k per perturbation, weighted by the Shapley kernel
         possible_k: Float[Tensor, f"{l - 1}"] = torch.arange(1, l, dtype=torch.float)
-        # initially: (l - 1) / (possible_k * (l - possible_k)), but it gave a weird distribution
-        probability_to_select_k_elements: Float[Tensor, f"{l - 1}"] = (possible_k * (l - possible_k)) / (l * (l - 1))
+        probability_to_select_k_elements: Float[Tensor, f"{l - 1}"] = (l - 1) / (possible_k * (l - possible_k))
         probability_to_select_k_elements: Float[Tensor, f"{l}"] = torch.cat(
             [torch.zeros(1), probability_to_select_k_elements]
         )
         k: Float[Tensor, f"{p}"] = torch.multinomial(probability_to_select_k_elements, p, replacement=True)
 
-        # Generate a random binary mask for each perturbation
+        # random binary mask with exactly k ones per perturbation, all equally likely
         rand_values: Float[Tensor, f"{p} {l}"] = torch.rand(p, l, dtype=torch.float)
         thresholds: Float[Tensor, f"{p}"] = torch.stack(
             [torch.kthvalue(rand_values[i], int(k[i]) + 1, dim=0).values for i in range(p)]

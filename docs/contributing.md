@@ -30,6 +30,17 @@ To activate your `.venv` run `source .venv/bin/activate`.
 
 Welcome to the team!
 
+## Running tests
+
+- `make test`: regular tests, including slow compatibility checks, excluding `gpu_heavy`.
+- `make heavy-tests`: heavy sanity checks and full-size memory stress checks, run serially.
+- `make fast-test`: only tests without the `slow` marker.
+
+The regular target uses pytest-xdist's automatic worker count (`-n auto`).
+Use the heavy target for focused changes, nightly checks, or pre-release validation.
+With the `loadgroup` scheduler, regular tests are grouped by file to reuse module-scoped
+models and processors without duplicating them across workers.
+
 ## Codestyle
 
 After installation you may execute code formatting.

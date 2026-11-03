@@ -27,46 +27,25 @@ from __future__ import annotations
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from transformers import PreTrainedTokenizer
 
-from interpreto.attributions.perturbations.base import IdsPerturbator
-from interpreto.commons.granularity import Granularity
+# attributions/perturbations/occlusion_perturbation.py
+from .base import MaskPerturbator
 
 
-class OcclusionPerturbator(IdsPerturbator):
+class OcclusionPerturbator(MaskPerturbator):  # change inheritance, might make the type checker unhappy
     """
-    Basic class for occlusion perturbations
+    Modality-agnostic occlusion mask: one reference plus one perturbation per granularity unit.
+
+    Carries no fields of its own. It is combined with a modality base at runtime by the
+    `Occlusion` explainer.
     """
-
-    __slots__ = ()
-
-    def __init__(
-        self,
-        tokenizer: PreTrainedTokenizer | None = None,
-        granularity: Granularity = Granularity.TOKEN,
-        replace_token_id: int = 0,
-    ) -> None:
-        """Instantiate the perturbator.
-
-        Args:
-            tokenizer (PreTrainedTokenizer | None): Hugging Face tokenizer associated with the model.
-            granularity (Granularity): Level at which occlusion should be applied.
-            replace_token_id (int): Token used to replace occluded elements.
-        """
-
-        super().__init__(
-            tokenizer=tokenizer,
-            replace_token_id=replace_token_id,
-            n_perturbations=-1,
-            granularity=granularity,
-        )
 
     @jaxtyped(typechecker=beartype)
-    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p l"]:
+    def get_mask(self, mask_dim: int) -> Float[torch.Tensor, "p g"]:
         """Return a mask performing single-token occlusions.
 
         Args:
-            mask_dim (int): Length of the input sequence.
+            mask_dim (int): Length of the granularity depedent input sequence.
 
         Returns:
             torch.Tensor: Tensor of shape ``(mask_dim + 1, mask_dim)`` where the
@@ -74,8 +53,8 @@ class OcclusionPerturbator(IdsPerturbator):
                 identity matrix.
         """
 
-        l = mask_dim
-        p = l + 1
-        mask: Float[torch.Tensor, "{p} {l}"] = torch.cat([torch.zeros(1, l), torch.eye(l)], dim=0)
+        g = mask_dim
+        p = g + 1
+        mask: Float[torch.Tensor, "{p} {g}"] = torch.cat([torch.zeros(1, g), torch.eye(g)], dim=0)
         assert mask.shape[0] == p
         return mask

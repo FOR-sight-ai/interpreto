@@ -177,6 +177,8 @@ def separable_train_test():
     return train_x, train_y, test_x, test_y
 
 
+@pytest.mark.slow
+@pytest.mark.gpu_heavy
 @pytest.mark.parametrize(
     "name,probe_cls,probe_kwargs",
     PROBE_CONFIGS,
