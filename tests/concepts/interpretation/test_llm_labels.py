@@ -336,6 +336,7 @@ def test_llm_labels_token_and_pooled_modes(
     assert token_method.k_context == 1
     assert len(token_method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)) == 3
 
+    # Pooling reduces each text to one representation, so there is no token context to include.
     monkeypatch.setattr(text_tokens_splitter, "token_pooling", "mean")
     with pytest.warns(UserWarning, match="k_context is set to 0"):
         pooled_method = LLMLabels(
@@ -347,6 +348,7 @@ def test_llm_labels_token_and_pooled_modes(
     assert pooled_method.k_context == 0
     assert len(pooled_method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)) == 3
 
+    # The classification splitter already returns one representation per sample, with no token context.
     with pytest.warns(UserWarning, match="k_context is set to 0"):
         classification_method = LLMLabels(
             concept_explainer=NeuronsAsConcepts(classification_splitter),

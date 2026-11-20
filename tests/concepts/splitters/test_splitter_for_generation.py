@@ -82,8 +82,8 @@ def test_get_activations_returns_flattened_tokens_by_default(split_gen: SFG, sen
     assert predictions is None, "Generation splitters should not return predicted classes"
     assert isinstance(activations, torch.Tensor), "Flattened activations should be returned as a tensor"
     assert activations.ndim == 2, f"Expected flattened token activations with shape (ng, d), got {activations.shape}"
-    assert activations.shape[-1] == split_gen.config.hidden_size
-    assert activations.dtype == torch.float32
+    assert activations.shape[-1] == split_gen.config.hidden_size, "Unexpected flattened activation width"
+    assert activations.dtype == torch.float32, "Flattened activations should retain the model dtype"
 
 
 def test_bfloat16_model_outputs_preserve_dtype(sentences: list[str]):
@@ -100,7 +100,7 @@ def test_bfloat16_model_outputs_preserve_dtype(sentences: list[str]):
 
     assert predictions is None, f"Expected predictions to be None, got {predictions}"
     assert isinstance(activations, torch.Tensor), f"Expected activations to be a tensor, got {type(activations)}"
-    assert activations.dtype == torch.bfloat16
+    assert activations.dtype == torch.bfloat16, "Activations should retain the model's bfloat16 dtype"
 
     identity = torch.eye(splitter.config.hidden_size, device=DEVICE, dtype=torch.bfloat16)
     gradients = splitter._get_concept_output_gradients(
@@ -109,7 +109,7 @@ def test_bfloat16_model_outputs_preserve_dtype(sentences: list[str]):
         concepts_to_activations=lambda x: x @ identity,
         targets=[0],
     )
-    assert gradients[0].dtype == torch.bfloat16
+    assert gradients[0].dtype == torch.bfloat16, "Gradients should retain the model's bfloat16 dtype"
 
 
 @pytest.mark.parametrize("include_special_tokens", [False, True])
@@ -129,12 +129,14 @@ def test_flatten_activations_matches_sample_wise_activations(
         flatten_activations=False,
     )
 
-    assert flattened_predictions is None
-    assert sample_wise_predictions is None
+    assert flattened_predictions is None, "Flattened extraction should not return predictions"
+    assert sample_wise_predictions is None, "Sample-wise extraction should not return predictions"
     assert isinstance(flattened_acts, torch.Tensor), "Flattened activations should be a tensor"
     assert isinstance(sample_wise_acts, list), "Sample-wise activations should be returned as a list"
-    assert flattened_acts.dtype == torch.float32
-    assert all(acts.dtype == torch.float32 for acts in sample_wise_acts)
+    assert flattened_acts.dtype == torch.float32, "Flattened activations should keep the model dtype"
+    assert all(acts.dtype == torch.float32 for acts in sample_wise_acts), (
+        "Every sample-wise activation tensor should keep the model dtype"
+    )
     assert len(sample_wise_acts) == len(sentences), (
         f"Expected one activation tensor per input, got {len(sample_wise_acts)} for {len(sentences)} inputs"
     )
@@ -201,8 +203,8 @@ def test_get_activation_and_gradient(split_gen: SFG, sentences: list[str]):
     encoder_weights = decoder_weights.T
 
     sample_wise_acts, predictions = split_gen.get_activations(sentences, flatten_activations=False)
-    assert predictions is None
-    assert isinstance(sample_wise_acts, list)
+    assert predictions is None, "Generation activation extraction should not return predicted classes"
+    assert isinstance(sample_wise_acts, list), "Expected one activation tensor per sample"
 
     grads_list = split_gen._get_concept_output_gradients(
         sentences,
@@ -237,10 +239,10 @@ def test_get_concept_output_gradients_with_explicit_targets(split_gen: SFG, sent
         targets=targets,
     )
 
-    assert len(grads_list) == 1
+    assert len(grads_list) == 1, "A single input should produce one gradient tensor"
     assert grads_list[0].ndim == 3, f"Expected gradients with shape (t, g, c), got {grads_list[0].shape}"
-    assert grads_list[0].shape[0] == len(targets)
-    assert grads_list[0].shape[-1] == hidden
+    assert grads_list[0].shape[0] == len(targets), "Expected one gradient row per requested target"
+    assert grads_list[0].shape[-1] == hidden, "Identity concepts should match the model's hidden size"
 
 
 def test_concept_output_gradients_are_sample_relative(split_gen: SFG, sentences: list[str]):
