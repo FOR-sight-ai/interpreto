@@ -44,7 +44,7 @@ import gc
 import warnings
 from collections.abc import Callable
 from math import ceil
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import torch
 from jaxtyping import Bool, Float
@@ -78,6 +78,12 @@ class TextTokensSplitter(BaseSplitter):
         model_or_repo_id (str | PreTrainedModel): A Hugging Face model ID or a
             pre-loaded text model.
         split_point (str | int): The split location inside the model.
+        token_pooling (TokenPooling | None):
+            If not None, specify how to pool tokens over the sequence dimension.
+            By default activations are of shape ``(n * l, d)``, with pooling, it becomes
+            ``(n, d)``.
+            Possible values are:
+            ``"mean"``, ``"max"``, ``"min"``, ``"signed_max"``, ``"first"``, ``"last"`` or ``None`` (no pooling).
         task (TextTokensTask): NNsight loading task. Either ``"feature-extraction"`` or ``"text-generation"``.
             Use ``"text-generation"`` for causal language models and
             ``"feature-extraction"`` for encoder models.
@@ -109,12 +115,19 @@ class TextTokensSplitter(BaseSplitter):
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | int,
         *,
+        token_pooling: TokenPooling = None,
         task: TextTokensTask | None = None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
         **kwargs,
     ):
+        if token_pooling not in get_args(TokenPooling):
+            raise ValueError(
+                f"Unknown token_pooling: {token_pooling!r}. Expected None, 'mean', 'max', 'min', "
+                "'signed_max', 'first' or 'last'."
+            )
+        self.token_pooling: TokenPooling = token_pooling
         super().__init__(
             model_or_repo_id,
             split_point,
@@ -129,13 +142,12 @@ class TextTokensSplitter(BaseSplitter):
     # Activation extraction
     # ------------------------------------------------------------------
 
-    @staticmethod
     def _pool_activation(
+        self,
         activation: LatentActivations,
-        token_pooling: TokenPooling,
     ) -> LatentActivations:
         """Optionally pool one sample's activations over its sequence dimension."""
-        match token_pooling:
+        match self.token_pooling:
             case None:
                 pooled_activation = activation
             case "mean":
@@ -152,10 +164,7 @@ class TextTokensSplitter(BaseSplitter):
             case "last":
                 pooled_activation = activation[-1:]
             case _:
-                raise ValueError(
-                    f"Unknown token_pooling: {token_pooling!r}. Expected None, 'mean', 'max', 'min', "
-                    "'signed_max', 'first' or 'last'."
-                )
+                assert_never(self.token_pooling)
         return pooled_activation
 
     def _tokenize_and_get_mask(
@@ -214,10 +223,9 @@ class TextTokensSplitter(BaseSplitter):
         *,
         include_special_tokens: bool = False,
         flatten_activations: bool = True,
-        token_pooling: TokenPooling = None,
         forward_kwargs: dict[str, Any] = {},
     ) -> list[LatentActivations] | LatentActivations:
-        """Extract activations from raw inputs.
+        """Extract activations from raw inputs using the configured token pooling.
 
         Args:
             inputs (list[str]): Raw text inputs.
@@ -225,8 +233,6 @@ class TextTokensSplitter(BaseSplitter):
                 (including special tokens but not padding).  If False (default),
                 filter out special tokens using ``tokenizer.all_special_ids``.
             flatten_activations (bool): Whether to flatten the activations into a single tensor of shape (n*g, d).
-            token_pooling (TokenPooling): Optional pooling applied to the retained
-                tokens of each sample.
             forward_kwargs (dict[str, Any]): Additional keyword arguments passed to the model forward pass.
 
         Returns:
@@ -245,7 +251,7 @@ class TextTokensSplitter(BaseSplitter):
 
         # Filter out special tokens and move public activations to CPU.
         granular_activations = [
-            self._pool_activation(acts[mask], token_pooling).detach().cpu().clone()
+            self._pool_activation(acts[mask]).detach().cpu().clone()
             for acts, mask in zip(full_activations, tokens_mask, strict=True)
         ]
 
@@ -260,12 +266,11 @@ class TextTokensSplitter(BaseSplitter):
         inputs: list[str],
         include_special_tokens: bool = False,
         flatten_activations: bool = True,
-        token_pooling: TokenPooling = None,
         tqdm_bar: bool = False,
         forward_kwargs: dict[str, Any] = {},
         **kwargs,
     ) -> tuple[list[LatentActivations] | LatentActivations, None]:
-        """Extract per-token activations at the split point for a list of text inputs.
+        """Extract token-level or pooled activations at the split point.
 
         Iterates over inputs in batches and delegates each batch to
         ``inputs_to_activations``.
@@ -278,9 +283,6 @@ class TextTokensSplitter(BaseSplitter):
             flatten_activations (bool): If True (default), flatten the activations.
                 Into a single tensor (n*g, d). Where g varies if all tokens are included or not.
                 If False, returns a list of sample-wise activations.
-            token_pooling (TokenPooling): Optional pooling applied to the retained
-                tokens of each sample. Supported values are ``"mean"``, ``"max"``,
-                ``"min"``, ``"signed_max"``, ``"first"``, and ``"last"``.
             tqdm_bar (bool): Whether to display a progress bar.
             forward_kwargs (dict[str, Any]): Additional kwargs for the model forward pass.
             **kwargs (dict[str, Any]): Unused, kept for API compatibility.
@@ -311,7 +313,6 @@ class TextTokensSplitter(BaseSplitter):
                     batch_texts,
                     include_special_tokens=include_special_tokens,
                     flatten_activations=False,
-                    token_pooling=token_pooling,
                     forward_kwargs=forward_kwargs,
                 )
                 assert isinstance(batch_activations, list)

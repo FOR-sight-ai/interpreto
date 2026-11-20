@@ -17,8 +17,9 @@ Set `include_special_tokens=True` to retain special tokens, or
 
 ## Pooling
 
-Use `token_pooling` to obtain one representation per input. Supported values
-are `"mean"`, `"max"`, `"min"`, `"signed_max"`, `"first"`, and `"last"`.
+Set `token_pooling` when creating the splitter to obtain one representation per
+input. Supported values are `"mean"`, `"max"`, `"min"`, `"signed_max"`, `"first"`,
+and `"last"`. The default, `None`, keeps one representation per retained token.
 Padding is always excluded, and special tokens are included only when
 `include_special_tokens=True`.
 
@@ -29,20 +30,19 @@ splitter = TextTokensSplitter(
     "gpt2",
     split_point=10,
     task="text-generation",
+    # token_pooling=None,  # default, flattened representations, one per token (n * l, d)
+    token_pooling="mean",  # one representation per sample (n, d)
     batch_size=8,
     device_map="auto",
 )
 
-# One row per retained token.
-token_activations, _ = splitter.get_activations(texts)
-
-# One row per input.
-sample_activations, _ = splitter.get_activations(texts, token_pooling="mean")
+sample_activations, _ = splitter.get_activations(texts)
 ```
 
 Concept-to-output gradients are available only with
-`task="text-generation"`. They are computed sample by sample and returned as
-one tensor per input with shape `(n_targets, n_tokens, n_concepts)`.
+`task="text-generation"`. They are computed sample by sample at token level,
+regardless of `token_pooling`, and returned as one tensor per input with shape
+`(n_targets, n_tokens, n_concepts)`.
 
 ## API Reference
 

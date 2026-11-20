@@ -61,11 +61,12 @@ model = TextTokensSplitter(
     "gpt2",
     split_point="transformer.h.6",
     task="text-generation",
+    token_pooling="mean",
     device_map="cuda",
 )
 
 # Aggregate retained tokens into one vector per sample - shape (n, d).
-activations, _ = model.get_activations(texts, token_pooling="mean")
+activations, _ = model.get_activations(texts)
 
 probe = CosineCentroidProbe()
 explainer = ProbeExplainer(model, concept_model=probe)
@@ -74,11 +75,23 @@ explainer.fit(activations, labels)
 
 #### Strategy B: Per-token activations (flattened)
 
-The default output contains one activation per retained token, flattened across
-samples. This is appropriate when concepts are local properties
-(e.g., named-entity type, part-of-speech) and labels are provided per-token.
+With the default `token_pooling=None`, the output contains one activation per
+retained token, flattened across samples. This is appropriate when concepts are
+local properties (e.g., named-entity type, part-of-speech) and labels are provided per-token.
 
 ```python
+from interpreto import TextTokensSplitter
+from interpreto.concepts import ProbeExplainer
+from interpreto.concepts.probes import LinearRegressionProbe
+
+model = TextTokensSplitter(
+    "gpt2",
+    split_point="transformer.h.6",
+    task="text-generation",
+    token_pooling=None,  # default
+    device_map="cuda",
+)
+
 # One vector per retained token - shape (n_tokens, d).
 activations, _ = model.get_activations(texts)
 
