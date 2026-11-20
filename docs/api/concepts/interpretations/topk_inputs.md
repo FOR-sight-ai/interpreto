@@ -9,11 +9,13 @@ It provides a **global** interpretation by finding which elements in your datase
 
 Display units follow the splitter and pooling mode:
 
-- Classification uses whole input samples because each input has one representation.
+- Classification ranks whole input samples by default because each input has one representation.
 - Text splitting without pooling uses individual retained tokens.
 - A `TextTokensSplitter` with `token_pooling` set to a pooling mode uses whole input samples.
 - `use_vocab=True` ranks independently encoded vocabulary entries.
-- `use_unique_words=True` ranks independently encoded words or n-grams and requires a pooled representation.
+- With one representation per input, `use_unique_words=True` extracts unique words from the dataset and encodes each
+  word as a separate input before ranking. Pass an integer such as `use_unique_words=3` to include up to 3-grams.
+  This does not aggregate token activations into word-level activations from the original samples.
 
 Precomputed `latent_activations` or `concepts_activations` must match that mode.
 Pooling is not inferred from tensor shapes.
