@@ -25,10 +25,10 @@
 """
 Base class for model splitters.
 
-``BaseSplitter`` is the abstract parent of ``ModelWithSplitPoints``,
-``SplitterForClassification``, and ``SplitterForGeneration``.
+``BaseSplitter`` is the abstract parent of ``SplitterForClassification`` and
+``TextTokensSplitter``.
 It encapsulates the common initialization logic (NNsight wrapping, tokenizer
-validation, split point resolution, padding helpers) and defines the abstract
+validation, split point resolution) and defines the abstract
 interface that concept explainers rely on.
 """
 
@@ -39,24 +39,17 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import torch
-from nnsight.modeling.language import LanguageModel
-from transformers import AutoModel, PretrainedConfig, PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerFast
-
-from interpreto.commons.granularity import GranularityAggregationStrategy
-from interpreto.concepts.splitters.splitting_utils import (
-    get_layer_by_idx,
-    validate_path,
-    walk_modules,
-)
+from nnsight import Envoy, TransformersModel
+from transformers import PreTrainedModel, PreTrainedTokenizer, PreTrainedTokenizerFast
 
 # Prevents:
-# UserWarning: Module ... of type ... has pre-defined a `output` attribute.
-# nnsight access for `output` will be mounted at `.nns_output` instead of `.output` for this module only.
+# UserWarning: Module ... has a submodule named 'output', which nnsight already serves ...
+# nnsight access for `output` will be mounted at `.E_output` instead of `.output` for this module only.
 warnings.filterwarnings(
     "ignore",
     category=UserWarning,
     module="nnsight.intervention.envoy",
-    message=r".*has pre-defined a `output` attribute.*",
+    message=r".*submodule named 'output'.*",
 )
 
 
@@ -64,13 +57,13 @@ class InitializationError(ValueError):
     """Raised to signal a problem with model initialization."""
 
 
-class BaseSplitter(LanguageModel, ABC):
+class BaseSplitter(TransformersModel, ABC):
     """Abstract base class for all Interpreto model splitters.
 
     Provides:
-    - Shared initialization (NNsight model loading, input validation, tokenizer management)
+    - Shared initialization (NNsight model loading and tokenizer management)
     - Split point property with validation
-    - Helpers for handling output tuples and padding tensors
+    - Helpers for handling output tuples
     - Abstract interface expected by concept explainers
 
     Subclasses must implement ``get_activations``, ``_get_concept_output_gradients``,
@@ -83,32 +76,26 @@ class BaseSplitter(LanguageModel, ABC):
             * A ``str`` corresponding to the local path of a folder containing a compatible checkpoint.
             * A preloaded ``transformers.PreTrainedModel`` object.
 
-        split_point (str | int): The split location inside the model.
+        split_point (str | int | None): The split location inside the model.
+            Subclasses may accept ``None`` and resolve it automatically.
 
-        automodel (type[AutoModel] | None): Hugging Face AutoClass for loading the model.
-            Required when ``model_or_repo_id`` is a string.
+        task (str): Hugging Face pipeline task selecting the model architecture.
 
         tokenizer (PreTrainedTokenizer | PreTrainedTokenizerFast | None): Custom tokenizer.
-            Required when providing a model instance.
-
-        config (PretrainedConfig | None): Custom configuration for the loaded model.
+            If None, NNsight resolves it automatically when possible.
 
         batch_size (int): Batch size for batched operations.
 
         device_map (torch.device | str | None): Device on which to load the model.
     """
 
-    # Class-level enums exposed for the concept explainer interface
-    aggregation_strategies = GranularityAggregationStrategy
-
     def __init__(
         self,
         model_or_repo_id: str | PreTrainedModel,
         split_point: str | int | None,
-        *args: tuple[Any],
-        automodel: type[AutoModel] | None = None,
+        *,
+        task: str | None,
         tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | None = None,
-        config: PretrainedConfig | None = None,
         batch_size: int = 1,
         device_map: torch.device | str | None = None,
         **kwargs,
@@ -116,74 +103,34 @@ class BaseSplitter(LanguageModel, ABC):
         """Initialize a BaseSplitter.
 
         Raises:
-            InitializationError: If the model cannot be loaded due to a missing ``tokenizer`` or ``automodel``.
+            InitializationError: If the tokenizer cannot be resolved.
             ValueError: If ``device_map`` is set to ``'auto'`` with a pre-loaded model.
-            TypeError: If ``model_or_repo_id`` is not a ``str`` or a ``PreTrainedModel``.
         """
         # ------------------------------------------------------------------
-        # Input validation
-        if isinstance(model_or_repo_id, PreTrainedModel):
-            if tokenizer is None:
-                raise InitializationError(
-                    "Tokenizer is not set. When providing a model instance, the tokenizer must be set."
-                )
-        elif isinstance(model_or_repo_id, str):
-            if automodel is None:
-                raise InitializationError(
-                    "Model autoclass not found.\n"
-                    "The model class can be omitted if a pre-loaded model is passed to `model_or_repo_id` "
-                    "param.\nIf an HF Hub ID is used, the corresponding autoclass must be specified in `automodel`.\n"
-                    "Example: BaseSplitter('bert-base-uncased', automodel=AutoModelForMaskedLM, ...)"
-                )
-        else:
-            raise TypeError(
-                f"Invalid model_or_repo_id type: {type(model_or_repo_id)}. "
-                "Expected `str` or `transformers.PreTrainedModel`."
-            )
-
-        # ------------------------------------------------------------------
-        # Model loading through nnsight.LanguageModel
+        # Model loading through nnsight.TransformersModel
         super().__init__(
             model_or_repo_id,
-            *args,
-            config=config,
-            tokenizer=tokenizer,  # type: ignore (under specification from NNsight)
-            automodel=automodel,  # type: ignore (under specification from NNsight)
+            task=task,
+            tokenizer=tokenizer,
             device_map=device_map,
             **kwargs,
         )
-
-        # ------------------------------------------------------------------
-        # Split point setup
-        self._model_paths = list(walk_modules(self._model))
-        self.split_point = split_point  # uses the property setter (overridable by subclasses)
-        if not hasattr(self, "_split_point") or self._split_point is None:
-            raise ValueError(
-                "split_point was not resolved during initialization. "
-                "Either pass a valid split_point or ensure the subclass setter resolves it."
-            )
-        self._model: PreTrainedModel  # narrow the NNsight type
-
-        if self.repo_id is None:
-            self.repo_id = self._model.config.name_or_path  # type: ignore (under specification from NNsight)
 
         self.batch_size = batch_size
 
         # ------------------------------------------------------------------
         # Device handling for pre-loaded models (nnsight ignores device_map in this case)
-        if not isinstance(model_or_repo_id, str):
-            if device_map is not None:
-                if device_map == "auto":
-                    raise ValueError(
-                        "'auto' device_map is only supported when loading a generation model from a repository id. "
-                        "Please specify a device_map, e.g. 'cuda' or 'cpu'."
-                    )
-                self.to(device_map)  # type: ignore (under specification from NNsight)
+        if not isinstance(model_or_repo_id, str) and device_map is not None:
+            if device_map == "auto":
+                raise ValueError("'auto' device_map is only supported when loading from a repository id.")
+            self.to(device_map)
 
         # ------------------------------------------------------------------
         # Final validation
         if self.tokenizer is None:
-            raise ValueError("Tokenizer is not set. When providing a model instance, the tokenizer must be set.")
+            raise InitializationError("Tokenizer could not be resolved automatically.")
+
+        self.split_point = split_point  # type: ignore[assignment]
 
     # ======================================================================
     # Split point property
@@ -208,30 +155,48 @@ class BaseSplitter(LanguageModel, ABC):
             raise ValueError(
                 "split_point cannot be None. Provide a valid split point path (str) or layer index (int)."
             )
-        if isinstance(split_point, int):
-            str_split = get_layer_by_idx(split_point, model_paths=self._model_paths)
-        else:
-            str_split = split_point
+        prefix = f"{self.path}."
+        modules = [
+            (path.removeprefix(prefix), module) for path, module in self.named_modules() if path.startswith(prefix)
+        ]
 
-        validate_path(self._model, str_split)
-        self._split_point: str = str_split
+        if isinstance(split_point, int):
+            matches = [(path, module) for path, module in modules if path.endswith(f".{split_point}")]
+            if len(matches) != 1:
+                raise ValueError(f"Layer {split_point} matched {[path for path, _ in matches]}")
+            path, module = matches[0]
+        else:
+            try:
+                path, module = next((path, module) for path, module in modules if path == split_point)
+            except StopIteration:
+                raise ValueError(f"The provided split point '{split_point}' is not valid.") from None
+
+        self._split_point = path
+        self._split_module = module
+
+    @property
+    def split_module(self) -> Envoy:
+        """The NNsight module at the split point."""
+        return self._split_module
 
     # ======================================================================
     # Shared helpers
     # ======================================================================
 
-    def _manage_output_tuple(self, activations: torch.Tensor | tuple[torch.Tensor], split_point: str) -> torch.Tensor:
+    def _extract_hidden_state(
+        self, activations: torch.Tensor | tuple, split_point: str
+    ) -> tuple[torch.Tensor, int | None]:
         """Extract the (n, l, d) hidden state from a possibly-tuple output at a split point.
 
-        If the output is a tuple of tensors, finds the 3D tensor in it (or uses
-        ``output_tuple_index`` if set).
+        If the output is a tuple, finds the 3D tensor in it.
 
         Args:
             activations: The raw output at the split point.
             split_point: The split point path (for error messages).
 
         Returns:
-            The 3D activations tensor of shape (n, l, d).
+            The 3D activations tensor and its index in the output tuple. The
+            index is None when the output is directly a tensor.
 
         Raises:
             ValueError: If activations are not a 3D tensor.
@@ -246,7 +211,7 @@ class BaseSplitter(LanguageModel, ABC):
                     f"got a tensor of shape {activations.shape}. "
                     "It is recommended to look for another split point."
                 )
-            return activations
+            return activations, None
 
         if not isinstance(activations, tuple):
             raise TypeError(
@@ -254,18 +219,14 @@ class BaseSplitter(LanguageModel, ABC):
                 f"Wrong type of activations. Expected torch.Tensor or tuple[torch.Tensor], got {type(activations)}: {activations}"
             )
 
-        if hasattr(self, "output_tuple_index"):
-            return activations[self.output_tuple_index]  # type: ignore
-
         for i, candidate in enumerate(activations):
-            if candidate.dim() == 3:
-                self.output_tuple_index: int | None = i
-                return candidate
+            if isinstance(candidate, torch.Tensor) and candidate.dim() == 3:
+                return candidate, i
 
         raise RuntimeError(
             f"Failed to manipulate activations for split point '{split_point}'. "
             "Activations are tuples, and no tensor with three dimensions was found. "
-            f"Found tensors of shape: {(t.shape for t in activations)}. "
+            f"Found members: {[type(member).__name__ for member in activations]}. "
             "It is recommended to look for another split point."
         )
 

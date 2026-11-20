@@ -28,11 +28,12 @@ Bases Classes for Concept-based Explainers
 
 from __future__ import annotations
 
+import itertools
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from functools import wraps
 from types import SimpleNamespace
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 import torch
 from jaxtyping import Float
@@ -40,10 +41,6 @@ from transformers.tokenization_utils_base import BatchEncoding
 
 from interpreto._vendor.overcomplete.base import BaseDictionaryLearning
 from interpreto.concepts.splitters.base_splitter import BaseSplitter
-from interpreto.concepts.splitters.model_with_split_points import (
-    ActivationGranularity,
-    GranularityAggregationStrategy,
-)
 from interpreto.concepts.splitters.splitter_for_classification import SplitterForClassification
 from interpreto.typing import (
     ConceptModelProtocol,
@@ -95,14 +92,14 @@ class ModelForInputsToConcepts:
                 f"The split model must be a SplitterForClassification model. Got {splitter.__class__.__name__}."
             )
 
-        self.to(self.concept_explainer.splitter.device)  # type: ignore
-
+        # Lazy NNsight models have meta-device weights until their first trace.
+        # Moving them eagerly would fail, so placement is deferred to the trace.
         self.nb_concepts = concept_explainer.concept_model.nb_concepts
 
         # Expose a minimal config so InferenceWrapper.__init__ and setup_token_ids can work
         self.config = SimpleNamespace(
             pad_token_id=splitter.tokenizer.pad_token_id,
-            vocab_size=getattr(splitter._model.config, "vocab_size", None),
+            vocab_size=getattr(splitter.config, "vocab_size", None),
         )
 
     def eval(self):
@@ -111,7 +108,7 @@ class ModelForInputsToConcepts:
 
     def resize_token_embeddings(self, new_num_tokens: int):
         """No-op: the concept model does not have token embeddings."""
-        self.concept_explainer.splitter._model.resize_token_embeddings(new_num_tokens)
+        self.concept_explainer.splitter.resize_token_embeddings(new_num_tokens)
 
     def __call__(self, **kwargs):
         """Run inputs → activations → concepts and return a BaseModelOutput-like object.
@@ -128,9 +125,12 @@ class ModelForInputsToConcepts:
         Returns:
             torch.device: The device on which the model is loaded.
         """
-        if self.concept_explainer.splitter.device != self.concept_explainer.device:
-            self.concept_explainer.to(self.concept_explainer.splitter.device)  # type: ignore
-        return self.concept_explainer.splitter.device  # type: ignore
+        splitter = self.concept_explainer.splitter
+        if getattr(splitter, "dispatched", True):
+            if splitter.device != self.concept_explainer.device:  # type: ignore
+                self.concept_explainer.to(splitter.device)  # type: ignore
+            return splitter.device  # type: ignore
+        return self.concept_explainer.device
 
     @device.setter
     def device(self, device: torch.device):
@@ -146,10 +146,14 @@ class ModelForInputsToConcepts:
         """
         Move the model to the specified device.
 
+        An undispatched splitter is left in place so its next trace can dispatch
+        the real weights. Only the concept model is moved eagerly.
+
         Args:
             device (torch.device): The device to which the model should be moved.
         """
-        self.concept_explainer.splitter.to(device)  # type: ignore
+        if getattr(self.concept_explainer.splitter, "dispatched", True):
+            self.concept_explainer.splitter.to(device)  # type: ignore
         self.concept_explainer.to(device)  # type: ignore
 
 
@@ -234,6 +238,32 @@ class ConceptEncoderExplainer(ABC, Generic[ConceptModel]):
         """Set the device on which the concept model is stored."""
         self.to(device)
 
+    def _normalize_to_concept_model(
+        self, inputs: torch.Tensor, *, move_device: bool = True, fallback_dtype: torch.dtype | None = None
+    ) -> torch.Tensor:
+        """Move floating inputs to the concept model's dtype and device.
+
+        A bit complex because concept models can come from overcomplete.
+
+        Models without floating parameters or buffers impose no dtype. Casts
+        remain differentiable, so concept-gradient paths are preserved. Device
+        movement can be disabled for datasets that are transferred in batches.
+        ``fallback_dtype`` can define the initialization dtype for an unfitted
+        model that does not expose floating state yet.
+        """
+        target_dtype = fallback_dtype
+        if isinstance(self.concept_model, torch.nn.Module):
+            concept_model = cast(torch.nn.Module, self.concept_model)
+            for tensor in itertools.chain(concept_model.parameters(), concept_model.buffers()):
+                if tensor.is_floating_point():
+                    target_dtype = tensor.dtype
+                    break
+
+        device = self.device if move_device else inputs.device
+        if inputs.is_floating_point() and target_dtype is not None:
+            return inputs.to(device=device, dtype=target_dtype)
+        return inputs.to(device=device)
+
     @abstractmethod
     def fit(self, activations: LatentActivations, *args, **kwargs) -> Any:
         """Fits `concept_model` on the given activations.
@@ -296,7 +326,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
     model, which defines the `encode` and `decode` methods for encoding and decoding activations into concepts.
 
     Attributes:
-        splitter (ModelWithSplitPoints): The model to apply the explanation on.
+        splitter (BaseSplitter): The model to apply the explanation on.
             The split point is determined by the model's `split_point` attribute.
         concept_model (BaseDictionaryLearning): The model used to extract concepts from the
             activations of  `splitter`. The only assumption for classes inheriting from this class is
@@ -338,9 +368,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The encoded concept activations.
         """
-        if self.device != activations.device:
-            activations = activations.to(self.device, non_blocking=True)
-        return self.concept_model.encode(activations)  # type: ignore
+        return self.concept_model.encode(self._normalize_to_concept_model(activations))  # type: ignore
 
     @check_fitted
     def concepts_to_activations(self, concepts: ConceptsActivations) -> torch.Tensor:  # LatentActivations
@@ -352,9 +380,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Returns:
             The decoded model activations.
         """
-        if self.device != concepts.device:
-            concepts = concepts.to(self.device, non_blocking=True)
-        return self.concept_model.decode(concepts)  # type: ignore
+        return self.concept_model.decode(self._normalize_to_concept_model(concepts))  # type: ignore
 
     @check_fitted
     def get_dictionary(self) -> torch.Tensor:  # TODO: add this to tests
@@ -388,8 +414,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         self,
         inputs: torch.Tensor | list[str] | BatchEncoding,
         targets: list[int] | None = None,
-        activation_granularity: ActivationGranularity = ActivationGranularity.TOKEN,
-        aggregation_strategy: GranularityAggregationStrategy = GranularityAggregationStrategy.MEAN,
         concepts_x_gradients: bool = True,
         normalization: bool = True,
         tqdm_bar: bool = False,
@@ -409,7 +433,7 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
         Given a set of samples $X$, and the functions $(h, t, t^{-1}, g)$
         This function first compute $C = t(A) = t \\circ h(X)$, then returns $\\nabla{f_{co}}(C)$.
 
-        In practice all computations are done by `ModelWithSplitPoints._get_concept_output_gradients`,
+        In practice all computations are done by `BaseSplitter._get_concept_output_gradients`,
         which relies on NNsight. The current method only forwards the $t$ and $t^{-1}$,
         respectively `self.activations_to_concepts` and `self.concepts_to_activations` methods.
 
@@ -423,47 +447,6 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 The `t` dimension of the returned tensor is equal to the number of selected targets.
                 (For classification, those are the classes logits and for generation, those are the most probable tokens probabilities).
 
-            activation_granularity (ActivationGranularity):
-                The granularity of the activations to use for the attribution.
-                It is highly recommended to to use the same granularity as the one used in the `fit` method.
-                Possibles values are:
-
-                - ``ModelWithSplitPoints.activation_granularities.CLS_TOKEN``:
-                    only the first token (e.g. ``[CLS]``) activation is returned ``(batch, d_model)``.
-
-                - ``ModelWithSplitPoints.activation_granularities.ALL_TOKENS``:
-                    every token activation is treated as a separate element ``(batch x seq_len, d_model)``.
-
-                - ``ModelWithSplitPoints.activation_granularities.TOKEN``: remove special tokens.
-
-                - ``ModelWithSplitPoints.activation_granularities.WORD``:
-                    aggregate by words following the split defined by
-                    :class:`~interpreto.commons.granularity.Granularity.WORD`.
-
-                - ``ModelWithSplitPoints.activation_granularities.SENTENCE``:
-                    aggregate by sentences following the split defined by
-                    :class:`~interpreto.commons.granularity.Granularity.SENTENCE`.
-
-            aggregation_strategy:
-                Strategy to aggregate token activations into larger inputs granularities.
-                Applied for `WORD` and `SENTENCE` activation strategies.
-                Token activations of shape  n * (l, d) are aggregated on the sequence length dimension.
-                The concatenated into (ng, d) tensors.
-                Existing strategies are:
-
-                - ``ModelWithSplitPoints.aggregation_strategies.SUM``:
-                    Tokens activations are summed along the sequence length dimension.
-
-                - ``ModelWithSplitPoints.aggregation_strategies.MEAN``:
-                    Tokens activations are averaged along the sequence length dimension.
-
-                - ``ModelWithSplitPoints.aggregation_strategies.MAX``:
-                    The maximum of the token activations along the sequence length dimension is selected.
-
-                - ``ModelWithSplitPoints.aggregation_strategies.SIGNED_MAX``:
-                    The maximum of the absolute value of the activations multiplied by its initial sign.
-                    signed_max([[-1, 0, 1, 2], [-3, 1, -2, 0]]) = [-3, 1, -2, 2]
-
             concepts_x_gradients (bool):
                 If the resulting gradients should be multiplied by the concepts activations.
                 True by default (similarly to attributions), because of mathematical properties.
@@ -472,16 +455,15 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
             normalization (bool):
                 Whether to normalize the gradients.
                 Gradients will be normalized on the concept (c) and sequence length (g) dimensions.
-                Such that for a given sample-target-granular pair,
+                Such that for a given sample-target pair,
                 the sum of the absolute values of the gradients is equal to 1.
-                (The granular elements depend on the :arg:`activation_granularity`).
 
             tqdm_bar (bool):
                 Whether to display a progress bar.
 
             batch_size (int | None):
                 Batch size for the model.
-                It might be different from the one used in `ModelWithSplitPoints.get_activations`
+                It might be different from the one used in `BaseSplitter.get_activations`
                 because gradients have a much larger impact on the memory.
 
         Returns:
@@ -497,17 +479,12 @@ class ConceptAutoEncoderExplainer(ConceptEncoderExplainer[BaseDictionaryLearning
                 f"Current explainer class: {self.__class__.__name__}."
             )
 
-        # put everything on device
-        self.to(self.splitter.device)  # type: ignore
-
         # forward all computations to
         gradients = self.splitter._get_concept_output_gradients(
             inputs=inputs,
             targets=targets,
             activations_to_concepts=self.activations_to_concepts,
             concepts_to_activations=self.concepts_to_activations,
-            activation_granularity=activation_granularity,
-            aggregation_strategy=aggregation_strategy,
             concepts_x_gradients=concepts_x_gradients,
             tqdm_bar=tqdm_bar,
             batch_size=batch_size,

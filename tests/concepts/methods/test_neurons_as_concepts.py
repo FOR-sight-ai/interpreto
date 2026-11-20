@@ -31,13 +31,13 @@ from __future__ import annotations
 import pytest
 import torch
 
+from interpreto import SplitterForClassification
 from interpreto.concepts import NeuronsAsConcepts
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def test_neurons_as_concepts(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
+def test_neurons_as_concepts(splitted_encoder_ml: SplitterForClassification, activations: torch.Tensor):
     """
     Test that the concept encoding and decoding of the `NeuronsAsConcepts` is the identity
     """

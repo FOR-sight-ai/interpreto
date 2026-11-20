@@ -253,6 +253,8 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
                 f"got {activations.shape[0]} and {labels.shape[0]}."
             )
 
+        if activations.dtype in (torch.float16, torch.bfloat16):
+            activations = activations.to(dtype=torch.float32)
         self.concept_model.fit(activations, labels)
 
     @check_fitted
@@ -265,8 +267,4 @@ class ProbeExplainer(ConceptEncoderExplainer[Probe]):
         Returns:
             Concept scores of shape `(n, c)`.
         """
-        # Use the _fitted_flag buffer (always present) to infer the probe's device.
-        probe_device = self.concept_model._fitted_flag.device  # type: ignore
-        if activations.device != probe_device:
-            activations = activations.to(probe_device)  # type: ignore
-        return self.concept_model.encode(activations)
+        return self.concept_model.encode(self._normalize_to_concept_model(activations))

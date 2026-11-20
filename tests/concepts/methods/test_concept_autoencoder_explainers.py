@@ -31,6 +31,7 @@ from __future__ import annotations
 import pytest
 import torch
 
+from interpreto import SplitterForClassification, TextTokensSplitter
 from interpreto.concepts import (
     BatchTopKSAEConcepts,
     Cockatiel,
@@ -51,7 +52,6 @@ from interpreto.concepts import (
 )
 from interpreto.concepts.methods.overcomplete import DictionaryLearningExplainer, SAEExplainer
 from interpreto.concepts.methods.sklearn_wrappers import SkLearnWrapperExplainer
-from interpreto.concepts.splitters.model_with_split_points import ActivationGranularity, ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -76,7 +76,7 @@ ALL_CONCEPT_METHODS = [
 
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
 def test_overcomplete_cbe(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     method_class: type[ConceptAutoEncoderExplainer],
 ):
@@ -153,21 +153,11 @@ def test_overcomplete_cbe(
 
 
 @pytest.mark.parametrize("method_class", ALL_CONCEPT_METHODS)
-@pytest.mark.parametrize(
-    "granularity",
-    [
-        ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
-        ModelWithSplitPoints.activation_granularities.TOKEN,
-        ModelWithSplitPoints.activation_granularities.WORD,
-        ModelWithSplitPoints.activation_granularities.SENTENCE,
-    ],
-)
 def test_concept_output_gradient(
-    splitted_encoder_ml: ModelWithSplitPoints,
+    splitted_encoder_ml: SplitterForClassification,
     activations: torch.Tensor,
     sentences: list[str],
     method_class: type[ConceptAutoEncoderExplainer],
-    granularity: ActivationGranularity,
 ):
     nb_concepts = 3
 
@@ -200,7 +190,6 @@ def test_concept_output_gradient(
     gradients = cbe.concept_output_gradient(
         sentences,
         targets=None,
-        activation_granularity=granularity,
         concepts_x_gradients=True,
     )
     assert gradients is not None, f"{method_class.__name__}.concept_output_gradient returned None"
@@ -210,48 +199,103 @@ def test_concept_output_gradient(
     assert len(gradients) == len(sentences), (
         f"Gradients list length mismatch: got {len(gradients)}, expected {len(sentences)}"
     )
-    for grad, sentence in zip(gradients, sentences, strict=True):
+    for grad in gradients:
         assert grad is not None, "A gradient entry is None"
         assert isinstance(grad, torch.Tensor), f"Gradient entry has type {type(grad)} instead of torch.Tensor"
+        assert grad.shape[1:] == (1, concepts_dim), (
+            f"Gradient shape mismatch: got {tuple(grad.shape)}, expected {(1, 1, concepts_dim)}"
+        )
 
-        tokenizer = splitted_encoder_ml.tokenizer
-        tokens = tokenizer(
-            sentence,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            return_offsets_mapping=True,
-        )
-        if granularity == ModelWithSplitPoints.activation_granularities.CLS_TOKEN:
-            nb_granularity_elements = 1
-        else:
-            indices_list = granularity.value.get_indices(tokens, tokenizer)  # type: ignore
-            nb_granularity_elements = len(indices_list[0])
-        assert grad.shape[1:] == (nb_granularity_elements, concepts_dim), (
-            "Gradient shape mismatch: got "
-            f"{tuple(grad.shape)}, expected {(1, nb_granularity_elements, concepts_dim)} for sentence '{sentence}'"
-        )
+
+def test_mixed_precision_encode_decode_preserves_gradients(
+    sentences: list[str],
+):
+    """Concept inputs are cast to model dtype without breaking gradients."""
+    splitter = SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+    activations, _ = splitter.get_activations(sentences)
+    explainer = PCAConcepts(splitter, nb_concepts=3, device=DEVICE)
+    explainer.fit(activations)
+
+    high_precision_activations = activations.to(torch.float64).requires_grad_(True)
+    concepts = explainer.activations_to_concepts(high_precision_activations)
+    decoded = explainer.concepts_to_activations(concepts.to(torch.float64))
+
+    assert concepts.dtype == torch.float32
+    assert decoded.dtype == torch.float32
+    gradients = torch.autograd.grad(decoded.sum(), high_precision_activations)[0]
+    assert torch.isfinite(gradients).all()
+
+
+def test_sae_fit_normalizes_dtype_without_moving_dataset(monkeypatch):
+    """SAE fitting keeps the dataset on its input device for batched transfer."""
+    splitter = SplitterForClassification("hf-internal-testing/tiny-random-bert", device_map=DEVICE)
+    explainer = VanillaSAEConcepts(splitter, nb_concepts=3, device=DEVICE)
+    activations = torch.randn(4, splitter.config.hidden_size, dtype=torch.float64)
+    observed = {}
+
+    def inspect_dataloader(**kwargs):
+        dataset_activations = kwargs["dataloader"].dataset.tensors[0]
+        observed["device"] = dataset_activations.device
+        observed["dtype"] = dataset_activations.dtype
+        return {}
+
+    monkeypatch.setattr("interpreto.concepts.methods.overcomplete.oc_sae.train_sae", inspect_dataloader)
+
+    explainer.fit(activations, nb_epochs=1, batch_size=2)
+
+    assert observed == {"device": activations.device, "dtype": torch.float32}
+
+
+def test_semi_nmf_fit_normalizes_activations_to_model_dtype(
+    splitted_encoder_ml: SplitterForClassification,
+):
+    """Semi-NMF factors and mixed-precision activations use the same dtype."""
+    explainer = SemiNMFConcepts(splitted_encoder_ml, nb_concepts=3, device=DEVICE)
+    activations = torch.randn(4, splitted_encoder_ml.config.hidden_size, dtype=torch.bfloat16)
+
+    explainer.fit(activations, max_iter=1)
+
+    assert explainer.get_dictionary().dtype == torch.get_default_dtype()
+    assert explainer.get_dictionary().device.type == torch.device(DEVICE).type
+
+
+def test_concept_output_gradient_uses_splitter_contract(
+    splitted_encoder_ml: SplitterForClassification, sentences: list[str]
+):
+    """Concept gradients delegate shape semantics to the task-specific splitter."""
+    explainer = NeuronsAsConcepts(splitted_encoder_ml)
+
+    gradients = explainer.concept_output_gradient(sentences[:2], targets=[0], normalization=False)
+
+    assert len(gradients) == 2
+    assert all(gradient.shape == (1, 1, splitted_encoder_ml.config.hidden_size) for gradient in gradients)
+
+
+def test_generation_concept_output_gradient_uses_splitter_contract(
+    text_tokens_splitter: TextTokensSplitter, sentences: list[str]
+):
+    """Generation splitters retain their token-level gradient dimension."""
+    explainer = NeuronsAsConcepts(text_tokens_splitter)
+
+    gradients = explainer.concept_output_gradient(sentences[:1], targets=[0], normalization=False)
+
+    assert len(gradients) == 1
+    assert gradients[0].shape[0] == 1
+    assert gradients[0].shape[1] > 1
+    assert gradients[0].shape[2] == text_tokens_splitter.config.hidden_size
 
 
 if __name__ == "__main__":
-    from transformers import AutoModelForMaskedLM
-
-    from interpreto import ModelWithSplitPoints
-
     sentences: list[str] = [
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
         "Interpreto is magical",
         "Testing interpreto",
     ]
-    splitted_encoder_ml: ModelWithSplitPoints = ModelWithSplitPoints(
+    splitted_encoder_ml = SplitterForClassification(
         "hf-internal-testing/tiny-random-bert",
-        split_point="bert.encoder.layer.1.output",
-        automodel=AutoModelForMaskedLM,  # type: ignore
         device_map=DEVICE,
     )
-    activations, _ = splitted_encoder_ml.get_activations(
-        sentences, activation_granularity=ModelWithSplitPoints.activation_granularities.ALL_TOKENS
-    )
+    activations, _ = splitted_encoder_ml.get_activations(sentences)
     test_overcomplete_cbe(
         splitted_encoder_ml=splitted_encoder_ml,
         activations=activations,  # type: ignore
@@ -262,5 +306,4 @@ if __name__ == "__main__":
         activations=activations,  # type: ignore
         sentences=sentences,
         method_class=SemiNMFConcepts,
-        granularity=ModelWithSplitPoints.activation_granularities.CLS_TOKEN,
     )

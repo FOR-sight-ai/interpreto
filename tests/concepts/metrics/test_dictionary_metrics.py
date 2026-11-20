@@ -27,9 +27,9 @@ from __future__ import annotations
 import pytest
 import torch
 
+from interpreto import SplitterForClassification
 from interpreto.concepts import NeuronsAsConcepts
 from interpreto.concepts.metrics import ConceptMatchingAlgorithm, Stability
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -65,13 +65,10 @@ def test_stability_values():
             raise AssertionError(f"Error with {algo}") from e
 
 
-def test_dictionary_metrics_with_dict_and_ce(splitted_encoder_ml: ModelWithSplitPoints):
+def test_dictionary_metrics_with_dict_and_ce(splitted_encoder_ml: SplitterForClassification):
     """
     Test the dictionary metric give similar results via dictionaries and concept explainers
     """
-    split = "bert.encoder.layer.1.output"
-    splitted_encoder_ml.split_point = split
-
     rand1 = torch.rand(32, 32)
     concept_explainer1 = NeuronsAsConcepts(splitter=splitted_encoder_ml)
     concept_explainer1.get_dictionary = lambda: rand1

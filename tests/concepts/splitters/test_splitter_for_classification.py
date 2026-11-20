@@ -55,9 +55,9 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
     with pytest.raises(ValueError):
         SSC(bert_model, split_point="wrong.module.name", tokenizer=bert_tokenizer)
 
-    # no tokenizer
-    with pytest.raises(ValueError):
-        SSC(bert_model)
+    # tokenizer inferred from the model repository
+    splitter = SSC(bert_model)
+    assert splitter.tokenizer is not None
 
     # correct module name
     splitter = SSC(bert_model, split_point="classifier", tokenizer=bert_tokenizer)
@@ -73,10 +73,56 @@ def test_loading_possibilities(bert_model, bert_tokenizer):
 
 
 def test_get_latent_shape(split_seq_cls: SSC):
-    """Shapes returned by ``get_latent_shape`` match activation shapes."""
+    """The latent shape contains one classification representation."""
     shape = split_seq_cls.get_latent_shape()
-    expected_shape = (1, split_seq_cls._model.config.hidden_size)
+    expected_shape = (1, split_seq_cls.config.hidden_size)
     assert shape == expected_shape, f"Latent shape mismatch: got {shape}, expected {expected_shape}"
+
+
+@pytest.mark.parametrize(
+    "repo_id",
+    [
+        "hf-internal-testing/tiny-random-bert",
+        "hf-internal-testing/tiny-random-LlamaForCausalLM",
+        "hf-internal-testing/tiny-random-t5",
+    ],
+)
+def test_standalone_token_ids_use_tokenizer_formatting(repo_id):
+    """Standalone token IDs can be processed directly or as an iterable."""
+    splitter = SSC(repo_id, batch_size=2, device_map=DEVICE)
+    token_ids = [
+        token_id
+        for token_id in splitter.tokenizer.get_vocab().values()
+        if token_id not in splitter.tokenizer.all_special_ids
+    ][:3]
+
+    prepared = splitter._prepare_batch(token_ids, {})
+    _, token_position = splitter._standalone_token_template
+    assert prepared["input_ids"][:, token_position].tolist() == token_ids
+
+    direct_activations = splitter.inputs_to_activations(token_ids)
+    activations, _ = splitter.get_activations(token_ids)
+    iterable_activations, _ = splitter.get_activations(iter(token_ids))
+    expected_shape = (len(token_ids), splitter.config.hidden_size)
+    assert direct_activations.shape == activations.shape == iterable_activations.shape == expected_shape
+
+
+def test_token_wise_head_keeps_attended_eos():
+    """Left and right padding must not hide an attended EOS with the same token ID."""
+    splitter = SSC("hf-internal-testing/tiny-random-gpt2")
+    eos_id = splitter.tokenizer.eos_token_id
+    splitter.config.pad_token_id = eos_id
+    activations = torch.arange(8).reshape(2, 4, 1).float()
+    input_ids = torch.tensor([[42, eos_id, eos_id, eos_id], [eos_id, eos_id, 42, eos_id]])
+    attention_mask = torch.tensor([[1, 1, 0, 0], [0, 0, 1, 1]])
+
+    selected = splitter._select_classification_representation(
+        activations, {"input_ids": input_ids, "attention_mask": attention_mask}
+    )
+    assert torch.equal(selected, torch.tensor([[1.0], [7.0]]))
+
+    selected_without_mask = splitter._select_classification_representation(activations, {"input_ids": input_ids})
+    assert torch.equal(selected_without_mask, torch.tensor([[0.0], [6.0]]))
 
 
 @pytest.mark.parametrize("repo_id", REPO_IDS)
@@ -91,10 +137,15 @@ def test_get_activation_and_gradient(repo_id, sentences):
         batch_size=2,
         device_map=DEVICE,
     )
+    if repo_id == "hf-internal-testing/tiny-random-gpt2":
+        # This checkpoint's config and tokenizer disagree on padding. Align them for the native logits comparison.
+        splitter.dispatch()
+        splitter.config.pad_token_id = splitter.tokenizer.pad_token_id
+
     # -----------------------------------------------------------
     # Define expected shapes for the different granularity levels
     batch = len(sentences)
-    hidden = splitter._model.config.hidden_size
+    hidden = splitter.config.hidden_size
 
     # ----------------------------------------------
     # Define a concept encoder/decoder weight matrix
@@ -125,6 +176,21 @@ def test_get_activation_and_gradient(repo_id, sentences):
         f"Predictions batch mismatch: got {predictions.shape[0]}, "  # type: ignore
         f"expected {expected_activations_shape[0]}"
     )
+
+    assert splitter.get_latent_shape() == torch.Size([1, hidden])
+
+    expected_logits = []
+    with torch.no_grad():
+        for i in range(0, len(sentences), splitter.batch_size):
+            with splitter.trace(sentences[i : i + splitter.batch_size]):
+                batch_logits = splitter.output.logits.save()
+            expected_logits.append(batch_logits)
+    expected_logits = torch.cat(expected_logits)
+
+    replayed_logits = splitter.activations_to_outputs(activations)
+    assert replayed_logits.shape == expected_logits.shape
+    assert torch.allclose(replayed_logits.cpu(), expected_logits.cpu(), atol=1e-5)
+    assert torch.equal(replayed_logits.argmax(dim=-1).cpu(), predictions.cpu())
 
     # -------------
     # Get gradients

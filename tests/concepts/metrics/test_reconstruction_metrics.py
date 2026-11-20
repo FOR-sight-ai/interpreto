@@ -24,8 +24,10 @@
 
 from __future__ import annotations
 
+import pytest
 import torch
 
+from interpreto import SplitterForClassification
 from interpreto.commons.distances import DistanceFunctions
 from interpreto.concepts import NeuronsAsConcepts, PCAConcepts
 from interpreto.concepts.metrics import (
@@ -34,16 +36,25 @@ from interpreto.concepts.metrics import (
     ReconstructionError,
     ReconstructionSpaces,
 )
-from interpreto.concepts.splitters.model_with_split_points import ModelWithSplitPoints
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def test_reconstruction_error(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
+@pytest.fixture(scope="module")
+def reconstruction_activations(splitted_encoder_ml: SplitterForClassification, huge_text: list[str]) -> torch.Tensor:
+    activations, _ = splitted_encoder_ml.get_activations(huge_text[:8])
+    return activations
+
+
+def test_reconstruction_error(
+    splitted_encoder_ml: SplitterForClassification,
+    reconstruction_activations: torch.Tensor,
+):
     """
     Test the reconstruction error metrics
     """
 
+    activations = reconstruction_activations
     neurons_concept_explainer = NeuronsAsConcepts(splitter=splitted_encoder_ml)
     pca_concept_explainer = PCAConcepts(splitter=splitted_encoder_ml, nb_concepts=5)
     pca_concept_explainer.fit(activations)
@@ -61,11 +72,15 @@ def test_reconstruction_error(splitted_encoder_ml: ModelWithSplitPoints, activat
             raise AssertionError(f"Error with {metric_class.__name__}") from e
 
 
-def test_latent_activations_reconstruction_error(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
+def test_latent_activations_reconstruction_error(
+    splitted_encoder_ml: SplitterForClassification,
+    reconstruction_activations: torch.Tensor,
+):
     """
     Test the latent activations reconstruction error metrics
     """
 
+    activations = reconstruction_activations
     pca_concept_explainer = PCAConcepts(splitter=splitted_encoder_ml, nb_concepts=5)
     pca_concept_explainer.fit(activations)
 
@@ -81,10 +96,14 @@ def test_latent_activations_reconstruction_error(splitted_encoder_ml: ModelWithS
     assert score == base_score
 
 
-def test_fid(splitted_encoder_ml: ModelWithSplitPoints, activations: torch.Tensor):
+def test_fid(
+    splitted_encoder_ml: SplitterForClassification,
+    reconstruction_activations: torch.Tensor,
+):
     """
     Test the fid metrics
     """
+    activations = reconstruction_activations
     pca_concept_explainer = PCAConcepts(splitter=splitted_encoder_ml, nb_concepts=5)
     pca_concept_explainer.fit(activations)
 

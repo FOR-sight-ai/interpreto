@@ -26,7 +26,7 @@ The main product surface is:
   - `inference_wrapper.py`: shared batching, device handling, logits/gradient access, padding helpers.
   - `classification_inference_wrapper.py`: targeted scoring for classification tasks.
   - `generation_inference_wrapper.py`: targeted scoring for generation tasks.
-  - `model_with_split_points.py`: `nnsight`-based model splitting and activation extraction for concept methods.
+  - `base_splitter.py`, `splitter_for_classification.py`, `text_tokens_splitter.py`: `nnsight`-based model splitting and activation extraction for concept methods.
   - `llm_interface.py`: abstraction layer for LLM-based concept labeling.
 - `interpreto/attributions/`
   - Attribution framework.
@@ -64,7 +64,7 @@ The main product surface is:
 - `transformers`
   - Main model/tokenizer interface and public compatibility target.
 - `nnsight`
-  - Used by `ModelWithSplitPoints` for split points and activation capture.
+  - Used by concept splitters for split-point resolution and activation capture.
 - `jaxtyping` and `beartype`
   - Preferred tools for explicit tensor typing and shape contracts.
 - `scikit-learn`, `scipy`, `einops`, `matplotlib`, `nltk`
@@ -96,13 +96,13 @@ Important style point: attribution code is intentionally generator-friendly. Man
 
 Typical flow:
 
-1. `ModelWithSplitPoints` wraps a transformer model and exposes split points.
-2. `get_activations()` extracts latent activations at a chosen granularity.
+1. `SplitterForClassification` exposes one classification representation per sample, while `TextTokensSplitter` exposes token-level or pooled text representations.
+2. `get_activations()` extracts latent activations at the selected split point.
 3. A concept explainer from `interpreto.concepts.methods` fits or applies a concept model on those activations.
 4. Interpretation methods such as `TopKInputs` or `LLMLabels` map concept dimensions to human-readable descriptions.
 5. Metrics and visualizations operate on the resulting concept-space artifacts.
 
-`ModelWithSplitPoints` is the bridge between the transformer world and concept methods. Most concept changes should respect that layering instead of bypassing it.
+Splitters are the bridge between the transformer world and concept methods. Most concept changes should respect that layering instead of bypassing it.
 
 ### Granularity and normalization
 
