@@ -323,6 +323,7 @@ def test_llm_labels_token_and_pooled_modes(
     classification_splitter: SplitterForClassification,
     text_tokens_splitter: TextTokensSplitter,
     sentences: list[str],
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """Token and pooled representations both produce labels."""
     concept_explainer = NeuronsAsConcepts(text_tokens_splitter)
@@ -335,13 +336,13 @@ def test_llm_labels_token_and_pooled_modes(
     assert token_method.k_context == 1
     assert len(token_method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)) == 3
 
+    monkeypatch.setattr(text_tokens_splitter, "token_pooling", "mean")
     with pytest.warns(UserWarning, match="k_context is set to 0"):
         pooled_method = LLMLabels(
             concept_explainer=concept_explainer,
             llm_interface=LLMInterfaceMock(),
             k_examples=2,
             k_context=1,
-            token_pooling="mean",
         )
     assert pooled_method.k_context == 0
     assert len(pooled_method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)) == 3

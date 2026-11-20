@@ -180,12 +180,14 @@ def test_topk_inputs_token_level(text_tokens_splitter: TextTokensSplitter, sente
 
 
 def test_topk_inputs_pooled_generation_matches_precomputed(
-    text_tokens_splitter: TextTokensSplitter, sentences: list[str]
+    text_tokens_splitter: TextTokensSplitter, sentences: list[str], monkeypatch: pytest.MonkeyPatch
 ):
     """Raw inputs and matching precomputed pooled activations produce the same result."""
+    monkeypatch.setattr(text_tokens_splitter, "token_pooling", "mean")
     concept_explainer = NeuronsAsConcepts(splitter=text_tokens_splitter)
-    pooled_activations, _ = text_tokens_splitter.get_activations(sentences, token_pooling="mean")
-    method = TopKInputs(concept_explainer=concept_explainer, k=2, token_pooling="mean")
+    pooled_activations, _ = text_tokens_splitter.get_activations(sentences)
+    assert isinstance(pooled_activations, torch.Tensor)
+    method = TopKInputs(concept_explainer=concept_explainer, k=2)
 
     from_inputs = method.interpret(concepts_indices=[0, 5, 13], inputs=sentences)
     from_precomputed = method.interpret(

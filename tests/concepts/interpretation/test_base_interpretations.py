@@ -61,12 +61,12 @@ def test_examples_follow_token_splitter(text_tokens_splitter, sentences: list[st
     ]
 
 
-def test_pooling_maps_generation_to_inputs(text_tokens_splitter, sentences: list[str]):
+def test_pooling_maps_generation_to_inputs(
+    text_tokens_splitter, sentences: list[str], monkeypatch: pytest.MonkeyPatch
+):
     """Pooled token representations map back to whole input examples."""
-    method = TopKInputs(
-        concept_explainer=NeuronsAsConcepts(text_tokens_splitter),
-        token_pooling="mean",
-    )
+    monkeypatch.setattr(text_tokens_splitter, "token_pooling", "mean")
+    method = TopKInputs(concept_explainer=NeuronsAsConcepts(text_tokens_splitter))
 
     granular_inputs, sample_ids = method.get_granular_inputs(sentences)
     concept_activations = method.concepts_activations_from_source(inputs=sentences)

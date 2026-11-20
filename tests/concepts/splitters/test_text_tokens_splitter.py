@@ -74,6 +74,7 @@ def test_loading_preloaded_models(
         bert_model,
         split_point="bert.encoder.layer.1",
         # task="feature-extraction",
+        token_pooling="max",
         tokenizer=bert_tokenizer,
         device_map=DEVICE,
     )
@@ -82,6 +83,7 @@ def test_loading_preloaded_models(
     assert generation.task == "text-generation", "Wrong task inference"
     assert encoder.split_point == "bert.encoder.layer.1", "Wrong split point mapping"
     assert encoder.task != "text-generation", "Wrong task inference"
+    assert encoder.token_pooling == "max"
 
 
 def test_generation_task_is_inferred(gpt2_model, gpt2_tokenizer):
@@ -124,12 +126,14 @@ def test_encoder_values_match_retained_tokens(encoder_splitter: TextTokensSplitt
         assert torch.allclose(activations, full_sample[mask].cpu(), atol=1e-5)
 
 
-def test_encoder_pooling_ignores_padding(encoder_splitter: TextTokensSplitter):
+def test_encoder_pooling_ignores_padding(encoder_splitter: TextTokensSplitter, monkeypatch: pytest.MonkeyPatch):
     """Pooling is applied after padding and special-token removal."""
     texts = ["Hi", "Interpreto is the latin for 'to interpret' and much longer"]
-    pooled, _ = encoder_splitter.get_activations(texts, token_pooling="mean")
     per_sample, _ = encoder_splitter.get_activations(texts, flatten_activations=False)
+    monkeypatch.setattr(encoder_splitter, "token_pooling", "mean")
+    pooled, _ = encoder_splitter.get_activations(texts)
 
+    assert isinstance(pooled, torch.Tensor)
     assert pooled.shape == (len(texts), encoder_splitter.config.hidden_size)
     for pooled_sample, activations in zip(pooled, per_sample, strict=True):
         assert torch.allclose(pooled_sample, activations.mean(dim=0), atol=1e-5)
