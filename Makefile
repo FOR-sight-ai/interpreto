@@ -52,6 +52,7 @@ install-dev:
 	if [ ! -f .venv/bin/python ]; then uv venv; fi && \
 		source .venv/bin/activate && \
 		uv pip install -e ".[docs,lint,notebook,test,vision]" && \
+		python -c 'import nltk; nltk.download(["punkt", "punkt_tab", "wordnet"], quiet=True, raise_on_error=True)' && \
 		pre-commit install
 
 #* Linting

@@ -23,10 +23,12 @@ make install # Regular dependencies for normal usage
 
 or
 
-make install-dev # Dev dependencies including docs and linting
+make install-dev # Dev dependencies including docs, notebooks, and linting
 ```
 
 To activate your `.venv` run `source .venv/bin/activate`.
+
+`make install-dev` also downloads the NLTK tokenizer and lemmatizer data used by the interpretation notebooks.
 
 Welcome to the team!
 
