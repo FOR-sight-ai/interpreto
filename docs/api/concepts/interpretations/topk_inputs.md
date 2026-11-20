@@ -11,7 +11,7 @@ Display units follow the splitter and pooling mode:
 
 - Classification uses whole input samples because each input has one representation.
 - Text splitting without pooling uses individual retained tokens.
-- Text splitting with `token_pooling` uses whole input samples.
+- A `TextTokensSplitter` with `token_pooling` set to a pooling mode uses whole input samples.
 - `use_vocab=True` ranks independently encoded vocabulary entries.
 - `use_unique_words=True` ranks independently encoded words or n-grams and requires a pooled representation.
 
@@ -31,11 +31,16 @@ topk = TopKInputs(
 topk_examples = topk.interpret(inputs=dataset, concepts_indices="all")
 ```
 
-For pooled text representations, use the same pooling mode for extraction and interpretation:
+Same API for pooled representations:
 
 ```python
-activations, _ = splitter.get_activations(dataset, token_pooling="mean")
-topk = TopKInputs(concept_explainer=concept_explainer, token_pooling="mean", k=5)
+from interpreto import TextTokensSplitter
+from interpreto.concepts import NeuronsAsConcepts, TopKInputs
+
+splitter = TextTokensSplitter("gpt2", split_point=5, token_pooling="mean")
+concept_explainer = NeuronsAsConcepts(splitter)
+activations, _ = splitter.get_activations(dataset)
+topk = TopKInputs(concept_explainer=concept_explainer, k=5)
 topk_inputs = topk.interpret(
     inputs=dataset,
     latent_activations=activations,

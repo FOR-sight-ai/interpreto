@@ -37,7 +37,6 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.concepts.splitters.text_tokens_splitter import TokenPooling
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -58,9 +57,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
     Arguments:
         concept_explainer (ConceptEncoderExplainer):
             The fitted concept explainer used to encode activations.
-
-        token_pooling (TokenPooling):
-            Optional pooling applied to token activations before interpretation.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -123,21 +119,21 @@ class TopKInputs(BaseConceptInterpretationMethod):
             concepts_indices="all",             # interpret all neurons at the [CLS] token position
         )
 
-        **Precomputed activations** can be passed directly,
-        ensure the interpretation token_pooling matches the activations one (if used):
+        **Precomputed activations** can be passed directly. Configure pooling on
+        the splitter used for both extraction and interpretation:
         >>> from interpreto import TextTokensSplitter
         >>> from interpreto.concepts import NeuronsAsConcepts, TopKInputs
         >>>
         >>> splitter = TextTokensSplitter(
         ...     "gpt2",
         ...     split_point=11,
+        ...     token_pooling="mean",
         ...     device_map="auto",
         ... )
         >>> texts = ["Interpreto explains models", "Concepts reveal patterns"]
-        >>> pooled_activations, _ = splitter.get_activations(texts, token_pooling="mean")
+        >>> pooled_activations, _ = splitter.get_activations(texts)
         >>> method = TopKInputs(
         ...     concept_explainer=NeuronsAsConcepts(splitter),
-        ...     token_pooling="mean",
         ...     k=2,
         ... )
         >>> topk_texts = method.interpret(
@@ -152,7 +148,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
         self,
         *,
         concept_explainer: ConceptEncoderExplainer,
-        token_pooling: TokenPooling = None,
         concept_encoding_batch_size: int = 1024,
         k: int = 5,
         use_vocab: bool = False,
@@ -161,7 +156,6 @@ class TopKInputs(BaseConceptInterpretationMethod):
     ):
         super().__init__(
             concept_explainer=concept_explainer,
-            token_pooling=token_pooling,
             concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,

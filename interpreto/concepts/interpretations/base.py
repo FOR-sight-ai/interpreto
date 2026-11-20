@@ -46,7 +46,7 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.splitters.splitter_for_classification import (
     SplitterForClassification,
 )
-from interpreto.concepts.splitters.text_tokens_splitter import TextTokensSplitter, TokenPooling
+from interpreto.concepts.splitters.text_tokens_splitter import TextTokensSplitter
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -186,7 +186,7 @@ def verify_granular_inputs(
             f"concept activation rows ({sure_concepts_activations.shape[0]}) for {mode}. "
             "Precomputed activations must match the selected interpretation mode: use token-level "
             "activations for token-level text splitters, and one pooled activation per input when "
-            "`token_pooling` is set."
+            "`token_pooling` is set on TextTokensSplitter."
         )
 
 
@@ -199,10 +199,6 @@ class BaseConceptInterpretationMethod(ABC):
     Attributes:
         concept_explainer (ConceptEncoderExplainer):
             The concept explainer used to compute the concept activations.
-
-        token_pooling (TokenPooling):
-            Optional pooling applied to token activations. With pooling,
-            interpretation examples are whole inputs rather than tokens.
 
         concept_encoding_batch_size (int):
             The batch size to use for the concept encoding.
@@ -227,7 +223,6 @@ class BaseConceptInterpretationMethod(ABC):
     def __init__(
         self,
         concept_explainer: ConceptEncoderExplainer,
-        token_pooling: TokenPooling = None,
         concept_encoding_batch_size: int = 1024,
         use_vocab: bool = False,
         use_unique_words: bool | int = 0,
@@ -237,7 +232,6 @@ class BaseConceptInterpretationMethod(ABC):
             raise ValueError("Cannot use both `use_unique_words` and `use_vocab`. Please use only one of them.")
 
         self.concept_explainer: ConceptEncoderExplainer = concept_explainer
-        self.token_pooling: TokenPooling = token_pooling
         self.concept_encoding_batch_size: int = concept_encoding_batch_size
         self.use_vocab: bool = use_vocab
         self.use_unique_words: int = int(use_unique_words)
@@ -245,14 +239,18 @@ class BaseConceptInterpretationMethod(ABC):
 
     def _is_pooled_mode(self) -> bool:
         """Whether the splitter exposes one representation per input."""
-        return isinstance(self.concept_explainer.splitter, SplitterForClassification) or self.token_pooling is not None
+        splitter = self.concept_explainer.splitter
+        return isinstance(splitter, SplitterForClassification) or (
+            isinstance(splitter, TextTokensSplitter) and splitter.token_pooling is not None
+        )
 
     def _mode_description(self) -> str:
         """Describe the representation mode for alignment errors."""
-        if isinstance(self.concept_explainer.splitter, SplitterForClassification):
+        splitter = self.concept_explainer.splitter
+        if isinstance(splitter, SplitterForClassification):
             return "classification (one pooled representation per input)"
-        if self.token_pooling is not None:
-            return f"pooled text representations (token_pooling={self.token_pooling!r})"
+        if isinstance(splitter, TextTokensSplitter) and splitter.token_pooling is not None:
+            return f"pooled text representations (token_pooling={splitter.token_pooling!r})"
         return "token-level text representations"
 
     @abstractmethod
@@ -328,13 +326,7 @@ class BaseConceptInterpretationMethod(ABC):
             return concepts_activations
 
         if inputs is not None:
-            extraction_kwargs: dict[str, Any] = {}
-            if isinstance(self.concept_explainer.splitter, TextTokensSplitter):
-                extraction_kwargs["token_pooling"] = self.token_pooling
-            latent_activations, _ = self.concept_explainer.splitter.get_activations(
-                inputs,
-                **extraction_kwargs,
-            )
+            latent_activations, _ = self.concept_explainer.splitter.get_activations(inputs)
             return self.concepts_activations_from_source(latent_activations=latent_activations, inputs=inputs)
 
         raise ValueError(

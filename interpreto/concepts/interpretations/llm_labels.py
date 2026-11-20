@@ -39,7 +39,6 @@ from interpreto.concepts.base import ConceptEncoderExplainer
 from interpreto.concepts.interpretations.base import (
     BaseConceptInterpretationMethod,
 )
-from interpreto.concepts.splitters.text_tokens_splitter import TokenPooling
 from interpreto.typing import ConceptsActivations, LatentActivations
 
 
@@ -110,9 +109,6 @@ class LLMLabels(BaseConceptInterpretationMethod):
         concept_explainer (ConceptEncoderExplainer):
             The fitted concept explainer used for encoding activations.
 
-        token_pooling (TokenPooling):
-            Optional pooling applied to token activations before interpretation.
-
         llm_interface:
             The model used to label concepts. Its behavior depends on the
             provided value:
@@ -165,7 +161,6 @@ class LLMLabels(BaseConceptInterpretationMethod):
         self,
         *,
         concept_explainer: ConceptEncoderExplainer,
-        token_pooling: TokenPooling = None,
         llm_interface: str | tuple[PreTrainedModel, PreTrainedTokenizerBase] | LLMInterface | None = None,
         concept_encoding_batch_size: int = 1024,
         sampling_method: SamplingMethod = SamplingMethod.TOP,
@@ -179,7 +174,6 @@ class LLMLabels(BaseConceptInterpretationMethod):
     ):
         super().__init__(
             concept_explainer=concept_explainer,
-            token_pooling=token_pooling,
             concept_encoding_batch_size=concept_encoding_batch_size,
             use_vocab=use_vocab,
             use_unique_words=use_unique_words,
