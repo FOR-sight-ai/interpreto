@@ -61,6 +61,7 @@ class SkLearnWrapper(BaseOptimDictionaryLearning):
         """
         Abstract concept model built around scikit-learn.
         The inheriting classes convert sklearn models into torch modules.
+        Fit inputs are converted on CPU to float32 because NumPy cannot represent all activation dtypes (e.g. bfloat16).
 
         Args:
             nb_concepts (int): Number of concepts to extract.
@@ -115,7 +116,7 @@ class ICAWrapper(SkLearnWrapper):
         self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
     ) -> FastICA | None:
         ica = FastICA(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
-        ica.fit(x.detach().to(torch.float32).cpu().numpy())
+        ica.fit(x.detach().cpu().float().numpy())
 
         self.mean.data = torch.as_tensor(ica.mean_, dtype=torch.float32, device=self.mean.device)
         self.components.data = torch.as_tensor(ica.components_.T, dtype=torch.float32, device=self.components.device)
@@ -168,7 +169,7 @@ class PCAWrapper(SkLearnWrapper):
         self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
     ) -> PCA | None:
         pca = PCA(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
-        pca.fit(x.detach().to(torch.float32).cpu().numpy())
+        pca.fit(x.detach().cpu().float().numpy())
         self.mean.data = torch.as_tensor(pca.mean_, dtype=torch.float32, device=self.mean.device)
         self.components.data = torch.as_tensor(pca.components_, dtype=torch.float32, device=self.components.device)
         self.fitted = True
@@ -228,7 +229,7 @@ class SVDWrapper(SkLearnWrapper):
         self, x: Float[torch.Tensor, "n {self.input_size}"], return_sklearn_model: bool = False, **kwargs
     ) -> TruncatedSVD | None:
         svd = TruncatedSVD(n_components=self.nb_concepts, random_state=self.random_state, **kwargs)
-        svd.fit(x.detach().to(torch.float32).cpu().numpy())
+        svd.fit(x.detach().cpu().float().numpy())
 
         self.components.data = torch.as_tensor(svd.components_, dtype=torch.float32, device=self.components.device)
         self.fitted = True
@@ -276,7 +277,7 @@ class KMeansWrapper(SkLearnWrapper):
     @jaxtyped(typechecker=beartype)
     def fit(self, x: Float[torch.Tensor, "n d"], return_sklearn_model: bool = False, **kwargs) -> KMeans | None:
         kmeans = KMeans(n_clusters=self.nb_concepts, random_state=self.random_state, **kwargs)
-        kmeans.fit(x.detach().to(torch.float32).cpu().numpy())
+        kmeans.fit(x.detach().cpu().float().numpy())
         self.components.data = torch.as_tensor(
             kmeans.cluster_centers_, dtype=torch.float32, device=self.components.device
         )
