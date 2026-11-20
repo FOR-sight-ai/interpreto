@@ -107,6 +107,24 @@ def test_standalone_token_ids_use_tokenizer_formatting(repo_id):
     assert direct_activations.shape == activations.shape == iterable_activations.shape == expected_shape
 
 
+def test_token_wise_head_keeps_attended_eos():
+    """Left and right padding must not hide an attended EOS with the same token ID."""
+    splitter = SSC("hf-internal-testing/tiny-random-gpt2")
+    eos_id = splitter.tokenizer.eos_token_id
+    splitter.config.pad_token_id = eos_id
+    activations = torch.arange(8).reshape(2, 4, 1).float()
+    input_ids = torch.tensor([[42, eos_id, eos_id, eos_id], [eos_id, eos_id, 42, eos_id]])
+    attention_mask = torch.tensor([[1, 1, 0, 0], [0, 0, 1, 1]])
+
+    selected = splitter._select_classification_representation(
+        activations, {"input_ids": input_ids, "attention_mask": attention_mask}
+    )
+    assert torch.equal(selected, torch.tensor([[1.0], [7.0]]))
+
+    selected_without_mask = splitter._select_classification_representation(activations, {"input_ids": input_ids})
+    assert torch.equal(selected_without_mask, torch.tensor([[0.0], [6.0]]))
+
+
 @pytest.mark.parametrize("repo_id", REPO_IDS)
 def test_get_activation_and_gradient(repo_id, sentences):
     """
@@ -119,6 +137,11 @@ def test_get_activation_and_gradient(repo_id, sentences):
         batch_size=2,
         device_map=DEVICE,
     )
+    if repo_id == "hf-internal-testing/tiny-random-gpt2":
+        # This checkpoint's config and tokenizer disagree on padding. Align them for the native logits comparison.
+        splitter.dispatch()
+        splitter.config.pad_token_id = splitter.tokenizer.pad_token_id
+
     # -----------------------------------------------------------
     # Define expected shapes for the different granularity levels
     batch = len(sentences)

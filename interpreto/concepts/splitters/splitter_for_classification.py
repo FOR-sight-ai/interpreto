@@ -163,7 +163,7 @@ class SplitterForClassification(BaseSplitter):
     def _select_classification_representation(
         self,
         activations: torch.Tensor,
-        input_ids: torch.Tensor | None,
+        prepared: dict[str, torch.Tensor],
     ) -> Float[torch.Tensor, "n d"]:
         """Select the first token, or the last non-padding token for token-wise heads."""
         # The head already receives one representation per sample.
@@ -174,14 +174,16 @@ class SplitterForClassification(BaseSplitter):
         if not self._head_is_token_wise:
             return activations[:, 0, :]
 
-        # Without padding information, token-wise heads classify the last token.
-        pad_token_id = self.config.pad_token_id
-        if input_ids is None or pad_token_id is None:
-            return activations[:, -1, :]
+        # The mask distinguishes real tokens from padding even when pad and EOS share an ID.
+        non_padding = prepared.get("attention_mask")
+        if non_padding is None:
+            input_ids = prepared.get("input_ids")
+            pad_token_id = self.config.pad_token_id
+            if input_ids is None or pad_token_id is None:
+                return activations[:, -1, :]
+            non_padding = input_ids != pad_token_id
 
-        # With padding, select each sample's last non-padding token.
-        non_padding = input_ids != pad_token_id
-        token_indices = torch.arange(input_ids.shape[-1], device=input_ids.device)
+        token_indices = torch.arange(non_padding.shape[-1], device=non_padding.device)
         positions = (token_indices * non_padding).argmax(-1).to(activations.device)
         return activations[
             torch.arange(activations.shape[0], device=activations.device),
@@ -201,7 +203,7 @@ class SplitterForClassification(BaseSplitter):
         inputs: list[str] | Iterable[int] | torch.Tensor | BatchEncoding | dict[str, torch.Tensor] | None,
         kwargs: dict[str, Any],
     ) -> dict[str, torch.Tensor]:
-        """Prepare model inputs while retaining the input IDs used for token selection."""
+        """Prepare model inputs, retaining any attention mask for token selection."""
         if inputs is None:
             if not kwargs:
                 raise ValueError("Either inputs or kwargs must be provided.")
@@ -276,10 +278,7 @@ class SplitterForClassification(BaseSplitter):
             activations = self._split_module.input.save()
             tracer.stop()  # we only needed the CLS token, no need to complete the forward pass
 
-        return self._select_classification_representation(
-            activations,
-            prepared.get("input_ids"),
-        )
+        return self._select_classification_representation(activations, prepared)
 
     def activations_to_outputs(
         self,
@@ -352,10 +351,7 @@ class SplitterForClassification(BaseSplitter):
                     batch_activations = classification_head.input.save()
                     batch_predictions = self.output.logits.argmax(dim=-1).save()  # type: ignore
 
-                batch_activations = self._select_classification_representation(
-                    batch_activations,
-                    batch.get("input_ids"),
-                )
+                batch_activations = self._select_classification_representation(batch_activations, batch)
 
                 # Materialize outside the trace. This is necessary to avoid memory leaks.
                 activations.append(batch_activations.detach().cpu().clone())
