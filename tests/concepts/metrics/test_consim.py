@@ -200,8 +200,8 @@ def test_consim_select_examples(splitted_encoder_ml: SplitterForClassification, 
     labels = torch.tensor([0, 1, 0, 1, 0, 1])
     predictions = torch.tensor([0, 0, 0, 1, 1, 1])
 
-    def fake_get_activations(x, **kwargs):
-        assert x == inputs, "consim did not pass the correct inputs to _get_predictions"
+    def fake_get_activations(x):
+        assert x == inputs, "consim did not pass the correct inputs to the splitter"
         return None, predictions
 
     monkeypatch.setattr(splitted_encoder_ml, "get_activations", fake_get_activations)
@@ -558,6 +558,22 @@ def test_consim_compute_score(splitted_encoder_ml: SplitterForClassification):
 
     # bad formatted response should return None
     assert ConSim._compute_score("wrong", ["A", "B"]) is None, "bad formatted response should return None"
+
+
+def test_consim_evaluate_manual_mode(splitted_encoder_ml: SplitterForClassification):
+    """Without an LLM, evaluation returns the prompts and model predictions."""
+    consim = ConSim(splitted_encoder_ml, user_llm=None, classes=["A", "B"])
+    result = consim.evaluate(
+        interesting_samples=["first example", "second example"],
+        predictions=torch.tensor([1, 1]),
+        prompt_type=PromptTypes.L2_baseline_with_lp,
+    )
+
+    assert isinstance(result, tuple)
+    (system_prompt, user_prompt), predictions = result
+    assert "first example" in system_prompt
+    assert "second example" in user_prompt
+    assert predictions == ["B"]
 
 
 @pytest.mark.parametrize(

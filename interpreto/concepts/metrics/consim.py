@@ -253,14 +253,14 @@ class ConSim:
     def __init__(
         self,
         splitter: BaseSplitter,
-        user_llm: str | tuple[PreTrainedModel, PreTrainedTokenizerBase] | LLMInterface,
+        user_llm: str | tuple[PreTrainedModel, PreTrainedTokenizerBase] | LLMInterface | None,
         classes: list[str] | None = None,
     ):
         """
-        Initialize the ConSim metric.
+        Initialize the ConSim metric. Pass ``user_llm=None`` to build prompts for manual evaluation.
         """
         self.splitter = splitter
-        self.user_llm: LLMInterface = _resolve_llm_interface(user_llm)
+        self.user_llm: LLMInterface | None = None if user_llm is None else _resolve_llm_interface(user_llm)
         self.classes: list[str] | None = classes
 
     def _extract_interesting_elements(
@@ -399,10 +399,9 @@ class ConSim:
         nb_lp_samples: int = 20,
         nb_ep_samples: int = 20,
         seed: int = 0,
-        batch_size: int = 64,
     ) -> tuple[list[str], torch.Tensor, torch.Tensor]:
         """
-        Select examples for the ConSim metric. It first computes the models' predictions on the inputs.
+        Select examples for the ConSim metric. It first computes predictions using the splitter's batch size.
         Then, it selects `nb_lp_samples` + `nb_ep_samples` samples from the inputs.
         The goal is to select uniformly between each class (with respect to the labels).
         There should be as many samples where the initial model prediction are correct as incorrect.
@@ -424,8 +423,6 @@ class ConSim:
                 The number of samples to select for the evaluation phase.
             seed: int
                 The seed to use for the random selection.
-            batch_size: int
-                The batch size to use for the predictions.
         Returns:
             interesting_samples: list[str]
                 The interesting samples.
@@ -434,7 +431,7 @@ class ConSim:
             predictions: torch.Tensor
                 The predictions of the model on the interesting samples.
         """
-        _, predictions = self.splitter.get_activations(inputs, batch_size=batch_size)
+        _, predictions = self.splitter.get_activations(inputs)
         return self._extract_interesting_elements(
             inputs=inputs,
             labels=labels,
